@@ -23,6 +23,7 @@ interface ShirtModel {
 interface Campaign {
   id: string;
   name: string;
+  segment_id: string;
 }
 
 const Campaign = () => {
@@ -71,7 +72,7 @@ const Campaign = () => {
     try {
       const { data: campaignData, error: campaignError } = await supabase
         .from("campaigns")
-        .select("id, name")
+        .select("id, name, segment_id")
         .eq("unique_link", uniqueLink)
         .single();
 
@@ -83,17 +84,12 @@ const Campaign = () => {
 
       setCampaign(campaignData);
 
-      const { data: campaignModels } = await supabase
-        .from("campaign_models")
-        .select("model_id")
-        .eq("campaign_id", campaignData.id);
-
-      if (campaignModels && campaignModels.length > 0) {
-        const modelIds = campaignModels.map((cm) => cm.model_id);
+      // Buscar modelos do segmento da campanha
+      if (campaignData.segment_id) {
         const { data: modelsData } = await supabase
           .from("shirt_models")
           .select("*")
-          .in("id", modelIds);
+          .eq("segment_id", campaignData.segment_id);
 
         if (modelsData) setModels(modelsData);
       }

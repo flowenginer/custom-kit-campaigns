@@ -14,42 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      campaign_models: {
-        Row: {
-          campaign_id: string | null
-          created_at: string | null
-          id: string
-          model_id: string | null
-        }
-        Insert: {
-          campaign_id?: string | null
-          created_at?: string | null
-          id?: string
-          model_id?: string | null
-        }
-        Update: {
-          campaign_id?: string | null
-          created_at?: string | null
-          id?: string
-          model_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "campaign_models_campaign_id_fkey"
-            columns: ["campaign_id"]
-            isOneToOne: false
-            referencedRelation: "campaigns"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "campaign_models_model_id_fkey"
-            columns: ["model_id"]
-            isOneToOne: false
-            referencedRelation: "shirt_models"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       campaigns: {
         Row: {
           created_at: string | null
@@ -205,6 +169,7 @@ export type Database = {
           image_right: string
           name: string
           photo_main: string
+          segment_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -216,6 +181,7 @@ export type Database = {
           image_right: string
           name: string
           photo_main: string
+          segment_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -227,9 +193,18 @@ export type Database = {
           image_right?: string
           name?: string
           photo_main?: string
+          segment_id?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "shirt_models_segment_id_fkey"
+            columns: ["segment_id"]
+            isOneToOne: false
+            referencedRelation: "segments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
+
 import { toast } from "sonner";
 import { Plus, ExternalLink, Copy, Trash2 } from "lucide-react";
 
@@ -14,8 +14,10 @@ interface Campaign {
   id: string;
   name: string;
   unique_link: string;
-  segments: { name: string } | null;
+  segment_id: string;
+  segments: { name: string; id: string } | null;
   created_at: string;
+  model_count?: number;
 }
 
 interface Segment {
@@ -23,20 +25,13 @@ interface Segment {
   name: string;
 }
 
-interface ShirtModel {
-  id: string;
-  name: string;
-}
-
 const Campaigns = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [segments, setSegments] = useState<Segment[]>([]);
-  const [models, setModels] = useState<ShirtModel[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     segment_id: "",
-    selectedModels: [] as string[],
   });
 
   useEffect(() => {
@@ -46,22 +41,32 @@ const Campaigns = () => {
   const loadData = async () => {
     const { data: campaignsData } = await supabase
       .from("campaigns")
-      .select("*, segments(name)")
+      .select("*, segments(name, id)")
       .order("created_at", { ascending: false });
     
     const { data: segmentsData } = await supabase
       .from("segments")
       .select("*")
       .order("name");
-    
-    const { data: modelsData } = await supabase
-      .from("shirt_models")
-      .select("id, name")
-      .order("name");
 
-    if (campaignsData) setCampaigns(campaignsData);
+    // Count models for each campaign
+    if (campaignsData) {
+      const campaignsWithCounts = await Promise.all(
+        campaignsData.map(async (campaign) => {
+          if (campaign.segment_id) {
+            const { count } = await supabase
+              .from("shirt_models")
+              .select("*", { count: "exact", head: true })
+              .eq("segment_id", campaign.segment_id);
+            return { ...campaign, model_count: count || 0 };
+          }
+          return { ...campaign, model_count: 0 };
+        })
+      );
+      setCampaigns(campaignsWithCounts);
+    }
+    
     if (segmentsData) setSegments(segmentsData);
-    if (modelsData) setModels(modelsData);
   };
 
   const generateUniqueLink = () => {
@@ -71,40 +76,27 @@ const Campaigns = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (formData.selectedModels.length === 0) {
-      toast.error("Selecione pelo menos um modelo!");
+    if (!formData.segment_id) {
+      toast.error("Selecione um segmento!");
       return;
     }
 
     try {
       const uniqueLink = generateUniqueLink();
       
-      const { data: campaign, error: campaignError } = await supabase
+      const { error: campaignError } = await supabase
         .from("campaigns")
         .insert({
           name: formData.name,
-          segment_id: formData.segment_id || null,
+          segment_id: formData.segment_id,
           unique_link: uniqueLink,
-        })
-        .select()
-        .single();
+        });
 
       if (campaignError) throw campaignError;
 
-      const campaignModels = formData.selectedModels.map((modelId) => ({
-        campaign_id: campaign.id,
-        model_id: modelId,
-      }));
-
-      const { error: modelsError } = await supabase
-        .from("campaign_models")
-        .insert(campaignModels);
-
-      if (modelsError) throw modelsError;
-
       toast.success("Campanha criada com sucesso!");
       setIsDialogOpen(false);
-      setFormData({ name: "", segment_id: "", selectedModels: [] });
+      setFormData({ name: "", segment_id: "" });
       loadData();
     } catch (error: any) {
       toast.error(error.message);
@@ -130,14 +122,6 @@ const Campaigns = () => {
     toast.success("Link copiado!");
   };
 
-  const toggleModel = (modelId: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      selectedModels: prev.selectedModels.includes(modelId)
-        ? prev.selectedModels.filter((id) => id !== modelId)
-        : [...prev.selectedModels, modelId],
-    }));
-  };
 
   return (
     <div className="p-8 space-y-6">
@@ -160,7 +144,7 @@ const Campaigns = () => {
             <DialogHeader>
               <DialogTitle>Nova Campanha</DialogTitle>
               <DialogDescription>
-                Configure uma nova campanha e selecione os modelos disponíveis
+                Todos os modelos do segmento selecionado estarão disponíveis na campanha
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -176,15 +160,16 @@ const Campaigns = () => {
               </div>
 
               <div>
-                <Label htmlFor="segment">Segmento</Label>
+                <Label htmlFor="segment">Segmento*</Label>
                 <Select
                   value={formData.segment_id}
                   onValueChange={(value) =>
                     setFormData({ ...formData, segment_id: value })
                   }
+                  required
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione um segmento (opcional)" />
+                    <SelectValue placeholder="Selecione um segmento" />
                   </SelectTrigger>
                   <SelectContent>
                     {segments.map((segment) => (
@@ -194,32 +179,9 @@ const Campaigns = () => {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-
-              <div>
-                <Label>Modelos Disponíveis*</Label>
-                <div className="space-y-2 mt-2 border rounded-lg p-4 max-h-60 overflow-y-auto">
-                  {models.map((model) => (
-                    <div key={model.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={model.id}
-                        checked={formData.selectedModels.includes(model.id)}
-                        onCheckedChange={() => toggleModel(model.id)}
-                      />
-                      <Label
-                        htmlFor={model.id}
-                        className="text-sm font-normal cursor-pointer flex-1"
-                      >
-                        {model.name}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-                {models.length === 0 && (
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Cadastre modelos primeiro para criar uma campanha.
-                  </p>
-                )}
+                <p className="text-sm text-muted-foreground mt-2">
+                  Os modelos cadastrados neste segmento aparecerão automaticamente na campanha
+                </p>
               </div>
 
               <Button type="submit" className="w-full">
@@ -239,7 +201,7 @@ const Campaigns = () => {
                   <CardTitle>{campaign.name}</CardTitle>
                   {campaign.segments && (
                     <CardDescription>
-                      Segmento: {campaign.segments.name}
+                      Segmento: {campaign.segments.name} • {campaign.model_count || 0} modelos disponíveis
                     </CardDescription>
                   )}
                 </div>
