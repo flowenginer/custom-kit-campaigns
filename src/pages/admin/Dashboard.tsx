@@ -21,9 +21,22 @@ interface FunnelData {
   completed: number;
 }
 
+interface LeadsMetrics {
+  total: number;
+  converted: number;
+  conversionRate: number;
+  bySource: { source: string; count: number }[];
+}
+
 const Dashboard = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [funnelData, setFunnelData] = useState<FunnelData[]>([]);
+  const [leadsMetrics, setLeadsMetrics] = useState<LeadsMetrics>({
+    total: 0,
+    converted: 0,
+    conversionRate: 0,
+    bySource: []
+  });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -76,6 +89,38 @@ const Dashboard = () => {
         const funnelResults = await Promise.all(funnelPromises);
         setFunnelData(funnelResults);
       }
+
+      // Carregar métricas de leads
+      const { data: leadsData } = await supabase
+        .from("leads")
+        .select("completed, utm_source");
+
+      if (leadsData) {
+        const total = leadsData.length;
+        const converted = leadsData.filter(l => l.completed).length;
+        const conversionRate = total > 0 ? (converted / total) * 100 : 0;
+        
+        // Agrupar por utm_source
+        const sourceGroups = leadsData.reduce((acc: any, lead) => {
+          const source = lead.utm_source || 'Direto';
+          acc[source] = (acc[source] || 0) + 1;
+          return acc;
+        }, {});
+        
+        const bySource = Object.entries(sourceGroups)
+          .map(([source, count]) => ({
+            source,
+            count: count as number
+          }))
+          .sort((a, b) => b.count - a.count);
+
+        setLeadsMetrics({
+          total,
+          converted,
+          conversionRate,
+          bySource
+        });
+      }
     } catch (error) {
       console.error("Erro ao carregar dashboard:", error);
     } finally {
@@ -98,6 +143,60 @@ const Dashboard = () => {
         <p className="text-muted-foreground mt-1">
           Visualize a performance de suas campanhas
         </p>
+      </div>
+
+      {/* Métricas de Leads */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total de Leads
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{leadsMetrics.total}</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Leads Convertidos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-green-600">{leadsMetrics.converted}</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Taxa de Conversão
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{leadsMetrics.conversionRate.toFixed(1)}%</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Principais Fontes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1">
+              {leadsMetrics.bySource.slice(0, 2).map((item) => (
+                <div key={item.source} className="flex justify-between text-sm">
+                  <span className="truncate mr-2">{item.source}</span>
+                  <span className="font-medium">{item.count}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {funnelData.length === 0 ? (

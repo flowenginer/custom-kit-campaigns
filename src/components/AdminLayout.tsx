@@ -2,7 +2,7 @@ import { useNavigate, Outlet } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "./ui/button";
-import { LogOut, LayoutDashboard, Tag, Shirt, Megaphone } from "lucide-react";
+import { LogOut, LayoutDashboard, Tag, Shirt, Megaphone, Users } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { Session } from "@supabase/supabase-js";
 
@@ -88,6 +88,15 @@ const AdminLayout = () => {
           >
             <Megaphone className="h-5 w-5" />
             <span className="font-medium">Campanhas</span>
+          </NavLink>
+
+          <NavLink
+            to="/admin/leads"
+            className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary"
+            activeClassName="bg-primary text-primary-foreground hover:bg-primary"
+          >
+            <Users className="h-5 w-5" />
+            <span className="font-medium">Leads</span>
           </NavLink>
         </nav>
 

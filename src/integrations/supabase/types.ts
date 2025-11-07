@@ -81,6 +81,87 @@ export type Database = {
           },
         ]
       }
+      leads: {
+        Row: {
+          campaign_id: string | null
+          completed: boolean | null
+          created_at: string | null
+          current_step: number | null
+          custom_quantity: number | null
+          customization_summary: Json | null
+          email: string | null
+          id: string
+          name: string
+          order_id: string | null
+          phone: string
+          quantity: string
+          session_id: string
+          updated_at: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+        }
+        Insert: {
+          campaign_id?: string | null
+          completed?: boolean | null
+          created_at?: string | null
+          current_step?: number | null
+          custom_quantity?: number | null
+          customization_summary?: Json | null
+          email?: string | null
+          id?: string
+          name: string
+          order_id?: string | null
+          phone: string
+          quantity: string
+          session_id: string
+          updated_at?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Update: {
+          campaign_id?: string | null
+          completed?: boolean | null
+          created_at?: string | null
+          current_step?: number | null
+          custom_quantity?: number | null
+          customization_summary?: Json | null
+          email?: string | null
+          id?: string
+          name?: string
+          order_id?: string | null
+          phone?: string
+          quantity?: string
+          session_id?: string
+          updated_at?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           campaign_id: string | null

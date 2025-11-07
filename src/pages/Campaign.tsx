@@ -123,6 +123,14 @@ const Campaign = () => {
     quantity: "",
     customQuantity: 10,
   });
+  const [utmParams, setUtmParams] = useState({
+    utm_source: '',
+    utm_medium: '',
+    utm_campaign: '',
+    utm_term: '',
+    utm_content: '',
+  });
+  const [leadId, setLeadId] = useState<string | null>(null);
   const [uploadedLogos, setUploadedLogos] = useState<{
     frontLogo: File | null;
     backLogo: File | null;
@@ -160,6 +168,16 @@ const Campaign = () => {
   useEffect(() => {
     if (campaign && currentStep === 0) {
       trackEvent("visit");
+      
+      // Capturar parâmetros UTM da URL
+      const params = new URLSearchParams(window.location.search);
+      setUtmParams({
+        utm_source: params.get('utm_source') || '',
+        utm_medium: params.get('utm_medium') || '',
+        utm_campaign: params.get('utm_campaign') || '',
+        utm_term: params.get('utm_term') || '',
+        utm_content: params.get('utm_content') || '',
+      });
     }
   }, [campaign]);
 
@@ -206,7 +224,57 @@ const Campaign = () => {
     });
   };
 
-  const handleNext = () => {
+  const createOrUpdateLead = async (stepNumber: number, isCompleted = false, orderId?: string) => {
+    try {
+      const leadData = {
+        campaign_id: campaign?.id,
+        session_id: sessionId,
+        name: customerData.name,
+        phone: customerData.phone,
+        email: customerData.email || null,
+        quantity: customerData.quantity,
+        custom_quantity: customerData.quantity === 'custom' ? customerData.customQuantity : null,
+        utm_source: utmParams.utm_source || null,
+        utm_medium: utmParams.utm_medium || null,
+        utm_campaign: utmParams.utm_campaign || null,
+        utm_term: utmParams.utm_term || null,
+        utm_content: utmParams.utm_content || null,
+        current_step: stepNumber,
+        completed: isCompleted,
+        order_id: orderId || null,
+        customization_summary: {
+          model: selectedModel?.name,
+          front: customizations.front,
+          back: customizations.back,
+          sleeves: customizations.sleeves,
+        } as any,
+      };
+
+      if (leadId) {
+        // Atualizar lead existente
+        const { error } = await supabase
+          .from('leads')
+          .update(leadData)
+          .eq('id', leadId);
+        
+        if (error) throw error;
+      } else {
+        // Criar novo lead
+        const { data, error } = await supabase
+          .from('leads')
+          .insert(leadData)
+          .select()
+          .single();
+        
+        if (error) throw error;
+        if (data) setLeadId(data.id);
+      }
+    } catch (error) {
+      console.error('Erro ao salvar lead:', error);
+    }
+  };
+
+  const handleNext = async () => {
     // Validação Step 0: Dados iniciais
     if (currentStep === 0) {
       if (!customerData.name.trim()) {
@@ -225,6 +293,9 @@ const Campaign = () => {
         toast.error("A quantidade mínima é 10 unidades");
         return;
       }
+      
+      // Criar lead no banco após Step 0
+      await createOrUpdateLead(0);
     }
 
     // Validação Step 1: Selecionar modelo
@@ -235,6 +306,11 @@ const Campaign = () => {
 
     const nextStep = currentStep + 1;
     setCurrentStep(nextStep);
+
+    // Atualizar lead com o próximo step
+    if (nextStep >= 1) {
+      await createOrUpdateLead(nextStep);
+    }
 
     if (nextStep >= 1 && nextStep <= 6) {
       trackEvent(`step_${nextStep}`);
@@ -380,7 +456,7 @@ const Campaign = () => {
         ? 60 
         : parseInt(customerData.quantity);
 
-      const { error: insertError } = await supabase.from("orders").insert({
+      const { data: orderData, error: insertError } = await supabase.from("orders").insert({
         campaign_id: campaign.id,
         model_id: selectedModel.id,
         session_id: sessionId,
@@ -389,9 +465,16 @@ const Campaign = () => {
         customer_phone: customerData.phone,
         quantity: finalQuantity,
         customization_data: finalCustomizations as any,
-      });
+      })
+      .select()
+      .single();
 
       if (insertError) throw insertError;
+
+      // Atualizar lead como completo e vincular ao pedido
+      if (orderData) {
+        await createOrUpdateLead(6, true, orderData.id);
+      }
 
       await trackEvent("completed");
 

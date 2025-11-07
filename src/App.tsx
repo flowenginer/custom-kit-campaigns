@@ -10,6 +10,7 @@ import Dashboard from "./pages/admin/Dashboard";
 import Segments from "./pages/admin/Segments";
 import Models from "./pages/admin/Models";
 import Campaigns from "./pages/admin/Campaigns";
+import Leads from "./pages/admin/Leads";
 import Campaign from "./pages/Campaign";
 import NotFound from "./pages/NotFound";
 
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="segments" element={<Segments />} />
             <Route path="models" element={<Models />} />
             <Route path="campaigns" element={<Campaigns />} />
+            <Route path="leads" element={<Leads />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
