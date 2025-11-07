@@ -324,11 +324,11 @@ const Campaign = () => {
                     }`}
                     onClick={() => setSelectedModel(model)}
                   >
-                    <div className="aspect-square bg-muted">
+                    <div className="bg-muted min-h-[400px] flex items-center justify-center">
                       <img
                         src={model.photo_main}
                         alt={model.name}
-                        className="w-full h-full object-cover rounded-t-lg"
+                        className="w-full h-auto object-contain rounded-t-lg max-h-[500px]"
                       />
                     </div>
                     <CardContent className="p-4">
