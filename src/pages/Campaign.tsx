@@ -53,6 +53,7 @@ interface BackCustomization {
   website: boolean;
   websiteText: string;
   sponsors: string[];
+  sponsorsLogosUrls?: string[];
 }
 
 interface SleeveCustomization {
@@ -113,6 +114,23 @@ const Campaign = () => {
     email: "",
     phone: "",
     quantity: 1,
+  });
+  const [uploadedLogos, setUploadedLogos] = useState<{
+    frontLogo: File | null;
+    backLogo: File | null;
+    sponsorsLogos: File[];
+    rightFlag: File | null;
+    rightLogo: File | null;
+    leftFlag: File | null;
+    leftLogo: File | null;
+  }>({
+    frontLogo: null,
+    backLogo: null,
+    sponsorsLogos: [],
+    rightFlag: null,
+    rightLogo: null,
+    leftFlag: null,
+    leftLogo: null,
   });
 
   const steps = [
@@ -197,12 +215,134 @@ const Campaign = () => {
     setCurrentStep(Math.max(0, currentStep - 1));
   };
 
+  const uploadToSupabase = async (file: File, folder: string): Promise<string> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+    const filePath = `${folder}/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('customer-logos')
+      .upload(filePath, file);
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('customer-logos')
+      .getPublicUrl(filePath);
+
+    return publicUrl;
+  };
+
+  const handleFrontLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) setUploadedLogos({ ...uploadedLogos, frontLogo: file });
+  };
+
+  const handleBackLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) setUploadedLogos({ ...uploadedLogos, backLogo: file });
+  };
+
+  const handleSponsorLogoUpload = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const newSponsorsLogos = [...uploadedLogos.sponsorsLogos];
+      newSponsorsLogos[index] = file;
+      setUploadedLogos({ ...uploadedLogos, sponsorsLogos: newSponsorsLogos });
+    }
+  };
+
+  const handleRightFlagUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) setUploadedLogos({ ...uploadedLogos, rightFlag: file });
+  };
+
+  const handleRightLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) setUploadedLogos({ ...uploadedLogos, rightLogo: file });
+  };
+
+  const handleLeftFlagUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) setUploadedLogos({ ...uploadedLogos, leftFlag: file });
+  };
+
+  const handleLeftLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) setUploadedLogos({ ...uploadedLogos, leftLogo: file });
+  };
+
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!campaign || !selectedModel) return;
 
     try {
+      // Upload all logos first
+      const uploadedUrls = {
+        frontLogoUrl: '',
+        backLogoUrl: '',
+        sponsorsLogosUrls: [] as string[],
+        rightFlagUrl: '',
+        rightLogoUrl: '',
+        leftFlagUrl: '',
+        leftLogoUrl: ''
+      };
+
+      if (uploadedLogos.frontLogo) {
+        uploadedUrls.frontLogoUrl = await uploadToSupabase(uploadedLogos.frontLogo, 'logos');
+      }
+
+      if (uploadedLogos.backLogo) {
+        uploadedUrls.backLogoUrl = await uploadToSupabase(uploadedLogos.backLogo, 'logos');
+      }
+
+      for (const logo of uploadedLogos.sponsorsLogos) {
+        if (logo) {
+          const url = await uploadToSupabase(logo, 'logos');
+          uploadedUrls.sponsorsLogosUrls.push(url);
+        }
+      }
+
+      if (uploadedLogos.rightFlag) {
+        uploadedUrls.rightFlagUrl = await uploadToSupabase(uploadedLogos.rightFlag, 'flags');
+      }
+
+      if (uploadedLogos.rightLogo) {
+        uploadedUrls.rightLogoUrl = await uploadToSupabase(uploadedLogos.rightLogo, 'logos');
+      }
+
+      if (uploadedLogos.leftFlag) {
+        uploadedUrls.leftFlagUrl = await uploadToSupabase(uploadedLogos.leftFlag, 'flags');
+      }
+
+      if (uploadedLogos.leftLogo) {
+        uploadedUrls.leftLogoUrl = await uploadToSupabase(uploadedLogos.leftLogo, 'logos');
+      }
+
+      // Update customizations with uploaded URLs
+      const finalCustomizations = {
+        ...customizations,
+        front: { ...customizations.front, logoUrl: uploadedUrls.frontLogoUrl },
+        back: { 
+          ...customizations.back, 
+          logoUrl: uploadedUrls.backLogoUrl,
+          sponsorsLogosUrls: uploadedUrls.sponsorsLogosUrls 
+        },
+        sleeves: {
+          right: { 
+            ...customizations.sleeves.right, 
+            logoUrl: uploadedUrls.rightLogoUrl,
+            flagUrl: uploadedUrls.rightFlagUrl 
+          },
+          left: { 
+            ...customizations.sleeves.left, 
+            logoUrl: uploadedUrls.leftLogoUrl,
+            flagUrl: uploadedUrls.leftFlagUrl 
+          }
+        }
+      };
+
       const { error: insertError } = await supabase.from("orders").insert({
         campaign_id: campaign.id,
         model_id: selectedModel.id,
@@ -211,7 +351,7 @@ const Campaign = () => {
         customer_email: customerData.email,
         customer_phone: customerData.phone,
         quantity: customerData.quantity,
-        customization_data: customizations as any,
+        customization_data: finalCustomizations as any,
       });
 
       if (insertError) throw insertError;
@@ -249,6 +389,15 @@ const Campaign = () => {
         }
       });
       setCustomerData({ name: "", email: "", phone: "", quantity: 1 });
+      setUploadedLogos({
+        frontLogo: null,
+        backLogo: null,
+        sponsorsLogos: [],
+        rightFlag: null,
+        rightLogo: null,
+        leftFlag: null,
+        leftLogo: null,
+      });
     } catch (error) {
       console.error("Erro ao enviar pedido:", error);
       toast.error("Erro ao enviar pedido");
@@ -452,6 +601,108 @@ const Campaign = () => {
                           ].filter(Boolean).join(', ')}</p>
                         )}
                       </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold mb-3">📤 Envie suas Imagens:</h3>
+                    <div className="space-y-4 bg-muted/30 p-4 rounded-lg">
+                      {customizations.front.logoType !== 'none' && (
+                        <div className="space-y-2">
+                          <Label>
+                            Logo da Frente ({
+                              customizations.front.logoType === 'small_left' 
+                                ? 'Pequena Esquerda' 
+                                : customizations.front.logoType === 'large_center' 
+                                ? 'Grande Centro' 
+                                : 'Personalizada'
+                            })*
+                          </Label>
+                          <Input 
+                            type="file" 
+                            accept="image/*" 
+                            onChange={handleFrontLogoUpload} 
+                            required 
+                          />
+                        </div>
+                      )}
+
+                      {customizations.back.logoLarge && (
+                        <div className="space-y-2">
+                          <Label>Logo Grande das Costas*</Label>
+                          <Input 
+                            type="file" 
+                            accept="image/*" 
+                            onChange={handleBackLogoUpload} 
+                            required 
+                          />
+                        </div>
+                      )}
+
+                      {customizations.back.sponsors.length > 0 && (
+                        <div className="space-y-3">
+                          <Label>Logos dos Patrocinadores*</Label>
+                          {customizations.back.sponsors.map((sponsor, idx) => (
+                            <div key={idx} className="space-y-1">
+                              <Label className="text-sm font-normal">{sponsor}</Label>
+                              <Input 
+                                type="file" 
+                                accept="image/*" 
+                                onChange={(e) => handleSponsorLogoUpload(e, idx)} 
+                                required 
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {customizations.sleeves.right.flag && (
+                        <div className="space-y-2">
+                          <Label>Bandeira - Manga Direita*</Label>
+                          <Input 
+                            type="file" 
+                            accept="image/*" 
+                            onChange={handleRightFlagUpload} 
+                            required 
+                          />
+                        </div>
+                      )}
+
+                      {customizations.sleeves.right.logoSmall && (
+                        <div className="space-y-2">
+                          <Label>Logo Pequena - Manga Direita*</Label>
+                          <Input 
+                            type="file" 
+                            accept="image/*" 
+                            onChange={handleRightLogoUpload} 
+                            required 
+                          />
+                        </div>
+                      )}
+
+                      {customizations.sleeves.left.flag && (
+                        <div className="space-y-2">
+                          <Label>Bandeira - Manga Esquerda*</Label>
+                          <Input 
+                            type="file" 
+                            accept="image/*" 
+                            onChange={handleLeftFlagUpload} 
+                            required 
+                          />
+                        </div>
+                      )}
+
+                      {customizations.sleeves.left.logoSmall && (
+                        <div className="space-y-2">
+                          <Label>Logo Pequena - Manga Esquerda*</Label>
+                          <Input 
+                            type="file" 
+                            accept="image/*" 
+                            onChange={handleLeftLogoUpload} 
+                            required 
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
 

@@ -3,9 +3,6 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { SponsorsList } from "./SponsorsList";
-import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 
 interface ShirtModel {
   id: string;
@@ -27,6 +24,7 @@ interface BackCustomization {
   website: boolean;
   websiteText: string;
   sponsors: string[];
+  sponsorsLogosUrls?: string[];
 }
 
 interface BackEditorProps {
@@ -36,48 +34,6 @@ interface BackEditorProps {
 }
 
 export const BackEditor = ({ model, value, onChange }: BackEditorProps) => {
-  const [uploading, setUploading] = useState(false);
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      toast.error("Por favor, selecione uma imagem válida");
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("A imagem deve ter no máximo 5MB");
-      return;
-    }
-
-    setUploading(true);
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
-      const filePath = `logos/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('customer-logos')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('customer-logos')
-        .getPublicUrl(filePath);
-
-      onChange({ ...value, logoUrl: publicUrl });
-      toast.success("Logo enviada com sucesso!");
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      toast.error("Erro ao fazer upload da logo");
-    } finally {
-      setUploading(false);
-    }
-  };
-
   return (
     <div className="grid md:grid-cols-2 gap-6">
       <Card>
@@ -111,25 +67,6 @@ export const BackEditor = ({ model, value, onChange }: BackEditorProps) => {
                 Logo grande no centro
               </Label>
             </div>
-            
-            {value.logoLarge && (
-              <div className="ml-6 space-y-2">
-                <Label>Upload da Logo</Label>
-                <Input 
-                  type="file" 
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  disabled={uploading}
-                />
-                {value.logoUrl && (
-                  <img 
-                    src={value.logoUrl} 
-                    alt="Logo preview" 
-                    className="h-20 w-20 object-contain border rounded-md"
-                  />
-                )}
-              </div>
-            )}
 
             <div className="flex items-center space-x-2">
               <Checkbox 

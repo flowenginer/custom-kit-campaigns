@@ -1,12 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { ColorPicker } from "./ColorPicker";
-import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 
 interface ShirtModel {
   id: string;
@@ -31,8 +25,6 @@ interface FrontEditorProps {
 }
 
 export const FrontEditor = ({ model, value, onChange }: FrontEditorProps) => {
-  const [uploading, setUploading] = useState(false);
-
   const getImageUrl = () => {
     switch(value.logoType) {
       case 'small_left':
@@ -46,46 +38,6 @@ export const FrontEditor = ({ model, value, onChange }: FrontEditorProps) => {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      toast.error("Por favor, selecione uma imagem válida");
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("A imagem deve ter no máximo 5MB");
-      return;
-    }
-
-    setUploading(true);
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
-      const filePath = `logos/${fileName}`;
-
-      const { error: uploadError, data } = await supabase.storage
-        .from('customer-logos')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('customer-logos')
-        .getPublicUrl(filePath);
-
-      onChange({ ...value, logoUrl: publicUrl });
-      toast.success("Logo enviada com sucesso!");
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      toast.error("Erro ao fazer upload da logo");
-    } finally {
-      setUploading(false);
-    }
-  };
-
   return (
     <div className="grid md:grid-cols-2 gap-6">
       <Card>
@@ -93,11 +45,11 @@ export const FrontEditor = ({ model, value, onChange }: FrontEditorProps) => {
           <CardTitle>Preview - Frente</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="relative aspect-square bg-muted rounded-lg overflow-hidden">
+          <div className="relative bg-muted rounded-lg overflow-hidden flex items-center justify-center min-h-[500px]">
             <img 
               src={getImageUrl()} 
               alt="Preview da frente"
-              className="w-full h-full object-cover"
+              className="w-full h-auto object-contain transition-transform duration-300 hover:scale-150 cursor-zoom-in"
             />
           </div>
         </CardContent>
@@ -135,42 +87,6 @@ export const FrontEditor = ({ model, value, onChange }: FrontEditorProps) => {
             </RadioGroup>
           </div>
 
-          {(value.logoType === 'small_left' || value.logoType === 'large_center' || value.logoType === 'custom') && (
-            <div className="space-y-2">
-              <Label>Upload da Logo</Label>
-              <Input 
-                type="file" 
-                accept="image/*"
-                onChange={handleFileUpload}
-                disabled={uploading}
-              />
-              {value.logoUrl && (
-                <div className="mt-2">
-                  <img 
-                    src={value.logoUrl} 
-                    alt="Logo preview" 
-                    className="h-20 w-20 object-contain border rounded-md"
-                  />
-                </div>
-              )}
-            </div>
-          )}
-
-          <ColorPicker
-            label="Cor do Texto/Estampa"
-            value={value.textColor}
-            onChange={(color) => onChange({ ...value, textColor: color })}
-          />
-
-          <div className="space-y-2">
-            <Label>Texto Personalizado</Label>
-            <Textarea
-              placeholder="Digite o texto para estampa..."
-              value={value.text}
-              onChange={(e) => onChange({ ...value, text: e.target.value })}
-              rows={3}
-            />
-          </div>
         </CardContent>
       </Card>
     </div>
