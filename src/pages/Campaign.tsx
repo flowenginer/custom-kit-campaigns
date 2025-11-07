@@ -313,22 +313,22 @@ const Campaign = () => {
           {currentStep === 0 && (
             <div>
               <h2 className="text-2xl font-semibold mb-6 text-center">Escolha seu modelo</h2>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="flex flex-col gap-4 max-w-4xl mx-auto">
                 {models.map((model) => (
                   <Card
                     key={model.id}
                     className={`cursor-pointer transition-all hover:shadow-lg ${
                       selectedModel?.id === model.id
-                        ? "ring-2 ring-primary"
+                        ? "ring-4 ring-primary"
                         : ""
                     }`}
                     onClick={() => setSelectedModel(model)}
                   >
-                    <div className="bg-muted min-h-[75vh] flex items-center justify-center">
+                    <div className="bg-muted min-h-[85vh] flex items-center justify-center p-4">
                       <img
                         src={model.photo_main}
                         alt={model.name}
-                        className="w-full h-auto object-contain rounded-lg max-h-[85vh]"
+                        className="w-full h-auto object-contain max-h-[85vh]"
                       />
                     </div>
                   </Card>
