@@ -317,18 +317,18 @@ const Campaign = () => {
                 {models.map((model) => (
                   <Card
                     key={model.id}
-                    className={`cursor-pointer transition-all hover:shadow-lg ${
+                    className={`cursor-pointer transition-all hover:shadow-lg overflow-hidden p-0 ${
                       selectedModel?.id === model.id
                         ? "ring-4 ring-primary"
                         : ""
                     }`}
                     onClick={() => setSelectedModel(model)}
                   >
-                    <div className="bg-muted min-h-[85vh] flex items-center justify-center p-4">
+                    <div className="bg-muted min-h-[85vh] flex items-center justify-center">
                       <img
                         src={model.photo_main}
                         alt={model.name}
-                        className="w-full h-auto object-contain max-h-[85vh]"
+                        className="w-full h-full object-cover min-h-[85vh]"
                       />
                     </div>
                   </Card>
