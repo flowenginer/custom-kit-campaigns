@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Trash2, Upload, ImageIcon } from "lucide-react";
+import { Plus, Trash2, Upload, ImageIcon, X } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 interface Segment {
@@ -29,6 +30,10 @@ interface ShirtModel {
 }
 
 const Models = () => {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const segmentFilter = searchParams.get("segment");
+  
   const [models, setModels] = useState<ShirtModel[]>([]);
   const [segments, setSegments] = useState<Segment[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -241,6 +246,12 @@ const Models = () => {
     }
   };
 
+  const filteredModels = segmentFilter
+    ? models.filter((m) => m.segment_id === segmentFilter)
+    : models;
+
+  const filteredSegment = segments.find((s) => s.id === segmentFilter);
+
   return (
     <div className="p-8 space-y-6">
       <div className="flex justify-between items-center">
@@ -352,8 +363,33 @@ const Models = () => {
         </Dialog>
       </div>
 
+      {segmentFilter && filteredSegment && (
+        <Card className="bg-primary/5 border-primary/20">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">
+                  Exibindo modelos do segmento: <strong>{filteredSegment.name}</strong>
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {filteredModels.length} {filteredModels.length === 1 ? "modelo encontrado" : "modelos encontrados"}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate("/admin/models")}
+              >
+                <X className="mr-2 h-4 w-4" />
+                Limpar Filtro
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {models.map((model) => (
+        {filteredModels.map((model) => (
           <Card key={model.id} className="overflow-hidden">
             <div className="aspect-square bg-muted relative">
               <img
@@ -381,10 +417,12 @@ const Models = () => {
         ))}
       </div>
 
-      {models.length === 0 && (
+      {filteredModels.length === 0 && (
         <Card>
           <CardContent className="pt-6 text-center text-muted-foreground">
-            Nenhum modelo cadastrado. Clique em "Novo Modelo" para começar!
+            {segmentFilter
+              ? "Nenhum modelo encontrado para este segmento."
+              : "Nenhum modelo cadastrado. Clique em \"Novo Modelo\" para começar!"}
           </CardContent>
         </Card>
       )}

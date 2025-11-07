@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye } from "lucide-react";
 
 interface Segment {
   id: string;
@@ -17,7 +18,9 @@ interface Segment {
 }
 
 const Segments = () => {
+  const navigate = useNavigate();
   const [segments, setSegments] = useState<Segment[]>([]);
+  const [modelCounts, setModelCounts] = useState<Record<string, number>>({});
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSegment, setEditingSegment] = useState<Segment | null>(null);
   const [formData, setFormData] = useState({ name: "", description: "" });
@@ -32,7 +35,25 @@ const Segments = () => {
       .select("*")
       .order("created_at", { ascending: false });
     
-    if (data) setSegments(data);
+    if (data) {
+      setSegments(data);
+      loadModelsCount(data);
+    }
+  };
+
+  const loadModelsCount = async (segmentsList: Segment[]) => {
+    const counts: Record<string, number> = {};
+    
+    for (const segment of segmentsList) {
+      const { count } = await supabase
+        .from("shirt_models")
+        .select("*", { count: "exact", head: true })
+        .eq("segment_id", segment.id);
+      
+      counts[segment.id] = count || 0;
+    }
+    
+    setModelCounts(counts);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -165,6 +186,21 @@ const Segments = () => {
                 </CardDescription>
               )}
             </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">
+                  {modelCounts[segment.id] || 0} {modelCounts[segment.id] === 1 ? "modelo" : "modelos"}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate(`/admin/models?segment=${segment.id}`)}
+                >
+                  <Eye className="mr-2 h-4 w-4" />
+                  Ver Modelos
+                </Button>
+              </div>
+            </CardContent>
           </Card>
         ))}
       </div>
