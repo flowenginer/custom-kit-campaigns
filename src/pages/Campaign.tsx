@@ -11,6 +11,13 @@ import { Loader2, ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { FrontEditor } from "@/components/customization/FrontEditor";
 import { BackEditor } from "@/components/customization/BackEditor";
 import { SleeveEditor } from "@/components/customization/SleeveEditor";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ShirtModel {
   id: string;
@@ -113,7 +120,8 @@ const Campaign = () => {
     name: "",
     email: "",
     phone: "",
-    quantity: 1,
+    quantity: "",
+    customQuantity: 10,
   });
   const [uploadedLogos, setUploadedLogos] = useState<{
     frontLogo: File | null;
@@ -134,6 +142,7 @@ const Campaign = () => {
   });
 
   const steps = [
+    "Dados Iniciais",
     "Selecionar Modelo",
     "Personalizar Frente",
     "Personalizar Costas",
@@ -198,7 +207,28 @@ const Campaign = () => {
   };
 
   const handleNext = () => {
-    if (currentStep === 0 && !selectedModel) {
+    // Validação Step 0: Dados iniciais
+    if (currentStep === 0) {
+      if (!customerData.name.trim()) {
+        toast.error("Por favor, digite seu nome");
+        return;
+      }
+      if (!customerData.phone.trim()) {
+        toast.error("Por favor, digite seu WhatsApp");
+        return;
+      }
+      if (!customerData.quantity) {
+        toast.error("Por favor, selecione a quantidade");
+        return;
+      }
+      if (customerData.quantity === 'custom' && customerData.customQuantity < 10) {
+        toast.error("A quantidade mínima é 10 unidades");
+        return;
+      }
+    }
+
+    // Validação Step 1: Selecionar modelo
+    if (currentStep === 1 && !selectedModel) {
       toast.error("Selecione um modelo para continuar");
       return;
     }
@@ -206,7 +236,7 @@ const Campaign = () => {
     const nextStep = currentStep + 1;
     setCurrentStep(nextStep);
 
-    if (nextStep >= 1 && nextStep <= 5) {
+    if (nextStep >= 1 && nextStep <= 6) {
       trackEvent(`step_${nextStep}`);
     }
   };
@@ -343,6 +373,13 @@ const Campaign = () => {
         }
       };
 
+      // Calcular quantidade final
+      const finalQuantity = customerData.quantity === 'custom' 
+        ? customerData.customQuantity 
+        : customerData.quantity === '60+' 
+        ? 60 
+        : parseInt(customerData.quantity);
+
       const { error: insertError } = await supabase.from("orders").insert({
         campaign_id: campaign.id,
         model_id: selectedModel.id,
@@ -350,7 +387,7 @@ const Campaign = () => {
         customer_name: customerData.name,
         customer_email: customerData.email,
         customer_phone: customerData.phone,
-        quantity: customerData.quantity,
+        quantity: finalQuantity,
         customization_data: finalCustomizations as any,
       });
 
@@ -388,7 +425,7 @@ const Campaign = () => {
           left: { flag: false, flagUrl: '', logoSmall: false, logoUrl: '', text: false, textContent: '' }
         }
       });
-      setCustomerData({ name: "", email: "", phone: "", quantity: 1 });
+      setCustomerData({ name: "", email: "", phone: "", quantity: "", customQuantity: 10 });
       setUploadedLogos({
         frontLogo: null,
         backLogo: null,
@@ -428,6 +465,15 @@ const Campaign = () => {
       <div className="container max-w-6xl mx-auto px-4">
         {/* Header */}
         <div className="mb-8">
+          {/* Logo Space Sports */}
+          <div className="flex justify-center mb-6">
+            <img 
+              src="https://cdn.awsli.com.br/400x300/1896/1896367/logo/space-logo-site-wgernz.png" 
+              alt="Space Sports" 
+              className="h-16 w-auto"
+            />
+          </div>
+          
           <h1 className="text-3xl font-bold text-center mb-2">{campaign.name}</h1>
           <p className="text-center text-muted-foreground mb-4">
             {steps[currentStep]} - Etapa {currentStep + 1} de {steps.length}
@@ -460,6 +506,92 @@ const Campaign = () => {
         {/* Step Content */}
         <div className="mb-6">
           {currentStep === 0 && (
+            <Card className="shadow-lg max-w-2xl mx-auto">
+              <CardContent className="p-6">
+                <h2 className="text-2xl font-semibold mb-6 text-center">
+                  Vamos começar! Preencha seus dados
+                </h2>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="initial-name">Digite seu nome*</Label>
+                    <Input
+                      id="initial-name"
+                      placeholder="Seu nome completo"
+                      value={customerData.name}
+                      onChange={(e) =>
+                        setCustomerData({ ...customerData, name: e.target.value })
+                      }
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="initial-whatsapp">Digite seu WhatsApp*</Label>
+                    <Input
+                      id="initial-whatsapp"
+                      type="tel"
+                      placeholder="(00) 00000-0000"
+                      value={customerData.phone}
+                      onChange={(e) =>
+                        setCustomerData({ ...customerData, phone: e.target.value })
+                      }
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="quantity-select">Quantidade*</Label>
+                    <Select
+                      value={customerData.quantity}
+                      onValueChange={(value) => {
+                        setCustomerData({ ...customerData, quantity: value });
+                      }}
+                    >
+                      <SelectTrigger id="quantity-select">
+                        <SelectValue placeholder="Selecione a quantidade" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="10">10 unidades</SelectItem>
+                        <SelectItem value="20">20 unidades</SelectItem>
+                        <SelectItem value="30">30 unidades</SelectItem>
+                        <SelectItem value="40">40 unidades</SelectItem>
+                        <SelectItem value="50">50 unidades</SelectItem>
+                        <SelectItem value="60+">60 ou mais</SelectItem>
+                        <SelectItem value="custom">Quantidade personalizada</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {customerData.quantity === 'custom' && (
+                    <div className="mt-4 p-4 bg-muted/30 rounded-lg">
+                      <Label htmlFor="custom-quantity">Digite a quantidade (mínimo 10)*</Label>
+                      <Input
+                        id="custom-quantity"
+                        type="number"
+                        min="10"
+                        placeholder="Digite a quantidade desejada"
+                        value={customerData.customQuantity}
+                        onChange={(e) =>
+                          setCustomerData({
+                            ...customerData,
+                            customQuantity: parseInt(e.target.value) || 10,
+                          })
+                        }
+                        required
+                      />
+                      {customerData.customQuantity < 10 && (
+                        <p className="text-sm text-destructive mt-2">
+                          A quantidade mínima é 10 unidades
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {currentStep === 1 && (
             <div>
               <h2 className="text-2xl font-semibold mb-6 text-center">Escolha seu modelo</h2>
               <div className="flex flex-col gap-4 max-w-4xl mx-auto">
@@ -484,7 +616,7 @@ const Campaign = () => {
             </div>
           )}
 
-          {currentStep === 1 && selectedModel && (
+          {currentStep === 2 && selectedModel && (
             <FrontEditor
               model={selectedModel}
               value={customizations.front}
@@ -494,7 +626,7 @@ const Campaign = () => {
             />
           )}
 
-          {currentStep === 2 && selectedModel && (
+          {currentStep === 3 && selectedModel && (
             <BackEditor
               model={selectedModel}
               value={customizations.back}
@@ -504,7 +636,7 @@ const Campaign = () => {
             />
           )}
 
-          {currentStep === 3 && selectedModel && (
+          {currentStep === 4 && selectedModel && (
             <SleeveEditor
               model={selectedModel}
               side="right"
@@ -518,7 +650,7 @@ const Campaign = () => {
             />
           )}
 
-          {currentStep === 4 && selectedModel && (
+          {currentStep === 5 && selectedModel && (
             <SleeveEditor
               model={selectedModel}
               side="left"
@@ -532,7 +664,7 @@ const Campaign = () => {
             />
           )}
 
-          {currentStep === 5 && selectedModel && (
+          {currentStep === 6 && selectedModel && (
             <Card className="shadow-lg">
               <CardContent className="p-6">
                 <h2 className="text-2xl font-semibold mb-6">Revisão e Envio</h2>
@@ -707,57 +839,52 @@ const Campaign = () => {
                   </div>
 
                   <form onSubmit={handleSubmitOrder} className="space-y-4">
-                    <h3 className="font-semibold">Seus Dados:</h3>
+                    <h3 className="font-semibold">Complete seus dados:</h3>
                     <div className="grid md:grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="name">Nome Completo*</Label>
+                        <Label htmlFor="name">Nome Completo</Label>
                         <Input
                           id="name"
                           value={customerData.name}
-                          onChange={(e) =>
-                            setCustomerData({ ...customerData, name: e.target.value })
-                          }
-                          required
+                          disabled
+                          className="bg-muted"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="email">Email*</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={customerData.email}
-                          onChange={(e) =>
-                            setCustomerData({ ...customerData, email: e.target.value })
-                          }
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="phone">Telefone*</Label>
+                        <Label htmlFor="phone">WhatsApp</Label>
                         <Input
                           id="phone"
                           type="tel"
                           value={customerData.phone}
-                          onChange={(e) =>
-                            setCustomerData({ ...customerData, phone: e.target.value })
-                          }
-                          required
+                          disabled
+                          className="bg-muted"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="quantity">Quantidade*</Label>
+                        <Label htmlFor="email">Email (opcional)</Label>
                         <Input
-                          id="quantity"
-                          type="number"
-                          min="1"
-                          value={customerData.quantity}
+                          id="email"
+                          type="email"
+                          placeholder="seu@email.com"
+                          value={customerData.email}
                           onChange={(e) =>
-                            setCustomerData({
-                              ...customerData,
-                              quantity: parseInt(e.target.value),
-                            })
+                            setCustomerData({ ...customerData, email: e.target.value })
                           }
-                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="quantity-display">Quantidade</Label>
+                        <Input
+                          id="quantity-display"
+                          value={
+                            customerData.quantity === 'custom' 
+                              ? `${customerData.customQuantity} unidades` 
+                              : customerData.quantity === '60+' 
+                              ? '60 ou mais' 
+                              : `${customerData.quantity} unidades`
+                          }
+                          disabled
+                          className="bg-muted"
                         />
                       </div>
                     </div>
@@ -784,7 +911,7 @@ const Campaign = () => {
             Voltar
           </Button>
 
-          {currentStep < 5 && (
+          {currentStep < 6 && (
             <Button onClick={handleNext} size="lg">
               Próximo
               <ArrowRight className="ml-2 h-4 w-4" />
