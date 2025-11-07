@@ -324,25 +324,13 @@ const Campaign = () => {
                     }`}
                     onClick={() => setSelectedModel(model)}
                   >
-                    <div className="bg-muted min-h-[400px] flex items-center justify-center">
+                    <div className="bg-muted min-h-[75vh] flex items-center justify-center">
                       <img
                         src={model.photo_main}
                         alt={model.name}
-                        className="w-full h-auto object-contain rounded-t-lg max-h-[500px]"
+                        className="w-full h-auto object-contain rounded-lg max-h-[85vh]"
                       />
                     </div>
-                    <CardContent className="p-4">
-                      <p className="font-semibold text-center mb-2">{model.name}</p>
-                      {model.features && model.features.length > 0 && (
-                        <div className="flex flex-wrap gap-1 justify-center">
-                          {model.features.map((feature, idx) => (
-                            <span key={idx} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                              {feature}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </CardContent>
                   </Card>
                 ))}
               </div>
