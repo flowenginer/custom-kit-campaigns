@@ -18,6 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useDebounce } from "use-debounce";
+import { format } from "date-fns";
 
 interface ShirtModel {
   id: string;
@@ -131,6 +133,8 @@ const Campaign = () => {
     utm_content: '',
   });
   const [leadId, setLeadId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [uploadedLogos, setUploadedLogos] = useState<{
     frontLogo: File | null;
     backLogo: File | null;
@@ -148,6 +152,10 @@ const Campaign = () => {
     leftFlag: null,
     leftLogo: null,
   });
+
+  // Debounced values for auto-save
+  const [debouncedCustomerData] = useDebounce(customerData, 1500);
+  const [debouncedCustomizations] = useDebounce(customizations, 2000);
 
   const steps = [
     "Dados Iniciais",
@@ -180,6 +188,60 @@ const Campaign = () => {
       });
     }
   }, [campaign]);
+
+  // Auto-save Step 0: Salvar quando nome, phone e quantity estiverem preenchidos
+  useEffect(() => {
+    const autoSaveStep0 = async () => {
+      // Só auto-save no step 0 e se os campos obrigatórios estiverem preenchidos
+      if (currentStep === 0 && 
+          debouncedCustomerData.name.trim() && 
+          debouncedCustomerData.phone.trim() && 
+          debouncedCustomerData.quantity &&
+          campaign) {
+        
+        // Validar quantidade customizada se necessário
+        if (debouncedCustomerData.quantity === 'custom' && debouncedCustomerData.customQuantity < 10) {
+          return; // Não salvar se quantidade inválida
+        }
+
+        setIsSaving(true);
+        await createOrUpdateLead(0);
+        setLastSaved(new Date());
+        setIsSaving(false);
+      }
+    };
+
+    autoSaveStep0();
+  }, [debouncedCustomerData, currentStep, campaign]);
+
+  // Auto-save das customizações (steps 2-6)
+  useEffect(() => {
+    const autoSaveCustomizations = async () => {
+      // Só fazer auto-save se já tiver um leadId (lead já foi criado)
+      if (leadId && currentStep >= 2 && currentStep <= 6) {
+        setIsSaving(true);
+        await createOrUpdateLead(currentStep);
+        setLastSaved(new Date());
+        setIsSaving(false);
+      }
+    };
+
+    autoSaveCustomizations();
+  }, [debouncedCustomizations, leadId]);
+
+  // Auto-save periódico a cada 30 segundos
+  useEffect(() => {
+    if (!leadId || !campaign) return;
+
+    const intervalId = setInterval(async () => {
+      setIsSaving(true);
+      await createOrUpdateLead(currentStep);
+      setLastSaved(new Date());
+      setIsSaving(false);
+    }, 30000); // 30 segundos
+
+    return () => clearInterval(intervalId);
+  }, [leadId, currentStep, campaign]);
 
   const loadCampaign = async () => {
     try {
@@ -294,8 +356,10 @@ const Campaign = () => {
         return;
       }
       
-      // Criar lead no banco após Step 0
-      await createOrUpdateLead(0);
+      // Lead já foi criado pelo auto-save, apenas garantir
+      if (!leadId) {
+        await createOrUpdateLead(0);
+      }
     }
 
     // Validação Step 1: Selecionar modelo
@@ -307,18 +371,22 @@ const Campaign = () => {
     const nextStep = currentStep + 1;
     setCurrentStep(nextStep);
 
-    // Atualizar lead com o próximo step
-    if (nextStep >= 1) {
-      await createOrUpdateLead(nextStep);
-    }
+    // Atualizar step imediatamente (sem debounce)
+    await createOrUpdateLead(nextStep);
 
     if (nextStep >= 1 && nextStep <= 6) {
       trackEvent(`step_${nextStep}`);
     }
   };
 
-  const handleBack = () => {
-    setCurrentStep(Math.max(0, currentStep - 1));
+  const handleBack = async () => {
+    const prevStep = currentStep - 1;
+    setCurrentStep(prevStep);
+    
+    // Atualizar step ao voltar também
+    if (leadId) {
+      await createOrUpdateLead(prevStep);
+    }
   };
 
   const uploadToSupabase = async (file: File, folder: string): Promise<string> => {
@@ -584,6 +652,25 @@ const Campaign = () => {
           </div>
           
           <Progress value={progress} className="h-2" />
+          
+          {/* Indicador de auto-save */}
+          {leadId && (
+            <div className="flex items-center justify-center gap-2 mt-4">
+              {isSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  <span className="text-sm text-muted-foreground">Salvando...</span>
+                </>
+              ) : lastSaved ? (
+                <>
+                  <Check className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-muted-foreground">
+                    Salvo automaticamente às {format(lastSaved, "HH:mm:ss")}
+                  </span>
+                </>
+              ) : null}
+            </div>
+          )}
         </div>
 
         {/* Step Content */}
