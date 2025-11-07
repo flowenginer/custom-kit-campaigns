@@ -49,6 +49,68 @@ const Leads = () => {
     applyFilters();
   }, [statusFilter, utmSourceFilter, leads]);
 
+  // Subscription para atualizações em tempo real
+  useEffect(() => {
+    if (isLoading) return; // Só iniciar subscription após carregar dados iniciais
+
+    const channel = supabase
+      .channel('leads-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Escutar INSERT, UPDATE e DELETE
+          schema: 'public',
+          table: 'leads'
+        },
+        async (payload) => {
+          console.log('Realtime update:', payload);
+
+          if (payload.eventType === 'INSERT') {
+            // Novo lead - buscar dados completos com relations
+            const { data: newLead } = await supabase
+              .from('leads')
+              .select(`
+                *,
+                campaigns(name),
+                orders(id)
+              `)
+              .eq('id', payload.new.id)
+              .single();
+
+            if (newLead) {
+              setLeads(prev => [newLead, ...prev]);
+            }
+          } else if (payload.eventType === 'UPDATE') {
+            // Lead atualizado - buscar dados completos
+            const { data: updatedLead } = await supabase
+              .from('leads')
+              .select(`
+                *,
+                campaigns(name),
+                orders(id)
+              `)
+              .eq('id', payload.new.id)
+              .single();
+
+            if (updatedLead) {
+              setLeads(prev => prev.map(lead => 
+                lead.id === updatedLead.id ? updatedLead : lead
+              ));
+            }
+          } else if (payload.eventType === 'DELETE') {
+            // Lead deletado
+            setLeads(prev => prev.filter(lead => lead.id !== payload.old.id));
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup: remover subscription quando componente desmontar
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isLoading]);
+
   const loadLeads = async () => {
     try {
       const { data, error } = await supabase
@@ -126,8 +188,15 @@ const Leads = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Gestão de Leads</h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 flex items-center gap-2">
             Total de {leads.length} leads • {leads.filter(l => l.completed).length} convertidos
+            <span className="flex items-center gap-1 text-green-600">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              </span>
+              Ao vivo
+            </span>
           </p>
         </div>
       </div>
