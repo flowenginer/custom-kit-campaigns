@@ -25,6 +25,10 @@ interface ShirtModel {
   image_back: string;
   image_right: string;
   image_left: string;
+  image_front_small_logo?: string | null;
+  image_front_large_logo?: string | null;
+  image_front_clean?: string | null;
+  features?: string[] | null;
   created_at: string;
   segments?: Segment;
 }
@@ -42,19 +46,27 @@ const Models = () => {
   const [formData, setFormData] = useState({
     name: "",
     segment_id: "",
+    features: [] as string[],
   });
+  const [newFeature, setNewFeature] = useState('');
   const [imageFiles, setImageFiles] = useState<{
     photo_main: File | null;
     image_front: File | null;
     image_back: File | null;
     image_right: File | null;
     image_left: File | null;
+    image_front_small_logo: File | null;
+    image_front_large_logo: File | null;
+    image_front_clean: File | null;
   }>({
     photo_main: null,
     image_front: null,
     image_back: null,
     image_right: null,
     image_left: null,
+    image_front_small_logo: null,
+    image_front_large_logo: null,
+    image_front_clean: null,
   });
   const [imagePreviews, setImagePreviews] = useState<{
     photo_main: string;
@@ -62,12 +74,18 @@ const Models = () => {
     image_back: string;
     image_right: string;
     image_left: string;
+    image_front_small_logo: string;
+    image_front_large_logo: string;
+    image_front_clean: string;
   }>({
     photo_main: "",
     image_front: "",
     image_back: "",
     image_right: "",
     image_left: "",
+    image_front_small_logo: "",
+    image_front_large_logo: "",
+    image_front_clean: "",
   });
 
   useEffect(() => {
@@ -169,21 +187,39 @@ const Models = () => {
           image_back: "temp",
           image_right: "temp",
           image_left: "temp",
+          features: formData.features.length > 0 ? formData.features : null,
         })
         .select()
         .single();
 
       if (insertError) throw insertError;
 
-      // Upload all images
+      // Upload all images (required + optional variations)
       const imageUrls: Record<string, string> = {};
       let progress = 0;
+      const progressStep = 100 / (requiredImages.length + 3); // +3 for optional variations
 
       for (const field of requiredImages) {
         const file = imageFiles[field];
         if (file) {
           imageUrls[field] = await uploadImage(model.id, field, file);
-          progress += 20;
+          progress += progressStep;
+          setUploadProgress(progress);
+        }
+      }
+
+      // Upload optional front variations
+      const optionalImages: (keyof typeof imageFiles)[] = [
+        "image_front_small_logo",
+        "image_front_large_logo",
+        "image_front_clean"
+      ];
+      
+      for (const field of optionalImages) {
+        const file = imageFiles[field];
+        if (file) {
+          imageUrls[field] = await uploadImage(model.id, field, file);
+          progress += progressStep;
           setUploadProgress(progress);
         }
       }
@@ -198,13 +234,17 @@ const Models = () => {
 
       toast.success("Modelo criado com sucesso!");
       setIsDialogOpen(false);
-      setFormData({ name: "", segment_id: "" });
+      setFormData({ name: "", segment_id: "", features: [] });
+      setNewFeature('');
       setImageFiles({
         photo_main: null,
         image_front: null,
         image_back: null,
         image_right: null,
         image_left: null,
+        image_front_small_logo: null,
+        image_front_large_logo: null,
+        image_front_clean: null,
       });
       setImagePreviews({
         photo_main: "",
@@ -212,6 +252,9 @@ const Models = () => {
         image_back: "",
         image_right: "",
         image_left: "",
+        image_front_small_logo: "",
+        image_front_large_logo: "",
+        image_front_clean: "",
       });
       loadModels();
     } catch (error: any) {
@@ -269,14 +312,14 @@ const Models = () => {
               Novo Modelo
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Novo Modelo de Camisa</DialogTitle>
               <DialogDescription>
-                Faça upload das 5 imagens do modelo (máx. 5MB cada)
+                Faça upload das imagens do modelo (máx. 5MB cada). As variações da frente são opcionais.
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <Label htmlFor="name">Nome do Modelo*</Label>
                 <Input
@@ -310,8 +353,66 @@ const Models = () => {
                 </Select>
               </div>
 
+              <div className="space-y-3">
+                <Label>Características do Modelo</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Ex: UV50+, Dry-fit, Absorção rápida"
+                    value={newFeature}
+                    onChange={(e) => setNewFeature(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (newFeature.trim()) {
+                          setFormData({ ...formData, features: [...formData.features, newFeature.trim()] });
+                          setNewFeature('');
+                        }
+                      }
+                    }}
+                    disabled={uploading}
+                  />
+                  <Button
+                    type="button"
+                    size="icon"
+                    onClick={() => {
+                      if (newFeature.trim()) {
+                        setFormData({ ...formData, features: [...formData.features, newFeature.trim()] });
+                        setNewFeature('');
+                      }
+                    }}
+                    disabled={uploading}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                {formData.features.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {formData.features.map((feature, index) => (
+                      <div key={index} className="flex items-center gap-1 bg-primary/10 text-primary px-2 py-1 rounded-md text-sm">
+                        <span>{feature}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-4 w-4 p-0"
+                          onClick={() => {
+                            setFormData({
+                              ...formData,
+                              features: formData.features.filter((_, i) => i !== index)
+                            });
+                          }}
+                          disabled={uploading}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="space-y-4">
-                <Label>Imagens do Modelo* (todas obrigatórias)</Label>
+                <Label>Imagens Obrigatórias*</Label>
                 
                 {[
                   { field: "photo_main" as const, label: "Foto Principal (para seleção)" },
@@ -332,6 +433,43 @@ const Models = () => {
                         onChange={(e) => handleFileChange(field, e.target.files?.[0] || null)}
                         disabled={uploading}
                         required
+                      />
+                      {imagePreviews[field] && (
+                        <div className="w-20 h-20 border rounded flex-shrink-0">
+                          <img
+                            src={imagePreviews[field]}
+                            alt={label}
+                            className="w-full h-full object-cover rounded"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-4">
+                <Label className="text-sm">Variações da Frente (Opcional)</Label>
+                <p className="text-xs text-muted-foreground">
+                  Faça upload das variações da frente para permitir preview durante a personalização
+                </p>
+                
+                {[
+                  { field: "image_front_small_logo" as const, label: "Frente - Logo Pequena no Peito" },
+                  { field: "image_front_large_logo" as const, label: "Frente - Logo Grande no Centro" },
+                  { field: "image_front_clean" as const, label: "Frente - Limpa (sem logo)" },
+                ].map(({ field, label }) => (
+                  <div key={field} className="space-y-2">
+                    <Label htmlFor={field} className="text-sm text-muted-foreground">
+                      {label}
+                    </Label>
+                    <div className="flex gap-2 items-start">
+                      <Input
+                        id={field}
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleFileChange(field, e.target.files?.[0] || null)}
+                        disabled={uploading}
                       />
                       {imagePreviews[field] && (
                         <div className="w-20 h-20 border rounded flex-shrink-0">

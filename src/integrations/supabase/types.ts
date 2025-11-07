@@ -162,9 +162,13 @@ export type Database = {
       shirt_models: {
         Row: {
           created_at: string | null
+          features: string[] | null
           id: string
           image_back: string
           image_front: string
+          image_front_clean: string | null
+          image_front_large_logo: string | null
+          image_front_small_logo: string | null
           image_left: string
           image_right: string
           name: string
@@ -174,9 +178,13 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          features?: string[] | null
           id?: string
           image_back: string
           image_front: string
+          image_front_clean?: string | null
+          image_front_large_logo?: string | null
+          image_front_small_logo?: string | null
           image_left: string
           image_right: string
           name: string
@@ -186,9 +194,13 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          features?: string[] | null
           id?: string
           image_back?: string
           image_front?: string
+          image_front_clean?: string | null
+          image_front_large_logo?: string | null
+          image_front_small_logo?: string | null
           image_left?: string
           image_right?: string
           name?: string
