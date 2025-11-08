@@ -446,10 +446,10 @@ const Campaign = () => {
     if (file) setUploadedLogos({ ...uploadedLogos, leftLogo: file });
   };
 
-  const handleSubmitOrder = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const handleSubmitOrder = async () => {
     if (!campaign || !selectedModel) return;
+
+    setIsSaving(true);
 
     try {
       // Upload all logos first
@@ -589,6 +589,8 @@ const Campaign = () => {
     } catch (error) {
       console.error("Erro ao enviar pedido:", error);
       toast.error("Erro ao enviar pedido");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -1008,61 +1010,40 @@ const Campaign = () => {
                     </div>
                   </div>
 
-                  <form onSubmit={handleSubmitOrder} className="space-y-4">
-                    <h3 className="font-semibold">Complete seus dados:</h3>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="name">Nome Completo</Label>
-                        <Input
-                          id="name"
-                          value={customerData.name}
-                          disabled
-                          className="bg-muted"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="phone">WhatsApp</Label>
-                        <Input
-                          id="phone"
-                          type="tel"
-                          value={customerData.phone}
-                          disabled
-                          className="bg-muted"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="email">Email (opcional)</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          placeholder="seu@email.com"
-                          value={customerData.email}
-                          onChange={(e) =>
-                            setCustomerData({ ...customerData, email: e.target.value })
-                          }
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="quantity-display">Quantidade</Label>
-                        <Input
-                          id="quantity-display"
-                          value={
-                            customerData.quantity === 'custom' 
-                              ? `${customerData.customQuantity} unidades` 
-                              : customerData.quantity === '60+' 
-                              ? '60 ou mais' 
-                              : `${customerData.quantity} unidades`
-                          }
-                          disabled
-                          className="bg-muted"
-                        />
-                      </div>
+                  <div className="space-y-4">
+                    <h3 className="font-semibold">📧 Quer receber atualizações por email? (opcional)</h3>
+                    <div className="max-w-md">
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="seu@email.com"
+                        value={customerData.email}
+                        onChange={(e) =>
+                          setCustomerData({ ...customerData, email: e.target.value })
+                        }
+                      />
                     </div>
-                    <Button type="submit" className="w-full" size="lg">
-                      <Check className="mr-2 h-5 w-5" />
-                      Enviar Pedido
+
+                    <Button 
+                      onClick={handleSubmitOrder} 
+                      className="w-full" 
+                      size="lg"
+                      disabled={isSaving}
+                    >
+                      {isSaving ? (
+                        <>
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          Enviando...
+                        </>
+                      ) : (
+                        <>
+                          <Check className="mr-2 h-5 w-5" />
+                          Enviar Pedido
+                        </>
+                      )}
                     </Button>
-                  </form>
+                  </div>
                 </div>
               </CardContent>
             </Card>
