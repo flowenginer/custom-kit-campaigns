@@ -6,9 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Eye, Filter } from "lucide-react";
+import { Loader2, Eye, Filter, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
 
 interface Lead {
   id: string;
@@ -182,6 +183,29 @@ const Leads = () => {
     }
   };
 
+  const handleDeleteLead = async (leadId: string, leadName: string) => {
+    if (!confirm(`Tem certeza que deseja deletar o lead "${leadName}"? Esta ação não pode ser desfeita.`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('leads')
+        .delete()
+        .eq('id', leadId);
+
+      if (error) throw error;
+
+      toast.success(`Lead "${leadName}" deletado com sucesso`);
+      
+      // Atualizar lista local (o realtime também vai atualizar)
+      setLeads(prev => prev.filter(lead => lead.id !== leadId));
+    } catch (error) {
+      console.error('Erro ao deletar lead:', error);
+      toast.error('Erro ao deletar lead');
+    }
+  };
+
   // Extrair UTM sources únicos para o filtro
   const utmSources = Array.from(new Set(leads.map(lead => lead.utm_source).filter(Boolean)));
 
@@ -200,6 +224,15 @@ const Leads = () => {
           <h1 className="text-3xl font-bold">Gestão de Leads</h1>
           <p className="text-muted-foreground mt-1 flex items-center gap-2">
             Total de {leads.length} leads • {leads.filter(l => l.completed).length} convertidos
+            {leads.filter(l => l.is_online).length > 0 && (
+              <span className="flex items-center gap-1 text-green-600 font-semibold">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                {leads.filter(l => l.is_online).length} online agora
+              </span>
+            )}
             <span className="flex items-center gap-1 text-green-600">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -293,8 +326,42 @@ const Leads = () => {
             <TableBody>
               {filteredLeads.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
-                    Nenhum lead encontrado
+                  <TableCell colSpan={10} className="text-center py-12">
+                    <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                      <div className="text-5xl">📋</div>
+                      {leads.length === 0 ? (
+                        <>
+                          <p className="font-semibold text-lg">Nenhum lead cadastrado ainda</p>
+                          <p className="text-sm max-w-md">
+                            Leads aparecerão aqui automaticamente quando alguém acessar o link da campanha e preencher os dados iniciais.
+                          </p>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => window.location.href = '/admin/campaigns'}
+                            className="mt-2"
+                          >
+                            Ir para Campanhas
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <p className="font-semibold text-lg">Nenhum lead encontrado com os filtros aplicados</p>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              setStatusFilter("all");
+                              setUtmSourceFilter("all");
+                              setOnlineStatusFilter("all");
+                            }}
+                            className="mt-2"
+                          >
+                            Limpar Filtros
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -341,17 +408,28 @@ const Leads = () => {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setSelectedLead(lead);
-                          setIsDialogOpen(true);
-                        }}
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        Ver Detalhes
-                      </Button>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setSelectedLead(lead);
+                            setIsDialogOpen(true);
+                          }}
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          Ver Detalhes
+                        </Button>
+                        
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => handleDeleteLead(lead.id, lead.name)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
