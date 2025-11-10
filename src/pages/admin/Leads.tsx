@@ -53,6 +53,31 @@ const Leads = () => {
     applyFilters();
   }, [statusFilter, utmSourceFilter, onlineStatusFilter, leads]);
 
+  // Verificar status online baseado em last_seen (timeout de 30 segundos)
+  useEffect(() => {
+    const checkOnlineStatus = () => {
+      setLeads(prevLeads => 
+        prevLeads.map(lead => {
+          const lastSeenDate = new Date(lead.last_seen);
+          const now = new Date();
+          const diffInSeconds = (now.getTime() - lastSeenDate.getTime()) / 1000;
+          const isActuallyOnline = diffInSeconds < 30;
+          
+          // Atualizar apenas se o status mudou
+          if (lead.is_online !== isActuallyOnline) {
+            return { ...lead, is_online: isActuallyOnline };
+          }
+          return lead;
+        })
+      );
+    };
+
+    // Verificar a cada 5 segundos
+    const intervalId = setInterval(checkOnlineStatus, 5000);
+    
+    return () => clearInterval(intervalId);
+  }, []);
+
   // Subscription para atualizações em tempo real
   useEffect(() => {
     if (isLoading) return; // Só iniciar subscription após carregar dados iniciais

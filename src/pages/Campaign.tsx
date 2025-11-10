@@ -254,26 +254,26 @@ const Campaign = () => {
   useEffect(() => {
     if (!leadId) return;
 
-    const handleBeforeUnload = async () => {
-      await supabase
-        .from('leads')
-        .update({ 
-          is_online: false, 
-          last_seen: new Date().toISOString() 
-        })
-        .eq('id', leadId);
+    const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+    const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+    const markOffline = () => {
+      // sendBeacon é mais confiável que fetch durante unload
+      const data = new Blob([JSON.stringify({ 
+        is_online: false, 
+        last_seen: new Date().toISOString() 
+      })], { type: 'application/json' });
+      
+      navigator.sendBeacon(
+        `${SUPABASE_URL}/rest/v1/leads?id=eq.${leadId}`,
+        data
+      );
     };
 
     const handleVisibilityChange = async () => {
       if (document.hidden) {
-        // Página ficou em background
-        await supabase
-          .from('leads')
-          .update({ 
-            is_online: false, 
-            last_seen: new Date().toISOString() 
-          })
-          .eq('id', leadId);
+        // Página ficou em background - usar sendBeacon
+        markOffline();
       } else {
         // Página voltou ao foreground
         await supabase
@@ -286,11 +286,14 @@ const Campaign = () => {
       }
     };
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
+    // beforeunload e pagehide para garantir detecção de fechamento
+    window.addEventListener('beforeunload', markOffline);
+    window.addEventListener('pagehide', markOffline);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('beforeunload', markOffline);
+      window.removeEventListener('pagehide', markOffline);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [leadId]);
