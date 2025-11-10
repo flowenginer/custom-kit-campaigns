@@ -6,7 +6,23 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, GripVertical, Save } from "lucide-react";
 import { toast } from "sonner";
-import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import type { Database } from "@/integrations/supabase/types";
 
 interface WorkflowStep {
@@ -21,12 +37,57 @@ interface Campaign {
   workflow_config: Database['public']['Tables']['campaigns']['Row']['workflow_config'];
 }
 
+// Componente para item sortable
+function SortableItem({ step, index }: { step: WorkflowStep; index: number }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: step.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-3 p-4 bg-card border rounded-lg ${
+        isDragging ? 'shadow-lg' : ''
+      }`}
+    >
+      <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
+        <GripVertical className="h-5 w-5 text-muted-foreground" />
+      </div>
+      <div className="flex items-center gap-3 flex-1">
+        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-semibold">
+          {index + 1}
+        </div>
+        <span className="font-medium">{step.label}</span>
+      </div>
+    </div>
+  );
+}
+
 const Workflows = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
   const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   useEffect(() => {
     loadCampaigns();
@@ -70,20 +131,23 @@ const Workflows = () => {
     }
   };
 
-  const handleDragEnd = (result: any) => {
-    if (!result.destination) return;
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
 
-    const items = Array.from(workflowSteps);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
+    if (!over || active.id === over.id) return;
 
-    // Atualizar orders
-    const updatedItems = items.map((item, index) => ({
-      ...item,
-      order: index
-    }));
+    setWorkflowSteps((items) => {
+      const oldIndex = items.findIndex((item) => item.id === active.id);
+      const newIndex = items.findIndex((item) => item.id === over.id);
 
-    setWorkflowSteps(updatedItems);
+      const newItems = arrayMove(items, oldIndex, newIndex);
+      
+      // Atualizar orders
+      return newItems.map((item, index) => ({
+        ...item,
+        order: index
+      }));
+    });
   };
 
   const handleSaveWorkflow = async () => {
@@ -167,41 +231,22 @@ const Workflows = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <DragDropContext onDragEnd={handleDragEnd}>
-              <Droppable droppableId="workflow-steps">
-                {(provided) => (
-                  <div
-                    {...provided.droppableProps}
-                    ref={provided.innerRef}
-                    className="space-y-2"
-                  >
-                    {workflowSteps.map((step, index) => (
-                      <Draggable key={step.id} draggableId={step.id} index={index}>
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            className={`flex items-center gap-3 p-4 bg-card border rounded-lg ${
-                              snapshot.isDragging ? 'shadow-lg' : ''
-                            }`}
-                          >
-                            <GripVertical className="h-5 w-5 text-muted-foreground" />
-                            <div className="flex items-center gap-3 flex-1">
-                              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-semibold">
-                                {index + 1}
-                              </div>
-                              <span className="font-medium">{step.label}</span>
-                            </div>
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
-            </DragDropContext>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={workflowSteps.map((step) => step.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-2">
+                  {workflowSteps.map((step, index) => (
+                    <SortableItem key={step.id} step={step} index={index} />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
 
             <div className="mt-6 flex justify-end">
               <Button onClick={handleSaveWorkflow} disabled={isSaving}>
