@@ -189,36 +189,12 @@ const Campaign = () => {
     }
   }, [campaign]);
 
-  // Auto-save Step 0: Salvar quando nome, phone e quantity estiverem preenchidos
-  useEffect(() => {
-    const autoSaveStep0 = async () => {
-      // Só auto-save no step 0 e se os campos obrigatórios estiverem preenchidos
-      if (currentStep === 0 && 
-          debouncedCustomerData.name.trim() && 
-          debouncedCustomerData.phone.trim() && 
-          debouncedCustomerData.quantity &&
-          campaign) {
-        
-        // Validar quantidade customizada se necessário
-        if (debouncedCustomerData.quantity === 'custom' && debouncedCustomerData.customQuantity < 10) {
-          return; // Não salvar se quantidade inválida
-        }
+  // Auto-save das customizações e updates de step (steps 1-6)
 
-        setIsSaving(true);
-        await createOrUpdateLead(0);
-        setLastSaved(new Date());
-        setIsSaving(false);
-      }
-    };
-
-    autoSaveStep0();
-  }, [debouncedCustomerData, currentStep, campaign]);
-
-  // Auto-save das customizações (steps 2-6)
   useEffect(() => {
     const autoSaveCustomizations = async () => {
-      // Só fazer auto-save se já tiver um leadId (lead já foi criado)
-      if (leadId && currentStep >= 2 && currentStep <= 6) {
+      // Só fazer auto-save se já tiver um leadId (lead já foi criado no step 0)
+      if (leadId && currentStep >= 1 && currentStep <= 6) {
         setIsSaving(true);
         await createOrUpdateLead(currentStep);
         setLastSaved(new Date());
@@ -227,7 +203,7 @@ const Campaign = () => {
     };
 
     autoSaveCustomizations();
-  }, [debouncedCustomizations, leadId]);
+  }, [debouncedCustomizations, leadId, currentStep]);
 
   // Auto-save periódico a cada 30 segundos
   useEffect(() => {
@@ -432,10 +408,12 @@ const Campaign = () => {
         return;
       }
       
-      // Lead já foi criado pelo auto-save, apenas garantir
-      if (!leadId) {
-        await createOrUpdateLead(0);
-      }
+      // Criar/atualizar lead IMEDIATAMENTE ao clicar "Próximo" no Step 0
+      setIsSaving(true);
+      await createOrUpdateLead(0);
+      setIsSaving(false);
+      
+      toast.success("Dados salvos com sucesso!");
     }
 
     // Validação Step 1: Selecionar modelo
@@ -447,8 +425,10 @@ const Campaign = () => {
     const nextStep = currentStep + 1;
     setCurrentStep(nextStep);
 
-    // Atualizar step imediatamente (sem debounce)
-    await createOrUpdateLead(nextStep);
+    // Atualizar step imediatamente após avançar
+    if (leadId) {
+      await createOrUpdateLead(nextStep);
+    }
 
     if (nextStep >= 1 && nextStep <= 6) {
       trackEvent(`step_${nextStep}`);
