@@ -39,6 +39,14 @@ interface Campaign {
   id: string;
   name: string;
   segment_id: string;
+  workflow_config?: Array<{
+    id: string;
+    label: string;
+    order: number;
+    enabled: boolean;
+    is_custom: boolean;
+    description?: string;
+  }>;
 }
 
 interface FrontCustomization {
@@ -157,15 +165,21 @@ const Campaign = () => {
   const [debouncedCustomerData] = useDebounce(customerData, 1500);
   const [debouncedCustomizations] = useDebounce(customizations, 2000);
 
-  const steps = [
-    "Dados Iniciais",
-    "Selecionar Modelo",
-    "Personalizar Frente",
-    "Personalizar Costas",
-    "Manga Direita",
-    "Manga Esquerda",
-    "Revisão e Envio",
-  ];
+  // Compute active steps from campaign workflow_config
+  const steps = campaign?.workflow_config 
+    ? campaign.workflow_config
+        .filter(step => step.enabled)
+        .sort((a, b) => a.order - b.order)
+        .map(step => step.label)
+    : [
+        "Dados Iniciais",
+        "Selecionar Modelo",
+        "Personalizar Frente",
+        "Personalizar Costas",
+        "Manga Direita",
+        "Manga Esquerda",
+        "Revisão e Envio",
+      ];
 
   useEffect(() => {
     if (uniqueLink) {
@@ -302,7 +316,7 @@ const Campaign = () => {
     try {
       const { data: campaignData, error: campaignError } = await supabase
         .from("campaigns")
-        .select("id, name, segment_id")
+        .select("id, name, segment_id, workflow_config")
         .eq("unique_link", uniqueLink)
         .single();
 
@@ -312,7 +326,7 @@ const Campaign = () => {
         return;
       }
 
-      setCampaign(campaignData);
+      setCampaign(campaignData as any);
 
       // Buscar modelos do segmento da campanha
       if (campaignData.segment_id) {

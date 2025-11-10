@@ -4,8 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, GripVertical, Save } from "lucide-react";
+import { Loader2, GripVertical, Save, Trash2, Plus, Copy } from "lucide-react";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { WorkflowPreview } from "@/components/workflow/WorkflowPreview";
+import { AddStepDialog } from "@/components/workflow/AddStepDialog";
+import { TemplateManager } from "@/components/workflow/TemplateManager";
+import { DuplicateWorkflowDialog } from "@/components/workflow/DuplicateWorkflowDialog";
 import {
   DndContext,
   closestCenter,
@@ -29,6 +36,9 @@ interface WorkflowStep {
   id: string;
   label: string;
   order: number;
+  enabled: boolean;
+  is_custom: boolean;
+  description?: string;
 }
 
 interface Campaign {
@@ -38,7 +48,17 @@ interface Campaign {
 }
 
 // Componente para item sortable
-function SortableItem({ step, index }: { step: WorkflowStep; index: number }) {
+function SortableItem({ 
+  step, 
+  index, 
+  onToggle, 
+  onRemove 
+}: { 
+  step: WorkflowStep; 
+  index: number;
+  onToggle: (id: string) => void;
+  onRemove: (id: string) => void;
+}) {
   const {
     attributes,
     listeners,
@@ -51,7 +71,7 @@ function SortableItem({ step, index }: { step: WorkflowStep; index: number }) {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.5 : (step.enabled ? 1 : 0.6),
   };
 
   return (
@@ -60,7 +80,7 @@ function SortableItem({ step, index }: { step: WorkflowStep; index: number }) {
       style={style}
       className={`flex items-center gap-3 p-4 bg-card border rounded-lg ${
         isDragging ? 'shadow-lg' : ''
-      }`}
+      } ${!step.enabled ? 'bg-muted/30' : ''}`}
     >
       <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
         <GripVertical className="h-5 w-5 text-muted-foreground" />
@@ -69,7 +89,35 @@ function SortableItem({ step, index }: { step: WorkflowStep; index: number }) {
         <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-semibold">
           {index + 1}
         </div>
-        <span className="font-medium">{step.label}</span>
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <span className="font-medium">{step.label}</span>
+            {step.is_custom && (
+              <Badge variant="outline" className="text-xs">Customizada</Badge>
+            )}
+            {!step.enabled && (
+              <Badge variant="secondary" className="text-xs">Desativada</Badge>
+            )}
+          </div>
+          {step.description && (
+            <p className="text-xs text-muted-foreground mt-1">{step.description}</p>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <Switch
+          checked={step.enabled}
+          onCheckedChange={() => onToggle(step.id)}
+        />
+        {step.is_custom && (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => onRemove(step.id)}
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -81,6 +129,9 @@ const Workflows = () => {
   const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [showAddStepDialog, setShowAddStepDialog] = useState(false);
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
+  const [stepToDelete, setStepToDelete] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -150,9 +201,61 @@ const Workflows = () => {
     });
   };
 
+  const handleToggleStep = (stepId: string) => {
+    setWorkflowSteps(steps =>
+      steps.map(step =>
+        step.id === stepId ? { ...step, enabled: !step.enabled } : step
+      )
+    );
+  };
+
+  const handleAddCustomStep = (newStep: Omit<WorkflowStep, 'order'>, position: number) => {
+    setWorkflowSteps(steps => {
+      const newSteps = [...steps];
+      newSteps.splice(position, 0, { ...newStep, order: position });
+      return newSteps.map((step, index) => ({ ...step, order: index }));
+    });
+    toast.success("Etapa customizada adicionada!");
+  };
+
+  const handleRemoveStep = (stepId: string) => {
+    const step = workflowSteps.find(s => s.id === stepId);
+    if (!step?.is_custom) {
+      toast.error("Apenas etapas customizadas podem ser removidas");
+      return;
+    }
+    setStepToDelete(stepId);
+  };
+
+  const confirmRemoveStep = () => {
+    if (!stepToDelete) return;
+    
+    setWorkflowSteps(steps => {
+      const filtered = steps.filter(s => s.id !== stepToDelete);
+      return filtered.map((step, index) => ({ ...step, order: index }));
+    });
+    
+    toast.success("Etapa removida!");
+    setStepToDelete(null);
+  };
+
+  const handleApplyTemplate = (workflow: WorkflowStep[]) => {
+    setWorkflowSteps(workflow.map((step, index) => ({ ...step, order: index })));
+  };
+
+  const handleDuplicateWorkflow = (workflow: WorkflowStep[]) => {
+    setWorkflowSteps(workflow.map((step, index) => ({ ...step, order: index })));
+  };
+
   const handleSaveWorkflow = async () => {
     if (!selectedCampaignId) {
       toast.error("Selecione uma campanha");
+      return;
+    }
+
+    const activeSteps = workflowSteps.filter(s => s.enabled);
+    if (activeSteps.length < 2) {
+      toast.error("É necessário pelo menos 2 etapas ativas");
       return;
     }
 
@@ -218,53 +321,89 @@ const Workflows = () => {
                 </SelectContent>
               </Select>
             </div>
+            {selectedCampaignId && (
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setShowDuplicateDialog(true)}
+              >
+                <Copy className="h-4 w-4 mr-2" />
+                Duplicar de outra campanha
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
 
       {selectedCampaignId && workflowSteps.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Ordem das Etapas</CardTitle>
-            <CardDescription>
-              Arraste e solte para reordenar as etapas do funil
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={workflowSteps.map((step) => step.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                <div className="space-y-2">
-                  {workflowSteps.map((step, index) => (
-                    <SortableItem key={step.id} step={step} index={index} />
-                  ))}
-                </div>
-              </SortableContext>
-            </DndContext>
+        <TemplateManager
+          currentWorkflow={workflowSteps}
+          onApplyTemplate={handleApplyTemplate}
+        />
+      )}
 
-            <div className="mt-6 flex justify-end">
-              <Button onClick={handleSaveWorkflow} disabled={isSaving}>
-                {isSaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Salvando...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Salvar Workflow
-                  </>
-                )}
+      {selectedCampaignId && workflowSteps.length > 0 && (
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle>Ordem das Etapas</CardTitle>
+              <CardDescription>
+                Arraste e solte para reordenar as etapas do funil. Use o switch para ativar/desativar etapas.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={workflowSteps.map((step) => step.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-2">
+                    {workflowSteps.map((step, index) => (
+                      <SortableItem
+                        key={step.id}
+                        step={step}
+                        index={index}
+                        onToggle={handleToggleStep}
+                        onRemove={handleRemoveStep}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+
+              <Button
+                variant="outline"
+                className="w-full mt-4"
+                onClick={() => setShowAddStepDialog(true)}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Nova Etapa Customizada
               </Button>
-            </div>
-          </CardContent>
-        </Card>
+
+              <div className="mt-6 flex justify-end">
+                <Button onClick={handleSaveWorkflow} disabled={isSaving}>
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Salvar Workflow
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <WorkflowPreview steps={workflowSteps} />
+        </>
       )}
 
       {campaigns.length === 0 && (
@@ -288,6 +427,35 @@ const Workflows = () => {
           </CardContent>
         </Card>
       )}
+
+      <AddStepDialog
+        open={showAddStepDialog}
+        onOpenChange={setShowAddStepDialog}
+        onAdd={handleAddCustomStep}
+        currentStepsCount={workflowSteps.length}
+      />
+
+      <DuplicateWorkflowDialog
+        open={showDuplicateDialog}
+        onOpenChange={setShowDuplicateDialog}
+        currentCampaignId={selectedCampaignId}
+        onDuplicate={handleDuplicateWorkflow}
+      />
+
+      <AlertDialog open={!!stepToDelete} onOpenChange={(open) => !open && setStepToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover Etapa</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover esta etapa? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRemoveStep}>Remover</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

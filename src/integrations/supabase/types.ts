@@ -308,6 +308,33 @@ export type Database = {
           },
         ]
       }
+      workflow_templates: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+          workflow_config: Json
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+          workflow_config: Json
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+          workflow_config?: Json
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
