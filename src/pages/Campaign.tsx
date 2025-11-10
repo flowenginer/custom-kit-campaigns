@@ -243,6 +243,82 @@ const Campaign = () => {
     return () => clearInterval(intervalId);
   }, [leadId, currentStep, campaign]);
 
+  // Heartbeat: atualizar status online a cada 5 segundos
+  useEffect(() => {
+    if (!leadId) return;
+
+    // Marcar como online ao entrar
+    const markOnline = async () => {
+      await supabase
+        .from('leads')
+        .update({ 
+          is_online: true, 
+          last_seen: new Date().toISOString() 
+        })
+        .eq('id', leadId);
+    };
+
+    markOnline();
+
+    // Enviar "ping" a cada 5 segundos
+    const heartbeatInterval = setInterval(async () => {
+      await supabase
+        .from('leads')
+        .update({ 
+          is_online: true, 
+          last_seen: new Date().toISOString() 
+        })
+        .eq('id', leadId);
+    }, 5000);
+
+    return () => clearInterval(heartbeatInterval);
+  }, [leadId]);
+
+  // Marcar como offline quando usuário sai da página
+  useEffect(() => {
+    if (!leadId) return;
+
+    const handleBeforeUnload = async () => {
+      await supabase
+        .from('leads')
+        .update({ 
+          is_online: false, 
+          last_seen: new Date().toISOString() 
+        })
+        .eq('id', leadId);
+    };
+
+    const handleVisibilityChange = async () => {
+      if (document.hidden) {
+        // Página ficou em background
+        await supabase
+          .from('leads')
+          .update({ 
+            is_online: false, 
+            last_seen: new Date().toISOString() 
+          })
+          .eq('id', leadId);
+      } else {
+        // Página voltou ao foreground
+        await supabase
+          .from('leads')
+          .update({ 
+            is_online: true, 
+            last_seen: new Date().toISOString() 
+          })
+          .eq('id', leadId);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [leadId]);
+
   const loadCampaign = async () => {
     try {
       const { data: campaignData, error: campaignError } = await supabase

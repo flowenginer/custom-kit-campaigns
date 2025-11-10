@@ -28,6 +28,8 @@ interface Lead {
   customization_summary: any;
   campaigns: { name: string };
   orders: { id: string } | null;
+  is_online: boolean;
+  last_seen: string;
 }
 
 const Leads = () => {
@@ -40,6 +42,7 @@ const Leads = () => {
   // Filtros
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [utmSourceFilter, setUtmSourceFilter] = useState<string>("all");
+  const [onlineStatusFilter, setOnlineStatusFilter] = useState<string>("all");
 
   useEffect(() => {
     loadLeads();
@@ -47,7 +50,7 @@ const Leads = () => {
 
   useEffect(() => {
     applyFilters();
-  }, [statusFilter, utmSourceFilter, leads]);
+  }, [statusFilter, utmSourceFilter, onlineStatusFilter, leads]);
 
   // Subscription para atualizações em tempo real
   useEffect(() => {
@@ -146,18 +149,25 @@ const Leads = () => {
       filtered = filtered.filter(lead => lead.utm_source === utmSourceFilter);
     }
 
+    // Filtro por status online
+    if (onlineStatusFilter === "online") {
+      filtered = filtered.filter(lead => lead.is_online);
+    } else if (onlineStatusFilter === "offline") {
+      filtered = filtered.filter(lead => !lead.is_online);
+    }
+
     setFilteredLeads(filtered);
   };
 
   const getStepLabel = (step: number) => {
     const labels = [
       "Dados Iniciais",
-      "Seleção de Modelo",
+      "Selecionar Modelo",
       "Personalizar Frente",
       "Personalizar Costas",
       "Manga Direita",
       "Manga Esquerda",
-      "Revisão"
+      "Revisão e Envio"
     ];
     return labels[step] || `Etapa ${step}`;
   };
@@ -240,6 +250,25 @@ const Leads = () => {
               </SelectContent>
             </Select>
           </div>
+
+          <div className="flex-1">
+            <label className="text-sm font-medium mb-2 block">Status Online</label>
+            <Select value={onlineStatusFilter} onValueChange={setOnlineStatusFilter}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="online">
+                  <span className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-green-500"></span>
+                    Online
+                  </span>
+                </SelectItem>
+                <SelectItem value="offline">Offline</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </CardContent>
       </Card>
 
@@ -247,29 +276,46 @@ const Leads = () => {
       <Card>
         <CardContent className="p-0">
           <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>WhatsApp</TableHead>
-                <TableHead>Campanha</TableHead>
-                <TableHead>Quantidade</TableHead>
-                <TableHead>Etapa Atual</TableHead>
-                <TableHead>Origem</TableHead>
-                <TableHead>Data</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Status</TableHead>
+              <TableHead>Nome</TableHead>
+              <TableHead>WhatsApp</TableHead>
+              <TableHead>Campanha</TableHead>
+              <TableHead>Quantidade</TableHead>
+              <TableHead>Etapa Atual</TableHead>
+              <TableHead>Origem</TableHead>
+              <TableHead>Data</TableHead>
+              <TableHead>Status Final</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
             <TableBody>
               {filteredLeads.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                     Nenhum lead encontrado
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredLeads.map((lead) => (
                   <TableRow key={lead.id}>
+                    <TableCell>
+                      {lead.is_online ? (
+                        <div className="flex items-center gap-2">
+                          <span className="relative flex h-3 w-3">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                          </span>
+                          <span className="text-green-600 font-medium text-sm">Online</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <span className="relative inline-flex rounded-full h-3 w-3 bg-gray-400"></span>
+                          <span className="text-muted-foreground text-sm">Offline</span>
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell className="font-medium">{lead.name}</TableCell>
                     <TableCell>{lead.phone}</TableCell>
                     <TableCell>{lead.campaigns?.name}</TableCell>
@@ -326,7 +372,22 @@ const Leads = () => {
             <div className="space-y-6">
               {/* Dados Pessoais */}
               <div>
-                <h3 className="font-semibold text-lg mb-3">Dados Pessoais</h3>
+                <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                  Dados Pessoais
+                  {selectedLead.is_online ? (
+                    <Badge className="bg-green-500 flex items-center gap-1">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                      </span>
+                      Online Agora
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline">
+                      Offline (última atividade: {format(new Date(selectedLead.last_seen || selectedLead.created_at), "dd/MM HH:mm", { locale: ptBR })})
+                    </Badge>
+                  )}
+                </h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-muted-foreground">Nome:</span>

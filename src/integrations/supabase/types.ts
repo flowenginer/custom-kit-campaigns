@@ -91,6 +91,8 @@ export type Database = {
           customization_summary: Json | null
           email: string | null
           id: string
+          is_online: boolean | null
+          last_seen: string | null
           name: string
           order_id: string | null
           phone: string
@@ -112,6 +114,8 @@ export type Database = {
           customization_summary?: Json | null
           email?: string | null
           id?: string
+          is_online?: boolean | null
+          last_seen?: string | null
           name: string
           order_id?: string | null
           phone: string
@@ -133,6 +137,8 @@ export type Database = {
           customization_summary?: Json | null
           email?: string | null
           id?: string
+          is_online?: boolean | null
+          last_seen?: string | null
           name?: string
           order_id?: string | null
           phone?: string
