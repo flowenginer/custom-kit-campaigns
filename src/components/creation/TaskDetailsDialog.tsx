@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { CustomizationViewer } from "./CustomizationViewer";
 import { 
   Download, 
   ExternalLink, 
@@ -164,12 +165,12 @@ export const TaskDetailsDialog = ({
 
       if (updateError) throw updateError;
 
-      toast.success("Arquivos enviados com sucesso!");
+      toast.success("Mockup enviado com sucesso!");
       setUploadNotes("");
       onTaskUpdated();
     } catch (error) {
       console.error("Error uploading files:", error);
-      toast.error("Erro ao enviar arquivos");
+      toast.error("Erro ao enviar mockup");
     } finally {
       setUploading(false);
     }
@@ -227,7 +228,7 @@ export const TaskDetailsDialog = ({
             <TabsTrigger value="details">📋 Detalhes</TabsTrigger>
             <TabsTrigger value="customization">🎨 Personalização</TabsTrigger>
             <TabsTrigger value="files">
-              📁 Arquivos ({task.design_files.length})
+              🎨 Enviar Mockup ({task.design_files.length})
             </TabsTrigger>
             <TabsTrigger value="history">📜 Histórico</TabsTrigger>
           </TabsList>
@@ -266,21 +267,14 @@ export const TaskDetailsDialog = ({
             </TabsContent>
 
             <TabsContent value="customization" className="mt-0">
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Dados de personalização do pedido
-                </p>
-                <pre className="bg-muted p-4 rounded-lg text-xs overflow-auto">
-                  {JSON.stringify(task.customization_data, null, 2)}
-                </pre>
-              </div>
+              <CustomizationViewer data={task.customization_data} />
             </TabsContent>
 
             <TabsContent value="files" className="space-y-4 mt-0">
               {canUpload && (
                 <Card>
                   <CardContent className="p-4 space-y-3">
-                    <Label>Upload Nova Versão</Label>
+                    <Label>Enviar Mockup para Cliente</Label>
                     <Input 
                       type="file" 
                       accept=".pdf,.png,.jpg,.jpeg,.ai,.psd,.zip"
@@ -299,7 +293,7 @@ export const TaskDetailsDialog = ({
               )}
 
               <div className="space-y-3">
-                <Label>Histórico de Versões</Label>
+                <Label>Mockups Enviados</Label>
                 {[...task.design_files].reverse().map((file) => (
                   <Card key={`${file.version}-${file.uploaded_at}`}>
                     <CardContent className="p-4">

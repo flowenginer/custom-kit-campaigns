@@ -1,11 +1,13 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Shirt, Clock, AlertCircle } from "lucide-react";
+import { Shirt, Clock, AlertCircle, Package } from "lucide-react";
 import { DesignTask } from "@/types/design-task";
 import { cn } from "@/lib/utils";
-import { format, isPast } from "date-fns";
+import { format, isPast, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useDraggable } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
 
 interface TaskCardProps {
   task: DesignTask;
@@ -15,8 +17,25 @@ interface TaskCardProps {
 export const TaskCard = ({ task, onClick }: TaskCardProps) => {
   const isOverdue = task.deadline && isPast(new Date(task.deadline)) && task.status !== 'completed';
   
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: task.id,
+    data: { task }
+  });
+
+  const style = {
+    transform: CSS.Translate.toString(transform),
+  };
+
   const formatDeadline = (deadline: string) => {
     return format(new Date(deadline), "dd/MM", { locale: ptBR });
+  };
+
+  const getProductionTime = () => {
+    if (task.status !== 'completed' || !task.completed_at) return null;
+    return formatDistanceToNow(new Date(task.completed_at), { 
+      locale: ptBR, 
+      addSuffix: true 
+    });
   };
 
   const getPriorityColor = (priority: string) => {
@@ -29,9 +48,18 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
     }
   };
 
+  const productionTime = getProductionTime();
+
   return (
     <Card 
-      className="cursor-pointer hover:shadow-md transition-shadow relative"
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={cn(
+        "cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow relative",
+        isDragging && "opacity-50"
+      )}
       onClick={onClick}
     >
       {task.priority === 'urgent' && (
@@ -56,19 +84,34 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
           </div>
         </div>
         
-        <div className="flex items-center justify-between text-xs">
-          <span className="flex items-center gap-1 text-muted-foreground">
-            <Shirt className="h-3 w-3" />
-            {task.quantity} un.
-          </span>
-          {task.deadline && (
-            <span className={cn(
-              "flex items-center gap-1",
-              isOverdue ? "text-destructive font-semibold" : "text-muted-foreground"
-            )}>
-              <Clock className="h-3 w-3" />
-              {formatDeadline(task.deadline)}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="flex items-center gap-1 text-muted-foreground">
+              <Shirt className="h-3 w-3" />
+              {task.quantity} un.
             </span>
+            {task.deadline && (
+              <span className={cn(
+                "flex items-center gap-1",
+                isOverdue ? "text-destructive font-semibold" : "text-muted-foreground"
+              )}>
+                <Clock className="h-3 w-3" />
+                {formatDeadline(task.deadline)}
+              </span>
+            )}
+          </div>
+          
+          {task.model_name && (
+            <div className="text-xs text-muted-foreground truncate">
+              🎽 {task.model_name}
+            </div>
+          )}
+          
+          {productionTime && (
+            <div className="flex items-center gap-1 text-xs text-primary">
+              <Package className="h-3 w-3" />
+              {productionTime}
+            </div>
           )}
         </div>
         

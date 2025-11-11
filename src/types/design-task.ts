@@ -42,6 +42,7 @@ export interface DesignTask {
   customization_data?: any;
   designer_name?: string;
   designer_initials?: string;
+  model_name?: string;
 }
 
 export interface DesignTaskHistory {

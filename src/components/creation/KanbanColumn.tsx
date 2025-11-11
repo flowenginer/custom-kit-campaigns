@@ -2,6 +2,8 @@ import { Badge } from "@/components/ui/badge";
 import { TaskCard } from "./TaskCard";
 import { DesignTask, TaskStatus } from "@/types/design-task";
 import { LucideIcon } from "lucide-react";
+import { useDroppable } from '@dnd-kit/core';
+import { cn } from "@/lib/utils";
 
 interface KanbanColumnProps {
   title: string;
@@ -13,12 +15,24 @@ interface KanbanColumnProps {
 
 export const KanbanColumn = ({
   title,
+  status,
   icon: Icon,
   tasks,
   onTaskClick,
 }: KanbanColumnProps) => {
+  const { setNodeRef, isOver } = useDroppable({
+    id: status,
+    data: { status }
+  });
+
   return (
-    <div className="bg-card rounded-lg border p-4 min-h-[600px] min-w-[320px] flex-shrink-0">
+    <div 
+      ref={setNodeRef}
+      className={cn(
+        "bg-card rounded-lg border p-4 min-h-[600px] min-w-[320px] flex-shrink-0 transition-colors",
+        isOver && "bg-accent/20 border-primary"
+      )}
+    >
       <div className="flex items-center justify-between mb-4 sticky top-0 bg-card pb-2 border-b">
         <div className="flex items-center gap-2">
           <Icon className="h-4 w-4 text-muted-foreground" />

@@ -15,12 +15,31 @@ import {
   AlertCircle,
   Package
 } from "lucide-react";
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  PointerSensor,
+  closestCorners,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
 
 const Creation = () => {
   const [tasks, setTasks] = useState<DesignTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<DesignTask | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [activeTask, setActiveTask] = useState<DesignTask | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
 
   useEffect(() => {
     loadTasks();
@@ -38,7 +57,11 @@ const Creation = () => {
             customer_email,
             customer_phone,
             quantity,
-            customization_data
+            customization_data,
+            model_id,
+            shirt_models (
+              name
+            )
           ),
           campaigns (
             name
@@ -56,6 +79,7 @@ const Creation = () => {
         quantity: task.orders?.quantity,
         customization_data: task.orders?.customization_data,
         campaign_name: task.campaigns?.name,
+        model_name: task.orders?.shirt_models?.name,
         designer_name: null, // TODO: Join with profiles
         designer_initials: null,
       }));
@@ -77,6 +101,55 @@ const Creation = () => {
   const handleTaskUpdated = () => {
     loadTasks();
     setDialogOpen(false);
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const task = event.active.data.current?.task as DesignTask;
+    setActiveTask(task);
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveTask(null);
+    
+    if (!over || active.id === over.id) return;
+
+    const task = active.data.current?.task as DesignTask;
+    const newStatus = over.id as DesignTask['status'];
+
+    // Validações de negócio
+    if (newStatus === 'awaiting_approval' && !task.assigned_to) {
+      toast.error("A tarefa precisa estar atribuída a um designer para ser enviada para aprovação");
+      return;
+    }
+
+    if (task.status === 'completed' && newStatus !== 'completed') {
+      toast.error("Não é possível mover tarefas de volta da Produção");
+      return;
+    }
+
+    if (newStatus === 'completed') {
+      const confirm = window.confirm("Tem certeza que deseja enviar para Produção?");
+      if (!confirm) return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("design_tasks")
+        .update({ 
+          status: newStatus,
+          completed_at: newStatus === 'completed' ? new Date().toISOString() : null
+        })
+        .eq("id", task.id);
+
+      if (error) throw error;
+
+      toast.success("Status atualizado com sucesso!");
+      loadTasks();
+    } catch (error) {
+      console.error("Error updating task status:", error);
+      toast.error("Erro ao atualizar status da tarefa");
+    }
   };
 
   const columns = [
@@ -155,18 +228,36 @@ const Creation = () => {
         </div>
       </div>
 
-      <div className="flex gap-4 overflow-x-auto pb-4">
-        {columns.map((column) => (
-          <KanbanColumn
-            key={column.status}
-            title={column.title}
-            status={column.status}
-            icon={column.icon}
-            tasks={column.tasks}
-            onTaskClick={handleTaskClick}
-          />
-        ))}
-      </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="flex gap-4 overflow-x-auto pb-4">
+          {columns.map((column) => (
+            <KanbanColumn
+              key={column.status}
+              title={column.title}
+              status={column.status}
+              icon={column.icon}
+              tasks={column.tasks}
+              onTaskClick={handleTaskClick}
+            />
+          ))}
+        </div>
+        
+        <DragOverlay>
+          {activeTask ? (
+            <div className="opacity-50 rotate-3 cursor-grabbing">
+              <div className="bg-card border rounded-lg p-4 shadow-lg">
+                <p className="font-semibold text-sm">{activeTask.customer_name}</p>
+                <p className="text-xs text-muted-foreground">{activeTask.campaign_name}</p>
+              </div>
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
 
       <TaskDetailsDialog
         task={selectedTask}
