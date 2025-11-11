@@ -346,9 +346,9 @@ export type Database = {
         Row: {
           campaign_id: string | null
           created_at: string | null
-          customer_email: string
+          customer_email: string | null
           customer_name: string
-          customer_phone: string
+          customer_phone: string | null
           customization_data: Json
           id: string
           model_id: string | null
@@ -358,9 +358,9 @@ export type Database = {
         Insert: {
           campaign_id?: string | null
           created_at?: string | null
-          customer_email: string
+          customer_email?: string | null
           customer_name: string
-          customer_phone: string
+          customer_phone?: string | null
           customization_data: Json
           id?: string
           model_id?: string | null
@@ -370,9 +370,9 @@ export type Database = {
         Update: {
           campaign_id?: string | null
           created_at?: string | null
-          customer_email?: string
+          customer_email?: string | null
           customer_name?: string
-          customer_phone?: string
+          customer_phone?: string | null
           customization_data?: Json
           id?: string
           model_id?: string | null
