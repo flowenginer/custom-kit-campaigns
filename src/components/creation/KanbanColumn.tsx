@@ -18,7 +18,7 @@ export const KanbanColumn = ({
   onTaskClick,
 }: KanbanColumnProps) => {
   return (
-    <div className="bg-card rounded-lg border p-4 min-h-[600px]">
+    <div className="bg-card rounded-lg border p-4 min-h-[600px] min-w-[320px] flex-shrink-0">
       <div className="flex items-center justify-between mb-4 sticky top-0 bg-card pb-2 border-b">
         <div className="flex items-center gap-2">
           <Icon className="h-4 w-4 text-muted-foreground" />
