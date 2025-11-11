@@ -46,6 +46,18 @@ All colors MUST be HSL.
     --shadow-md: 0 4px 6px -1px hsl(220 13% 91% / 0.1), 0 2px 4px -2px hsl(220 13% 91% / 0.1);
     --shadow-lg: 0 10px 15px -3px hsl(220 13% 91% / 0.1), 0 4px 6px -4px hsl(220 13% 91% / 0.1);
     --shadow-xl: 0 20px 25px -5px hsl(220 13% 91% / 0.1), 0 8px 10px -6px hsl(220 13% 91% / 0.1);
+
+    /* Chart colors for 3D visualizations */
+    --chart-purple: 258 90% 66%;
+    --chart-green: 142 76% 36%;
+    --chart-orange: 25 95% 53%;
+    --chart-red: 0 84% 60%;
+    --chart-blue: 217 91% 60%;
+    --chart-pink: 330 81% 60%;
+    --chart-teal: 173 80% 40%;
+    --chart-indigo: 243 75% 59%;
+    --chart-cyan: 189 94% 43%;
+    --chart-amber: 38 92% 50%;
   }
 
   .dark {

@@ -51,6 +51,18 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        chart: {
+          purple: "hsl(var(--chart-purple))",
+          green: "hsl(var(--chart-green))",
+          orange: "hsl(var(--chart-orange))",
+          red: "hsl(var(--chart-red))",
+          blue: "hsl(var(--chart-blue))",
+          pink: "hsl(var(--chart-pink))",
+          teal: "hsl(var(--chart-teal))",
+          indigo: "hsl(var(--chart-indigo))",
+          cyan: "hsl(var(--chart-cyan))",
+          amber: "hsl(var(--chart-amber))",
+        },
       },
       boxShadow: {
         sm: "var(--shadow-sm)",
