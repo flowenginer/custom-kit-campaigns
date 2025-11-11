@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import AdminLayout from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Plus, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -132,47 +131,44 @@ export default function Workflows() {
   };
 
   return (
-    <>
-      <AdminLayout />
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Workflows</h1>
-            <p className="text-muted-foreground">Gerencie os workflows das suas campanhas</p>
-          </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Workflows</h1>
+          <p className="text-muted-foreground">Gerencie os workflows das suas campanhas</p>
+        </div>
+        <Button onClick={handleNewWorkflow}>
+          <Plus className="w-4 h-4" />
+          Novo Workflow
+        </Button>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      ) : workflows.length === 0 ? (
+        <div className="text-center py-12 border border-dashed rounded-lg">
+          <p className="text-muted-foreground mb-4">Nenhum workflow criado ainda</p>
           <Button onClick={handleNewWorkflow}>
             <Plus className="w-4 h-4" />
-            Novo Workflow
+            Criar Primeiro Workflow
           </Button>
         </div>
-
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          </div>
-        ) : workflows.length === 0 ? (
-          <div className="text-center py-12 border border-dashed rounded-lg">
-            <p className="text-muted-foreground mb-4">Nenhum workflow criado ainda</p>
-            <Button onClick={handleNewWorkflow}>
-              <Plus className="w-4 h-4" />
-              Criar Primeiro Workflow
-            </Button>
-          </div>
-        ) : (
-          <div className="grid gap-4">
-            {workflows.map((workflow) => (
-              <WorkflowCard
-                key={workflow.id}
-                workflow={workflow}
-                onEdit={handleEditWorkflow}
-                onDuplicate={handleDuplicateWorkflow}
-                onDelete={handleDeleteWorkflow}
-                onApplyToCampaign={handleApplyToCampaign}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+      ) : (
+        <div className="grid gap-4">
+          {workflows.map((workflow) => (
+            <WorkflowCard
+              key={workflow.id}
+              workflow={workflow}
+              onEdit={handleEditWorkflow}
+              onDuplicate={handleDuplicateWorkflow}
+              onDelete={handleDeleteWorkflow}
+              onApplyToCampaign={handleApplyToCampaign}
+            />
+          ))}
+        </div>
+      )}
 
       <WorkflowEditorDialog
         workflowId={selectedWorkflowId}
@@ -202,6 +198,6 @@ export default function Workflows() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   );
 }
