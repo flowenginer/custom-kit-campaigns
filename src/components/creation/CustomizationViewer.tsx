@@ -349,7 +349,7 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[250px] pr-4">
+            <ScrollArea className="h-[400px] pr-4">
               <div className="grid grid-cols-3 gap-3">
                 {allImages.map((image, index) => (
                   <div key={index} className="space-y-1">

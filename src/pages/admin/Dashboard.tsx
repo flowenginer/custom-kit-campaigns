@@ -44,6 +44,28 @@ interface CampaignComparisonData {
   value: number;
   percentage: number;
 }
+
+interface DesignMetrics {
+  tasksByStatus: {
+    status: string;
+    count: number;
+    label: string;
+    color: string;
+  }[];
+  avgTimeByStage: {
+    stage: string;
+    avgHours: number;
+  }[];
+  designerPerformance: {
+    designer_id: string;
+    designer_name: string;
+    total_tasks: number;
+    completed_tasks: number;
+    approved_tasks: number;
+    avg_completion_time: number;
+    efficiency_score: number;
+  }[];
+}
 const CHART_COLORS = ["hsl(var(--chart-purple))", "hsl(var(--chart-green))", "hsl(var(--chart-orange))", "hsl(var(--chart-blue))", "hsl(var(--chart-pink))", "hsl(var(--chart-teal))", "hsl(var(--chart-indigo))", "hsl(var(--chart-cyan))", "hsl(var(--chart-amber))", "hsl(var(--chart-red))"];
 const Dashboard = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -58,9 +80,15 @@ const Dashboard = () => {
   const [utmData, setUtmData] = useState<UTMData[]>([]);
   const [selectedUtmSource, setSelectedUtmSource] = useState<string>("all");
   const [selectedUtmMedium, setSelectedUtmMedium] = useState<string>("all");
+  const [designMetrics, setDesignMetrics] = useState<DesignMetrics>({
+    tasksByStatus: [],
+    avgTimeByStage: [],
+    designerPerformance: []
+  });
   const [isLoading, setIsLoading] = useState(true);
   useEffect(() => {
     loadDashboardData();
+    loadDesignMetrics();
   }, []);
   useEffect(() => {
     if (campaigns.length > 0 && selectedCampaigns.length === 0) {
@@ -213,6 +241,116 @@ const Dashboard = () => {
       return acc;
     }, {});
     return Object.values(sourceGroups).sort((a: any, b: any) => b.leads - a.leads).slice(0, 10);
+  };
+
+  // Carregar métricas de criação
+  const loadDesignMetrics = async () => {
+    try {
+      // 1. Buscar contagem de tarefas por status
+      const { data: tasksData } = await supabase
+        .from("design_tasks")
+        .select("status, assigned_to, created_at, completed_at");
+
+      const statusLabels: Record<string, { label: string; color: string }> = {
+        pending: { label: "Aguardando", color: "hsl(var(--chart-blue))" },
+        in_progress: { label: "Em Progresso", color: "hsl(var(--chart-orange))" },
+        awaiting_approval: { label: "Aguardando Aprovação", color: "hsl(var(--chart-purple))" },
+        approved: { label: "Aprovado", color: "hsl(var(--chart-green))" },
+        changes_requested: { label: "Revisão Necessária", color: "hsl(var(--chart-red))" },
+        completed: { label: "Concluído", color: "hsl(var(--chart-teal))" }
+      };
+
+      const tasksByStatus = Object.entries(
+        tasksData?.reduce((acc, task) => {
+          acc[task.status] = (acc[task.status] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>) || {}
+      ).map(([status, count]) => ({
+        status,
+        count,
+        ...statusLabels[status as keyof typeof statusLabels]
+      }));
+
+      // 2. Calcular tempo médio entre etapas
+      const { data: historyData } = await supabase
+        .from("design_task_history")
+        .select("task_id, old_status, new_status, created_at")
+        .eq("action", "status_changed")
+        .order("created_at", { ascending: true });
+
+      const timeByStage: Record<string, number[]> = {};
+      
+      historyData?.forEach((item, idx, arr) => {
+        if (idx === 0) return;
+        const prev = arr[idx - 1];
+        if (prev.task_id === item.task_id && prev.new_status && item.new_status) {
+          const key = `${prev.new_status} → ${item.new_status}`;
+          const hours = (new Date(item.created_at).getTime() - new Date(prev.created_at).getTime()) / (1000 * 60 * 60);
+          if (!timeByStage[key]) timeByStage[key] = [];
+          timeByStage[key].push(hours);
+        }
+      });
+
+      const avgTimeByStage = Object.entries(timeByStage).map(([stage, times]) => ({
+        stage,
+        avgHours: times.reduce((a, b) => a + b, 0) / times.length
+      })).sort((a, b) => b.avgHours - a.avgHours).slice(0, 10);
+
+      // 3. Performance dos designers
+      const designerGroups = tasksData?.reduce((acc, task) => {
+        const id = task.assigned_to;
+        if (!id) return acc;
+        
+        if (!acc[id]) {
+          acc[id] = {
+            designer_id: id,
+            designer_name: `Designer ${id.substring(0, 8)}`,
+            total_tasks: 0,
+            completed_tasks: 0,
+            approved_tasks: 0,
+            completion_times: []
+          };
+        }
+        
+        acc[id].total_tasks++;
+        if (task.status === 'completed') {
+          acc[id].completed_tasks++;
+          if (task.completed_at && task.created_at) {
+            const hours = (new Date(task.completed_at).getTime() - new Date(task.created_at).getTime()) / (1000 * 60 * 60);
+            acc[id].completion_times.push(hours);
+          }
+        }
+        if (task.status === 'approved') acc[id].approved_tasks++;
+        
+        return acc;
+      }, {} as Record<string, any>) || {};
+
+      const designerPerformance = Object.values(designerGroups).map((designer: any) => {
+        const avg_completion_time = designer.completion_times.length > 0
+          ? designer.completion_times.reduce((a: number, b: number) => a + b, 0) / designer.completion_times.length
+          : 0;
+        
+        const completion_rate = designer.total_tasks > 0 ? designer.completed_tasks / designer.total_tasks : 0;
+        const approval_rate = designer.total_tasks > 0 ? designer.approved_tasks / designer.total_tasks : 0;
+        const time_efficiency = avg_completion_time > 0 ? Math.max(0, 100 - avg_completion_time) / 100 : 0;
+        
+        const efficiency_score = (completion_rate * 40 + approval_rate * 40 + time_efficiency * 20) * 100;
+        
+        return {
+          ...designer,
+          avg_completion_time,
+          efficiency_score: Math.round(efficiency_score)
+        };
+      }).sort((a: any, b: any) => b.efficiency_score - a.efficiency_score);
+
+      setDesignMetrics({
+        tasksByStatus,
+        avgTimeByStage,
+        designerPerformance
+      });
+    } catch (error) {
+      console.error("Erro ao carregar métricas de criação:", error);
+    }
   };
 
   // Obter sources e mediums únicos para filtros
@@ -548,6 +686,131 @@ const Dashboard = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Seção 5: Métricas de Criação de Design */}
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-2xl font-bold">📐 Métricas de Criação</h2>
+          <p className="text-muted-foreground">Acompanhe o desempenho da equipe de design</p>
+        </div>
+
+        {/* Cards de Status de Tarefas */}
+        <div className="grid gap-4 md:grid-cols-6">
+          {designMetrics.tasksByStatus.map((status) => (
+            <Card key={status.status} style={{ borderColor: status.color, borderWidth: '2px' }}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs font-medium text-muted-foreground">
+                  {status.label}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold" style={{ color: status.color }}>
+                  {status.count}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Gráfico de Tempo Médio por Etapa */}
+        {designMetrics.avgTimeByStage.length > 0 && (
+          <Card className="shadow-xl">
+            <CardHeader>
+              <CardTitle>⏱️ Tempo Médio Entre Etapas</CardTitle>
+              <CardDescription>
+                Média de horas gastas em cada transição de status (Top 10)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={designMetrics.avgTimeByStage}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                    <XAxis 
+                      dataKey="stage" 
+                      angle={-45}
+                      textAnchor="end"
+                      height={100}
+                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+                    />
+                    <YAxis 
+                      label={{ value: 'Horas', angle: -90, position: 'insideLeft' }}
+                      tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    />
+                    <Tooltip 
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px'
+                      }}
+                      formatter={(value: number) => [`${value.toFixed(1)}h`, 'Tempo Médio']}
+                    />
+                    <Bar 
+                      dataKey="avgHours" 
+                      fill="hsl(var(--chart-orange))" 
+                      radius={[8, 8, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Tabela de Performance dos Designers */}
+        <Card className="shadow-xl">
+          <CardHeader>
+            <CardTitle>🏆 Ranking de Designers</CardTitle>
+            <CardDescription>
+              Performance baseada em tarefas concluídas, aprovadas e tempo médio
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {designMetrics.designerPerformance.map((designer, idx) => (
+                <div 
+                  key={designer.designer_id} 
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 font-bold text-lg">
+                      #{idx + 1}
+                    </div>
+                    <div>
+                      <p className="font-semibold">{designer.designer_name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {designer.total_tasks} tarefas • 
+                        {designer.completed_tasks} concluídas • 
+                        {designer.approved_tasks} aprovadas
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <p className="text-sm font-medium">
+                        {designer.avg_completion_time > 0 
+                          ? `${designer.avg_completion_time.toFixed(1)}h média`
+                          : '-'}
+                      </p>
+                      <Badge 
+                        variant={designer.efficiency_score >= 70 ? "default" : "secondary"}
+                        className="mt-1"
+                      >
+                        Score: {designer.efficiency_score}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {designMetrics.designerPerformance.length === 0 && (
+                <p className="text-center text-muted-foreground py-8">
+                  Nenhum designer com tarefas atribuídas ainda
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>;
 };
 export default Dashboard;
