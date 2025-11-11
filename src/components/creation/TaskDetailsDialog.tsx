@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CustomizationViewer } from "./CustomizationViewer";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   Download, 
   ExternalLink, 
@@ -30,7 +31,8 @@ import {
   Send,
   UserPlus,
   Trash2,
-  RefreshCcw
+  RefreshCcw,
+  Loader2
 } from "lucide-react";
 
 interface TaskDetailsDialogProps {
@@ -50,6 +52,8 @@ export const TaskDetailsDialog = ({
   const [uploading, setUploading] = useState(false);
   const [uploadNotes, setUploadNotes] = useState("");
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [uploadedPreviews, setUploadedPreviews] = useState<Array<{url: string, name: string}>>([]);
+  const [uploadProgress, setUploadProgress] = useState<string>("");
 
   useEffect(() => {
     if (task && open) {
@@ -60,6 +64,13 @@ export const TaskDetailsDialog = ({
   useEffect(() => {
     getCurrentUser();
   }, []);
+
+  useEffect(() => {
+    if (!open) {
+      setUploadedPreviews([]);
+      setUploadProgress("");
+    }
+  }, [open]);
 
   const getCurrentUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -124,18 +135,38 @@ export const TaskDetailsDialog = ({
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!task || !e.target.files || e.target.files.length === 0) return;
 
-    setUploading(true);
+    // Validação de arquivos
     const files = Array.from(e.target.files);
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    const allowedExtensions = ['.pdf', '.png', '.jpg', '.jpeg', '.ai', '.psd', '.zip'];
+
+    for (const file of files) {
+      if (file.size > maxSize) {
+        toast.error(`Arquivo ${file.name} é muito grande. Máximo: 10MB`);
+        return;
+      }
+      
+      const fileExt = '.' + file.name.split('.').pop()?.toLowerCase();
+      if (!allowedExtensions.includes(fileExt)) {
+        toast.error(`Tipo de arquivo ${fileExt} não permitido`);
+        return;
+      }
+    }
+
+    setUploading(true);
     const newVersion = task.current_version + 1;
 
     try {
       const uploadedFiles = [];
 
-      for (const file of files) {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setUploadProgress(`Enviando ${i + 1} de ${files.length}...`);
+        
         const fileExt = file.name.split('.').pop();
         const fileName = `${task.id}/v${newVersion}/${Date.now()}.${fileExt}`;
         
-        const { error: uploadError, data } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from('customer-logos')
           .upload(fileName, file);
 
@@ -153,6 +184,13 @@ export const TaskDetailsDialog = ({
         });
       }
 
+      // Gerar previews dos arquivos enviados
+      const previews = uploadedFiles.map((file, idx) => ({
+        url: file.url,
+        name: files[idx].name
+      }));
+      setUploadedPreviews(prev => [...prev, ...previews]);
+
       const updatedFiles = [...task.design_files, ...uploadedFiles];
 
       const { error: updateError } = await supabase
@@ -167,10 +205,12 @@ export const TaskDetailsDialog = ({
 
       toast.success("Mockup enviado com sucesso!");
       setUploadNotes("");
+      setUploadProgress("");
       onTaskUpdated();
     } catch (error) {
       console.error("Error uploading files:", error);
       toast.error("Erro ao enviar mockup");
+      setUploadProgress("");
     } finally {
       setUploading(false);
     }
@@ -206,8 +246,31 @@ export const TaskDetailsDialog = ({
     ['in_progress', 'changes_requested'].includes(task.status);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+    <Dialog 
+      open={open} 
+      onOpenChange={(newOpen) => {
+        if (uploading) {
+          toast.error("Aguarde o upload finalizar");
+          return;
+        }
+        onOpenChange(newOpen);
+      }}
+    >
+      <DialogContent 
+        className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
+        onPointerDownOutside={(e) => {
+          if (uploading) {
+            e.preventDefault();
+            toast.error("Aguarde o upload finalizar");
+          }
+        }}
+        onEscapeKeyDown={(e) => {
+          if (uploading) {
+            e.preventDefault();
+            toast.error("Aguarde o upload finalizar");
+          }
+        }}
+      >
         <DialogHeader>
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
@@ -288,6 +351,35 @@ export const TaskDetailsDialog = ({
                       onChange={(e) => setUploadNotes(e.target.value)}
                       disabled={uploading}
                     />
+                    {uploading && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        {uploadProgress}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Preview dos mockups enviados (antes de fechar o dialog) */}
+              {uploadedPreviews.length > 0 && (
+                <Card>
+                  <CardContent className="p-4">
+                    <Label className="mb-3 block">Mockups Prontos para Enviar ao Cliente</Label>
+                    <div className="grid grid-cols-3 gap-3">
+                      {uploadedPreviews.map((preview, idx) => (
+                        <div key={idx} className="relative">
+                          <img 
+                            src={preview.url} 
+                            alt={preview.name}
+                            className="w-full h-32 object-cover rounded border cursor-pointer hover:border-primary transition-colors"
+                            onClick={() => window.open(preview.url, '_blank')}
+                            title="Clique para ver em tamanho completo"
+                          />
+                          <p className="text-xs mt-1 truncate" title={preview.name}>{preview.name}</p>
+                        </div>
+                      ))}
+                    </div>
                   </CardContent>
                 </Card>
               )}
@@ -370,10 +462,26 @@ export const TaskDetailsDialog = ({
               </Button>
             )}
             {task.status === 'in_progress' && task.assigned_to === currentUser?.id && (
-              <Button onClick={() => handleStatusChange('awaiting_approval')}>
-                <Send className="h-4 w-4 mr-2" />
-                Enviar para Aprovação
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <Button 
+                        onClick={() => handleStatusChange('awaiting_approval')}
+                        disabled={task.design_files.length === 0}
+                      >
+                        <Send className="h-4 w-4 mr-2" />
+                        Enviar para Aprovação
+                      </Button>
+                    </div>
+                  </TooltipTrigger>
+                  {task.design_files.length === 0 && (
+                    <TooltipContent>
+                      <p>Envie pelo menos um mockup antes de enviar para aprovação</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             )}
             {task.status === 'awaiting_approval' && (
               <>
