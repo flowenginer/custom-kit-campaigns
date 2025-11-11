@@ -5,6 +5,7 @@ import { Button } from "./ui/button";
 import { LogOut, LayoutDashboard, Tag, Shirt, Megaphone, Users, Workflow, Palette } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { Session } from "@supabase/supabase-js";
+import { NotificationsDropdown } from "./NotificationsDropdown";
 const AdminLayout = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
@@ -98,6 +99,12 @@ const AdminLayout = () => {
 
       {/* Main content */}
       <main className="flex-1 overflow-auto">
+        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+          <div className="flex items-center justify-between h-16 px-6">
+            <h2 className="text-2xl font-bold">Painel de Controle</h2>
+            <NotificationsDropdown />
+          </div>
+        </div>
         <Outlet />
       </main>
     </div>;
