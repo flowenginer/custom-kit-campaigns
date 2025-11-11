@@ -6,15 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus } from "lucide-react";
-
-interface WorkflowStep {
-  id: string;
-  label: string;
-  order: number;
-  enabled: boolean;
-  is_custom: boolean;
-  description?: string;
-}
+import { WorkflowStep } from "@/types/workflow";
 
 interface AddStepDialogProps {
   open: boolean;

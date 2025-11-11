@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { useDebounce } from "use-debounce";
 import { format } from "date-fns";
+import { WorkflowStep } from "@/types/workflow";
 
 interface ShirtModel {
   id: string;
@@ -38,15 +39,11 @@ interface ShirtModel {
 interface Campaign {
   id: string;
   name: string;
-  segment_id: string;
-  workflow_config?: Array<{
-    id: string;
-    label: string;
-    order: number;
-    enabled: boolean;
-    is_custom: boolean;
-    description?: string;
-  }>;
+  segment_id: string | null;
+  workflow_template_id: string;
+  workflow_templates?: {
+    workflow_config: WorkflowStep[];
+  };
 }
 
 interface FrontCustomization {
@@ -165,9 +162,10 @@ const Campaign = () => {
   const [debouncedCustomerData] = useDebounce(customerData, 1500);
   const [debouncedCustomizations] = useDebounce(customizations, 2000);
 
-  // Compute active steps from campaign workflow_config
-  const steps = campaign?.workflow_config 
-    ? campaign.workflow_config
+  // Compute active steps from campaign workflow template
+  const templateSteps = campaign?.workflow_templates?.workflow_config || [];
+  const steps = templateSteps.length > 0
+    ? templateSteps
         .filter(step => step.enabled)
         .sort((a, b) => a.order - b.order)
         .map(step => step.label)

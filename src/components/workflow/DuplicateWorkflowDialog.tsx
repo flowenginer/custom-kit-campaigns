@@ -7,21 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Copy, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-
-interface WorkflowStep {
-  id: string;
-  label: string;
-  order: number;
-  enabled: boolean;
-  is_custom: boolean;
-  description?: string;
-}
-
-interface Campaign {
-  id: string;
-  name: string;
-  workflow_config: WorkflowStep[];
-}
+import { WorkflowStep } from "@/types/workflow";
 
 interface DuplicateWorkflowDialogProps {
   open: boolean;

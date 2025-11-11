@@ -14,15 +14,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Trash2, Plus } from "lucide-react";
 import { AddStepDialog } from "./AddStepDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-
-interface WorkflowStep {
-  id: string;
-  label: string;
-  order: number;
-  enabled: boolean;
-  is_custom?: boolean;
-  description?: string;
-}
+import { WorkflowStep } from "@/types/workflow";
 
 interface WorkflowEditorDialogProps {
   workflowId: string | null;

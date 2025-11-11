@@ -1,15 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Eye } from "lucide-react";
-
-interface WorkflowStep {
-  id: string;
-  label: string;
-  order: number;
-  enabled: boolean;
-  is_custom?: boolean;
-  description?: string;
-}
+import { WorkflowStep } from "@/types/workflow";
 
 interface WorkflowPreviewProps {
   steps: WorkflowStep[];

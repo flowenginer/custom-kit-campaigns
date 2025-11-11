@@ -6,22 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-
-interface WorkflowStep {
-  id: string;
-  label: string;
-  order: number;
-  enabled: boolean;
-  is_custom?: boolean;
-  description?: string;
-}
-
-interface WorkflowTemplate {
-  id: string;
-  name: string;
-  description: string | null;
-  workflow_config: WorkflowStep[];
-}
+import { WorkflowTemplate } from "@/types/workflow";
 
 interface Campaign {
   id: string;

@@ -7,24 +7,7 @@ import { WorkflowCard } from "@/components/workflow/WorkflowCard";
 import { WorkflowEditorDialog } from "@/components/workflow/WorkflowEditorDialog";
 import { ApplyWorkflowDialog } from "@/components/workflow/ApplyWorkflowDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-
-interface WorkflowStep {
-  id: string;
-  label: string;
-  order: number;
-  enabled: boolean;
-  is_custom?: boolean;
-  description?: string;
-}
-
-interface WorkflowTemplate {
-  id: string;
-  name: string;
-  description: string | null;
-  workflow_config: WorkflowStep[];
-  created_at: string;
-  updated_at: string;
-}
+import { WorkflowTemplate, WorkflowStep } from "@/types/workflow";
 
 export default function Workflows() {
   const [workflows, setWorkflows] = useState<WorkflowTemplate[]>([]);
