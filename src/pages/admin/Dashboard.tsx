@@ -5,12 +5,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
 import { Loader2, TrendingUp, Users, Target, Activity } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-
 interface Campaign {
   id: string;
   name: string;
 }
-
 interface FunnelData {
   campaignId: string;
   campaignName: string;
@@ -22,14 +20,15 @@ interface FunnelData {
   step5: number;
   completed: number;
 }
-
 interface LeadsMetrics {
   total: number;
   converted: number;
   conversionRate: number;
-  bySource: { source: string; count: number }[];
+  bySource: {
+    source: string;
+    count: number;
+  }[];
 }
-
 interface UTMData {
   source: string;
   medium: string;
@@ -40,26 +39,12 @@ interface UTMData {
   completed: number;
   conversionRate: number;
 }
-
 interface CampaignComparisonData {
   name: string;
   value: number;
   percentage: number;
 }
-
-const CHART_COLORS = [
-  "hsl(var(--chart-purple))",
-  "hsl(var(--chart-green))",
-  "hsl(var(--chart-orange))",
-  "hsl(var(--chart-blue))",
-  "hsl(var(--chart-pink))",
-  "hsl(var(--chart-teal))",
-  "hsl(var(--chart-indigo))",
-  "hsl(var(--chart-cyan))",
-  "hsl(var(--chart-amber))",
-  "hsl(var(--chart-red))",
-];
-
+const CHART_COLORS = ["hsl(var(--chart-purple))", "hsl(var(--chart-green))", "hsl(var(--chart-orange))", "hsl(var(--chart-blue))", "hsl(var(--chart-pink))", "hsl(var(--chart-teal))", "hsl(var(--chart-indigo))", "hsl(var(--chart-cyan))", "hsl(var(--chart-amber))", "hsl(var(--chart-red))"];
 const Dashboard = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [funnelData, setFunnelData] = useState<FunnelData[]>([]);
@@ -74,35 +59,30 @@ const Dashboard = () => {
   const [selectedUtmSource, setSelectedUtmSource] = useState<string>("all");
   const [selectedUtmMedium, setSelectedUtmMedium] = useState<string>("all");
   const [isLoading, setIsLoading] = useState(true);
-
   useEffect(() => {
     loadDashboardData();
   }, []);
-
   useEffect(() => {
     if (campaigns.length > 0 && selectedCampaigns.length === 0) {
       setSelectedCampaigns([campaigns[0].id]);
     }
   }, [campaigns]);
-
   const loadDashboardData = async () => {
     try {
       // Carregar campanhas
-      const { data: campaignsData } = await supabase
-        .from("campaigns")
-        .select("id, name")
-        .order("created_at", { ascending: false });
-
+      const {
+        data: campaignsData
+      } = await supabase.from("campaigns").select("id, name").order("created_at", {
+        ascending: false
+      });
       if (campaignsData) {
         setCampaigns(campaignsData);
-        
-        // Carregar dados de funil para cada campanha
-        const funnelPromises = campaignsData.map(async (campaign) => {
-          const { data: events } = await supabase
-            .from("funnel_events")
-            .select("event_type")
-            .eq("campaign_id", campaign.id);
 
+        // Carregar dados de funil para cada campanha
+        const funnelPromises = campaignsData.map(async campaign => {
+          const {
+            data: events
+          } = await supabase.from("funnel_events").select("event_type").eq("campaign_id", campaign.id);
           const counts = {
             visits: 0,
             step1: 0,
@@ -110,54 +90,40 @@ const Dashboard = () => {
             step3: 0,
             step4: 0,
             step5: 0,
-            completed: 0,
+            completed: 0
           };
-
-          events?.forEach((event) => {
-            if (event.event_type === "visit") counts.visits++;
-            else if (event.event_type === "step_1") counts.step1++;
-            else if (event.event_type === "step_2") counts.step2++;
-            else if (event.event_type === "step_3") counts.step3++;
-            else if (event.event_type === "step_4") counts.step4++;
-            else if (event.event_type === "step_5") counts.step5++;
-            else if (event.event_type === "completed") counts.completed++;
+          events?.forEach(event => {
+            if (event.event_type === "visit") counts.visits++;else if (event.event_type === "step_1") counts.step1++;else if (event.event_type === "step_2") counts.step2++;else if (event.event_type === "step_3") counts.step3++;else if (event.event_type === "step_4") counts.step4++;else if (event.event_type === "step_5") counts.step5++;else if (event.event_type === "completed") counts.completed++;
           });
-
           return {
             campaignId: campaign.id,
             campaignName: campaign.name,
-            ...counts,
+            ...counts
           };
         });
-
         const funnelResults = await Promise.all(funnelPromises);
         setFunnelData(funnelResults);
       }
 
       // Carregar métricas de leads com UTMs
-      const { data: leadsData } = await supabase
-        .from("leads")
-        .select("completed, utm_source, utm_medium, utm_campaign, utm_term, utm_content, campaign_id");
-
+      const {
+        data: leadsData
+      } = await supabase.from("leads").select("completed, utm_source, utm_medium, utm_campaign, utm_term, utm_content, campaign_id");
       if (leadsData) {
         const total = leadsData.length;
         const converted = leadsData.filter(l => l.completed).length;
-        const conversionRate = total > 0 ? (converted / total) * 100 : 0;
-        
+        const conversionRate = total > 0 ? converted / total * 100 : 0;
+
         // Agrupar por utm_source
         const sourceGroups = leadsData.reduce((acc: any, lead) => {
           const source = lead.utm_source || 'Direto';
           acc[source] = (acc[source] || 0) + 1;
           return acc;
         }, {});
-        
-        const bySource = Object.entries(sourceGroups)
-          .map(([source, count]) => ({
-            source,
-            count: count as number
-          }))
-          .sort((a, b) => b.count - a.count);
-
+        const bySource = Object.entries(sourceGroups).map(([source, count]) => ({
+          source,
+          count: count as number
+        })).sort((a, b) => b.count - a.count);
         setLeadsMetrics({
           total,
           converted,
@@ -169,7 +135,7 @@ const Dashboard = () => {
         const utmGroups = leadsData.reduce((acc: any, lead) => {
           const key = `${lead.utm_source || 'Direto'}|${lead.utm_medium || '-'}|${lead.utm_campaign || '-'}|${lead.utm_term || '-'}|${lead.utm_content || '-'}`;
           if (!acc[key]) {
-            acc[key] = { 
+            acc[key] = {
               source: lead.utm_source || 'Direto',
               medium: lead.utm_medium || '-',
               campaign: lead.utm_campaign || '-',
@@ -183,12 +149,10 @@ const Dashboard = () => {
           if (lead.completed) acc[key].completed++;
           return acc;
         }, {});
-
         const utmArray: UTMData[] = Object.values(utmGroups).map((item: any) => ({
           ...item,
-          conversionRate: item.total > 0 ? (item.completed / item.total) * 100 : 0
+          conversionRate: item.total > 0 ? item.completed / item.total * 100 : 0
         }));
-
         setUtmData(utmArray.sort((a, b) => b.total - a.total));
       }
     } catch (error) {
@@ -201,20 +165,17 @@ const Dashboard = () => {
   // Preparar dados para o gráfico de funil comparativo
   const getComparativeFunnelData = () => {
     const stages = ["Visitas", "Etapa 1", "Etapa 2", "Etapa 3", "Etapa 4", "Etapa 5", "Concluído"];
-    
     return stages.map(stage => {
-      const dataPoint: any = { stage };
-      
+      const dataPoint: any = {
+        stage
+      };
       selectedCampaigns.forEach(campaignId => {
         const campaign = funnelData.find(c => c.campaignId === campaignId);
         if (campaign) {
-          const stageKey = stage === "Visitas" ? "visits" :
-                          stage === "Concluído" ? "completed" :
-                          `step${stage.split(" ")[1]}` as keyof FunnelData;
+          const stageKey = stage === "Visitas" ? "visits" : stage === "Concluído" ? "completed" : `step${stage.split(" ")[1]}` as keyof FunnelData;
           dataPoint[campaign.campaignName] = campaign[stageKey as keyof FunnelData];
         }
       });
-      
       return dataPoint;
     });
   };
@@ -222,15 +183,11 @@ const Dashboard = () => {
   // Preparar dados para o gráfico de pizza comparativo
   const getCampaignComparisonData = (): CampaignComparisonData[] => {
     const totalCompleted = funnelData.reduce((sum, c) => sum + c.completed, 0);
-    
-    return funnelData
-      .filter(c => c.completed > 0)
-      .map(campaign => ({
-        name: campaign.campaignName,
-        value: campaign.completed,
-        percentage: totalCompleted > 0 ? (campaign.completed / totalCompleted) * 100 : 0
-      }))
-      .sort((a, b) => b.value - a.value);
+    return funnelData.filter(c => c.completed > 0).map(campaign => ({
+      name: campaign.campaignName,
+      value: campaign.completed,
+      percentage: totalCompleted > 0 ? campaign.completed / totalCompleted * 100 : 0
+    })).sort((a, b) => b.value - a.value);
   };
 
   // Filtrar dados de UTM
@@ -247,40 +204,32 @@ const Dashboard = () => {
     const filteredData = getFilteredUtmData();
     const sourceGroups = filteredData.reduce((acc: any, item) => {
       if (!acc[item.source]) {
-        acc[item.source] = { source: item.source, leads: 0 };
+        acc[item.source] = {
+          source: item.source,
+          leads: 0
+        };
       }
       acc[item.source].leads += item.total;
       return acc;
     }, {});
-
-    return Object.values(sourceGroups)
-      .sort((a: any, b: any) => b.leads - a.leads)
-      .slice(0, 10);
+    return Object.values(sourceGroups).sort((a: any, b: any) => b.leads - a.leads).slice(0, 10);
   };
 
   // Obter sources e mediums únicos para filtros
   const uniqueSources = ["all", ...Array.from(new Set(utmData.map(d => d.source)))];
   const uniqueMediums = ["all", ...Array.from(new Set(utmData.map(d => d.medium)))];
-
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
+    return <div className="flex items-center justify-center h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+      </div>;
   }
-
   const comparativeFunnelData = getComparativeFunnelData();
   const campaignComparisonData = getCampaignComparisonData();
   const topUtmSources = getTopUtmSources();
   const filteredUtmData = getFilteredUtmData();
-
-  return (
-    <div className="p-8 space-y-8">
+  return <div className="p-8 space-y-8">
       <div>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-chart-purple bg-clip-text text-transparent">
-          Dashboard de Funil
-        </h1>
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-chart-purple bg-clip-text text-transparent">Dashboard</h1>
         <p className="text-muted-foreground mt-1">
           Visualize a performance de suas campanhas em tempo real
         </p>
@@ -344,29 +293,26 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-1">
-              {leadsMetrics.bySource.slice(0, 2).map((item, idx) => (
-                <div key={item.source} className="flex justify-between text-sm">
-                  <span className="truncate mr-2 font-medium" style={{ color: CHART_COLORS[idx] }}>
+              {leadsMetrics.bySource.slice(0, 2).map((item, idx) => <div key={item.source} className="flex justify-between text-sm">
+                  <span className="truncate mr-2 font-medium" style={{
+                color: CHART_COLORS[idx]
+              }}>
                     {item.source}
                   </span>
                   <Badge variant="secondary" className="font-semibold">{item.count}</Badge>
-                </div>
-              ))}
+                </div>)}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {funnelData.length === 0 ? (
-        <Card>
+      {funnelData.length === 0 ? <Card>
           <CardContent className="pt-6">
             <p className="text-center text-muted-foreground">
               Nenhuma campanha com dados ainda. Crie uma campanha para começar!
             </p>
           </CardContent>
-        </Card>
-      ) : (
-        <>
+        </Card> : <>
           {/* Seção 2: Gráfico de Funil Interativo com Filtro de Campanhas */}
           <Card className="shadow-xl">
             <CardHeader>
@@ -378,26 +324,14 @@ const Dashboard = () => {
                   </CardDescription>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {campaigns.map((campaign, idx) => (
-                    <Badge
-                      key={campaign.id}
-                      variant={selectedCampaigns.includes(campaign.id) ? "default" : "outline"}
-                      className="cursor-pointer transition-all hover:scale-105"
-                      style={selectedCampaigns.includes(campaign.id) ? { 
-                        backgroundColor: CHART_COLORS[idx % CHART_COLORS.length],
-                        borderColor: CHART_COLORS[idx % CHART_COLORS.length]
-                      } : {}}
-                      onClick={() => {
-                        setSelectedCampaigns(prev =>
-                          prev.includes(campaign.id)
-                            ? prev.filter(id => id !== campaign.id)
-                            : [...prev, campaign.id]
-                        );
-                      }}
-                    >
+                  {campaigns.map((campaign, idx) => <Badge key={campaign.id} variant={selectedCampaigns.includes(campaign.id) ? "default" : "outline"} className="cursor-pointer transition-all hover:scale-105" style={selectedCampaigns.includes(campaign.id) ? {
+                backgroundColor: CHART_COLORS[idx % CHART_COLORS.length],
+                borderColor: CHART_COLORS[idx % CHART_COLORS.length]
+              } : {}} onClick={() => {
+                setSelectedCampaigns(prev => prev.includes(campaign.id) ? prev.filter(id => id !== campaign.id) : [...prev, campaign.id]);
+              }}>
                       {campaign.name}
-                    </Badge>
-                  ))}
+                    </Badge>)}
                 </div>
               </div>
             </CardHeader>
@@ -406,37 +340,31 @@ const Dashboard = () => {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={comparativeFunnelData}>
                     <defs>
-                      {selectedCampaigns.map((_, idx) => (
-                        <linearGradient key={`gradient-${idx}`} id={`barGradient-${idx}`} x1="0" y1="0" x2="0" y2="1">
+                      {selectedCampaigns.map((_, idx) => <linearGradient key={`gradient-${idx}`} id={`barGradient-${idx}`} x1="0" y1="0" x2="0" y2="1">
                           <stop offset="0%" stopColor={CHART_COLORS[idx % CHART_COLORS.length]} stopOpacity={0.9} />
                           <stop offset="100%" stopColor={CHART_COLORS[idx % CHART_COLORS.length]} stopOpacity={0.6} />
-                        </linearGradient>
-                      ))}
+                        </linearGradient>)}
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                    <XAxis dataKey="stage" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
-                    <YAxis tick={{ fill: 'hsl(var(--muted-foreground))' }} />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-                      }}
-                    />
+                    <XAxis dataKey="stage" tick={{
+                  fill: 'hsl(var(--muted-foreground))'
+                }} />
+                    <YAxis tick={{
+                  fill: 'hsl(var(--muted-foreground))'
+                }} />
+                    <Tooltip contentStyle={{
+                  backgroundColor: 'hsl(var(--card))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                }} />
                     <Legend />
                     {selectedCampaigns.map((campaignId, idx) => {
-                      const campaign = campaigns.find(c => c.id === campaignId);
-                      return campaign ? (
-                        <Bar
-                          key={campaignId}
-                          dataKey={campaign.name}
-                          fill={`url(#barGradient-${idx})`}
-                          radius={[8, 8, 0, 0]}
-                          style={{ filter: 'drop-shadow(0px 4px 6px rgba(0, 0, 0, 0.15))' }}
-                        />
-                      ) : null;
-                    })}
+                  const campaign = campaigns.find(c => c.id === campaignId);
+                  return campaign ? <Bar key={campaignId} dataKey={campaign.name} fill={`url(#barGradient-${idx})`} radius={[8, 8, 0, 0]} style={{
+                    filter: 'drop-shadow(0px 4px 6px rgba(0, 0, 0, 0.15))'
+                  }} /> : null;
+                })}
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -457,71 +385,50 @@ const Dashboard = () => {
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <defs>
-                        {campaignComparisonData.map((_, idx) => (
-                          <linearGradient key={`pieGradient-${idx}`} id={`pieGradient-${idx}`} x1="0" y1="0" x2="1" y2="1">
+                        {campaignComparisonData.map((_, idx) => <linearGradient key={`pieGradient-${idx}`} id={`pieGradient-${idx}`} x1="0" y1="0" x2="1" y2="1">
                             <stop offset="0%" stopColor={CHART_COLORS[idx % CHART_COLORS.length]} stopOpacity={1} />
                             <stop offset="100%" stopColor={CHART_COLORS[idx % CHART_COLORS.length]} stopOpacity={0.7} />
-                          </linearGradient>
-                        ))}
+                          </linearGradient>)}
                       </defs>
-                      <Pie
-                        data={campaignComparisonData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percentage }) => `${name}: ${percentage.toFixed(1)}%`}
-                        outerRadius={140}
-                        innerRadius={70}
-                        fill="#8884d8"
-                        dataKey="value"
-                        paddingAngle={3}
-                        animationDuration={800}
-                        style={{ filter: 'drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.2))' }}
-                      >
-                        {campaignComparisonData.map((_, index) => (
-                          <Cell key={`cell-${index}`} fill={`url(#pieGradient-${index})`} />
-                        ))}
+                      <Pie data={campaignComparisonData} cx="50%" cy="50%" labelLine={false} label={({
+                    name,
+                    percentage
+                  }) => `${name}: ${percentage.toFixed(1)}%`} outerRadius={140} innerRadius={70} fill="#8884d8" dataKey="value" paddingAngle={3} animationDuration={800} style={{
+                    filter: 'drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.2))'
+                  }}>
+                        {campaignComparisonData.map((_, index) => <Cell key={`cell-${index}`} fill={`url(#pieGradient-${index})`} />)}
                       </Pie>
-                      <Tooltip
-                        contentStyle={{ 
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px',
-                          boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-                        }}
-                      />
+                      <Tooltip contentStyle={{
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                  }} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
                 <div className="flex flex-col justify-center space-y-3">
                   <h3 className="font-semibold text-lg mb-2">Ranking de Campanhas</h3>
-                  {campaignComparisonData.map((item, idx) => (
-                    <div key={item.name} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                      <div 
-                        className="w-4 h-4 rounded-full" 
-                        style={{ backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }}
-                      />
+                  {campaignComparisonData.map((item, idx) => <div key={item.name} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                      <div className="w-4 h-4 rounded-full" style={{
+                  backgroundColor: CHART_COLORS[idx % CHART_COLORS.length]
+                }} />
                       <div className="flex-1">
                         <p className="font-medium">{item.name}</p>
                         <p className="text-sm text-muted-foreground">{item.value} leads completos</p>
                       </div>
-                      <Badge 
-                        variant="secondary"
-                        style={{ 
-                          backgroundColor: `${CHART_COLORS[idx % CHART_COLORS.length]}20`,
-                          color: CHART_COLORS[idx % CHART_COLORS.length]
-                        }}
-                      >
+                      <Badge variant="secondary" style={{
+                  backgroundColor: `${CHART_COLORS[idx % CHART_COLORS.length]}20`,
+                  color: CHART_COLORS[idx % CHART_COLORS.length]
+                }}>
                         {item.percentage.toFixed(1)}%
                       </Badge>
-                    </div>
-                  ))}
+                    </div>)}
                 </div>
               </div>
             </CardContent>
           </Card>
-        </>
-      )}
+        </>}
 
       {/* Seção 4: Análise de UTMs */}
       <Card className="shadow-xl">
@@ -541,11 +448,9 @@ const Dashboard = () => {
                   <SelectValue placeholder="Todas as fontes" />
                 </SelectTrigger>
                 <SelectContent>
-                  {uniqueSources.map(source => (
-                    <SelectItem key={source} value={source}>
+                  {uniqueSources.map(source => <SelectItem key={source} value={source}>
                       {source === "all" ? "Todas as fontes" : source}
-                    </SelectItem>
-                  ))}
+                    </SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -556,11 +461,9 @@ const Dashboard = () => {
                   <SelectValue placeholder="Todos os meios" />
                 </SelectTrigger>
                 <SelectContent>
-                  {uniqueMediums.map(medium => (
-                    <SelectItem key={medium} value={medium}>
+                  {uniqueMediums.map(medium => <SelectItem key={medium} value={medium}>
                       {medium === "all" ? "Todos os meios" : medium}
-                    </SelectItem>
-                  ))}
+                    </SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -579,22 +482,21 @@ const Dashboard = () => {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                  <XAxis type="number" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
-                  <YAxis dataKey="source" type="category" width={100} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
-                  <Tooltip
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-                    }}
-                  />
-                  <Bar 
-                    dataKey="leads" 
-                    fill="url(#sourceGradient)" 
-                    radius={[0, 8, 8, 0]}
-                    style={{ filter: 'drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.15))' }}
-                  />
+                  <XAxis type="number" tick={{
+                  fill: 'hsl(var(--muted-foreground))'
+                }} />
+                  <YAxis dataKey="source" type="category" width={100} tick={{
+                  fill: 'hsl(var(--muted-foreground))'
+                }} />
+                  <Tooltip contentStyle={{
+                  backgroundColor: 'hsl(var(--card))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                }} />
+                  <Bar dataKey="leads" fill="url(#sourceGradient)" radius={[0, 8, 8, 0]} style={{
+                  filter: 'drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.15))'
+                }} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -619,8 +521,7 @@ const Dashboard = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {filteredUtmData.slice(0, 20).map((item, idx) => (
-                      <tr key={idx} className="hover:bg-muted/50 transition-colors">
+                    {filteredUtmData.slice(0, 20).map((item, idx) => <tr key={idx} className="hover:bg-muted/50 transition-colors">
                         <td className="px-4 py-3 text-sm font-medium">{item.source}</td>
                         <td className="px-4 py-3 text-sm text-muted-foreground">{item.medium}</td>
                         <td className="px-4 py-3 text-sm text-muted-foreground">{item.campaign}</td>
@@ -629,32 +530,24 @@ const Dashboard = () => {
                         <td className="px-4 py-3 text-sm text-right font-semibold">{item.total}</td>
                         <td className="px-4 py-3 text-sm text-right text-chart-green font-semibold">{item.completed}</td>
                         <td className="px-4 py-3 text-sm text-right">
-                          <Badge 
-                            variant={item.conversionRate > 50 ? "default" : "secondary"}
-                            style={item.conversionRate > 50 ? { 
-                              backgroundColor: 'hsl(var(--chart-green))',
-                              color: 'white'
-                            } : {}}
-                          >
+                          <Badge variant={item.conversionRate > 50 ? "default" : "secondary"} style={item.conversionRate > 50 ? {
+                        backgroundColor: 'hsl(var(--chart-green))',
+                        color: 'white'
+                      } : {}}>
                             {item.conversionRate.toFixed(1)}%
                           </Badge>
                         </td>
-                      </tr>
-                    ))}
+                      </tr>)}
                   </tbody>
                 </table>
               </div>
             </div>
-            {filteredUtmData.length > 20 && (
-              <p className="text-sm text-muted-foreground mt-2 text-center">
+            {filteredUtmData.length > 20 && <p className="text-sm text-muted-foreground mt-2 text-center">
                 Mostrando 20 de {filteredUtmData.length} resultados
-              </p>
-            )}
+              </p>}
           </div>
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>;
 };
-
 export default Dashboard;
