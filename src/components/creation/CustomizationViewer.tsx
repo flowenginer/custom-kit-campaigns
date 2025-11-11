@@ -81,7 +81,7 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
         <img 
           src={url} 
           alt={label}
-          className="w-20 h-20 object-cover rounded border cursor-pointer hover:border-primary transition-colors"
+          className="w-24 h-24 object-cover rounded border cursor-pointer hover:border-primary transition-colors"
           onClick={() => window.open(url, '_blank')}
           title="Clique para ver em tamanho completo"
         />
@@ -152,7 +152,7 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
   const allImages = collectAllImages();
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {/* FRENTE */}
       {transformedData.front && (
         <Card>
@@ -168,6 +168,13 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
                 <Badge variant="secondary" className="text-xs">
                   {transformedData.front.logoSize === 'small_left' ? 'Pequeno Esquerda' : 'Grande Centro'}
                 </Badge>
+              </div>
+            )}
+            
+            {transformedData.front.logoFile && (
+              <div>
+                <p className="text-xs font-medium mb-1">Logo</p>
+                {renderImage(transformedData.front.logoFile, 'Logo Frente')}
               </div>
             )}
             
@@ -190,47 +197,75 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {/* Só exibir campos que foram habilitados pelo cliente */}
-            <div className="grid grid-cols-2 gap-1.5">
-              {transformedData.back.name?.enabled && renderCheckBox(true, "Nome")}
-              {transformedData.back.instagram?.enabled && renderCheckBox(true, "Instagram")}
-              {transformedData.back.website?.enabled && renderCheckBox(true, "Website")}
-              {transformedData.back.email?.enabled && renderCheckBox(true, "Email")}
-              {transformedData.back.whatsapp?.enabled && renderCheckBox(true, "WhatsApp")}
-            </div>
-
-            {transformedData.back.name?.enabled && transformedData.back.name?.value && (
+            {/* Logo das Costas - SEMPRE EXIBIR SE EXISTIR */}
+            {transformedData.back.logo && (
               <div>
-                <p className="text-xs font-medium mb-0.5">Nome</p>
-                <p className="text-xs bg-muted p-1.5 rounded">{transformedData.back.name.value}</p>
+                <p className="text-xs font-medium mb-1">Logo</p>
+                {renderImage(transformedData.back.logo, 'Logo Costas')}
               </div>
             )}
 
-            {transformedData.back.instagram?.enabled && transformedData.back.instagram?.value && (
-              <div>
-                <p className="text-xs font-medium mb-0.5">Instagram</p>
-                <p className="text-xs bg-muted p-1.5 rounded">{transformedData.back.instagram.value}</p>
-              </div>
+            {/* Só exibir campos de texto se algum foi habilitado */}
+            {(transformedData.back.name?.enabled || 
+              transformedData.back.instagram?.enabled || 
+              transformedData.back.website?.enabled || 
+              transformedData.back.email?.enabled || 
+              transformedData.back.whatsapp?.enabled) && (
+              <>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {transformedData.back.name?.enabled && renderCheckBox(true, "Nome")}
+                  {transformedData.back.instagram?.enabled && renderCheckBox(true, "Instagram")}
+                  {transformedData.back.website?.enabled && renderCheckBox(true, "Website")}
+                  {transformedData.back.email?.enabled && renderCheckBox(true, "Email")}
+                  {transformedData.back.whatsapp?.enabled && renderCheckBox(true, "WhatsApp")}
+                </div>
+
+                {transformedData.back.name?.enabled && transformedData.back.name?.value && (
+                  <div>
+                    <p className="text-xs font-medium mb-0.5">Nome</p>
+                    <p className="text-xs bg-muted p-1.5 rounded">{transformedData.back.name.value}</p>
+                  </div>
+                )}
+
+                {transformedData.back.instagram?.enabled && transformedData.back.instagram?.value && (
+                  <div>
+                    <p className="text-xs font-medium mb-0.5">Instagram</p>
+                    <p className="text-xs bg-muted p-1.5 rounded">{transformedData.back.instagram.value}</p>
+                  </div>
+                )}
+
+                {transformedData.back.website?.enabled && transformedData.back.website?.value && (
+                  <div>
+                    <p className="text-xs font-medium mb-0.5">Website</p>
+                    <p className="text-xs bg-muted p-1.5 rounded">{transformedData.back.website.value}</p>
+                  </div>
+                )}
+
+                {transformedData.back.email?.enabled && transformedData.back.email?.value && (
+                  <div>
+                    <p className="text-xs font-medium mb-0.5">Email</p>
+                    <p className="text-xs bg-muted p-1.5 rounded">{transformedData.back.email.value}</p>
+                  </div>
+                )}
+
+                {transformedData.back.whatsapp?.enabled && transformedData.back.whatsapp?.value && (
+                  <div>
+                    <p className="text-xs font-medium mb-0.5">WhatsApp</p>
+                    <p className="text-xs bg-muted p-1.5 rounded">{transformedData.back.whatsapp.value}</p>
+                  </div>
+                )}
+              </>
             )}
 
-            {transformedData.back.website?.enabled && transformedData.back.website?.value && (
+            {/* Patrocinadores */}
+            {transformedData.back.sponsors && transformedData.back.sponsors.length > 0 && (
               <div>
-                <p className="text-xs font-medium mb-0.5">Website</p>
-                <p className="text-xs bg-muted p-1.5 rounded">{transformedData.back.website.value}</p>
-              </div>
-            )}
-
-            {transformedData.back.email?.enabled && transformedData.back.email?.value && (
-              <div>
-                <p className="text-xs font-medium mb-0.5">Email</p>
-                <p className="text-xs bg-muted p-1.5 rounded">{transformedData.back.email.value}</p>
-              </div>
-            )}
-
-            {transformedData.back.whatsapp?.enabled && transformedData.back.whatsapp?.value && (
-              <div>
-                <p className="text-xs font-medium mb-0.5">WhatsApp</p>
-                <p className="text-xs bg-muted p-1.5 rounded">{transformedData.back.whatsapp.value}</p>
+                <p className="text-xs font-medium mb-1">Patrocinadores</p>
+                <div className="space-y-2">
+                  {transformedData.back.sponsors.map((sponsor: any, idx: number) => 
+                    renderImage(sponsor.logo, `Patrocinador ${idx + 1}`)
+                  )}
+                </div>
               </div>
             )}
           </CardContent>
@@ -251,6 +286,20 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
               <div className="space-y-2">
                 <h4 className="font-semibold text-xs">Manga Esquerda</h4>
                 
+                {transformedData.leftSleeve.flag && (
+                  <div>
+                    <p className="text-xs font-medium mb-1">Bandeira</p>
+                    {renderImage(transformedData.leftSleeve.flag, 'Bandeira Manga Esquerda')}
+                  </div>
+                )}
+                
+                {transformedData.leftSleeve.logo && (
+                  <div>
+                    <p className="text-xs font-medium mb-1">Logo</p>
+                    {renderImage(transformedData.leftSleeve.logo, 'Logo Manga Esquerda')}
+                  </div>
+                )}
+                
                 {transformedData.leftSleeve.text && (
                   <div>
                     <p className="text-xs font-medium mb-0.5">Texto</p>
@@ -264,6 +313,20 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
             {transformedData.rightSleeve && (
               <div className="space-y-2">
                 <h4 className="font-semibold text-xs">Manga Direita</h4>
+                
+                {transformedData.rightSleeve.flag && (
+                  <div>
+                    <p className="text-xs font-medium mb-1">Bandeira</p>
+                    {renderImage(transformedData.rightSleeve.flag, 'Bandeira Manga Direita')}
+                  </div>
+                )}
+                
+                {transformedData.rightSleeve.logo && (
+                  <div>
+                    <p className="text-xs font-medium mb-1">Logo</p>
+                    {renderImage(transformedData.rightSleeve.logo, 'Logo Manga Direita')}
+                  </div>
+                )}
                 
                 {transformedData.rightSleeve.text && (
                   <div>
@@ -286,8 +349,8 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[300px] pr-4">
-              <div className="grid grid-cols-3 gap-2">
+            <ScrollArea className="h-[250px] pr-4">
+              <div className="grid grid-cols-3 gap-3">
                 {allImages.map((image, index) => (
                   <div key={index} className="space-y-1">
                     <div className="relative group">
