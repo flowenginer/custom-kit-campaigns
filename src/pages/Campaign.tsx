@@ -93,7 +93,7 @@ interface CustomizationData {
 
 const Campaign = () => {
   const { uniqueLink } = useParams<{ uniqueLink: string }>();
-  const [sessionId] = useState(() => `session-${Date.now()}-${Math.random()}`);
+  const [sessionId, setSessionId] = useState(() => `session-${Date.now()}-${Math.random()}`);
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [models, setModels] = useState<ShirtModel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -355,8 +355,41 @@ const Campaign = () => {
     });
   };
 
+  // Gerar identificador único baseado em email+phone
+  const generateLeadGroupId = (email: string, phone: string) => {
+    const cleanPhone = phone.replace(/\D/g, '');
+    return `${email || 'noemail'}_${cleanPhone}`;
+  };
+
+  // Buscar número da tentativa
+  const getAttemptNumber = async (groupId: string): Promise<number> => {
+    const { count } = await supabase
+      .from('leads')
+      .select('*', { count: 'exact', head: true })
+      .eq('lead_group_identifier', groupId);
+    
+    return (count || 0) + 1;
+  };
+
   const createOrUpdateLead = async (stepNumber: number, isCompleted = false, orderId?: string) => {
     try {
+      // NUNCA atualizar lead concluído
+      if (leadId) {
+        const { data: existingLead } = await supabase
+          .from('leads')
+          .select('completed')
+          .eq('id', leadId)
+          .maybeSingle();
+        
+        if (existingLead?.completed) {
+          console.log('Lead já concluído - não será atualizado');
+          return;
+        }
+      }
+
+      const groupId = generateLeadGroupId(customerData.email, customerData.phone);
+      const attemptNumber = leadId ? undefined : await getAttemptNumber(groupId);
+
       const leadData = {
         campaign_id: campaign?.id,
         session_id: sessionId,
@@ -373,6 +406,8 @@ const Campaign = () => {
         current_step: stepNumber,
         completed: isCompleted,
         order_id: orderId || null,
+        lead_group_identifier: groupId,
+        attempt_number: attemptNumber,
         customization_summary: {
           model: selectedModel?.name,
           front: customizations.front,
@@ -382,7 +417,7 @@ const Campaign = () => {
       };
 
       if (leadId) {
-        // Atualizar lead existente
+        // Atualizar apenas se não estiver completo
         const { error } = await supabase
           .from('leads')
           .update(leadData)
@@ -620,7 +655,11 @@ const Campaign = () => {
       await trackEvent("completed");
 
       toast.success("Pedido enviado com sucesso!");
+      
+      // RESETAR TUDO para nova tentativa
       setCurrentStep(0);
+      setLeadId(null); // ← Forçar criação de novo lead
+      setSessionId(`session-${Date.now()}-${Math.random()}`); // ← Novo session_id
       setSelectedModel(null);
       setCustomizations({
         front: {
@@ -649,7 +688,12 @@ const Campaign = () => {
           left: { flag: false, flagUrl: '', logoSmall: false, logoUrl: '', text: false, textContent: '' }
         }
       });
-      setCustomerData({ name: "", email: "", phone: "", quantity: "", customQuantity: 10 });
+      // Manter dados do cliente para facilitar nova tentativa
+      setCustomerData({ 
+        ...customerData, 
+        quantity: "", 
+        customQuantity: 10 
+      });
       setUploadedLogos({
         frontLogo: null,
         backLogo: null,

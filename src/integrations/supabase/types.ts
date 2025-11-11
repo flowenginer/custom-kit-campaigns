@@ -86,6 +86,7 @@ export type Database = {
       }
       leads: {
         Row: {
+          attempt_number: number | null
           campaign_id: string | null
           completed: boolean | null
           created_at: string | null
@@ -96,6 +97,7 @@ export type Database = {
           id: string
           is_online: boolean | null
           last_seen: string | null
+          lead_group_identifier: string | null
           name: string
           order_id: string | null
           phone: string
@@ -109,6 +111,7 @@ export type Database = {
           utm_term: string | null
         }
         Insert: {
+          attempt_number?: number | null
           campaign_id?: string | null
           completed?: boolean | null
           created_at?: string | null
@@ -119,6 +122,7 @@ export type Database = {
           id?: string
           is_online?: boolean | null
           last_seen?: string | null
+          lead_group_identifier?: string | null
           name: string
           order_id?: string | null
           phone: string
@@ -132,6 +136,7 @@ export type Database = {
           utm_term?: string | null
         }
         Update: {
+          attempt_number?: number | null
           campaign_id?: string | null
           completed?: boolean | null
           created_at?: string | null
@@ -142,6 +147,7 @@ export type Database = {
           id?: string
           is_online?: boolean | null
           last_seen?: string | null
+          lead_group_identifier?: string | null
           name?: string
           order_id?: string | null
           phone?: string

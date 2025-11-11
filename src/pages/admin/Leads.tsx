@@ -31,6 +31,8 @@ interface Lead {
   orders: { id: string } | null;
   is_online: boolean;
   last_seen: string;
+  lead_group_identifier: string | null;
+  attempt_number: number | null;
 }
 
 const Leads = () => {
@@ -44,6 +46,7 @@ const Leads = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [utmSourceFilter, setUtmSourceFilter] = useState<string>("all");
   const [onlineStatusFilter, setOnlineStatusFilter] = useState<string>("all");
+  const [showOnlyFirstAttempt, setShowOnlyFirstAttempt] = useState(false);
 
   useEffect(() => {
     loadLeads();
@@ -51,7 +54,7 @@ const Leads = () => {
 
   useEffect(() => {
     applyFilters();
-  }, [statusFilter, utmSourceFilter, onlineStatusFilter, leads]);
+  }, [statusFilter, utmSourceFilter, onlineStatusFilter, showOnlyFirstAttempt, leads]);
 
   // Verificar status online baseado em last_seen (timeout de 30 segundos)
   useEffect(() => {
@@ -182,7 +185,28 @@ const Leads = () => {
       filtered = filtered.filter(lead => !lead.is_online);
     }
 
+    // Filtro de primeira tentativa
+    if (showOnlyFirstAttempt) {
+      filtered = filtered.filter(lead => lead.attempt_number === 1);
+    }
+
     setFilteredLeads(filtered);
+  };
+
+  // Função para contar tentativas
+  const getLeadAttempts = (groupId: string) => {
+    return leads.filter(l => l.lead_group_identifier === groupId)
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  };
+
+  // Calcular estatísticas de conversão
+  const conversionStats = {
+    totalLeads: leads.length,
+    uniqueLeads: new Set(leads.map(l => l.lead_group_identifier).filter(Boolean)).size,
+    totalConversions: leads.filter(l => l.completed).length,
+    convertedAtFirstAttempt: leads.filter(l => l.completed && l.attempt_number === 1).length,
+    convertedAtSecondAttempt: leads.filter(l => l.completed && l.attempt_number === 2).length,
+    convertedAtThirdOrMore: leads.filter(l => l.completed && l.attempt_number && l.attempt_number >= 3).length,
   };
 
   const getStepLabel = (step: number) => {
@@ -269,6 +293,39 @@ const Leads = () => {
         </div>
       </div>
 
+      {/* Analytics de Conversão */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Analytics de Conversão</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="text-center">
+            <p className="text-3xl font-bold text-primary">{conversionStats.uniqueLeads}</p>
+            <p className="text-sm text-muted-foreground mt-1">Leads Únicos</p>
+          </div>
+          <div className="text-center">
+            <p className="text-3xl font-bold text-green-600">{conversionStats.totalConversions}</p>
+            <p className="text-sm text-muted-foreground mt-1">Total Convertidos</p>
+          </div>
+          <div className="text-center">
+            <p className="text-3xl font-bold text-blue-600">{conversionStats.convertedAtFirstAttempt}</p>
+            <p className="text-sm text-muted-foreground mt-1">1ª Tentativa</p>
+          </div>
+          <div className="text-center">
+            <p className="text-3xl font-bold text-purple-600">{conversionStats.convertedAtSecondAttempt}</p>
+            <p className="text-sm text-muted-foreground mt-1">2ª Tentativa</p>
+          </div>
+          <div className="text-center">
+            <p className="text-3xl font-bold text-orange-600">
+              {conversionStats.uniqueLeads > 0 
+                ? ((conversionStats.totalConversions / conversionStats.uniqueLeads) * 100).toFixed(1)
+                : 0}%
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">Taxa de Conversão</p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Filtros */}
       <Card>
         <CardHeader>
@@ -327,6 +384,17 @@ const Leads = () => {
               </SelectContent>
             </Select>
           </div>
+
+          <div className="flex-1">
+            <label className="text-sm font-medium mb-2 block">Tentativas</label>
+            <Button
+              variant={showOnlyFirstAttempt ? "default" : "outline"}
+              className="w-full"
+              onClick={() => setShowOnlyFirstAttempt(!showOnlyFirstAttempt)}
+            >
+              {showOnlyFirstAttempt ? "Mostrando apenas 1ª tentativa" : "Todas as tentativas"}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -339,6 +407,7 @@ const Leads = () => {
               <TableHead>Status</TableHead>
               <TableHead>Nome</TableHead>
               <TableHead>WhatsApp</TableHead>
+              <TableHead>Tentativa</TableHead>
               <TableHead>Campanha</TableHead>
               <TableHead>Quantidade</TableHead>
               <TableHead>Etapa Atual</TableHead>
@@ -410,6 +479,13 @@ const Leads = () => {
                     </TableCell>
                     <TableCell className="font-medium">{lead.name}</TableCell>
                     <TableCell>{lead.phone}</TableCell>
+                    <TableCell>
+                      {lead.attempt_number && (
+                        <Badge variant="secondary">
+                          Tentativa #{lead.attempt_number}
+                        </Badge>
+                      )}
+                    </TableCell>
                     <TableCell>{lead.campaigns?.name}</TableCell>
                     <TableCell>{getQuantityDisplay(lead)}</TableCell>
                     <TableCell>
@@ -615,6 +691,42 @@ const Leads = () => {
                   </div>
                 </div>
               )}
+
+              {/* Histórico de Tentativas */}
+              {selectedLead.lead_group_identifier && (() => {
+                const attempts = getLeadAttempts(selectedLead.lead_group_identifier);
+                return attempts.length > 1 ? (
+                  <div>
+                    <h3 className="font-semibold text-lg mb-3">Histórico de Tentativas ({attempts.length})</h3>
+                    <div className="space-y-2">
+                      {attempts.map((attempt) => (
+                        <div key={attempt.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <Badge variant="secondary">
+                              Tentativa #{attempt.attempt_number}
+                            </Badge>
+                            <span className="text-sm text-muted-foreground">
+                              {format(new Date(attempt.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {attempt.completed ? (
+                              <Badge className="bg-green-500">✓ Convertido</Badge>
+                            ) : (
+                              <Badge variant="outline">
+                                Parou em: {getStepLabel(attempt.current_step)}
+                              </Badge>
+                            )}
+                            {attempt.id === selectedLead.id && (
+                              <Badge variant="default">Atual</Badge>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null;
+              })()}
 
               {/* Link para Pedido */}
               {selectedLead.orders && (
