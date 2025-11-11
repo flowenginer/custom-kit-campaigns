@@ -316,7 +316,7 @@ const Campaign = () => {
     try {
       const { data: campaignData, error: campaignError } = await supabase
         .from("campaigns")
-        .select("id, name, segment_id, workflow_config")
+        .select("id, name, segment_id, workflow_template_id, workflow_templates(workflow_config)")
         .eq("unique_link", uniqueLink)
         .single();
 

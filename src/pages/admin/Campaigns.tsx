@@ -192,7 +192,8 @@ export default function Campaigns() {
   };
 
   return (
-    <AdminLayout>
+    <>
+      <AdminLayout />
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -375,6 +376,6 @@ export default function Campaigns() {
           </DialogContent>
         </Dialog>
       </div>
-    </AdminLayout>
+    </>
   );
 }

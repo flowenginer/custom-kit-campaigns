@@ -7,7 +7,7 @@ interface WorkflowStep {
   label: string;
   order: number;
   enabled: boolean;
-  is_custom: boolean;
+  is_custom?: boolean;
   description?: string;
 }
 
