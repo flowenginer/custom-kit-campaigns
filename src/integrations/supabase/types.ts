@@ -59,6 +59,164 @@ export type Database = {
           },
         ]
       }
+      design_task_comments: {
+        Row: {
+          comment: string
+          created_at: string | null
+          id: string
+          is_internal: boolean | null
+          task_id: string
+          user_id: string | null
+        }
+        Insert: {
+          comment: string
+          created_at?: string | null
+          id?: string
+          is_internal?: boolean | null
+          task_id: string
+          user_id?: string | null
+        }
+        Update: {
+          comment?: string
+          created_at?: string | null
+          id?: string
+          is_internal?: boolean | null
+          task_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "design_task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "design_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      design_task_history: {
+        Row: {
+          action: string
+          created_at: string | null
+          id: string
+          new_status: Database["public"]["Enums"]["task_status"] | null
+          notes: string | null
+          old_status: Database["public"]["Enums"]["task_status"] | null
+          task_id: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          id?: string
+          new_status?: Database["public"]["Enums"]["task_status"] | null
+          notes?: string | null
+          old_status?: Database["public"]["Enums"]["task_status"] | null
+          task_id: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          id?: string
+          new_status?: Database["public"]["Enums"]["task_status"] | null
+          notes?: string | null
+          old_status?: Database["public"]["Enums"]["task_status"] | null
+          task_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "design_task_history_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "design_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      design_tasks: {
+        Row: {
+          assigned_at: string | null
+          assigned_to: string | null
+          campaign_id: string | null
+          changes_notes: string | null
+          client_approved_at: string | null
+          client_feedback: string | null
+          completed_at: string | null
+          created_at: string | null
+          current_version: number | null
+          deadline: string | null
+          design_files: Json | null
+          id: string
+          lead_id: string | null
+          order_id: string
+          priority: Database["public"]["Enums"]["task_priority"] | null
+          status: Database["public"]["Enums"]["task_status"]
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_to?: string | null
+          campaign_id?: string | null
+          changes_notes?: string | null
+          client_approved_at?: string | null
+          client_feedback?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          current_version?: number | null
+          deadline?: string | null
+          design_files?: Json | null
+          id?: string
+          lead_id?: string | null
+          order_id: string
+          priority?: Database["public"]["Enums"]["task_priority"] | null
+          status?: Database["public"]["Enums"]["task_status"]
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_to?: string | null
+          campaign_id?: string | null
+          changes_notes?: string | null
+          client_approved_at?: string | null
+          client_feedback?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          current_version?: number | null
+          deadline?: string | null
+          design_files?: Json | null
+          id?: string
+          lead_id?: string | null
+          order_id?: string
+          priority?: Database["public"]["Enums"]["task_priority"] | null
+          status?: Database["public"]["Enums"]["task_status"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "design_tasks_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "design_tasks_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "design_tasks_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       funnel_events: {
         Row: {
           campaign_id: string | null
@@ -359,7 +517,14 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      task_priority: "low" | "normal" | "high" | "urgent"
+      task_status:
+        | "pending"
+        | "in_progress"
+        | "awaiting_approval"
+        | "approved"
+        | "changes_requested"
+        | "completed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -486,6 +651,16 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      task_priority: ["low", "normal", "high", "urgent"],
+      task_status: [
+        "pending",
+        "in_progress",
+        "awaiting_approval",
+        "approved",
+        "changes_requested",
+        "completed",
+      ],
+    },
   },
 } as const

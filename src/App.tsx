@@ -12,6 +12,7 @@ import Models from "./pages/admin/Models";
 import Campaigns from "./pages/admin/Campaigns";
 import Leads from "./pages/admin/Leads";
 import Workflows from "./pages/admin/Workflows";
+import Creation from "./pages/admin/Creation";
 import Campaign from "./pages/Campaign";
 import NotFound from "./pages/NotFound";
 
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="campaigns" element={<Campaigns />} />
             <Route path="leads" element={<Leads />} />
             <Route path="workflows" element={<Workflows />} />
+            <Route path="creation" element={<Creation />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
