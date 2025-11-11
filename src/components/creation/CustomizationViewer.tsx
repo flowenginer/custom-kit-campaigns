@@ -152,7 +152,7 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
   const allImages = collectAllImages();
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 pb-4">
       {/* FRENTE */}
       {transformedData.front && (
         <Card>

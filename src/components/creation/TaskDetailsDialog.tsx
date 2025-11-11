@@ -296,7 +296,7 @@ export const TaskDetailsDialog = ({
             <TabsTrigger value="history">📜 Histórico</TabsTrigger>
           </TabsList>
 
-          <ScrollArea className="flex-1 mt-4">
+          <div className="flex-1 mt-4 overflow-y-auto pr-4">
             <TabsContent value="details" className="space-y-4 mt-0">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -447,7 +447,7 @@ export const TaskDetailsDialog = ({
                 ))}
               </div>
             </TabsContent>
-          </ScrollArea>
+          </div>
         </Tabs>
 
         <div className="flex justify-between pt-4 border-t">
