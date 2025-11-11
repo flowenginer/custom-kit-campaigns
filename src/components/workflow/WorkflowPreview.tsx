@@ -18,27 +18,6 @@ interface WorkflowPreviewProps {
 
 export function WorkflowPreview({ steps, compact = false }: WorkflowPreviewProps) {
   const activeSteps = steps.filter(step => step.enabled).sort((a, b) => a.order - b.order);
-  
-  // Gerar diagrama Mermaid
-  const generateMermaidDiagram = () => {
-    if (activeSteps.length === 0) return "";
-    
-    let diagram = "graph LR\n";
-    activeSteps.forEach((step, index) => {
-      const nodeId = `S${index}`;
-      const label = `${index + 1}. ${step.label}`;
-      diagram += `    ${nodeId}["${label}"]\n`;
-      
-      if (index < activeSteps.length - 1) {
-        const nextNodeId = `S${index + 1}`;
-        diagram += `    ${nodeId} --> ${nextNodeId}\n`;
-      }
-    });
-    
-    return diagram;
-  };
-
-  const mermaidCode = generateMermaidDiagram();
 
   if (compact) {
     return (
@@ -46,9 +25,13 @@ export function WorkflowPreview({ steps, compact = false }: WorkflowPreviewProps
         <p className="text-sm text-muted-foreground mb-2">
           {activeSteps.length} etapas ativas
         </p>
-        <div dangerouslySetInnerHTML={{ 
-          __html: `<lov-mermaid>\n${mermaidCode}\n</lov-mermaid>` 
-        }} />
+        <div className="flex flex-wrap gap-2">
+          {activeSteps.map((step, i) => (
+            <Badge key={step.id} variant="outline">
+              {i + 1}. {step.label}
+            </Badge>
+          ))}
+        </div>
       </div>
     );
   }
@@ -75,10 +58,28 @@ export function WorkflowPreview({ steps, compact = false }: WorkflowPreviewProps
             <p>Nenhuma etapa ativa para exibir</p>
           </div>
         ) : (
-          <div className="bg-muted/30 p-6 rounded-lg">
-            <div dangerouslySetInnerHTML={{ 
-              __html: `<lov-mermaid>\n${mermaidCode}\n</lov-mermaid>` 
-            }} />
+          <div className="space-y-0">
+            {activeSteps.map((step, i) => (
+              <div key={step.id} className="relative">
+                <div className="flex items-center gap-3 p-3 bg-background border rounded-lg">
+                  <div className="flex-shrink-0 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-semibold text-sm">
+                    {i + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium">{step.label}</p>
+                    {step.description && (
+                      <p className="text-sm text-muted-foreground">{step.description}</p>
+                    )}
+                  </div>
+                  {step.is_custom && (
+                    <Badge variant="secondary" className="flex-shrink-0">Custom</Badge>
+                  )}
+                </div>
+                {i < activeSteps.length - 1 && (
+                  <div className="h-6 w-0.5 bg-border ml-7 my-1" />
+                )}
+              </div>
+            ))}
           </div>
         )}
       </CardContent>
