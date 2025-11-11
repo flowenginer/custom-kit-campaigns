@@ -40,7 +40,7 @@ const AdminLayout = () => {
   return (
     <div className="min-h-screen flex">
       {/* Sidebar */}
-      <aside className="w-64 bg-card border-r flex flex-col">
+      <aside className="w-64 bg-card border-r flex flex-col h-screen sticky top-0">
         <div className="p-6 border-b">
           <div className="flex items-center gap-2">
             <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">

@@ -46,6 +46,7 @@ const Models = () => {
   const [formData, setFormData] = useState({
     name: "",
     segment_id: "",
+    sku: "",
     features: [] as string[],
   });
   const [newFeature, setNewFeature] = useState('');
@@ -182,6 +183,7 @@ const Models = () => {
         .insert({
           name: formData.name,
           segment_id: formData.segment_id,
+          sku: formData.sku || null,
           photo_main: "temp",
           image_front: "temp",
           image_back: "temp",
@@ -234,7 +236,7 @@ const Models = () => {
 
       toast.success("Modelo criado com sucesso!");
       setIsDialogOpen(false);
-      setFormData({ name: "", segment_id: "", features: [] });
+      setFormData({ name: "", segment_id: "", sku: "", features: [] });
       setNewFeature('');
       setImageFiles({
         photo_main: null,
@@ -351,6 +353,17 @@ const Models = () => {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="sku">SKU</Label>
+                <Input
+                  id="sku"
+                  value={formData.sku}
+                  onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                  placeholder="Ex: CM-001, REG-PERF-01"
+                  disabled={uploading}
+                />
               </div>
 
               <div className="space-y-3">

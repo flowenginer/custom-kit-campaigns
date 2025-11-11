@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ExternalLink, Copy, Plus, Trash2, Settings } from "lucide-react";
 import { toast } from "sonner";
-import AdminLayout from "@/components/AdminLayout";
 
 interface Campaign {
   id: string;
@@ -192,9 +191,7 @@ export default function Campaigns() {
   };
 
   return (
-    <>
-      <AdminLayout />
-      <div className="space-y-6">
+    <div className="p-8 space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Campanhas</h1>
@@ -375,7 +372,6 @@ export default function Campaigns() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
-    </>
+    </div>
   );
 }
