@@ -1,23 +1,37 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
+import { ExternalLink, Copy, Plus, Trash2, Settings } from "lucide-react";
 import { toast } from "sonner";
-import { Plus, ExternalLink, Copy, Trash2 } from "lucide-react";
+import AdminLayout from "@/components/AdminLayout";
 
 interface Campaign {
   id: string;
   name: string;
   unique_link: string;
-  segment_id: string;
-  segments: { name: string; id: string } | null;
+  segment_id: string | null;
+  workflow_template_id: string;
+  segments?: {
+    id: string;
+    name: string;
+  };
+  workflow_templates?: {
+    id: string;
+    name: string;
+  };
   created_at: string;
   model_count?: number;
+}
+
+interface WorkflowTemplate {
+  id: string;
+  name: string;
+  description: string | null;
 }
 
 interface Segment {
@@ -25,13 +39,17 @@ interface Segment {
   name: string;
 }
 
-const Campaigns = () => {
+export default function Campaigns() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [segments, setSegments] = useState<Segment[]>([]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [workflows, setWorkflows] = useState<WorkflowTemplate[]>([]);
+  const [showDialog, setShowDialog] = useState(false);
+  const [showChangeWorkflow, setShowChangeWorkflow] = useState(false);
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
   const [formData, setFormData] = useState({
     name: "",
     segment_id: "",
+    workflow_template_id: "",
   });
 
   useEffect(() => {
@@ -39,18 +57,27 @@ const Campaigns = () => {
   }, []);
 
   const loadData = async () => {
-    const { data: campaignsData } = await supabase
+    // Carregar campanhas
+    const { data: campaignsData, error: campaignsError } = await supabase
       .from("campaigns")
-      .select("*, segments(name, id)")
+      .select(`
+        *,
+        segments (
+          id,
+          name
+        ),
+        workflow_templates (
+          id,
+          name
+        )
+      `)
       .order("created_at", { ascending: false });
-    
-    const { data: segmentsData } = await supabase
-      .from("segments")
-      .select("*")
-      .order("name");
 
-    // Count models for each campaign
-    if (campaignsData) {
+    if (campaignsError) {
+      toast.error("Erro ao carregar campanhas");
+      console.error(campaignsError);
+    } else if (campaignsData) {
+      // Count models for each campaign
       const campaignsWithCounts = await Promise.all(
         campaignsData.map(async (campaign) => {
           if (campaign.segment_id) {
@@ -65,8 +92,32 @@ const Campaigns = () => {
       );
       setCampaigns(campaignsWithCounts);
     }
-    
-    if (segmentsData) setSegments(segmentsData);
+
+    // Carregar segmentos
+    const { data: segmentsData, error: segmentsError } = await supabase
+      .from("segments")
+      .select("*")
+      .order("name");
+
+    if (segmentsError) {
+      toast.error("Erro ao carregar segmentos");
+      console.error(segmentsError);
+    } else {
+      setSegments(segmentsData || []);
+    }
+
+    // Carregar workflows
+    const { data: workflowsData, error: workflowsError } = await supabase
+      .from("workflow_templates")
+      .select("id, name, description")
+      .order("name");
+
+    if (workflowsError) {
+      toast.error("Erro ao carregar workflows");
+      console.error(workflowsError);
+    } else {
+      setWorkflows(workflowsData || []);
+    }
   };
 
   const generateUniqueLink = () => {
@@ -76,42 +127,60 @@ const Campaigns = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.segment_id) {
-      toast.error("Selecione um segmento!");
+    if (!formData.name || !formData.segment_id || !formData.workflow_template_id) {
+      toast.error("Preencha todos os campos obrigatórios");
       return;
     }
 
-    try {
-      const uniqueLink = generateUniqueLink();
-      
-      const { error: campaignError } = await supabase
-        .from("campaigns")
-        .insert({
-          name: formData.name,
-          segment_id: formData.segment_id,
-          unique_link: uniqueLink,
-        });
+    const campaignData = {
+      name: formData.name,
+      segment_id: formData.segment_id,
+      workflow_template_id: formData.workflow_template_id,
+      unique_link: generateUniqueLink(),
+    };
 
-      if (campaignError) throw campaignError;
+    const { error } = await supabase.from("campaigns").insert([campaignData]);
 
+    if (error) {
+      toast.error("Erro ao criar campanha");
+      console.error(error);
+    } else {
       toast.success("Campanha criada com sucesso!");
-      setIsDialogOpen(false);
-      setFormData({ name: "", segment_id: "" });
+      setShowDialog(false);
+      setFormData({ name: "", segment_id: "", workflow_template_id: "" });
       loadData();
-    } catch (error: any) {
-      toast.error(error.message);
+    }
+  };
+
+  const handleChangeWorkflow = async (workflowId: string) => {
+    if (!selectedCampaignId) return;
+
+    const { error } = await supabase
+      .from("campaigns")
+      .update({ workflow_template_id: workflowId })
+      .eq("id", selectedCampaignId);
+
+    if (error) {
+      toast.error("Erro ao alterar workflow");
+      console.error(error);
+    } else {
+      toast.success("Workflow alterado com sucesso!");
+      setShowChangeWorkflow(false);
+      setSelectedCampaignId("");
+      loadData();
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir esta campanha?")) return;
+    if (!confirm("Tem certeza que deseja deletar esta campanha?")) return;
 
     const { error } = await supabase.from("campaigns").delete().eq("id", id);
-    
+
     if (error) {
-      toast.error("Erro ao excluir campanha");
+      toast.error("Erro ao deletar campanha");
+      console.error(error);
     } else {
-      toast.success("Campanha excluída!");
+      toast.success("Campanha deletada!");
       loadData();
     }
   };
@@ -122,132 +191,190 @@ const Campaigns = () => {
     toast.success("Link copiado!");
   };
 
-
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Campanhas</h1>
-          <p className="text-muted-foreground mt-1">
-            Crie e gerencie suas campanhas de vendas
-          </p>
+    <AdminLayout>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Campanhas</h1>
+            <p className="text-muted-foreground">Gerencie suas campanhas de vendas</p>
+          </div>
+          <Dialog open={showDialog} onOpenChange={setShowDialog}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4" />
+                Nova Campanha
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Nova Campanha</DialogTitle>
+                <DialogDescription>
+                  Crie uma nova campanha associando um segmento e workflow
+                </DialogDescription>
+              </DialogHeader>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <Label htmlFor="name">Nome da Campanha*</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Ex: Campanha Verão 2025"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="segment">Segmento*</Label>
+                  <Select
+                    value={formData.segment_id}
+                    onValueChange={(value) => setFormData({ ...formData, segment_id: value })}
+                    required
+                  >
+                    <SelectTrigger id="segment">
+                      <SelectValue placeholder="Selecione um segmento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {segments.map((segment) => (
+                        <SelectItem key={segment.id} value={segment.id}>
+                          {segment.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="workflow">Workflow*</Label>
+                  <Select
+                    value={formData.workflow_template_id}
+                    onValueChange={(value) => setFormData({ ...formData, workflow_template_id: value })}
+                    required
+                  >
+                    <SelectTrigger id="workflow">
+                      <SelectValue placeholder="Selecione um workflow" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {workflows.map((workflow) => (
+                        <SelectItem key={workflow.id} value={workflow.id}>
+                          {workflow.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Define as etapas do funil para esta campanha
+                  </p>
+                </div>
+
+                <Button type="submit" className="w-full">
+                  Criar Campanha
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Nova Campanha
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        {campaigns.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <p className="text-muted-foreground">Nenhuma campanha criada ainda</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4">
+            {campaigns.map((campaign) => (
+              <Card key={campaign.id}>
+                <CardHeader>
+                  <CardTitle>{campaign.name}</CardTitle>
+                  <CardDescription>
+                    {campaign.segments?.name || "Sem segmento"} • {campaign.model_count || 0} modelos
+                    {campaign.workflow_templates && ` • Workflow: ${campaign.workflow_templates.name}`}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                    <code className="text-sm flex-1 truncate">
+                      {window.location.origin}/c/{campaign.unique_link}
+                    </code>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => copyLink(campaign.unique_link)}
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => window.open(`/c/${campaign.unique_link}`, "_blank")}
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </Button>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedCampaignId(campaign.id);
+                        setShowChangeWorkflow(true);
+                      }}
+                    >
+                      <Settings className="w-4 h-4" />
+                      Alterar Workflow
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDelete(campaign.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Deletar
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        <Dialog open={showChangeWorkflow} onOpenChange={setShowChangeWorkflow}>
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle>Nova Campanha</DialogTitle>
+              <DialogTitle>Alterar Workflow da Campanha</DialogTitle>
               <DialogDescription>
-                Todos os modelos do segmento selecionado estarão disponíveis na campanha
+                Selecione o novo workflow para esta campanha
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="name">Nome da Campanha*</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Ex: Torneio Futsal 2025"
-                  required
-                />
-              </div>
 
-              <div>
-                <Label htmlFor="segment">Segmento*</Label>
-                <Select
-                  value={formData.segment_id}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, segment_id: value })
-                  }
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um segmento" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {segments.map((segment) => (
-                      <SelectItem key={segment.id} value={segment.id}>
-                        {segment.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Os modelos cadastrados neste segmento aparecerão automaticamente na campanha
-                </p>
-              </div>
+            <div>
+              <Label htmlFor="new-workflow">Novo Workflow</Label>
+              <Select onValueChange={handleChangeWorkflow}>
+                <SelectTrigger id="new-workflow">
+                  <SelectValue placeholder="Selecione um workflow" />
+                </SelectTrigger>
+                <SelectContent>
+                  {workflows.map((workflow) => (
+                    <SelectItem key={workflow.id} value={workflow.id}>
+                      {workflow.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-              <Button type="submit" className="w-full">
-                Criar Campanha
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowChangeWorkflow(false)}>
+                Cancelar
               </Button>
-            </form>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
-
-      <div className="grid gap-4">
-        {campaigns.map((campaign) => (
-          <Card key={campaign.id}>
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <CardTitle>{campaign.name}</CardTitle>
-                  {campaign.segments && (
-                    <CardDescription>
-                      Segmento: {campaign.segments.name} • {campaign.model_count || 0} modelos disponíveis
-                    </CardDescription>
-                  )}
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleDelete(campaign.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-                <code className="text-sm flex-1 truncate">
-                  {window.location.origin}/c/{campaign.unique_link}
-                </code>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => copyLink(campaign.unique_link)}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => window.open(`/c/${campaign.unique_link}`, "_blank")}
-                >
-                  <ExternalLink className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {campaigns.length === 0 && (
-        <Card>
-          <CardContent className="pt-6 text-center text-muted-foreground">
-            Nenhuma campanha criada. Clique em "Nova Campanha" para começar!
-          </CardContent>
-        </Card>
-      )}
-    </div>
+    </AdminLayout>
   );
-};
-
-export default Campaigns;
+}

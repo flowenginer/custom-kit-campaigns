@@ -13,9 +13,10 @@ interface WorkflowStep {
 
 interface WorkflowPreviewProps {
   steps: WorkflowStep[];
+  compact?: boolean;
 }
 
-export function WorkflowPreview({ steps }: WorkflowPreviewProps) {
+export function WorkflowPreview({ steps, compact = false }: WorkflowPreviewProps) {
   const activeSteps = steps.filter(step => step.enabled).sort((a, b) => a.order - b.order);
   
   // Gerar diagrama Mermaid
@@ -38,6 +39,19 @@ export function WorkflowPreview({ steps }: WorkflowPreviewProps) {
   };
 
   const mermaidCode = generateMermaidDiagram();
+
+  if (compact) {
+    return (
+      <div>
+        <p className="text-sm text-muted-foreground mb-2">
+          {activeSteps.length} etapas ativas
+        </p>
+        <div dangerouslySetInnerHTML={{ 
+          __html: `<lov-mermaid>\n${mermaidCode}\n</lov-mermaid>` 
+        }} />
+      </div>
+    );
+  }
 
   return (
     <Card>

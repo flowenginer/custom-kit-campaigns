@@ -22,7 +22,7 @@ export type Database = {
           segment_id: string | null
           unique_link: string
           updated_at: string | null
-          workflow_config: Json | null
+          workflow_template_id: string
         }
         Insert: {
           created_at?: string | null
@@ -31,7 +31,7 @@ export type Database = {
           segment_id?: string | null
           unique_link: string
           updated_at?: string | null
-          workflow_config?: Json | null
+          workflow_template_id: string
         }
         Update: {
           created_at?: string | null
@@ -40,7 +40,7 @@ export type Database = {
           segment_id?: string | null
           unique_link?: string
           updated_at?: string | null
-          workflow_config?: Json | null
+          workflow_template_id?: string
         }
         Relationships: [
           {
@@ -48,6 +48,13 @@ export type Database = {
             columns: ["segment_id"]
             isOneToOne: false
             referencedRelation: "segments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaigns_workflow_template_id_fkey"
+            columns: ["workflow_template_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_templates"
             referencedColumns: ["id"]
           },
         ]

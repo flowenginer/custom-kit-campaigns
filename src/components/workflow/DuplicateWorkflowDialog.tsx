@@ -26,72 +26,63 @@ interface Campaign {
 interface DuplicateWorkflowDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  currentCampaignId: string;
+  sourceWorkflowId?: string;
   onDuplicate: (workflow: WorkflowStep[]) => void;
 }
 
 export function DuplicateWorkflowDialog({
   open,
   onOpenChange,
-  currentCampaignId,
+  sourceWorkflowId,
   onDuplicate,
 }: DuplicateWorkflowDialogProps) {
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [selectedCampaignId, setSelectedCampaignId] = useState("");
-  const [selectedWorkflow, setSelectedWorkflow] = useState<WorkflowStep[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [workflows, setWorkflows] = useState<any[]>([]);
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>("");
+  const [selectedWorkflow, setSelectedWorkflow] = useState<WorkflowStep[] | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (open) {
-      loadCampaigns();
+      loadWorkflows();
     }
-  }, [open, currentCampaignId]);
+  }, [open]);
 
   useEffect(() => {
-    if (selectedCampaignId) {
-      const campaign = campaigns.find(c => c.id === selectedCampaignId);
-      if (campaign) {
-        setSelectedWorkflow(campaign.workflow_config);
+    if (selectedWorkflowId) {
+      const workflow = workflows.find((w) => w.id === selectedWorkflowId);
+      if (workflow) {
+        setSelectedWorkflow(workflow.workflow_config as WorkflowStep[]);
       }
     } else {
-      setSelectedWorkflow([]);
+      setSelectedWorkflow(null);
     }
-  }, [selectedCampaignId, campaigns]);
+  }, [selectedWorkflowId, workflows]);
 
-  const loadCampaigns = async () => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("campaigns")
-        .select("id, name, workflow_config")
-        .neq("id", currentCampaignId)
-        .order("name");
+  const loadWorkflows = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("workflow_templates")
+      .select("id, name, workflow_config")
+      .order("name");
 
-      if (error) throw error;
-      setCampaigns((data || []).map(c => ({
-        ...c,
-        workflow_config: (c.workflow_config as unknown as WorkflowStep[]) || []
-      })));
-    } catch (error) {
-      console.error("Erro ao carregar campanhas:", error);
-      toast.error("Erro ao carregar campanhas");
-    } finally {
-      setIsLoading(false);
+    if (error) {
+      toast.error("Erro ao carregar workflows");
+      console.error(error);
+    } else {
+      // Filtrar o workflow atual se fornecido
+      setWorkflows(sourceWorkflowId ? (data || []).filter((w) => w.id !== sourceWorkflowId) : data || []);
     }
+    setLoading(false);
   };
 
   const handleDuplicate = () => {
-    if (!selectedWorkflow.length) {
-      toast.error("Selecione uma campanha");
+    if (!selectedWorkflow) {
+      toast.error("Selecione um workflow");
       return;
     }
 
     onDuplicate(selectedWorkflow);
-    
-    const campaignName = campaigns.find(c => c.id === selectedCampaignId)?.name;
-    toast.success(`Workflow duplicado de "${campaignName}"!`);
-    
-    setSelectedCampaignId("");
+    toast.success("Workflow duplicado!");
     onOpenChange(false);
   };
 
@@ -101,41 +92,41 @@ export function DuplicateWorkflowDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Copy className="h-5 w-5" />
-            Duplicar Workflow de Outra Campanha
+            Duplicar Workflow
           </DialogTitle>
           <DialogDescription>
-            Copie a configuração de workflow de outra campanha
+            Copie a configuração de outro workflow template
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {isLoading ? (
+          {loading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
-          ) : campaigns.length === 0 ? (
+          ) : workflows.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              <p>Nenhuma outra campanha disponível para duplicar</p>
+              <p>Nenhum outro workflow disponível para duplicar</p>
             </div>
           ) : (
             <>
               <div className="space-y-2">
-                <Label htmlFor="campaign">Selecionar Campanha Origem</Label>
-                <Select value={selectedCampaignId} onValueChange={setSelectedCampaignId}>
-                  <SelectTrigger id="campaign">
-                    <SelectValue placeholder="Escolha uma campanha" />
+                <Label htmlFor="workflow">Selecionar Workflow Origem</Label>
+                <Select value={selectedWorkflowId} onValueChange={setSelectedWorkflowId}>
+                  <SelectTrigger id="workflow">
+                    <SelectValue placeholder="Escolha um workflow" />
                   </SelectTrigger>
                   <SelectContent>
-                    {campaigns.map((campaign) => (
-                      <SelectItem key={campaign.id} value={campaign.id}>
-                        {campaign.name}
+                    {workflows.map((workflow) => (
+                      <SelectItem key={workflow.id} value={workflow.id}>
+                        {workflow.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              {selectedWorkflow.length > 0 && (
+              {selectedWorkflow && selectedWorkflow.length > 0 && (
                 <div className="space-y-3 p-4 bg-muted/30 rounded-lg">
                   <div className="flex items-center justify-between">
                     <Label>Preview do Workflow</Label>
@@ -189,7 +180,7 @@ export function DuplicateWorkflowDialog({
           </Button>
           <Button
             onClick={handleDuplicate}
-            disabled={!selectedCampaignId || isLoading}
+            disabled={!selectedWorkflowId || loading}
           >
             <Copy className="h-4 w-4 mr-2" />
             Duplicar Workflow
