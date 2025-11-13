@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Trash2, Upload, ImageIcon, X } from "lucide-react";
+import { Plus, Trash2, Upload, ImageIcon, X, Pencil } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 interface Segment {
@@ -20,6 +20,7 @@ interface ShirtModel {
   id: string;
   name: string;
   segment_id: string;
+  sku?: string | null;
   photo_main: string;
   image_front: string;
   image_back: string;
@@ -41,6 +42,8 @@ const Models = () => {
   const [models, setModels] = useState<ShirtModel[]>([]);
   const [segments, setSegments] = useState<Segment[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingModel, setEditingModel] = useState<ShirtModel | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [formData, setFormData] = useState({
@@ -268,6 +271,17 @@ const Models = () => {
   };
 
   const handleDelete = async (id: string, segmentId: string) => {
+    // Verificar se há orders associados
+    const { count: orderCount } = await supabase
+      .from('orders')
+      .select('*', { count: 'exact', head: true })
+      .eq('model_id', id);
+
+    if (orderCount && orderCount > 0) {
+      toast.error(`Não é possível deletar. Este modelo possui ${orderCount} pedido(s) associado(s).`);
+      return;
+    }
+
     if (!confirm("Tem certeza que deseja excluir este modelo?")) return;
 
     try {
@@ -288,6 +302,117 @@ const Models = () => {
       loadModels();
     } catch (error: any) {
       toast.error("Erro ao excluir modelo: " + error.message);
+    }
+  };
+
+  const openEditDialog = (model: ShirtModel) => {
+    setEditingModel(model);
+    setFormData({
+      name: model.name,
+      segment_id: model.segment_id,
+      sku: model.sku || "",
+      features: model.features || [],
+    });
+    setImagePreviews({
+      photo_main: model.photo_main,
+      image_front: model.image_front,
+      image_back: model.image_back,
+      image_right: model.image_right,
+      image_left: model.image_left,
+      image_front_small_logo: model.image_front_small_logo || "",
+      image_front_large_logo: model.image_front_large_logo || "",
+      image_front_clean: model.image_front_clean || "",
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingModel) return;
+
+    setUploading(true);
+    setUploadProgress(0);
+
+    try {
+      // Atualizar dados básicos
+      const { error: updateError } = await supabase
+        .from("shirt_models")
+        .update({
+          name: formData.name,
+          sku: formData.sku || null,
+          features: formData.features.length > 0 ? formData.features : null,
+        })
+        .eq("id", editingModel.id);
+
+      if (updateError) throw updateError;
+
+      // Upload apenas das novas imagens
+      const imageUrls: Record<string, string> = {};
+      const imageFieldsToCheck: (keyof typeof imageFiles)[] = [
+        "photo_main",
+        "image_front",
+        "image_back",
+        "image_right",
+        "image_left",
+        "image_front_small_logo",
+        "image_front_large_logo",
+        "image_front_clean"
+      ];
+
+      let progress = 0;
+      const changedImages = imageFieldsToCheck.filter(field => imageFiles[field]);
+      const progressStep = changedImages.length > 0 ? 100 / changedImages.length : 0;
+
+      for (const field of imageFieldsToCheck) {
+        const file = imageFiles[field];
+        if (file) {
+          imageUrls[field] = await uploadImage(editingModel.id, field, file);
+          progress += progressStep;
+          setUploadProgress(progress);
+        }
+      }
+
+      // Atualizar URLs das imagens se houver
+      if (Object.keys(imageUrls).length > 0) {
+        const { error: imagesUpdateError } = await supabase
+          .from("shirt_models")
+          .update(imageUrls)
+          .eq("id", editingModel.id);
+
+        if (imagesUpdateError) throw imagesUpdateError;
+      }
+
+      toast.success("Modelo atualizado com sucesso!");
+      setIsEditDialogOpen(false);
+      setEditingModel(null);
+      setFormData({ name: "", segment_id: "", sku: "", features: [] });
+      setNewFeature('');
+      setImageFiles({
+        photo_main: null,
+        image_front: null,
+        image_back: null,
+        image_right: null,
+        image_left: null,
+        image_front_small_logo: null,
+        image_front_large_logo: null,
+        image_front_clean: null,
+      });
+      setImagePreviews({
+        photo_main: "",
+        image_front: "",
+        image_back: "",
+        image_right: "",
+        image_left: "",
+        image_front_small_logo: "",
+        image_front_large_logo: "",
+        image_front_clean: "",
+      });
+      loadModels();
+    } catch (error: any) {
+      toast.error("Erro ao atualizar modelo: " + error.message);
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -552,13 +677,22 @@ const Models = () => {
             <CardHeader>
               <CardTitle className="flex items-start justify-between">
                 <span className="line-clamp-1">{model.name}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleDelete(model.id, model.segment_id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => openEditDialog(model)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDelete(model.id, model.segment_id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </CardTitle>
               <CardDescription>
                 {model.segments?.name || "Sem segmento"} • 5 imagens
@@ -577,6 +711,190 @@ const Models = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Dialog de Edição */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Modelo de Camisa</DialogTitle>
+            <DialogDescription>
+              Atualize as informações e fotos do modelo. Você pode alterar apenas as fotos que desejar.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdate} className="space-y-6">
+            <div>
+              <Label htmlFor="edit-name">Nome do Modelo*</Label>
+              <Input
+                id="edit-name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Ex: Regata Performance, Camisa Gola V"
+                required
+                disabled={uploading}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="edit-sku">SKU</Label>
+              <Input
+                id="edit-sku"
+                value={formData.sku}
+                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                placeholder="Ex: CM-001, REG-PERF-01"
+                disabled={uploading}
+              />
+            </div>
+
+            <div className="space-y-3">
+              <Label>Características do Modelo</Label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Ex: UV50+, Dry-fit, Absorção rápida"
+                  value={newFeature}
+                  onChange={(e) => setNewFeature(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (newFeature.trim()) {
+                        setFormData({ ...formData, features: [...formData.features, newFeature.trim()] });
+                        setNewFeature('');
+                      }
+                    }
+                  }}
+                  disabled={uploading}
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  onClick={() => {
+                    if (newFeature.trim()) {
+                      setFormData({ ...formData, features: [...formData.features, newFeature.trim()] });
+                      setNewFeature('');
+                    }
+                  }}
+                  disabled={uploading}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              {formData.features.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {formData.features.map((feature, index) => (
+                    <div key={index} className="flex items-center gap-1 bg-primary/10 text-primary px-2 py-1 rounded-md text-sm">
+                      <span>{feature}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-4 w-4 p-0"
+                        onClick={() => {
+                          setFormData({
+                            ...formData,
+                            features: formData.features.filter((_, i) => i !== index)
+                          });
+                        }}
+                        disabled={uploading}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-4">
+              <Label>Imagens Atuais (selecione para substituir)</Label>
+              <p className="text-xs text-muted-foreground">
+                As imagens atuais serão mantidas, a menos que você selecione novos arquivos
+              </p>
+              
+              {[
+                { field: "photo_main" as const, label: "Foto Principal" },
+                { field: "image_front" as const, label: "Frente" },
+                { field: "image_back" as const, label: "Costas" },
+                { field: "image_right" as const, label: "Lado Direito" },
+                { field: "image_left" as const, label: "Lado Esquerdo" },
+                { field: "image_front_small_logo" as const, label: "Frente - Logo Pequena" },
+                { field: "image_front_large_logo" as const, label: "Frente - Logo Grande" },
+                { field: "image_front_clean" as const, label: "Frente - Limpa" },
+              ].map(({ field, label }) => (
+                <div key={field} className="space-y-2">
+                  <Label htmlFor={`edit-${field}`} className="text-sm text-muted-foreground">
+                    {label}
+                  </Label>
+                  <div className="flex gap-2 items-start">
+                    <Input
+                      id={`edit-${field}`}
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleFileChange(field, e.target.files?.[0] || null)}
+                      disabled={uploading}
+                    />
+                    {imagePreviews[field] && (
+                      <div className="w-20 h-20 border rounded flex-shrink-0">
+                        <img
+                          src={imagePreviews[field]}
+                          alt={label}
+                          className="w-full h-full object-cover rounded"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {uploading && (
+              <div className="space-y-2">
+                <Label>Atualizando...</Label>
+                <Progress value={uploadProgress} />
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="flex-1"
+                onClick={() => {
+                  setIsEditDialogOpen(false);
+                  setEditingModel(null);
+                  setFormData({ name: "", segment_id: "", sku: "", features: [] });
+                  setNewFeature('');
+                  setImageFiles({
+                    photo_main: null,
+                    image_front: null,
+                    image_back: null,
+                    image_right: null,
+                    image_left: null,
+                    image_front_small_logo: null,
+                    image_front_large_logo: null,
+                    image_front_clean: null,
+                  });
+                  setImagePreviews({
+                    photo_main: "",
+                    image_front: "",
+                    image_back: "",
+                    image_right: "",
+                    image_left: "",
+                    image_front_small_logo: "",
+                    image_front_large_logo: "",
+                    image_front_clean: "",
+                  });
+                }}
+                disabled={uploading}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" className="flex-1" disabled={uploading}>
+                <Upload className="mr-2 h-4 w-4" />
+                {uploading ? "Atualizando..." : "Atualizar Modelo"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

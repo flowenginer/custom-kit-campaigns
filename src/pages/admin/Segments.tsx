@@ -87,6 +87,17 @@ const Segments = () => {
   };
 
   const handleDelete = async (id: string) => {
+    // Verificar se há modelos associados
+    const { count: modelCount } = await supabase
+      .from('shirt_models')
+      .select('*', { count: 'exact', head: true })
+      .eq('segment_id', id);
+
+    if (modelCount && modelCount > 0) {
+      toast.error(`Não é possível deletar. Este segmento possui ${modelCount} modelo(s) associado(s).`);
+      return;
+    }
+
     if (!confirm("Tem certeza que deseja excluir este segmento?")) return;
 
     const { error } = await supabase.from("segments").delete().eq("id", id);
