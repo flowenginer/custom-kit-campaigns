@@ -171,6 +171,17 @@ export default function Campaigns() {
   };
 
   const handleDelete = async (id: string) => {
+    // Verificar se há leads associados
+    const { count } = await supabase
+      .from('leads')
+      .select('*', { count: 'exact', head: true })
+      .eq('campaign_id', id);
+    
+    if (count && count > 0) {
+      toast.error(`Não é possível deletar. Esta campanha possui ${count} lead(s) associado(s).`);
+      return;
+    }
+
     if (!confirm("Tem certeza que deseja deletar esta campanha?")) return;
 
     const { error } = await supabase.from("campaigns").delete().eq("id", id);

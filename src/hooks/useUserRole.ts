@@ -3,6 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type AppRole = 'super_admin' | 'admin' | 'designer' | 'viewer';
 
+interface UserRoleRow {
+  role: AppRole;
+}
+
 export const useUserRole = () => {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -16,13 +20,16 @@ export const useUserRole = () => {
         return;
       }
 
-      // Usar rpc() para evitar problemas com types
-      const { data, error } = await supabase.rpc('get_user_roles', {
+      // Fazer a chamada diretamente sem o tipo do supabase para evitar erro de TypeScript
+      // até que types.ts seja regenerado com a função get_user_roles
+      const response: any = await (supabase as any).rpc('get_user_roles', {
         _user_id: user.id
       });
 
+      const { data, error } = response;
+
       if (!error && data) {
-        const userRoles = data.map((r: any) => r.role as AppRole);
+        const userRoles = (data as UserRoleRow[]).map(r => r.role);
         setRoles(userRoles);
         console.log('User roles loaded:', userRoles);
         console.log('Is Super Admin:', userRoles.includes('super_admin'));
