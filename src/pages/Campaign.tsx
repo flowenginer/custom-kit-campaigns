@@ -885,18 +885,28 @@ const Campaign = () => {
                 {models.map((model) => (
                   <Card
                     key={model.id}
-                    className={`cursor-pointer transition-all hover:shadow-lg overflow-hidden ${
-                      selectedModel?.id === model.id
-                        ? "ring-4 ring-primary"
-                        : ""
-                    }`}
-                    onClick={() => setSelectedModel(model)}
+                    className="overflow-hidden transition-all hover:shadow-lg"
                   >
                     <img
                       src={model.photo_main}
                       alt={model.name}
                       className="w-full h-auto"
                     />
+                    <CardContent className="p-4 bg-muted/30">
+                      <h3 className="font-semibold text-lg mb-3 text-center">
+                        {model.name}
+                      </h3>
+                      <Button 
+                        className="w-full" 
+                        size="lg"
+                        onClick={() => {
+                          setSelectedModel(model);
+                          setTimeout(() => handleNext(), 300);
+                        }}
+                      >
+                        Selecionar Modelo
+                      </Button>
+                    </CardContent>
                   </Card>
                 ))}
               </div>
