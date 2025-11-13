@@ -2,13 +2,15 @@ import { useNavigate, Outlet } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "./ui/button";
-import { LogOut, LayoutDashboard, Tag, Shirt, Megaphone, Users, Workflow, Palette, Code } from "lucide-react";
+import { LogOut, LayoutDashboard, Tag, Shirt, Megaphone, Users, Workflow, Palette, Code, Settings } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { Session } from "@supabase/supabase-js";
 import { NotificationsDropdown } from "./NotificationsDropdown";
+import { useUserRole } from "@/hooks/useUserRole";
 const AdminLayout = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
+  const { isSuperAdmin, isAdmin, isDesigner } = useUserRole();
   useEffect(() => {
     supabase.auth.getSession().then(({
       data: {
@@ -53,45 +55,62 @@ const AdminLayout = () => {
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
-          <NavLink to="/admin/dashboard" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
-            <LayoutDashboard className="h-5 w-5" />
-            <span className="font-medium">Dashboard</span>
-          </NavLink>
+          {(isAdmin || isDesigner) && (
+            <NavLink to="/admin/dashboard" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
+              <LayoutDashboard className="h-5 w-5" />
+              <span className="font-medium">Dashboard</span>
+            </NavLink>
+          )}
 
-          <NavLink to="/admin/segments" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
-            <Tag className="h-5 w-5" />
-            <span className="font-medium">Segmentos</span>
-          </NavLink>
+          {isAdmin && (
+            <>
+              <NavLink to="/admin/segments" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
+                <Tag className="h-5 w-5" />
+                <span className="font-medium">Segmentos</span>
+              </NavLink>
 
-          <NavLink to="/admin/models" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
-            <Shirt className="h-5 w-5" />
-            <span className="font-medium">Modelos</span>
-          </NavLink>
+              <NavLink to="/admin/models" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
+                <Shirt className="h-5 w-5" />
+                <span className="font-medium">Modelos</span>
+              </NavLink>
 
-          <NavLink to="/admin/campaigns" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
-            <Megaphone className="h-5 w-5" />
-            <span className="font-medium">Campanhas</span>
-          </NavLink>
+              <NavLink to="/admin/campaigns" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
+                <Megaphone className="h-5 w-5" />
+                <span className="font-medium">Campanhas</span>
+              </NavLink>
 
-          <NavLink to="/admin/leads" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
-            <Users className="h-5 w-5" />
-            <span className="font-medium">Leads</span>
-          </NavLink>
+              <NavLink to="/admin/leads" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
+                <Users className="h-5 w-5" />
+                <span className="font-medium">Leads</span>
+              </NavLink>
 
-          <NavLink to="/admin/workflows" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
-            <Workflow className="h-5 w-5" />
-            <span className="font-medium">Workflows</span>
-          </NavLink>
+              <NavLink to="/admin/workflows" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
+                <Workflow className="h-5 w-5" />
+                <span className="font-medium">Workflows</span>
+              </NavLink>
+            </>
+          )}
 
-          <NavLink to="/admin/creation" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
-            <Palette className="h-5 w-5" />
-            <span className="font-medium">Criação</span>
-          </NavLink>
+          {(isAdmin || isDesigner) && (
+            <NavLink to="/admin/creation" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
+              <Palette className="h-5 w-5" />
+              <span className="font-medium">Criação</span>
+            </NavLink>
+          )}
 
-          <NavLink to="/admin/api" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
-            <Code className="h-5 w-5" />
-            <span className="font-medium">API</span>
-          </NavLink>
+          {isAdmin && (
+            <NavLink to="/admin/api" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
+              <Code className="h-5 w-5" />
+              <span className="font-medium">API</span>
+            </NavLink>
+          )}
+
+          {isSuperAdmin && (
+            <NavLink to="/admin/settings" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
+              <Settings className="h-5 w-5" />
+              <span className="font-medium">Configurações</span>
+            </NavLink>
+          )}
         </nav>
 
         <div className="p-4 border-t">
