@@ -14,6 +14,7 @@ import Leads from "./pages/admin/Leads";
 import Workflows from "./pages/admin/Workflows";
 import Creation from "./pages/admin/Creation";
 import Api from "./pages/admin/Api";
+import Settings from "./pages/admin/Settings";
 import Campaign from "./pages/Campaign";
 import NotFound from "./pages/NotFound";
 
@@ -37,7 +38,8 @@ const App = () => (
             <Route path="leads" element={<Leads />} />
             <Route path="workflows" element={<Workflows />} />
             <Route path="creation" element={<Creation />} />
-            <Route path="api" element={<Api />} />
+              <Route path="api" element={<Api />} />
+              <Route path="settings" element={<Settings />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
