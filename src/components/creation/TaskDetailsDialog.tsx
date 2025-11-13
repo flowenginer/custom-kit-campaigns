@@ -128,6 +128,32 @@ export const TaskDetailsDialog = ({
       return;
     }
 
+    // Disparar webhook se o status for "awaiting_approval"
+    if (newStatus === 'awaiting_approval') {
+      try {
+        toast.loading("Enviando para aprovação...");
+        
+        const { error: webhookError } = await supabase.functions.invoke('send-approval-webhook', {
+          body: { task_id: task.id }
+        });
+
+        if (webhookError) {
+          console.error('Erro ao enviar webhook:', webhookError);
+          toast.dismiss();
+          toast.warning("Status atualizado, mas houve erro ao notificar. Verifique os logs.");
+        } else {
+          toast.dismiss();
+          toast.success("Enviado para aprovação com sucesso!");
+        }
+      } catch (error) {
+        console.error('Erro ao chamar webhook:', error);
+        toast.dismiss();
+        toast.warning("Status atualizado, mas webhook falhou");
+      }
+    } else {
+      toast.success("Status atualizado!");
+    }
+
     toast.success("Status atualizado!");
     onTaskUpdated();
   };
