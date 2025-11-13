@@ -2,7 +2,7 @@ import { useNavigate, Outlet } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "./ui/button";
-import { LogOut, LayoutDashboard, Tag, Shirt, Megaphone, Users, Workflow, Palette } from "lucide-react";
+import { LogOut, LayoutDashboard, Tag, Shirt, Megaphone, Users, Workflow, Palette, Code } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { Session } from "@supabase/supabase-js";
 import { NotificationsDropdown } from "./NotificationsDropdown";
@@ -86,6 +86,11 @@ const AdminLayout = () => {
           <NavLink to="/admin/creation" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
             <Palette className="h-5 w-5" />
             <span className="font-medium">Criação</span>
+          </NavLink>
+
+          <NavLink to="/admin/api" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
+            <Code className="h-5 w-5" />
+            <span className="font-medium">API</span>
           </NavLink>
         </nav>
 
