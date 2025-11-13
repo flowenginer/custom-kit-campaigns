@@ -2,11 +2,12 @@ import { useNavigate, Outlet } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "./ui/button";
-import { LogOut, LayoutDashboard, Tag, Shirt, Megaphone, Users, Workflow, Palette, Code, Settings } from "lucide-react";
+import { LogOut, LayoutDashboard, Tag, Megaphone, Users, Workflow, Palette, Code, Settings } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { Session } from "@supabase/supabase-js";
 import { NotificationsDropdown } from "./NotificationsDropdown";
 import { useUserRole } from "@/hooks/useUserRole";
+import logoSS from "@/assets/logo-ss.png";
 const AdminLayout = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
@@ -53,9 +54,11 @@ const AdminLayout = () => {
       <aside className="w-64 bg-card border-r flex flex-col h-screen sticky top-0">
         <div className="p-6 border-b">
           <div className="flex items-center gap-2">
-            <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
-              <Shirt className="h-6 w-6 text-primary-foreground" />
-            </div>
+            <img 
+              src={logoSS} 
+              alt="Space Sports Logo" 
+              className="h-10 w-10 object-contain"
+            />
             <div>
               <h1 className="font-bold text-lg">Space Sports</h1>
               <p className="text-xs text-muted-foreground">Painel de Controle</p>
@@ -79,7 +82,7 @@ const AdminLayout = () => {
               </NavLink>
 
               <NavLink to="/admin/models" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
-                <Shirt className="h-5 w-5" />
+                <Tag className="h-5 w-5" />
                 <span className="font-medium">Modelos</span>
               </NavLink>
 

@@ -1166,7 +1166,11 @@ const Campaign = () => {
         </div>
 
         {/* Navigation */}
-        <div className="flex justify-between">
+        <div className={`flex justify-between ${
+          currentStep === 1 
+            ? 'sticky bottom-0 bg-background/95 backdrop-blur-sm border-t p-4 shadow-lg z-10 -mx-6 -mb-6 px-6' 
+            : ''
+        }`}>
           <Button
             variant="outline"
             onClick={handleBack}
