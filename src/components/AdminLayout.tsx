@@ -68,10 +68,16 @@ const AdminLayout = () => {
 
         <nav className="flex-1 p-4 space-y-2">
           {showDesignerLinks && (
-            <NavLink to="/admin/dashboard" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
-              <LayoutDashboard className="h-5 w-5" />
-              <span className="font-medium">Dashboard</span>
-            </NavLink>
+            <>
+              <NavLink to="/admin/dashboard" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
+                <LayoutDashboard className="h-5 w-5" />
+                <span className="font-medium">Dashboard</span>
+              </NavLink>
+              <NavLink to="/admin/advanced-dashboard" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
+                <LayoutDashboard className="h-5 w-5" />
+                <span className="font-medium">Dashboard Avançada</span>
+              </NavLink>
+            </>
           )}
 
           {showAdminLinks && (
