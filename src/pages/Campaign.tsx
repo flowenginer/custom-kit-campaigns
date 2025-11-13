@@ -891,16 +891,13 @@ const Campaign = () => {
                       alt={model.name}
                       className="w-full h-auto"
                     />
-                    <CardContent className="p-4 bg-muted/30">
-                      <h3 className="font-semibold text-lg mb-3 text-center">
-                        {model.name}
-                      </h3>
+                    <CardContent className="p-3 bg-muted/30">
                       <Button 
                         className="w-full" 
                         size="lg"
                         onClick={() => {
                           setSelectedModel(model);
-                          setTimeout(() => handleNext(), 300);
+                          handleNext();
                         }}
                       >
                         Selecionar Modelo
