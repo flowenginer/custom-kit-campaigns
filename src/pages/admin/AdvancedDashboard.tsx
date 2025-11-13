@@ -5,6 +5,8 @@ import { DateRangeFilter } from "@/components/dashboard/DateRangeFilter";
 import { RealtimeMetrics } from "@/components/dashboard/RealtimeMetrics";
 import { CrossAnalysisTable } from "@/components/dashboard/CrossAnalysisTable";
 import { SankeyFlow } from "@/components/dashboard/SankeyFlow";
+import { DynamicFilters, FilterOptions } from "@/components/dashboard/DynamicFilters";
+import { FilterBadges } from "@/components/dashboard/FilterBadges";
 import { Button } from "@/components/ui/button";
 import { Download, FileText, Mail, Share2 } from "lucide-react";
 import { subDays } from "date-fns";
@@ -47,16 +49,44 @@ export default function AdvancedDashboard() {
   const [flowData, setFlowData] = useState<FlowData[]>([]);
   const [metrics, setMetrics] = useState<MetricCard[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Filter state
+  const [filters, setFilters] = useState<FilterOptions>({
+    campaigns: [],
+    segments: [],
+    utmSources: [],
+    utmMediums: [],
+    utmCampaigns: [],
+  });
+  const [campaignNames, setCampaignNames] = useState<Map<string, string>>(new Map());
+  const [segmentNames, setSegmentNames] = useState<Map<string, string>>(new Map());
+  const [allLeadsData, setAllLeadsData] = useState<any[]>([]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
+      // Fetch campaign and segment names for badges
+      const { data: campaignsData } = await supabase
+        .from("campaigns")
+        .select("id, name");
+      const { data: segmentsData } = await supabase
+        .from("segments")
+        .select("id, name");
+      
+      if (campaignsData) {
+        setCampaignNames(new Map(campaignsData.map(c => [c.id, c.name])));
+      }
+      if (segmentsData) {
+        setSegmentNames(new Map(segmentsData.map(s => [s.id, s.name])));
+      }
+
       // Fetch cross-analysis data (UTM x Segment)
       const { data: leadsData } = await supabase
         .from("leads")
         .select(`
           utm_source,
           utm_medium,
+          utm_campaign,
           order_id,
           campaign_id,
           campaigns(segment_id, segments(name))
@@ -64,119 +94,12 @@ export default function AdvancedDashboard() {
         .gte("created_at", startDate.toISOString())
         .lte("created_at", endDate.toISOString());
 
-      const grouped = (leadsData || []).reduce((acc: any, lead) => {
-        const key = `${lead.utm_source || "unknown"}_${lead.utm_medium || "unknown"}_${
-          (lead.campaigns as any)?.segments?.name || "Sem segmento"
-        }`;
-        if (!acc[key]) {
-          acc[key] = {
-            utm_source: lead.utm_source || "unknown",
-            utm_medium: lead.utm_medium || "unknown",
-            segment_name: (lead.campaigns as any)?.segments?.name || "Sem segmento",
-            total_leads: 0,
-            total_orders: 0,
-            conversion_rate: 0,
-          };
-        }
-        acc[key].total_leads++;
-        if (lead.order_id) acc[key].total_orders++;
-        return acc;
-      }, {});
+      // Store all leads data for filtering
+      setAllLeadsData(leadsData || []);
 
-      const crossDataArray = Object.values(grouped).map((item: any) => ({
-        ...item,
-        conversion_rate: item.total_leads > 0 ? (item.total_orders / item.total_leads) * 100 : 0,
-      }));
+      // Initial processing (will be re-filtered when filters change)
+      processLeadsData(leadsData || []);
 
-      setCrossData(crossDataArray);
-
-      // Fetch daily evolution data - aggregate by date
-      const { data: allLeadsForDaily } = await supabase
-        .from("leads")
-        .select("created_at, order_id")
-        .gte("created_at", startDate.toISOString())
-        .lte("created_at", endDate.toISOString());
-
-      const dailyGrouped = (allLeadsForDaily || []).reduce((acc: any, lead) => {
-        const date = lead.created_at.split("T")[0];
-        if (!acc[date]) {
-          acc[date] = { date, total_leads: 0, total_orders: 0, conversion_rate: 0 };
-        }
-        acc[date].total_leads++;
-        if (lead.order_id) acc[date].total_orders++;
-        return acc;
-      }, {});
-
-      const dailyDataArray = Object.values(dailyGrouped)
-        .map((item: any) => ({
-          ...item,
-          conversion_rate: item.total_leads > 0 ? (item.total_orders / item.total_leads) * 100 : 0,
-        }))
-        .sort((a: any, b: any) => a.date.localeCompare(b.date));
-
-      setDailyData(dailyDataArray);
-
-      // Fetch flow data for Sankey
-      const { data: leadsForFlow } = await supabase
-        .from("leads")
-        .select(`
-          utm_source,
-          order_id,
-          campaign_id,
-          campaigns(segment_id, segments(name))
-        `)
-        .gte("created_at", startDate.toISOString())
-        .lte("created_at", endDate.toISOString())
-        .not("utm_source", "is", null)
-        .not("campaign_id", "is", null);
-
-      const flowGrouped = (leadsForFlow || []).reduce((acc: any, lead) => {
-        const source = lead.utm_source || "unknown";
-        const target = (lead.campaigns as any)?.segments?.name || "Sem segmento";
-        const key = `${source}_${target}`;
-        
-        if (!acc[key]) {
-          acc[key] = { source, target, value: 0 };
-        }
-        if (lead.order_id) acc[key].value++;
-        return acc;
-      }, {});
-
-      setFlowData(Object.values(flowGrouped));
-
-      // Calculate summary metrics
-      const totalLeads = crossData.reduce((sum, item) => sum + item.total_leads, 0);
-      const totalOrders = crossData.reduce((sum, item) => sum + item.total_orders, 0);
-      const overallConversion = totalLeads > 0 ? (totalOrders / totalLeads) * 100 : 0;
-
-      // Best campaign
-      const bestCampaign = crossData.reduce(
-        (best, item) =>
-          item.conversion_rate > (best?.conversion_rate || 0) ? item : best,
-        crossData[0]
-      );
-
-      setMetrics([
-        {
-          title: "Total de Leads",
-          value: totalLeads,
-          subtitle: "no período selecionado",
-        },
-        {
-          title: "Total de Conversões",
-          value: totalOrders,
-          subtitle: `${overallConversion.toFixed(1)}% taxa de conversão`,
-        },
-        {
-          title: "Melhor Combinação",
-          value: bestCampaign
-            ? `${bestCampaign.utm_source} → ${bestCampaign.segment_name}`
-            : "-",
-          subtitle: bestCampaign
-            ? `${bestCampaign.conversion_rate.toFixed(1)}% conversão`
-            : "-",
-        },
-      ]);
     } catch (error) {
       console.error("Error in fetchData:", error);
       toast.error("Erro ao carregar dados da dashboard");
@@ -189,6 +112,145 @@ export default function AdvancedDashboard() {
     fetchData();
   }, [startDate, endDate]);
 
+  useEffect(() => {
+    processLeadsData(allLeadsData);
+  }, [filters, allLeadsData]);
+
+  const processLeadsData = (leadsData: any[]) => {
+    // Apply filters
+    let filteredLeads = leadsData;
+
+    if (filters.campaigns.length > 0) {
+      filteredLeads = filteredLeads.filter(lead => 
+        filters.campaigns.includes(lead.campaign_id)
+      );
+    }
+
+    if (filters.segments.length > 0) {
+      filteredLeads = filteredLeads.filter(lead => 
+        filters.segments.includes((lead.campaigns as any)?.segment_id)
+      );
+    }
+
+    if (filters.utmSources.length > 0) {
+      filteredLeads = filteredLeads.filter(lead => 
+        filters.utmSources.includes(lead.utm_source)
+      );
+    }
+
+    if (filters.utmMediums.length > 0) {
+      filteredLeads = filteredLeads.filter(lead => 
+        filters.utmMediums.includes(lead.utm_medium)
+      );
+    }
+
+    if (filters.utmCampaigns.length > 0) {
+      filteredLeads = filteredLeads.filter(lead => 
+        filters.utmCampaigns.includes(lead.utm_campaign)
+      );
+    }
+
+    // Process cross-analysis data
+    const grouped = filteredLeads.reduce((acc: any, lead) => {
+      const key = `${lead.utm_source || "unknown"}_${lead.utm_medium || "unknown"}_${
+        (lead.campaigns as any)?.segments?.name || "Sem segmento"
+      }`;
+      if (!acc[key]) {
+        acc[key] = {
+          utm_source: lead.utm_source || "unknown",
+          utm_medium: lead.utm_medium || "unknown",
+          segment_name: (lead.campaigns as any)?.segments?.name || "Sem segmento",
+          total_leads: 0,
+          total_orders: 0,
+          conversion_rate: 0,
+        };
+      }
+      acc[key].total_leads++;
+      if (lead.order_id) acc[key].total_orders++;
+      return acc;
+    }, {});
+
+    const crossDataArray = Object.values(grouped).map((item: any) => ({
+      ...item,
+      conversion_rate: item.total_leads > 0 ? (item.total_orders / item.total_leads) * 100 : 0,
+    }));
+
+    setCrossData(crossDataArray);
+
+    // Process daily data
+    const dailyGrouped = filteredLeads.reduce((acc: any, lead) => {
+      const date = lead.created_at?.split("T")[0];
+      if (!date) return acc;
+      if (!acc[date]) {
+        acc[date] = { date, total_leads: 0, total_orders: 0, conversion_rate: 0 };
+      }
+      acc[date].total_leads++;
+      if (lead.order_id) acc[date].total_orders++;
+      return acc;
+    }, {});
+
+    const dailyDataArray = Object.values(dailyGrouped)
+      .map((item: any) => ({
+        ...item,
+        conversion_rate: item.total_leads > 0 ? (item.total_orders / item.total_leads) * 100 : 0,
+      }))
+      .sort((a: any, b: any) => a.date.localeCompare(b.date));
+
+    setDailyData(dailyDataArray);
+
+    // Process flow data
+    const flowGrouped = filteredLeads
+      .filter(lead => lead.utm_source && lead.campaign_id)
+      .reduce((acc: any, lead) => {
+        const source = lead.utm_source || "unknown";
+        const target = (lead.campaigns as any)?.segments?.name || "Sem segmento";
+        const key = `${source}_${target}`;
+        
+        if (!acc[key]) {
+          acc[key] = { source, target, value: 0 };
+        }
+        if (lead.order_id) acc[key].value++;
+        return acc;
+      }, {});
+
+    setFlowData(Object.values(flowGrouped));
+
+    // Calculate metrics
+    const totalLeads = crossDataArray.reduce((sum: number, item: any) => sum + item.total_leads, 0);
+    const totalOrders = crossDataArray.reduce((sum: number, item: any) => sum + item.total_orders, 0);
+    const overallConversion = totalLeads > 0 ? (totalOrders / totalLeads) * 100 : 0;
+
+    const bestCampaign = crossDataArray.length > 0
+      ? crossDataArray.reduce(
+          (best: any, item: any) =>
+            item.conversion_rate > (best?.conversion_rate || 0) ? item : best,
+          crossDataArray[0]
+        )
+      : null;
+
+    setMetrics([
+      {
+        title: "Total de Leads",
+        value: totalLeads,
+        subtitle: "no período selecionado",
+      },
+      {
+        title: "Total de Conversões",
+        value: totalOrders,
+        subtitle: `${overallConversion.toFixed(1)}% taxa de conversão`,
+      },
+      {
+        title: "Melhor Combinação",
+        value: bestCampaign
+          ? `${bestCampaign.utm_source} → ${bestCampaign.segment_name}`
+          : "-",
+        subtitle: bestCampaign
+          ? `${bestCampaign.conversion_rate.toFixed(1)}% conversão`
+          : "-",
+      },
+    ]);
+  };
+
   const handleDateChange = (start: Date, end: Date) => {
     setStartDate(start);
     setEndDate(end);
@@ -196,6 +258,17 @@ export default function AdvancedDashboard() {
 
   const handleExport = () => {
     toast.success("Funcionalidade de exportação em desenvolvimento");
+  };
+
+  const handleFiltersChange = (newFilters: FilterOptions) => {
+    setFilters(newFilters);
+  };
+
+  const handleRemoveFilter = (type: keyof FilterOptions, value: string) => {
+    setFilters(prev => ({
+      ...prev,
+      [type]: prev[type].filter(v => v !== value),
+    }));
   };
 
   return (
@@ -228,16 +301,32 @@ export default function AdvancedDashboard() {
         </div>
       </div>
 
-      {/* Date Filter */}
+      {/* Date and Dynamic Filters */}
       <Card>
-        <CardHeader>
-          <CardTitle>Filtros de Período</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <DateRangeFilter
-            startDate={startDate}
-            endDate={endDate}
-            onDateChange={handleDateChange}
+        <CardContent className="pt-6 space-y-4">
+          <div>
+            <h3 className="text-sm font-medium mb-3 text-foreground">Período</h3>
+            <DateRangeFilter
+              startDate={startDate}
+              endDate={endDate}
+              onDateChange={handleDateChange}
+            />
+          </div>
+          
+          <div className="border-t pt-4">
+            <h3 className="text-sm font-medium mb-3 text-foreground">Filtros Dinâmicos</h3>
+            <DynamicFilters
+              startDate={startDate}
+              endDate={endDate}
+              onFiltersChange={handleFiltersChange}
+            />
+          </div>
+
+          <FilterBadges
+            filters={filters}
+            campaignNames={campaignNames}
+            segmentNames={segmentNames}
+            onRemoveFilter={handleRemoveFilter}
           />
         </CardContent>
       </Card>
