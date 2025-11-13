@@ -742,7 +742,6 @@ const Campaign = () => {
             />
           </div>
           
-          <h1 className="text-3xl font-bold text-center mb-2">{campaign.name}</h1>
           <p className="text-center text-muted-foreground mb-4">
             {steps[currentStep]} - Etapa {currentStep + 1} de {steps.length}
           </p>
@@ -1175,29 +1174,27 @@ const Campaign = () => {
           )}
         </div>
 
-        {/* Navigation */}
-        <div className={`flex justify-between ${
-          currentStep === 1 
-            ? 'sticky bottom-0 bg-background/95 backdrop-blur-sm border-t p-4 shadow-lg z-10 -mx-6 -mb-6 px-6' 
-            : ''
-        }`}>
-          <Button
-            variant="outline"
-            onClick={handleBack}
-            disabled={currentStep === 0}
-            size="lg"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar
-          </Button>
-
-          {currentStep < 6 && (
-            <Button onClick={handleNext} size="lg">
-              Próximo
-              <ArrowRight className="ml-2 h-4 w-4" />
+        {/* Navigation - Hidden on step 1 (model selection) */}
+        {currentStep !== 1 && (
+          <div className="flex justify-between">
+            <Button
+              variant="outline"
+              onClick={handleBack}
+              disabled={currentStep === 0}
+              size="lg"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Voltar
             </Button>
-          )}
-        </div>
+
+            {currentStep < 6 && (
+              <Button onClick={handleNext} size="lg">
+                Próximo
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
