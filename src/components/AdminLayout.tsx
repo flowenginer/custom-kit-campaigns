@@ -10,7 +10,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 const AdminLayout = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
-  const { isSuperAdmin, isAdmin, isDesigner } = useUserRole();
+  const { isSuperAdmin, isAdmin, isDesigner, isLoading } = useUserRole();
   useEffect(() => {
     supabase.auth.getSession().then(({
       data: {
@@ -39,6 +39,15 @@ const AdminLayout = () => {
     navigate("/auth");
   };
   if (!session) return null;
+  
+  if (isLoading) {
+    return <div className="flex items-center justify-center min-h-screen">Carregando...</div>;
+  }
+
+  // Super admin vê tudo
+  const showAll = isSuperAdmin;
+  const showAdminLinks = showAll || isAdmin;
+  const showDesignerLinks = showAll || isDesigner;
   return <div className="min-h-screen flex">
       {/* Sidebar */}
       <aside className="w-64 bg-card border-r flex flex-col h-screen sticky top-0">
@@ -55,14 +64,14 @@ const AdminLayout = () => {
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
-          {(isAdmin || isDesigner) && (
+          {showDesignerLinks && (
             <NavLink to="/admin/dashboard" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
               <LayoutDashboard className="h-5 w-5" />
               <span className="font-medium">Dashboard</span>
             </NavLink>
           )}
 
-          {isAdmin && (
+          {showAdminLinks && (
             <>
               <NavLink to="/admin/segments" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
                 <Tag className="h-5 w-5" />
@@ -91,21 +100,21 @@ const AdminLayout = () => {
             </>
           )}
 
-          {(isAdmin || isDesigner) && (
+          {showDesignerLinks && (
             <NavLink to="/admin/creation" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
               <Palette className="h-5 w-5" />
               <span className="font-medium">Criação</span>
             </NavLink>
           )}
 
-          {isAdmin && (
+          {showAdminLinks && (
             <NavLink to="/admin/api" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
               <Code className="h-5 w-5" />
               <span className="font-medium">API</span>
             </NavLink>
           )}
 
-          {isSuperAdmin && (
+          {showAll && (
             <NavLink to="/admin/settings" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
               <Settings className="h-5 w-5" />
               <span className="font-medium">Configurações</span>
