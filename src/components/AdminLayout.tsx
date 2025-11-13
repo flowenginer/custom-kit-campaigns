@@ -11,7 +11,12 @@ import logoSS from "@/assets/logo-ss.png";
 const AdminLayout = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
-  const { isSuperAdmin, isAdmin, isDesigner, isLoading } = useUserRole();
+  const {
+    isSuperAdmin,
+    isAdmin,
+    isDesigner,
+    isLoading
+  } = useUserRole();
   useEffect(() => {
     supabase.auth.getSession().then(({
       data: {
@@ -40,7 +45,6 @@ const AdminLayout = () => {
     navigate("/auth");
   };
   if (!session) return null;
-  
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-screen">Carregando...</div>;
   }
@@ -54,11 +58,7 @@ const AdminLayout = () => {
       <aside className="w-64 bg-card border-r flex flex-col h-screen sticky top-0">
         <div className="p-6 border-b">
           <div className="flex items-center gap-2">
-            <img 
-              src={logoSS} 
-              alt="Space Sports Logo" 
-              className="h-10 w-10 object-contain"
-            />
+            <img src={logoSS} alt="Space Sports Logo" className="h-10 w-10 object-contain" />
             <div>
               <h1 className="font-bold text-lg">Space Sports</h1>
               <p className="text-xs text-muted-foreground">Painel de Controle</p>
@@ -67,21 +67,18 @@ const AdminLayout = () => {
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
-          {showDesignerLinks && (
-            <>
+          {showDesignerLinks && <>
               <NavLink to="/admin/dashboard" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
                 <LayoutDashboard className="h-5 w-5" />
                 <span className="font-medium">Dashboard</span>
               </NavLink>
               <NavLink to="/admin/advanced-dashboard" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
                 <LayoutDashboard className="h-5 w-5" />
-                <span className="font-medium">Dashboard Avançada</span>
+                <span className="font-medium">Data Cross   </span>
               </NavLink>
-            </>
-          )}
+            </>}
 
-          {showAdminLinks && (
-            <>
+          {showAdminLinks && <>
               <NavLink to="/admin/segments" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
                 <Tag className="h-5 w-5" />
                 <span className="font-medium">Segmentos</span>
@@ -106,29 +103,22 @@ const AdminLayout = () => {
                 <Workflow className="h-5 w-5" />
                 <span className="font-medium">Workflows</span>
               </NavLink>
-            </>
-          )}
+            </>}
 
-          {showDesignerLinks && (
-            <NavLink to="/admin/creation" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
+          {showDesignerLinks && <NavLink to="/admin/creation" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
               <Palette className="h-5 w-5" />
               <span className="font-medium">Criação</span>
-            </NavLink>
-          )}
+            </NavLink>}
 
-          {showAdminLinks && (
-            <NavLink to="/admin/api" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
+          {showAdminLinks && <NavLink to="/admin/api" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
               <Code className="h-5 w-5" />
               <span className="font-medium">API</span>
-            </NavLink>
-          )}
+            </NavLink>}
 
-          {showAll && (
-            <NavLink to="/admin/settings" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
+          {showAll && <NavLink to="/admin/settings" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
               <Settings className="h-5 w-5" />
               <span className="font-medium">Configurações</span>
-            </NavLink>
-          )}
+            </NavLink>}
         </nav>
 
         <div className="p-4 border-t">
