@@ -95,7 +95,7 @@ const Campaign = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [sessionId, setSessionId] = useState(() => `session-${Date.now()}-${Math.random()}`);
-  const STORAGE_KEY = `campaign_progress_${uniqueLink}`;
+  const STORAGE_KEY = uniqueLink ? `campaign_progress_${uniqueLink}` : 'campaign_progress_temp';
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [models, setModels] = useState<ShirtModel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -202,25 +202,42 @@ const Campaign = () => {
         customerData,
         customizations
       };
-      console.log('💾 Salvando no sessionStorage:', dataToSave);
+      console.log('💾 Salvando no sessionStorage:', {
+        key: STORAGE_KEY,
+        data: dataToSave
+      });
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+      console.log('✅ Dados salvos com sucesso!');
     }
-  }, [selectedModel, customerData, customizations, uniqueLink, STORAGE_KEY]);
+  }, [selectedModel, customerData, customizations, uniqueLink]);
 
   // Reidratar estado do sessionStorage após carregar modelos
   useEffect(() => {
     // Só tentar reidratar DEPOIS que os models foram carregados
     if (models.length > 0 && isRehydrating) {
       const cached = sessionStorage.getItem(STORAGE_KEY);
-      
+
+      console.log('🔍 Tentando recuperar do sessionStorage:', {
+        key: STORAGE_KEY,
+        hasData: !!cached,
+        modelsCount: models.length
+      });
+
       if (cached) {
         try {
           const data = JSON.parse(cached);
-          console.log('📂 Recuperando do sessionStorage:', data);
+          console.log('📂 Dados recuperados:', data);
           
-          // Restaurar customerData e customizations
-          if (data.customerData) setCustomerData(data.customerData);
-          if (data.customizations) setCustomizations(data.customizations);
+          // IMPORTANTE: Verificar se os dados existem antes de restaurar
+          if (data.customerData && Object.keys(data.customerData).length > 0) {
+            setCustomerData(data.customerData);
+            console.log('✅ CustomerData restaurado');
+          }
+          
+          if (data.customizations && Object.keys(data.customizations).length > 0) {
+            setCustomizations(data.customizations);
+            console.log('✅ Customizations restauradas');
+          }
           
           // Restaurar selectedModel
           if (data.selectedModelId) {
@@ -228,23 +245,44 @@ const Campaign = () => {
             if (foundModel) {
               setSelectedModel(foundModel);
               console.log('✅ Modelo recuperado:', foundModel.name);
+            } else {
+              console.warn('⚠️ Modelo não encontrado pelo ID:', data.selectedModelId);
             }
           } else if (data.selectedModelName) {
             const foundModel = models.find(m => m.name === data.selectedModelName);
             if (foundModel) {
               setSelectedModel(foundModel);
-              console.log('✅ Modelo recuperado:', foundModel.name);
+              console.log('✅ Modelo recuperado pelo nome:', foundModel.name);
+            } else {
+              console.warn('⚠️ Modelo não encontrado pelo nome:', data.selectedModelName);
             }
           }
         } catch (e) {
-          console.error("❌ Erro ao reidratar:", e);
+          console.error("❌ Erro ao parsear sessionStorage:", e);
         }
+      } else {
+        console.warn('⚠️ Nenhum dado encontrado no sessionStorage para:', STORAGE_KEY);
       }
       
-      // Marcar como concluído
+      // Marcar como concluído APENAS SE os models foram carregados
       setIsRehydrating(false);
+    } else if (models.length === 0) {
+      console.log('⏳ Aguardando models carregarem...');
     }
-  }, [models, isRehydrating, STORAGE_KEY]);
+  }, [models, isRehydrating]);
+
+  // DEBUG: Monitorar mudanças no estado
+  useEffect(() => {
+    console.log('🔄 Estado atual:', {
+      currentStep,
+      hasSelectedModel: !!selectedModel,
+      selectedModelName: selectedModel?.name,
+      frontLogoType: customizations.front.logoType,
+      backLogoLarge: customizations.back.logoLarge,
+      backNameText: customizations.back.nameText,
+      isRehydrating
+    });
+  }, [currentStep, selectedModel, customizations, isRehydrating]);
 
   // Detectar mudanças no query param ?step=X
   useEffect(() => {
