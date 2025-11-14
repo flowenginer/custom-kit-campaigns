@@ -195,7 +195,9 @@ const Campaign = () => {
 
   // Persistir progresso no sessionStorage
   useEffect(() => {
-    if (uniqueLink) {  // Salvar sempre que houver uniqueLink
+    if (!uniqueLink || isRehydrating) return; // NÃO salvar durante reidratação
+    
+    if (selectedModel || customerData.name || Object.keys(customizations.front).length > 0) {
       const dataToSave = {
         selectedModelId: selectedModel?.id,
         selectedModelName: selectedModel?.name,
@@ -209,15 +211,41 @@ const Campaign = () => {
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
       console.log('✅ Dados salvos com sucesso!');
     }
-  }, [selectedModel, customerData, customizations, uniqueLink]);
+  }, [selectedModel, customerData, customizations, uniqueLink, isRehydrating]);
 
-  // Reidratar estado do sessionStorage após carregar modelos
+  // FASE 1: Reidratação rápida (sem models) - restaurar customerData e customizations
   useEffect(() => {
-    // Só tentar reidratar DEPOIS que os models foram carregados
+    if (!isRehydrating) return;
+    
+    const cached = sessionStorage.getItem(STORAGE_KEY);
+    if (!cached) return;
+
+    try {
+      const data = JSON.parse(cached);
+      console.log('📂 [FASE 1] Restaurando dados básicos:', data);
+      
+      if (data.customerData && Object.keys(data.customerData).length > 0) {
+        setCustomerData(data.customerData);
+        console.log('✅ [FASE 1] CustomerData restaurado');
+      }
+      
+      if (data.customizations && Object.keys(data.customizations).length > 0) {
+        setCustomizations(data.customizations);
+        console.log('✅ [FASE 1] Customizations restauradas');
+      }
+    } catch (e) {
+      console.error("❌ [FASE 1] Erro ao parsear sessionStorage:", e);
+    }
+    // Não finaliza isRehydrating aqui; selectedModel virá na fase 2
+  }, [STORAGE_KEY, isRehydrating]);
+
+  // FASE 2: Reidratar selectedModel após carregar modelos
+  useEffect(() => {
+    // Só tentar reidratar o modelo DEPOIS que os models foram carregados
     if (models.length > 0 && isRehydrating) {
       const cached = sessionStorage.getItem(STORAGE_KEY);
 
-      console.log('🔍 Tentando recuperar do sessionStorage:', {
+      console.log('🔍 [FASE 2] Tentando recuperar modelo:', {
         key: STORAGE_KEY,
         hasData: !!cached,
         modelsCount: models.length
@@ -226,50 +254,48 @@ const Campaign = () => {
       if (cached) {
         try {
           const data = JSON.parse(cached);
-          console.log('📂 Dados recuperados:', data);
+          console.log('📂 [FASE 2] Restaurando modelo:', data);
           
-          // IMPORTANTE: Verificar se os dados existem antes de restaurar
-          if (data.customerData && Object.keys(data.customerData).length > 0) {
-            setCustomerData(data.customerData);
-            console.log('✅ CustomerData restaurado');
-          }
-          
-          if (data.customizations && Object.keys(data.customizations).length > 0) {
-            setCustomizations(data.customizations);
-            console.log('✅ Customizations restauradas');
-          }
-          
-          // Restaurar selectedModel
+          // Restaurar APENAS selectedModel (dados já foram restaurados na fase 1)
           if (data.selectedModelId) {
             const foundModel = models.find(m => m.id === data.selectedModelId);
             if (foundModel) {
               setSelectedModel(foundModel);
-              console.log('✅ Modelo recuperado:', foundModel.name);
+              console.log('✅ [FASE 2] Modelo recuperado:', foundModel.name);
             } else {
-              console.warn('⚠️ Modelo não encontrado pelo ID:', data.selectedModelId);
+              console.warn('⚠️ [FASE 2] Modelo não encontrado pelo ID:', data.selectedModelId);
             }
           } else if (data.selectedModelName) {
             const foundModel = models.find(m => m.name === data.selectedModelName);
             if (foundModel) {
               setSelectedModel(foundModel);
-              console.log('✅ Modelo recuperado pelo nome:', foundModel.name);
+              console.log('✅ [FASE 2] Modelo recuperado pelo nome:', foundModel.name);
             } else {
-              console.warn('⚠️ Modelo não encontrado pelo nome:', data.selectedModelName);
+              console.warn('⚠️ [FASE 2] Modelo não encontrado pelo nome:', data.selectedModelName);
             }
           }
         } catch (e) {
-          console.error("❌ Erro ao parsear sessionStorage:", e);
+          console.error("❌ [FASE 2] Erro ao parsear sessionStorage:", e);
         }
       } else {
-        console.warn('⚠️ Nenhum dado encontrado no sessionStorage para:', STORAGE_KEY);
+        console.warn('⚠️ [FASE 2] Nenhum dado encontrado no sessionStorage para:', STORAGE_KEY);
       }
       
-      // Marcar como concluído APENAS SE os models foram carregados
+      // Marcar reidratação como concluída
       setIsRehydrating(false);
+      console.log('✅ [FASE 2] Reidratação completa!');
     } else if (models.length === 0) {
-      console.log('⏳ Aguardando models carregarem...');
+      console.log('⏳ [FASE 2] Aguardando models carregarem...');
     }
   }, [models, isRehydrating]);
+
+  // Sincronizar sessionId com localStorage para UploadLogos
+  useEffect(() => {
+    if (sessionId) {
+      localStorage.setItem('session_id', sessionId);
+      console.log('🔗 SessionId sincronizado com localStorage:', sessionId);
+    }
+  }, [sessionId]);
 
   // DEBUG: Monitorar mudanças no estado
   useEffect(() => {
