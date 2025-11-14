@@ -1131,54 +1131,6 @@ const Campaign = () => {
               </CardContent>
             </Card>
           )}
-                            type="file" 
-                            accept="image/*" 
-                            onChange={handleLeftLogoUpload} 
-                            required 
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <h3 className="font-semibold">📧 Quer receber atualizações por email? (opcional)</h3>
-                    <div className="max-w-md">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="seu@email.com"
-                        value={customerData.email}
-                        onChange={(e) =>
-                          setCustomerData({ ...customerData, email: e.target.value })
-                        }
-                      />
-                    </div>
-
-                    <Button 
-                      onClick={handleSubmitOrder} 
-                      className="w-full" 
-                      size="lg"
-                      disabled={isSaving}
-                    >
-                      {isSaving ? (
-                        <>
-                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                          Enviando...
-                        </>
-                      ) : (
-                        <>
-                          <Check className="mr-2 h-5 w-5" />
-                          Enviar Pedido
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
 
         {/* Navigation - Hidden on step 1 (model selection) - Mobile-friendly */}
