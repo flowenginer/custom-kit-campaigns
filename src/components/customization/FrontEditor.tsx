@@ -39,48 +39,50 @@ export const FrontEditor = ({ model, value, onChange }: FrontEditorProps) => {
   };
 
   return (
-    <div className="grid md:grid-cols-2 gap-6">
-      <Card>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+      <Card className="order-1 md:order-1">
         <CardHeader>
-          <CardTitle>Preview - Frente</CardTitle>
+          <CardTitle className="text-base md:text-lg">Preview - Frente</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="relative bg-muted rounded-lg overflow-hidden flex items-center justify-center min-h-[500px]">
+          <div className="relative bg-muted rounded-lg overflow-hidden flex items-center justify-center min-h-[300px] md:min-h-[500px]">
             <img 
               src={getImageUrl()} 
               alt="Preview da frente"
               className="w-full h-auto object-contain transition-transform duration-300 hover:scale-150 cursor-zoom-in"
+              loading="lazy"
             />
           </div>
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="order-2 md:order-2">
         <CardHeader>
-          <CardTitle>Opções de Personalização</CardTitle>
+          <CardTitle className="text-base md:text-lg">Opções de Personalização</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="space-y-3">
-            <Label>Tipo de Logo</Label>
+          <div className="space-y-4">
+            <Label className="text-base">Tipo de Logo</Label>
             <RadioGroup 
               value={value.logoType} 
               onValueChange={(val) => onChange({ ...value, logoType: val as FrontCustomization['logoType'] })}
+              className="space-y-3"
             >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="small_left" id="small_left" />
-                <Label htmlFor="small_left" className="font-normal cursor-pointer">
+              <div className="flex items-center space-x-3 py-2">
+                <RadioGroupItem value="small_left" id="small_left" className="h-5 w-5" />
+                <Label htmlFor="small_left" className="font-normal cursor-pointer text-base flex-1 py-1">
                   Logo pequena no peito esquerdo
                 </Label>
               </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="large_center" id="large_center" />
-                <Label htmlFor="large_center" className="font-normal cursor-pointer">
+              <div className="flex items-center space-x-3 py-2">
+                <RadioGroupItem value="large_center" id="large_center" className="h-5 w-5" />
+                <Label htmlFor="large_center" className="font-normal cursor-pointer text-base flex-1 py-1">
                   Logo grande no centro
                 </Label>
               </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="custom" id="custom" />
-                <Label htmlFor="custom" className="font-normal cursor-pointer">
+              <div className="flex items-center space-x-3 py-2">
+                <RadioGroupItem value="custom" id="custom" className="h-5 w-5" />
+                <Label htmlFor="custom" className="font-normal cursor-pointer text-base flex-1 py-1">
                   Outras personalizações
                 </Label>
               </div>
