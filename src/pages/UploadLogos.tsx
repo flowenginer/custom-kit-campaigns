@@ -65,11 +65,6 @@ export const UploadLogos = () => {
   };
 
   const handleContinue = async () => {
-    if (uploadChoice === null) {
-      toast.error("Escolha uma opção para continuar");
-      return;
-    }
-
     setIsSaving(true);
 
     try {
@@ -140,12 +135,9 @@ export const UploadLogos = () => {
 
         <Card className="shadow-lg">
           <CardHeader className="text-center pb-4">
-            <CardTitle className="text-xl md:text-2xl">
-              Upload das Logos
-            </CardTitle>
-            <p className="text-muted-foreground text-sm md:text-base mt-2">
+            <CardTitle className="text-xl md:text-2xl font-bold">
               Você prefere enviar suas logos agora ou depois?
-            </p>
+            </CardTitle>
           </CardHeader>
 
           <CardContent className="space-y-6">
@@ -171,7 +163,10 @@ export const UploadLogos = () => {
                     </Button>
 
                     <Button
-                      onClick={() => setUploadChoice('depois')}
+                      onClick={() => {
+                        setUploadChoice('depois');
+                        handleContinue();
+                      }}
                       variant="outline"
                       size="lg"
                       className="h-32 flex flex-col gap-3 text-lg font-semibold"
@@ -323,39 +318,6 @@ export const UploadLogos = () => {
                   </div>
                 )}
 
-                {/* Se escolheu DEPOIS */}
-                {uploadChoice === 'depois' && (
-                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-                    <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 p-6 rounded-lg text-center">
-                      <CheckCircle2 className="h-12 w-12 text-green-600 dark:text-green-400 mx-auto mb-3" />
-                      <p className="text-base text-green-900 dark:text-green-100 font-medium mb-2">
-                        Tudo certo! Você poderá enviar as logos depois
-                      </p>
-                      <p className="text-sm text-green-700 dark:text-green-300">
-                        Entraremos em contato via WhatsApp ou Email
-                      </p>
-                    </div>
-
-                    <Button
-                      onClick={handleContinue}
-                      disabled={isSaving}
-                      size="lg"
-                      className="w-full min-h-[56px] text-lg font-semibold"
-                    >
-                      {isSaving ? (
-                        <>
-                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                          Salvando...
-                        </>
-                      ) : (
-                        <>
-                          Continuar para Revisão
-                          <ArrowRight className="ml-2 h-5 w-5" />
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                )}
               </>
             )}
           </CardContent>
