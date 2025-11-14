@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,6 @@ import { Loader2, ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { FrontEditor } from "@/components/customization/FrontEditor";
 import { BackEditor } from "@/components/customization/BackEditor";
 import { SleeveEditor } from "@/components/customization/SleeveEditor";
-import { LogoUploader } from "@/components/customization/LogoUploader";
 import {
   Select,
   SelectContent,
@@ -93,6 +92,7 @@ interface CustomizationData {
 
 const Campaign = () => {
   const { uniqueLink } = useParams<{ uniqueLink: string }>();
+  const navigate = useNavigate();
   const [sessionId, setSessionId] = useState(() => `session-${Date.now()}-${Math.random()}`);
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [models, setModels] = useState<ShirtModel[]>([]);
@@ -181,13 +181,23 @@ const Campaign = () => {
         "Personalizar Costas",
         "Manga Direita",
         "Manga Esquerda",
-        "Upload de Logos",
         "Revisão e Envio",
       ];
 
   useEffect(() => {
     if (uniqueLink) {
       loadCampaign();
+    }
+    
+    // Verificar se está voltando da página de upload
+    const params = new URLSearchParams(window.location.search);
+    const stepParam = params.get('step');
+    
+    if (stepParam) {
+      const stepNumber = parseInt(stepParam);
+      if (!isNaN(stepNumber) && stepNumber >= 0 && stepNumber < steps.length) {
+        setCurrentStep(stepNumber);
+      }
     }
   }, [uniqueLink]);
 
@@ -207,12 +217,12 @@ const Campaign = () => {
     }
   }, [campaign]);
 
-  // Auto-save das customizações e updates de step (steps 1-7)
+  // Auto-save das customizações e updates de step (steps 1-6)
 
   useEffect(() => {
     const autoSaveCustomizations = async () => {
       // Só fazer auto-save se já tiver um leadId (lead já foi criado no step 0)
-      if (leadId && currentStep >= 1 && currentStep <= 7) {
+      if (leadId && currentStep >= 1 && currentStep <= 6) {
         setIsSaving(true);
         await createOrUpdateLead(currentStep);
         setLastSaved(new Date());
@@ -489,30 +499,17 @@ const Campaign = () => {
       return;
     }
 
-    // Validação Step 6: Upload de logos
-    if (currentStep === 6) {
-      if (!uploadChoice) {
-        toast.error("Escolha se quer enviar as logos agora ou depois");
-        return;
+    // Step 5: Após Manga Esquerda, navegar para página de upload
+    if (currentStep === 5) {
+      if (leadId) {
+        await createOrUpdateLead(5);
       }
-      // Se escolheu "agora", validar se uploadou os arquivos obrigatórios
-      if (uploadChoice === 'agora') {
-        const needsFrontLogo = customizations.front.logoType !== 'none';
-        const needsBackLogo = customizations.back.logoLarge;
-        
-        if (needsFrontLogo && !uploadedLogos.frontLogo) {
-          toast.error("Por favor, envie a logo da frente");
-          return;
-        }
-        if (needsBackLogo && !uploadedLogos.backLogo) {
-          toast.error("Por favor, envie a logo das costas");
-          return;
-        }
-      }
+      navigate(`/c/${uniqueLink}/upload-logos`);
+      return;
     }
 
-    // Step 7: Revisão - submeter pedido
-    if (currentStep === 7) {
+    // Step 6: Revisão - submeter pedido
+    if (currentStep === 6) {
       handleSubmitOrder();
       return;
     }
@@ -525,7 +522,7 @@ const Campaign = () => {
       await createOrUpdateLead(nextStep);
     }
 
-    if (nextStep >= 1 && nextStep <= 7) {
+    if (nextStep >= 1 && nextStep <= 6) {
       trackEvent(`step_${nextStep}`);
     }
   };
@@ -1033,44 +1030,60 @@ const Campaign = () => {
             />
           )}
 
-          {currentStep === 6 && (
-            <LogoUploader
-              customizations={customizations}
-              uploadChoice={uploadChoice}
-              onUploadChoiceChange={setUploadChoice}
-              onLogosUpload={setUploadedLogos}
-              currentLogos={uploadedLogos}
-            />
-          )}
-
           {currentStep === 6 && selectedModel && (
             <Card className="shadow-lg">
               <CardContent className="p-6">
                 <h2 className="text-2xl font-semibold mb-6">Revisão e Envio</h2>
                 <div className="space-y-6">
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-2">Modelo Selecionado:</p>
-                      <div className="flex items-center gap-3">
+                  {/* Grid de 4 imagens do modelo */}
+                  <div>
+                    <h3 className="font-semibold text-lg mb-4">Modelo Selecionado:</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                      <div className="space-y-1">
                         <img
-                          src={selectedModel.photo_main}
-                          alt={selectedModel.name}
-                          className="w-20 h-20 object-cover rounded"
+                          src={selectedModel.image_front}
+                          alt="Frente"
+                          className="w-full aspect-square object-cover rounded-lg border-2 border-primary/20"
                         />
-                        <div>
-                          <p className="font-semibold">{selectedModel.name}</p>
-                          {selectedModel.features && selectedModel.features.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {selectedModel.features.map((feature, idx) => (
-                                <span key={idx} className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded">
-                                  {feature}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+                        <p className="text-xs text-center text-muted-foreground">Frente</p>
+                      </div>
+                      <div className="space-y-1">
+                        <img
+                          src={selectedModel.image_back}
+                          alt="Costas"
+                          className="w-full aspect-square object-cover rounded-lg border-2 border-primary/20"
+                        />
+                        <p className="text-xs text-center text-muted-foreground">Costas</p>
+                      </div>
+                      <div className="space-y-1">
+                        <img
+                          src={selectedModel.image_right}
+                          alt="Manga Direita"
+                          className="w-full aspect-square object-cover rounded-lg border-2 border-primary/20"
+                        />
+                        <p className="text-xs text-center text-muted-foreground">Direita</p>
+                      </div>
+                      <div className="space-y-1">
+                        <img
+                          src={selectedModel.image_left}
+                          alt="Manga Esquerda"
+                          className="w-full aspect-square object-cover rounded-lg border-2 border-primary/20"
+                        />
+                        <p className="text-xs text-center text-muted-foreground">Esquerda</p>
                       </div>
                     </div>
+                    <p className="text-center font-semibold text-lg mt-4">
+                      {selectedModel.name}
+                    </p>
+                    {selectedModel.features && selectedModel.features.length > 0 && (
+                      <div className="flex flex-wrap gap-2 justify-center mt-2">
+                        {selectedModel.features.map((feature, idx) => (
+                          <span key={idx} className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
+                            {feature}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div>
@@ -1114,99 +1127,10 @@ const Campaign = () => {
                       </div>
                     </div>
                   </div>
-
-                  <div>
-                    <h3 className="font-semibold mb-3">📤 Envie suas Imagens:</h3>
-                    <div className="space-y-4 bg-muted/30 p-4 rounded-lg">
-                      {customizations.front.logoType !== 'none' && (
-                        <div className="space-y-2">
-                          <Label>
-                            Logo da Frente ({
-                              customizations.front.logoType === 'small_left' 
-                                ? 'Pequena Esquerda' 
-                                : customizations.front.logoType === 'large_center' 
-                                ? 'Grande Centro' 
-                                : 'Personalizada'
-                            })*
-                          </Label>
-                          <Input 
-                            type="file" 
-                            accept="image/*" 
-                            onChange={handleFrontLogoUpload} 
-                            required 
-                          />
-                        </div>
-                      )}
-
-                      {customizations.back.logoLarge && (
-                        <div className="space-y-2">
-                          <Label>Logo Grande das Costas*</Label>
-                          <Input 
-                            type="file" 
-                            accept="image/*" 
-                            onChange={handleBackLogoUpload} 
-                            required 
-                          />
-                        </div>
-                      )}
-
-                      {customizations.back.sponsors.length > 0 && (
-                        <div className="space-y-3">
-                          <Label>Logos dos Patrocinadores*</Label>
-                          {customizations.back.sponsors.map((sponsor, idx) => (
-                            <div key={idx} className="space-y-1">
-                              <Label className="text-sm font-normal">{sponsor}</Label>
-                              <Input 
-                                type="file" 
-                                accept="image/*" 
-                                onChange={(e) => handleSponsorLogoUpload(e, idx)} 
-                                required 
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {customizations.sleeves.right.flag && (
-                        <div className="space-y-2">
-                          <Label>Bandeira - Manga Direita*</Label>
-                          <Input 
-                            type="file" 
-                            accept="image/*" 
-                            onChange={handleRightFlagUpload} 
-                            required 
-                          />
-                        </div>
-                      )}
-
-                      {customizations.sleeves.right.logoSmall && (
-                        <div className="space-y-2">
-                          <Label>Logo Pequena - Manga Direita*</Label>
-                          <Input 
-                            type="file" 
-                            accept="image/*" 
-                            onChange={handleRightLogoUpload} 
-                            required 
-                          />
-                        </div>
-                      )}
-
-                      {customizations.sleeves.left.flag && (
-                        <div className="space-y-2">
-                          <Label>Bandeira - Manga Esquerda*</Label>
-                          <Input 
-                            type="file" 
-                            accept="image/*" 
-                            onChange={handleLeftFlagUpload} 
-                            required 
-                          />
-                        </div>
-                      )}
-
-                      {customizations.sleeves.left.logoSmall && (
-                        <div className="space-y-2">
-                          <Label>Logo Pequena - Manga Esquerda*</Label>
-                          <Input 
+                </div>
+              </CardContent>
+            </Card>
+          )}
                             type="file" 
                             accept="image/*" 
                             onChange={handleLeftLogoUpload} 

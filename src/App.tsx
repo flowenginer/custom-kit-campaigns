@@ -17,6 +17,7 @@ import Creation from "./pages/admin/Creation";
 import Api from "./pages/admin/Api";
 import Settings from "./pages/admin/Settings";
 import Campaign from "./pages/Campaign";
+import { UploadLogos } from "./pages/UploadLogos";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/c/:uniqueLink" element={<Campaign />} />
+          <Route path="/c/:uniqueLink/upload-logos" element={<UploadLogos />} />
           <Route path="/admin" element={<AdminLayout />}>
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="advanced-dashboard" element={<AdvancedDashboard />} />
