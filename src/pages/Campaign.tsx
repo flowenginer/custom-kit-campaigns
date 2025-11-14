@@ -96,6 +96,7 @@ const Campaign = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
   const [selectedModel, setSelectedModel] = useState<ShirtModel | null>(null);
+  const [showFixedProgress, setShowFixedProgress] = useState(false);
   const [customizations, setCustomizations] = useState<CustomizationData>({
     front: {
       logoType: 'none',
@@ -309,6 +310,17 @@ const Campaign = () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [leadId]);
+
+  // Detectar scroll para mostrar barra de progresso fixa
+  useEffect(() => {
+    const handleScroll = () => {
+      // Mostrar barra fixa após 100px de scroll
+      setShowFixedProgress(window.scrollY > 100);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const loadCampaign = async () => {
     try {
@@ -730,6 +742,28 @@ const Campaign = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5 py-8">
+      {/* Barra de progresso fixa - Aparece no scroll mobile */}
+      <div 
+        className={`fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b shadow-md transition-transform duration-300 md:hidden ${
+          showFixedProgress ? 'translate-y-0' : '-translate-y-full'
+        }`}
+      >
+        <div className="container max-w-6xl mx-auto px-4 py-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-muted-foreground">
+              Etapa {currentStep + 1} de {steps.length}
+            </span>
+            <span className="text-xs font-semibold text-primary">
+              {Math.round(progress)}%
+            </span>
+          </div>
+          <Progress value={progress} className="h-2" />
+          <p className="text-xs text-center text-muted-foreground mt-2 truncate">
+            {steps[currentStep]}
+          </p>
+        </div>
+      </div>
+
       <div className="container max-w-6xl mx-auto px-4">
         {/* Header */}
         <div className="mb-6 md:mb-8">

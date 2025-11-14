@@ -3,6 +3,10 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { SponsorsList } from "./SponsorsList";
+import { ImageZoomModal } from "@/components/ui/image-zoom-modal";
+import { useState } from "react";
+import { Maximize2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface ShirtModel {
   id: string;
@@ -34,14 +38,27 @@ interface BackEditorProps {
 }
 
 export const BackEditor = ({ model, value, onChange }: BackEditorProps) => {
+  const [isZoomOpen, setIsZoomOpen] = useState(false);
+  
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
       <Card className="order-1 md:order-1">
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base md:text-lg">Preview - Costas</CardTitle>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsZoomOpen(true)}
+            className="md:hidden h-8 w-8"
+          >
+            <Maximize2 className="h-4 w-4" />
+          </Button>
         </CardHeader>
         <CardContent>
-          <div className="relative aspect-square bg-muted rounded-lg overflow-hidden min-h-[300px] md:min-h-auto">
+          <div 
+            className="relative aspect-square bg-muted rounded-lg overflow-hidden min-h-[300px] md:min-h-auto cursor-pointer"
+            onClick={() => setIsZoomOpen(true)}
+          >
             <img 
               src={model.image_back} 
               alt="Preview das costas"
@@ -51,6 +68,13 @@ export const BackEditor = ({ model, value, onChange }: BackEditorProps) => {
           </div>
         </CardContent>
       </Card>
+
+      <ImageZoomModal
+        isOpen={isZoomOpen}
+        onClose={() => setIsZoomOpen(false)}
+        imageUrl={model.image_back}
+        alt="Preview das costas - Zoom"
+      />
 
       <Card className="order-2 md:order-2">
         <CardHeader>
