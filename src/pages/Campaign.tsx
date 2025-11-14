@@ -11,6 +11,7 @@ import { Loader2, ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { FrontEditor } from "@/components/customization/FrontEditor";
 import { BackEditor } from "@/components/customization/BackEditor";
 import { SleeveEditor } from "@/components/customization/SleeveEditor";
+import { LogoUploader } from "@/components/customization/LogoUploader";
 import {
   Select,
   SelectContent,
@@ -66,6 +67,8 @@ interface BackCustomization {
   emailText: string;
   website: boolean;
   websiteText: string;
+  hasSponsors?: boolean;
+  sponsorsLocation?: string;
   sponsors: string[];
   sponsorsLogosUrls?: string[];
 }
@@ -141,6 +144,7 @@ const Campaign = () => {
   const [leadId, setLeadId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [uploadChoice, setUploadChoice] = useState<'agora' | 'depois' | null>(null);
   const [uploadedLogos, setUploadedLogos] = useState<{
     frontLogo: File | null;
     backLogo: File | null;
@@ -177,6 +181,7 @@ const Campaign = () => {
         "Personalizar Costas",
         "Manga Direita",
         "Manga Esquerda",
+        "Upload de Logos",
         "Revisão e Envio",
       ];
 
@@ -202,12 +207,12 @@ const Campaign = () => {
     }
   }, [campaign]);
 
-  // Auto-save das customizações e updates de step (steps 1-6)
+  // Auto-save das customizações e updates de step (steps 1-7)
 
   useEffect(() => {
     const autoSaveCustomizations = async () => {
       // Só fazer auto-save se já tiver um leadId (lead já foi criado no step 0)
-      if (leadId && currentStep >= 1 && currentStep <= 6) {
+      if (leadId && currentStep >= 1 && currentStep <= 7) {
         setIsSaving(true);
         await createOrUpdateLead(currentStep);
         setLastSaved(new Date());
@@ -484,6 +489,34 @@ const Campaign = () => {
       return;
     }
 
+    // Validação Step 6: Upload de logos
+    if (currentStep === 6) {
+      if (!uploadChoice) {
+        toast.error("Escolha se quer enviar as logos agora ou depois");
+        return;
+      }
+      // Se escolheu "agora", validar se uploadou os arquivos obrigatórios
+      if (uploadChoice === 'agora') {
+        const needsFrontLogo = customizations.front.logoType !== 'none';
+        const needsBackLogo = customizations.back.logoLarge;
+        
+        if (needsFrontLogo && !uploadedLogos.frontLogo) {
+          toast.error("Por favor, envie a logo da frente");
+          return;
+        }
+        if (needsBackLogo && !uploadedLogos.backLogo) {
+          toast.error("Por favor, envie a logo das costas");
+          return;
+        }
+      }
+    }
+
+    // Step 7: Revisão - submeter pedido
+    if (currentStep === 7) {
+      handleSubmitOrder();
+      return;
+    }
+
     const nextStep = currentStep + 1;
     setCurrentStep(nextStep);
 
@@ -492,7 +525,7 @@ const Campaign = () => {
       await createOrUpdateLead(nextStep);
     }
 
-    if (nextStep >= 1 && nextStep <= 6) {
+    if (nextStep >= 1 && nextStep <= 7) {
       trackEvent(`step_${nextStep}`);
     }
   };
@@ -997,6 +1030,16 @@ const Campaign = () => {
                   sleeves: { ...customizations.sleeves, left: data }
                 })
               }
+            />
+          )}
+
+          {currentStep === 6 && (
+            <LogoUploader
+              customizations={customizations}
+              uploadChoice={uploadChoice}
+              onUploadChoiceChange={setUploadChoice}
+              onLogosUpload={setUploadedLogos}
+              currentLogos={uploadedLogos}
             />
           )}
 
