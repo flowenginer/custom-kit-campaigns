@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { SponsorsList } from "./SponsorsList";
 import { ImageZoomModal } from "@/components/ui/image-zoom-modal";
@@ -95,50 +96,54 @@ export const BackEditor = ({ model, value, onChange }: BackEditorProps) => {
         <CardContent className="space-y-6">
           {/* Logo Grande */}
           <div className="space-y-3">
-            <Label className="text-base">Quer logo grande no centro?</Label>
-            <RadioGroup 
-              value={value.logoLarge ? "sim" : "nao"}
-              onValueChange={(val) => onChange({ ...value, logoLarge: val === "sim" })}
-              className="flex gap-4"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="sim" id="logo-sim" className="h-5 w-5" />
-                <Label htmlFor="logo-sim" className="font-normal cursor-pointer text-base">
-                  Sim
-                </Label>
+            <div className="flex items-center space-x-3">
+              <Checkbox
+                id="logoLarge"
+                checked={value.logoLarge}
+                onCheckedChange={(checked) => 
+                  onChange({ ...value, logoLarge: checked as boolean })
+                }
+                className="h-5 w-5"
+              />
+              <Label 
+                htmlFor="logoLarge" 
+                className="flex-1 py-1 cursor-pointer text-base"
+              >
+                Logo grande no centro
+              </Label>
+            </div>
+            {value.logoLarge && (
+              <div className="ml-8">
+                <Input
+                  placeholder="URL da logo (opcional)"
+                  value={value.logoUrl}
+                  onChange={(e) => onChange({ ...value, logoUrl: e.target.value })}
+                  className="min-h-[48px] text-base"
+                />
               </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="nao" id="logo-nao" className="h-5 w-5" />
-                <Label htmlFor="logo-nao" className="font-normal cursor-pointer text-base">
-                  Não
-                </Label>
-              </div>
-            </RadioGroup>
+            )}
           </div>
 
           {/* Nome */}
           <div className="space-y-3">
-            <Label className="text-base">Quer adicionar nome?</Label>
-            <RadioGroup 
-              value={value.name ? "sim" : "nao"}
-              onValueChange={(val) => onChange({ ...value, name: val === "sim" })}
-              className="flex gap-4"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="sim" id="name-sim" className="h-5 w-5" />
-                <Label htmlFor="name-sim" className="font-normal cursor-pointer text-base">
-                  Sim
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="nao" id="name-nao" className="h-5 w-5" />
-                <Label htmlFor="name-nao" className="font-normal cursor-pointer text-base">
-                  Não
-                </Label>
-              </div>
-            </RadioGroup>
+            <div className="flex items-center space-x-3">
+              <Checkbox
+                id="name"
+                checked={value.name}
+                onCheckedChange={(checked) => 
+                  onChange({ ...value, name: checked as boolean })
+                }
+                className="h-5 w-5"
+              />
+              <Label 
+                htmlFor="name" 
+                className="flex-1 py-1 cursor-pointer text-base"
+              >
+                Nome
+              </Label>
+            </div>
             {value.name && (
-              <div className="ml-6 md:ml-8">
+              <div className="ml-8">
                 <Input 
                   placeholder="Digite o nome"
                   value={value.nameText}
@@ -151,27 +156,24 @@ export const BackEditor = ({ model, value, onChange }: BackEditorProps) => {
 
           {/* WhatsApp */}
           <div className="space-y-3">
-            <Label className="text-base">Quer adicionar WhatsApp?</Label>
-            <RadioGroup 
-              value={value.whatsapp ? "sim" : "nao"}
-              onValueChange={(val) => onChange({ ...value, whatsapp: val === "sim" })}
-              className="flex gap-4"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="sim" id="whatsapp-sim" className="h-5 w-5" />
-                <Label htmlFor="whatsapp-sim" className="font-normal cursor-pointer text-base">
-                  Sim
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="nao" id="whatsapp-nao" className="h-5 w-5" />
-                <Label htmlFor="whatsapp-nao" className="font-normal cursor-pointer text-base">
-                  Não
-                </Label>
-              </div>
-            </RadioGroup>
+            <div className="flex items-center space-x-3">
+              <Checkbox
+                id="whatsapp"
+                checked={value.whatsapp}
+                onCheckedChange={(checked) => 
+                  onChange({ ...value, whatsapp: checked as boolean })
+                }
+                className="h-5 w-5"
+              />
+              <Label 
+                htmlFor="whatsapp" 
+                className="flex-1 py-1 cursor-pointer text-base"
+              >
+                WhatsApp
+              </Label>
+            </div>
             {value.whatsapp && (
-              <div className="ml-6 md:ml-8">
+              <div className="ml-8">
                 <Input 
                   placeholder="+55 (00) 00000-0000"
                   value={value.whatsappText}
@@ -184,27 +186,24 @@ export const BackEditor = ({ model, value, onChange }: BackEditorProps) => {
 
           {/* Instagram */}
           <div className="space-y-3">
-            <Label className="text-base">Quer adicionar Instagram?</Label>
-            <RadioGroup 
-              value={value.instagram ? "sim" : "nao"}
-              onValueChange={(val) => onChange({ ...value, instagram: val === "sim" })}
-              className="flex gap-4"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="sim" id="instagram-sim" className="h-5 w-5" />
-                <Label htmlFor="instagram-sim" className="font-normal cursor-pointer text-base">
-                  Sim
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="nao" id="instagram-nao" className="h-5 w-5" />
-                <Label htmlFor="instagram-nao" className="font-normal cursor-pointer text-base">
-                  Não
-                </Label>
-              </div>
-            </RadioGroup>
+            <div className="flex items-center space-x-3">
+              <Checkbox
+                id="instagram"
+                checked={value.instagram}
+                onCheckedChange={(checked) => 
+                  onChange({ ...value, instagram: checked as boolean })
+                }
+                className="h-5 w-5"
+              />
+              <Label 
+                htmlFor="instagram" 
+                className="flex-1 py-1 cursor-pointer text-base"
+              >
+                Instagram
+              </Label>
+            </div>
             {value.instagram && (
-              <div className="ml-6 md:ml-8">
+              <div className="ml-8">
                 <Input 
                   placeholder="@usuario"
                   value={value.instagramText}
@@ -217,27 +216,24 @@ export const BackEditor = ({ model, value, onChange }: BackEditorProps) => {
 
           {/* Email */}
           <div className="space-y-3">
-            <Label className="text-base">Quer adicionar Email?</Label>
-            <RadioGroup 
-              value={value.email ? "sim" : "nao"}
-              onValueChange={(val) => onChange({ ...value, email: val === "sim" })}
-              className="flex gap-4"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="sim" id="email-sim" className="h-5 w-5" />
-                <Label htmlFor="email-sim" className="font-normal cursor-pointer text-base">
-                  Sim
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="nao" id="email-nao" className="h-5 w-5" />
-                <Label htmlFor="email-nao" className="font-normal cursor-pointer text-base">
-                  Não
-                </Label>
-              </div>
-            </RadioGroup>
+            <div className="flex items-center space-x-3">
+              <Checkbox
+                id="email"
+                checked={value.email}
+                onCheckedChange={(checked) => 
+                  onChange({ ...value, email: checked as boolean })
+                }
+                className="h-5 w-5"
+              />
+              <Label 
+                htmlFor="email" 
+                className="flex-1 py-1 cursor-pointer text-base"
+              >
+                Email
+              </Label>
+            </div>
             {value.email && (
-              <div className="ml-6 md:ml-8">
+              <div className="ml-8">
                 <Input 
                   type="email"
                   placeholder="email@exemplo.com"
@@ -251,27 +247,24 @@ export const BackEditor = ({ model, value, onChange }: BackEditorProps) => {
 
           {/* Website */}
           <div className="space-y-3">
-            <Label className="text-base">Quer adicionar Site?</Label>
-            <RadioGroup 
-              value={value.website ? "sim" : "nao"}
-              onValueChange={(val) => onChange({ ...value, website: val === "sim" })}
-              className="flex gap-4"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="sim" id="website-sim" className="h-5 w-5" />
-                <Label htmlFor="website-sim" className="font-normal cursor-pointer text-base">
-                  Sim
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="nao" id="website-nao" className="h-5 w-5" />
-                <Label htmlFor="website-nao" className="font-normal cursor-pointer text-base">
-                  Não
-                </Label>
-              </div>
-            </RadioGroup>
+            <div className="flex items-center space-x-3">
+              <Checkbox
+                id="website"
+                checked={value.website}
+                onCheckedChange={(checked) => 
+                  onChange({ ...value, website: checked as boolean })
+                }
+                className="h-5 w-5"
+              />
+              <Label 
+                htmlFor="website" 
+                className="flex-1 py-1 cursor-pointer text-base"
+              >
+                Site
+              </Label>
+            </div>
             {value.website && (
-              <div className="ml-6 md:ml-8">
+              <div className="ml-8">
                 <Input 
                   placeholder="www.site.com"
                   value={value.websiteText}
@@ -282,15 +275,16 @@ export const BackEditor = ({ model, value, onChange }: BackEditorProps) => {
             )}
           </div>
 
-          {/* Patrocinadores */}
+          {/* Patrocinadores - mantém RadioGroup */}
           <div className="space-y-3 border-t pt-4">
-            <Label className="text-base">Quer adicionar patrocinadores?</Label>
+            <Label className="text-base font-semibold">Quer adicionar patrocinadores?</Label>
             <RadioGroup 
               value={value.hasSponsors ? "sim" : "nao"}
               onValueChange={(val) => onChange({ 
                 ...value, 
                 hasSponsors: val === "sim",
-                sponsors: val === "nao" ? [] : value.sponsors 
+                sponsors: val === "nao" ? [] : value.sponsors,
+                sponsorsLocation: val === "nao" ? undefined : value.sponsorsLocation
               })}
               className="flex gap-4"
             >
