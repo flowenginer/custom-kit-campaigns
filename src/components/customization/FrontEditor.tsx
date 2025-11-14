@@ -1,6 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { ImageZoomModal } from "@/components/ui/image-zoom-modal";
+import { useState } from "react";
+import { Maximize2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface ShirtModel {
   id: string;
@@ -25,6 +29,8 @@ interface FrontEditorProps {
 }
 
 export const FrontEditor = ({ model, value, onChange }: FrontEditorProps) => {
+  const [isZoomOpen, setIsZoomOpen] = useState(false);
+  
   const getImageUrl = () => {
     switch(value.logoType) {
       case 'small_left':
@@ -41,20 +47,38 @@ export const FrontEditor = ({ model, value, onChange }: FrontEditorProps) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
       <Card className="order-1 md:order-1">
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base md:text-lg">Preview - Frente</CardTitle>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsZoomOpen(true)}
+            className="md:hidden h-8 w-8"
+          >
+            <Maximize2 className="h-4 w-4" />
+          </Button>
         </CardHeader>
         <CardContent>
-          <div className="relative bg-muted rounded-lg overflow-hidden flex items-center justify-center min-h-[300px] md:min-h-[500px]">
+          <div 
+            className="relative bg-muted rounded-lg overflow-hidden flex items-center justify-center min-h-[300px] md:min-h-[500px] cursor-pointer"
+            onClick={() => setIsZoomOpen(true)}
+          >
             <img 
               src={getImageUrl()} 
               alt="Preview da frente"
-              className="w-full h-auto object-contain transition-transform duration-300 hover:scale-150 cursor-zoom-in"
+              className="w-full h-auto object-contain md:transition-transform md:duration-300 md:hover:scale-150"
               loading="lazy"
             />
           </div>
         </CardContent>
       </Card>
+
+      <ImageZoomModal
+        isOpen={isZoomOpen}
+        onClose={() => setIsZoomOpen(false)}
+        imageUrl={getImageUrl()}
+        alt="Preview da frente - Zoom"
+      />
 
       <Card className="order-2 md:order-2">
         <CardHeader>
