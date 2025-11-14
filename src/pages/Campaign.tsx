@@ -195,12 +195,14 @@ const Campaign = () => {
   // Persistir progresso no sessionStorage
   useEffect(() => {
     if (selectedModel || Object.keys(customerData).some(k => customerData[k as keyof typeof customerData])) {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+      const dataToSave = {
         selectedModelId: selectedModel?.id,
         selectedModelName: selectedModel?.name,
         customerData,
         customizations
-      }));
+      };
+      console.log('💾 Salvando no sessionStorage:', dataToSave);
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
     }
   }, [selectedModel, customerData, customizations, STORAGE_KEY]);
 
@@ -211,6 +213,7 @@ const Campaign = () => {
       if (cached) {
         try {
           const data = JSON.parse(cached);
+          console.log('📂 Recuperando do sessionStorage:', data);
           
           // Restaurar customerData e customizations
           if (data.customerData) setCustomerData(data.customerData);
@@ -538,11 +541,7 @@ const Campaign = () => {
       toast.success("Dados salvos com sucesso!");
     }
 
-    // Validação Step 1: Selecionar modelo
-    if (currentStep === 1 && !selectedModel) {
-      toast.error("Selecione um modelo para continuar");
-      return;
-    }
+    // Validação Step 1 removida - o botão já seleciona o modelo diretamente
 
     // Step 5: Após Manga Esquerda, navegar para página de upload
     if (currentStep === 5) {
@@ -1013,16 +1012,17 @@ const Campaign = () => {
                       loading="lazy"
                     />
                     <CardContent className="p-3 bg-muted/30">
-                      <Button 
-                        className="w-full min-h-[48px] text-base font-semibold touch-manipulation" 
-                        size="lg"
-                        onClick={() => {
-                          setSelectedModel(model);
-                          handleNext();
-                        }}
-                      >
-                        Selecionar Modelo
-                      </Button>
+                    <Button 
+                      className="w-full min-h-[48px] text-base font-semibold touch-manipulation" 
+                      size="lg"
+                      onClick={() => {
+                        setSelectedModel(model);
+                        setCurrentStep(2);
+                        trackEvent('step_2');
+                      }}
+                    >
+                      Selecionar Modelo
+                    </Button>
                     </CardContent>
                   </Card>
                 ))}
@@ -1082,6 +1082,16 @@ const Campaign = () => {
             <Card className="shadow-lg">
               <CardContent className="p-6">
                 <h2 className="text-2xl font-semibold mb-6">Revisão e Envio</h2>
+                
+                {/* Debug Info - REMOVER DEPOIS */}
+                <div className="bg-yellow-50 border border-yellow-200 p-4 mb-4 rounded text-xs space-y-1">
+                  <p className="font-bold text-yellow-800">🐛 Debug Info:</p>
+                  <p>selectedModel: {selectedModel ? selectedModel.name : 'NULL ❌'}</p>
+                  <p>customizations.front.logoType: {customizations.front.logoType}</p>
+                  <p>customizations.back.logoLarge: {customizations.back.logoLarge ? 'Sim' : 'Não'}</p>
+                  <p>customizations.back.nameText: {customizations.back.nameText || 'vazio'}</p>
+                </div>
+                
                 <div className="space-y-6">
                   {/* Grid de 4 imagens do modelo */}
                   {selectedModel ? (

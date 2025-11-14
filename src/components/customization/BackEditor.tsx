@@ -112,16 +112,6 @@ export const BackEditor = ({ model, value, onChange }: BackEditorProps) => {
                 Logo grande no centro
               </Label>
             </div>
-            {value.logoLarge && (
-              <div className="ml-8">
-                <Input
-                  placeholder="URL da logo (opcional)"
-                  value={value.logoUrl}
-                  onChange={(e) => onChange({ ...value, logoUrl: e.target.value })}
-                  className="min-h-[48px] text-base"
-                />
-              </div>
-            )}
           </div>
 
           {/* Nome */}
