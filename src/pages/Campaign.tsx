@@ -732,36 +732,41 @@ const Campaign = () => {
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5 py-8">
       <div className="container max-w-6xl mx-auto px-4">
         {/* Header */}
-        <div className="mb-8">
-          {/* Logo Space Sports */}
-          <div className="flex justify-center mb-6">
+        <div className="mb-6 md:mb-8">
+          {/* Logo Space Sports - Menor no mobile */}
+          <div className="flex justify-center mb-4 md:mb-6">
             <img 
               src="https://cdn.awsli.com.br/400x300/1896/1896367/logo/space-logo-site-wgernz.png" 
               alt="Space Sports" 
-              className="h-16 w-auto"
+              className="h-12 md:h-16 w-auto"
+              loading="eager"
             />
           </div>
           
-          <p className="text-center text-muted-foreground mb-4">
+          {/* Título da etapa - Responsivo */}
+          <p className="text-center text-sm md:text-base text-muted-foreground mb-3 md:mb-4 px-2">
             {steps[currentStep]} - Etapa {currentStep + 1} de {steps.length}
           </p>
           
-          {/* Step Indicator */}
-          <div className="flex justify-center items-center gap-2 mb-4">
+          {/* Step Indicator - Otimizado para mobile */}
+          <div className="flex justify-center items-center gap-1 md:gap-2 mb-3 md:mb-4 overflow-x-auto px-4">
             {steps.map((step, index) => (
-              <div key={index} className="flex items-center">
+              <div key={index} className="flex items-center flex-shrink-0">
                 <div className={`flex flex-col items-center ${index <= currentStep ? 'text-primary' : 'text-muted-foreground'}`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-colors ${
+                  {/* Círculos menores no mobile */}
+                  <div className={`w-6 h-6 md:w-8 md:h-8 rounded-full flex items-center justify-center text-xs md:text-sm font-semibold border-2 transition-colors ${
                     index <= currentStep 
                       ? 'bg-primary text-primary-foreground border-primary' 
                       : 'bg-background border-muted'
                   }`}>
-                    {index < currentStep ? <Check className="h-4 w-4" /> : index + 1}
+                    {index < currentStep ? <Check className="h-3 w-3 md:h-4 md:w-4" /> : index + 1}
                   </div>
-                  <span className="text-xs mt-1 hidden sm:block max-w-[80px] text-center">{step}</span>
+                  {/* Texto visível apenas em tablets+ */}
+                  <span className="text-xs mt-1 hidden lg:block max-w-[80px] text-center leading-tight">{step}</span>
                 </div>
+                {/* Linha conectora mais fina no mobile */}
                 {index < steps.length - 1 && (
-                  <div className={`w-8 h-0.5 mx-1 ${index < currentStep ? 'bg-primary' : 'bg-muted'}`} />
+                  <div className={`w-3 md:w-8 h-0.5 mx-0.5 md:mx-1 ${index < currentStep ? 'bg-primary' : 'bg-muted'}`} />
                 )}
               </div>
             ))}
@@ -769,19 +774,19 @@ const Campaign = () => {
           
           <Progress value={progress} className="h-2" />
           
-          {/* Indicador de auto-save */}
+          {/* Indicador de auto-save - Mobile-friendly */}
           {leadId && (
-            <div className="flex items-center justify-center gap-2 mt-4">
+            <div className="flex items-center justify-center gap-2 mt-3 md:mt-4">
               {isSaving ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                  <span className="text-sm text-muted-foreground">Salvando...</span>
+                  <Loader2 className="h-3 w-3 md:h-4 md:w-4 animate-spin text-primary" />
+                  <span className="text-xs md:text-sm text-muted-foreground">Salvando...</span>
                 </>
               ) : lastSaved ? (
                 <>
-                  <Check className="h-4 w-4 text-green-500" />
-                  <span className="text-sm text-muted-foreground">
-                    Salvo automaticamente às {format(lastSaved, "HH:mm:ss")}
+                  <Check className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
+                  <span className="text-xs md:text-sm text-muted-foreground">
+                    Salvo às {format(lastSaved, "HH:mm:ss")}
                   </span>
                 </>
               ) : null}
@@ -793,13 +798,13 @@ const Campaign = () => {
         <div className="mb-6">
           {currentStep === 0 && (
             <Card className="shadow-lg max-w-2xl mx-auto">
-              <CardContent className="p-6">
-                <h2 className="text-2xl font-semibold mb-6 text-center">
+              <CardContent className="p-4 md:p-6">
+                <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-center px-2">
                   Vamos começar! Preencha seus dados
                 </h2>
-                <div className="space-y-4">
+                <div className="space-y-6">
                   <div>
-                    <Label htmlFor="initial-name">Digite seu nome*</Label>
+                    <Label htmlFor="initial-name" className="py-2 block text-base">Digite seu nome*</Label>
                     <Input
                       id="initial-name"
                       placeholder="Seu nome completo"
@@ -807,12 +812,13 @@ const Campaign = () => {
                       onChange={(e) =>
                         setCustomerData({ ...customerData, name: e.target.value })
                       }
+                      className="min-h-[48px] text-base"
                       required
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="initial-whatsapp">Digite seu WhatsApp*</Label>
+                    <Label htmlFor="initial-whatsapp" className="py-2 block text-base">Digite seu WhatsApp*</Label>
                     <Input
                       id="initial-whatsapp"
                       type="tel"
@@ -821,19 +827,20 @@ const Campaign = () => {
                       onChange={(e) =>
                         setCustomerData({ ...customerData, phone: e.target.value })
                       }
+                      className="min-h-[48px] text-base"
                       required
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="quantity-select">Quantidade*</Label>
+                    <Label htmlFor="quantity-select" className="py-2 block text-base">Quantidade*</Label>
                     <Select
                       value={customerData.quantity}
                       onValueChange={(value) => {
                         setCustomerData({ ...customerData, quantity: value });
                       }}
                     >
-                      <SelectTrigger id="quantity-select">
+                      <SelectTrigger id="quantity-select" className="min-h-[48px] text-base">
                         <SelectValue placeholder="Selecione a quantidade" />
                       </SelectTrigger>
                       <SelectContent>
@@ -850,7 +857,7 @@ const Campaign = () => {
 
                   {customerData.quantity === 'custom' && (
                     <div className="mt-4 p-4 bg-muted/30 rounded-lg">
-                      <Label htmlFor="custom-quantity">Digite a quantidade (mínimo 10)*</Label>
+                      <Label htmlFor="custom-quantity" className="py-2 block text-base">Digite a quantidade (mínimo 10)*</Label>
                       <Input
                         id="custom-quantity"
                         type="number"
@@ -863,6 +870,7 @@ const Campaign = () => {
                             customQuantity: parseInt(e.target.value) || 10,
                           })
                         }
+                        className="min-h-[48px] text-base"
                         required
                       />
                       {customerData.customQuantity < 10 && (
@@ -879,21 +887,22 @@ const Campaign = () => {
 
           {currentStep === 1 && (
             <div>
-              <h2 className="text-2xl font-semibold mb-6 text-center">Escolha seu modelo</h2>
+              <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-center px-2">Escolha seu modelo</h2>
               <div className="flex flex-col gap-4 max-w-4xl mx-auto">
                 {models.map((model) => (
                   <Card
                     key={model.id}
-                    className="overflow-hidden transition-all hover:shadow-lg"
+                    className="overflow-hidden transition-all hover:shadow-lg touch-manipulation"
                   >
                     <img
                       src={model.photo_main}
                       alt={model.name}
                       className="w-full h-auto"
+                      loading="lazy"
                     />
                     <CardContent className="p-3 bg-muted/30">
                       <Button 
-                        className="w-full" 
+                        className="w-full min-h-[48px] text-base font-semibold touch-manipulation" 
                         size="lg"
                         onClick={() => {
                           setSelectedModel(model);
@@ -1171,23 +1180,28 @@ const Campaign = () => {
           )}
         </div>
 
-        {/* Navigation - Hidden on step 1 (model selection) */}
+        {/* Navigation - Hidden on step 1 (model selection) - Mobile-friendly */}
         {currentStep !== 1 && (
-          <div className="flex justify-between">
+          <div className="flex flex-col-reverse sm:flex-row justify-between gap-3 sm:gap-4">
             <Button
               variant="outline"
               onClick={handleBack}
               disabled={currentStep === 0}
               size="lg"
+              className="w-full sm:w-auto min-h-[48px] touch-manipulation"
             >
-              <ArrowLeft className="mr-2 h-4 w-4" />
+              <ArrowLeft className="mr-2 h-4 md:h-5 w-4 md:w-5" />
               Voltar
             </Button>
 
             {currentStep < 6 && (
-              <Button onClick={handleNext} size="lg">
+              <Button 
+                onClick={handleNext} 
+                size="lg"
+                className="w-full sm:w-auto min-h-[48px] touch-manipulation font-semibold"
+              >
                 Próximo
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowRight className="ml-2 h-4 md:h-5 w-4 md:w-5" />
               </Button>
             )}
           </div>
