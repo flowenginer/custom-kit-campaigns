@@ -102,6 +102,7 @@ const Campaign = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [selectedModel, setSelectedModel] = useState<ShirtModel | null>(null);
   const [showFixedProgress, setShowFixedProgress] = useState(false);
+  const [isRehydrating, setIsRehydrating] = useState(true);
   const [customizations, setCustomizations] = useState<CustomizationData>({
     front: {
       logoType: 'none',
@@ -194,7 +195,7 @@ const Campaign = () => {
 
   // Persistir progresso no sessionStorage
   useEffect(() => {
-    if (selectedModel || Object.keys(customerData).some(k => customerData[k as keyof typeof customerData])) {
+    if (uniqueLink) {  // Salvar sempre que houver uniqueLink
       const dataToSave = {
         selectedModelId: selectedModel?.id,
         selectedModelName: selectedModel?.name,
@@ -204,12 +205,14 @@ const Campaign = () => {
       console.log('💾 Salvando no sessionStorage:', dataToSave);
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
     }
-  }, [selectedModel, customerData, customizations, STORAGE_KEY]);
+  }, [selectedModel, customerData, customizations, uniqueLink, STORAGE_KEY]);
 
   // Reidratar estado do sessionStorage após carregar modelos
   useEffect(() => {
-    if (models.length > 0 && !selectedModel) {
+    // Só tentar reidratar DEPOIS que os models foram carregados
+    if (models.length > 0 && isRehydrating) {
       const cached = sessionStorage.getItem(STORAGE_KEY);
+      
       if (cached) {
         try {
           const data = JSON.parse(cached);
@@ -222,17 +225,26 @@ const Campaign = () => {
           // Restaurar selectedModel
           if (data.selectedModelId) {
             const foundModel = models.find(m => m.id === data.selectedModelId);
-            if (foundModel) setSelectedModel(foundModel);
+            if (foundModel) {
+              setSelectedModel(foundModel);
+              console.log('✅ Modelo recuperado:', foundModel.name);
+            }
           } else if (data.selectedModelName) {
             const foundModel = models.find(m => m.name === data.selectedModelName);
-            if (foundModel) setSelectedModel(foundModel);
+            if (foundModel) {
+              setSelectedModel(foundModel);
+              console.log('✅ Modelo recuperado:', foundModel.name);
+            }
           }
         } catch (e) {
-          console.error("Erro ao reidratar estado:", e);
+          console.error("❌ Erro ao reidratar:", e);
         }
       }
+      
+      // Marcar como concluído
+      setIsRehydrating(false);
     }
-  }, [models, selectedModel, STORAGE_KEY]);
+  }, [models, isRehydrating, STORAGE_KEY]);
 
   // Detectar mudanças no query param ?step=X
   useEffect(() => {
@@ -243,8 +255,8 @@ const Campaign = () => {
       const stepNumber = parseInt(stepParam);
       if (!isNaN(stepNumber) && stepNumber >= 0 && stepNumber < steps.length) {
         setCurrentStep(stepNumber);
-        // Limpar o query param da URL
-        window.history.replaceState({}, '', `/c/${uniqueLink}`);
+        // Manter o ?step=6 na URL para facilitar debug e deep linking
+        // window.history.replaceState({}, '', `/c/${uniqueLink}`);
       }
     }
   }, [location.search, steps.length, uniqueLink]);
@@ -1083,16 +1095,24 @@ const Campaign = () => {
               <CardContent className="p-6">
                 <h2 className="text-2xl font-semibold mb-6">Revisão e Envio</h2>
                 
-                {/* Debug Info - REMOVER DEPOIS */}
-                <div className="bg-yellow-50 border border-yellow-200 p-4 mb-4 rounded text-xs space-y-1">
-                  <p className="font-bold text-yellow-800">🐛 Debug Info:</p>
-                  <p>selectedModel: {selectedModel ? selectedModel.name : 'NULL ❌'}</p>
-                  <p>customizations.front.logoType: {customizations.front.logoType}</p>
-                  <p>customizations.back.logoLarge: {customizations.back.logoLarge ? 'Sim' : 'Não'}</p>
-                  <p>customizations.back.nameText: {customizations.back.nameText || 'vazio'}</p>
-                </div>
-                
-                <div className="space-y-6">
+                {/* Mostrar loading enquanto reidrata */}
+                {isRehydrating ? (
+                  <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                    <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                    <p className="text-muted-foreground">Carregando suas personalizações...</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Debug Info - REMOVER DEPOIS */}
+                    <div className="bg-yellow-50 border border-yellow-200 p-4 mb-4 rounded text-xs space-y-1">
+                      <p className="font-bold text-yellow-800">🐛 Debug Info:</p>
+                      <p>selectedModel: {selectedModel ? selectedModel.name : 'NULL ❌'}</p>
+                      <p>customizations.front.logoType: {customizations.front.logoType}</p>
+                      <p>customizations.back.logoLarge: {customizations.back.logoLarge ? 'Sim' : 'Não'}</p>
+                      <p>customizations.back.nameText: {customizations.back.nameText || 'vazio'}</p>
+                    </div>
+                    
+                    <div className="space-y-6">
                   {/* Grid de 4 imagens do modelo */}
                   {selectedModel ? (
                     <div>
@@ -1193,7 +1213,9 @@ const Campaign = () => {
                       </div>
                     </div>
                   </div>
-                </div>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           )}
