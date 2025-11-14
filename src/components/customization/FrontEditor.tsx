@@ -83,6 +83,9 @@ export const FrontEditor = ({ model, value, onChange }: FrontEditorProps) => {
       <Card className="order-2 md:order-2">
         <CardHeader>
           <CardTitle className="text-base md:text-lg">Opções de Personalização</CardTitle>
+          <p className="text-sm text-muted-foreground mt-2">
+            Escolha abaixo o que você quer que tenha no seu modelo
+          </p>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-4">
