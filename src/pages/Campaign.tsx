@@ -95,6 +95,7 @@ const Campaign = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [sessionId, setSessionId] = useState(() => `session-${Date.now()}-${Math.random()}`);
+  const STORAGE_KEY = `campaign_progress_${uniqueLink}`;
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [models, setModels] = useState<ShirtModel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -190,6 +191,45 @@ const Campaign = () => {
       loadCampaign();
     }
   }, [uniqueLink]);
+
+  // Persistir progresso no sessionStorage
+  useEffect(() => {
+    if (selectedModel || Object.keys(customerData).some(k => customerData[k as keyof typeof customerData])) {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+        selectedModelId: selectedModel?.id,
+        selectedModelName: selectedModel?.name,
+        customerData,
+        customizations
+      }));
+    }
+  }, [selectedModel, customerData, customizations, STORAGE_KEY]);
+
+  // Reidratar estado do sessionStorage após carregar modelos
+  useEffect(() => {
+    if (models.length > 0 && !selectedModel) {
+      const cached = sessionStorage.getItem(STORAGE_KEY);
+      if (cached) {
+        try {
+          const data = JSON.parse(cached);
+          
+          // Restaurar customerData e customizations
+          if (data.customerData) setCustomerData(data.customerData);
+          if (data.customizations) setCustomizations(data.customizations);
+          
+          // Restaurar selectedModel
+          if (data.selectedModelId) {
+            const foundModel = models.find(m => m.id === data.selectedModelId);
+            if (foundModel) setSelectedModel(foundModel);
+          } else if (data.selectedModelName) {
+            const foundModel = models.find(m => m.name === data.selectedModelName);
+            if (foundModel) setSelectedModel(foundModel);
+          }
+        } catch (e) {
+          console.error("Erro ao reidratar estado:", e);
+        }
+      }
+    }
+  }, [models, selectedModel, STORAGE_KEY]);
 
   // Detectar mudanças no query param ?step=X
   useEffect(() => {
@@ -701,6 +741,9 @@ const Campaign = () => {
 
       toast.success("Pedido enviado com sucesso!");
       
+      // Limpar cache do sessionStorage após sucesso
+      sessionStorage.removeItem(STORAGE_KEY);
+      
       // RESETAR TUDO para nova tentativa
       setCurrentStep(0);
       setLeadId(null); // ← Forçar criação de novo lead
@@ -1035,15 +1078,16 @@ const Campaign = () => {
             />
           )}
 
-          {currentStep === 6 && selectedModel && (
+          {currentStep === 6 && (
             <Card className="shadow-lg">
               <CardContent className="p-6">
                 <h2 className="text-2xl font-semibold mb-6">Revisão e Envio</h2>
                 <div className="space-y-6">
                   {/* Grid de 4 imagens do modelo */}
-                  <div>
-                    <h3 className="font-semibold text-lg mb-4">Modelo Selecionado:</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                  {selectedModel ? (
+                    <div>
+                      <h3 className="font-semibold text-lg mb-4">Modelo Selecionado:</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                       <div className="space-y-1">
                         <img
                           src={selectedModel.image_front}
@@ -1089,7 +1133,14 @@ const Campaign = () => {
                         ))}
                       </div>
                     )}
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="bg-muted/50 p-4 rounded-lg text-center">
+                      <p className="text-muted-foreground text-sm">
+                        Modelo não carregado. Volte uma etapa e selecione o modelo novamente.
+                      </p>
+                    </div>
+                  )}
 
                   <div>
                     <h3 className="font-semibold mb-3">Resumo das Personalizações:</h3>
@@ -1160,6 +1211,27 @@ const Campaign = () => {
               >
                 Próximo
                 <ArrowRight className="ml-2 h-4 md:h-5 w-4 md:w-5" />
+              </Button>
+            )}
+
+            {currentStep === 6 && (
+              <Button 
+                onClick={handleSubmitOrder}
+                disabled={isSaving || !selectedModel}
+                size="lg"
+                className="w-full sm:w-auto min-h-[48px] touch-manipulation font-semibold"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 md:h-5 w-4 md:w-5 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    Enviar Pedido
+                    <Check className="ml-2 h-4 md:h-5 w-4 md:w-5" />
+                  </>
+                )}
               </Button>
             )}
           </div>
