@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -93,6 +93,7 @@ interface CustomizationData {
 const Campaign = () => {
   const { uniqueLink } = useParams<{ uniqueLink: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [sessionId, setSessionId] = useState(() => `session-${Date.now()}-${Math.random()}`);
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [models, setModels] = useState<ShirtModel[]>([]);
@@ -188,18 +189,22 @@ const Campaign = () => {
     if (uniqueLink) {
       loadCampaign();
     }
-    
-    // Verificar se está voltando da página de upload
-    const params = new URLSearchParams(window.location.search);
+  }, [uniqueLink]);
+
+  // Detectar mudanças no query param ?step=X
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
     const stepParam = params.get('step');
     
     if (stepParam) {
       const stepNumber = parseInt(stepParam);
       if (!isNaN(stepNumber) && stepNumber >= 0 && stepNumber < steps.length) {
         setCurrentStep(stepNumber);
+        // Limpar o query param da URL
+        window.history.replaceState({}, '', `/c/${uniqueLink}`);
       }
     }
-  }, [uniqueLink]);
+  }, [location.search, steps.length, uniqueLink]);
 
   useEffect(() => {
     if (campaign && currentStep === 0) {
