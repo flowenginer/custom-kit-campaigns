@@ -1103,15 +1103,6 @@ const Campaign = () => {
                   </div>
                 ) : (
                   <>
-                    {/* Debug Info - REMOVER DEPOIS */}
-                    <div className="bg-yellow-50 border border-yellow-200 p-4 mb-4 rounded text-xs space-y-1">
-                      <p className="font-bold text-yellow-800">🐛 Debug Info:</p>
-                      <p>selectedModel: {selectedModel ? selectedModel.name : 'NULL ❌'}</p>
-                      <p>customizations.front.logoType: {customizations.front.logoType}</p>
-                      <p>customizations.back.logoLarge: {customizations.back.logoLarge ? 'Sim' : 'Não'}</p>
-                      <p>customizations.back.nameText: {customizations.back.nameText || 'vazio'}</p>
-                    </div>
-                    
                     <div className="space-y-6">
                   {/* Grid de 4 imagens do modelo */}
                   {selectedModel ? (
