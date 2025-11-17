@@ -6,9 +6,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ExternalLink, Copy, Plus, Trash2, Settings } from "lucide-react";
+import { ExternalLink, Copy, Plus, Trash2, Settings, FlaskConical } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CreateABTestDialog } from "@/components/abtest/CreateABTestDialog";
+import { Badge } from "@/components/ui/badge";
+import type { ABTest } from "@/types/ab-test";
 
 interface Campaign {
   id: string;
@@ -43,8 +46,10 @@ export default function Campaigns() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [segments, setSegments] = useState<Segment[]>([]);
   const [workflows, setWorkflows] = useState<WorkflowTemplate[]>([]);
+  const [abTests, setAbTests] = useState<ABTest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
+  const [showABTestDialog, setShowABTestDialog] = useState(false);
   const [showChangeWorkflow, setShowChangeWorkflow] = useState(false);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
   const [formData, setFormData] = useState({
@@ -119,6 +124,18 @@ export default function Campaigns() {
       console.error(workflowsError);
     } else {
       setWorkflows(workflowsData || []);
+    }
+
+    // Carregar testes A/B ativos
+    const { data: abTestsData, error: abTestsError } = await supabase
+      .from("ab_tests")
+      .select("*")
+      .in("status", ["active", "paused"]);
+
+    if (abTestsError) {
+      console.error("Erro ao carregar testes A/B:", abTestsError);
+    } else {
+      setAbTests((abTestsData || []) as ABTest[]);
     }
     
     setIsLoading(false);
@@ -206,6 +223,13 @@ export default function Campaigns() {
     toast.success("Link copiado!");
   };
 
+  const getCampaignTestInfo = (campaignId: string) => {
+    return abTests.find((test) => {
+      const campaigns = test.campaigns as Array<{ campaign_id: string; percentage: number }>;
+      return campaigns.some((c) => c.campaign_id === campaignId);
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="p-8 space-y-6">
@@ -242,22 +266,23 @@ export default function Campaigns() {
             <h1 className="text-3xl font-bold">Campanhas</h1>
             <p className="text-muted-foreground">Gerencie suas campanhas de vendas</p>
           </div>
-          <Dialog open={showDialog} onOpenChange={setShowDialog}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="w-4 h-4" />
-                Nova Campanha
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Nova Campanha</DialogTitle>
-                <DialogDescription>
-                  Crie uma nova campanha associando um segmento e workflow
-                </DialogDescription>
-              </DialogHeader>
+          <div className="flex gap-2">
+            <Dialog open={showDialog} onOpenChange={setShowDialog}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="w-4 h-4" />
+                  Nova Campanha
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Nova Campanha</DialogTitle>
+                  <DialogDescription>
+                    Crie uma nova campanha associando um segmento e workflow
+                  </DialogDescription>
+                </DialogHeader>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <Label htmlFor="name">Nome da Campanha*</Label>
                   <Input
@@ -318,7 +343,13 @@ export default function Campaigns() {
               </form>
             </DialogContent>
           </Dialog>
+
+          <Button variant="outline" onClick={() => setShowABTestDialog(true)}>
+            <FlaskConical className="w-4 h-4" />
+            Criar Teste A/B
+          </Button>
         </div>
+      </div>
 
         {campaigns.length === 0 ? (
           <Card>
@@ -331,11 +362,23 @@ export default function Campaigns() {
             {campaigns.map((campaign) => (
               <Card key={campaign.id}>
                 <CardHeader>
-                  <CardTitle>{campaign.name}</CardTitle>
-                  <CardDescription>
-                    {campaign.segments?.name || "Sem segmento"} • {campaign.model_count || 0} modelos
-                    {campaign.workflow_templates && ` • Workflow: ${campaign.workflow_templates.name}`}
-                  </CardDescription>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1">
+                      <CardTitle className="flex items-center gap-2">
+                        {campaign.name}
+                        {getCampaignTestInfo(campaign.id) && (
+                          <Badge variant="secondary" className="gap-1">
+                            <FlaskConical className="w-3 h-3" />
+                            Em Teste A/B
+                          </Badge>
+                        )}
+                      </CardTitle>
+                      <CardDescription>
+                        {campaign.segments?.name || "Sem segmento"} • {campaign.model_count || 0} modelos
+                        {campaign.workflow_templates && ` • Workflow: ${campaign.workflow_templates.name}`}
+                      </CardDescription>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
@@ -417,6 +460,15 @@ export default function Campaigns() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <CreateABTestDialog
+          open={showABTestDialog}
+          onOpenChange={setShowABTestDialog}
+          onSuccess={() => {
+            setShowABTestDialog(false);
+            loadData();
+          }}
+        />
     </div>
   );
 }
