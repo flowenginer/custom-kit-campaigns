@@ -85,11 +85,30 @@ const Api = () => {
             <AccordionItem value="list" className="border rounded-lg px-4">
               <AccordionTrigger>
                 <div className="flex items-center gap-3">
-                  <Badge className="bg-green-600">GET</Badge>
-                  <span className="font-mono text-sm">/task-operations?action=list</span>
+                  <Badge variant="http_get">GET</Badge>
+                  <span className="font-semibold text-base">Listar Tarefas</span>
                 </div>
               </AccordionTrigger>
               <AccordionContent>
+                <div className="mb-4 p-4 bg-muted rounded-lg border">
+                  <p className="text-xs font-semibold mb-2 text-muted-foreground">Endpoint:</p>
+                  <div className="flex items-center gap-2">
+                    <code className="bg-background px-3 py-2 rounded border flex-1 text-sm font-mono">
+                      GET {BASE_URL}/task-operations?action=list
+                    </code>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => copyToClipboard(
+                        `GET ${BASE_URL}/task-operations?action=list`,
+                        'url-list'
+                      )}
+                    >
+                      {copiedId === 'url-list' ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+                
                 <Card>
                   <CardContent className="pt-6 space-y-6">
                     
@@ -282,11 +301,30 @@ const Api = () => {
             <AccordionItem value="get" className="border rounded-lg px-4">
               <AccordionTrigger>
                 <div className="flex items-center gap-3">
-                  <Badge className="bg-green-600">GET</Badge>
-                  <span className="font-mono text-sm">/task-operations?action=get&task_id=xxx</span>
+                  <Badge variant="http_get">GET</Badge>
+                  <span className="font-semibold text-base">Ver Detalhes de Tarefa</span>
                 </div>
               </AccordionTrigger>
               <AccordionContent>
+                <div className="mb-4 p-4 bg-muted rounded-lg border">
+                  <p className="text-xs font-semibold mb-2 text-muted-foreground">Endpoint:</p>
+                  <div className="flex items-center gap-2">
+                    <code className="bg-background px-3 py-2 rounded border flex-1 text-sm font-mono">
+                      GET {BASE_URL}/task-operations?action=get&task_id=xxx
+                    </code>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => copyToClipboard(
+                        `GET ${BASE_URL}/task-operations?action=get&task_id=xxx`,
+                        'url-get'
+                      )}
+                    >
+                      {copiedId === 'url-get' ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+                
                 <Card>
                   <CardContent className="pt-6 space-y-6">
                     
@@ -380,12 +418,31 @@ const Api = () => {
             <AccordionItem value="create" className="border rounded-lg px-4">
               <AccordionTrigger>
                 <div className="flex items-center gap-3">
-                  <Badge className="bg-blue-600">POST</Badge>
-                  <span className="font-mono text-sm">/task-operations?action=create</span>
-                  <Badge variant="outline" className="text-xs">⭐ Importante</Badge>
+                  <Badge variant="http_post">POST</Badge>
+                  <span className="font-semibold text-base">Criar Nova Tarefa</span>
+                  <Badge variant="destructive" className="ml-2">Importante</Badge>
                 </div>
               </AccordionTrigger>
               <AccordionContent>
+                <div className="mb-4 p-4 bg-muted rounded-lg border">
+                  <p className="text-xs font-semibold mb-2 text-muted-foreground">Endpoint:</p>
+                  <div className="flex items-center gap-2">
+                    <code className="bg-background px-3 py-2 rounded border flex-1 text-sm font-mono">
+                      POST {BASE_URL}/task-operations?action=create
+                    </code>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => copyToClipboard(
+                        `POST ${BASE_URL}/task-operations?action=create`,
+                        'url-create'
+                      )}
+                    >
+                      {copiedId === 'url-create' ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+                
                 <Card>
                   <CardContent className="pt-6 space-y-6">
                     
@@ -576,11 +633,30 @@ const Api = () => {
             <AccordionItem value="update_status" className="border rounded-lg px-4">
               <AccordionTrigger>
                 <div className="flex items-center gap-3">
-                  <Badge className="bg-yellow-600">PATCH</Badge>
-                  <span className="font-mono text-sm">/task-operations?action=update_status</span>
+                  <Badge variant="http_patch">PATCH</Badge>
+                  <span className="font-semibold text-base">Atualizar Status</span>
                 </div>
               </AccordionTrigger>
               <AccordionContent>
+                <div className="mb-4 p-4 bg-muted rounded-lg border">
+                  <p className="text-xs font-semibold mb-2 text-muted-foreground">Endpoint:</p>
+                  <div className="flex items-center gap-2">
+                    <code className="bg-background px-3 py-2 rounded border flex-1 text-sm font-mono">
+                      PATCH {BASE_URL}/task-operations?action=update_status
+                    </code>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => copyToClipboard(
+                        `PATCH ${BASE_URL}/task-operations?action=update_status`,
+                        'url-update-status'
+                      )}
+                    >
+                      {copiedId === 'url-update-status' ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+                
                 <Card>
                   <CardContent className="pt-6 space-y-6">
                     
@@ -765,11 +841,30 @@ const Api = () => {
             <AccordionItem value="assign_designer" className="border rounded-lg px-4">
               <AccordionTrigger>
                 <div className="flex items-center gap-3">
-                  <Badge className="bg-yellow-600">PATCH</Badge>
-                  <span className="font-mono text-sm">/task-operations?action=assign_designer</span>
+                  <Badge variant="http_patch">PATCH</Badge>
+                  <span className="font-semibold text-base">Atribuir Designer</span>
                 </div>
               </AccordionTrigger>
               <AccordionContent>
+                <div className="mb-4 p-4 bg-muted rounded-lg border">
+                  <p className="text-xs font-semibold mb-2 text-muted-foreground">Endpoint:</p>
+                  <div className="flex items-center gap-2">
+                    <code className="bg-background px-3 py-2 rounded border flex-1 text-sm font-mono">
+                      PATCH {BASE_URL}/task-operations?action=assign_designer
+                    </code>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => copyToClipboard(
+                        `PATCH ${BASE_URL}/task-operations?action=assign_designer`,
+                        'url-assign'
+                      )}
+                    >
+                      {copiedId === 'url-assign' ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+                
                 <Card>
                   <CardContent className="pt-6 space-y-6">
                     
@@ -861,11 +956,30 @@ const Api = () => {
             <AccordionItem value="add_comment" className="border rounded-lg px-4">
               <AccordionTrigger>
                 <div className="flex items-center gap-3">
-                  <Badge className="bg-blue-600">POST</Badge>
-                  <span className="font-mono text-sm">/task-operations?action=add_comment</span>
+                  <Badge variant="http_post">POST</Badge>
+                  <span className="font-semibold text-base">Adicionar Comentário</span>
                 </div>
               </AccordionTrigger>
               <AccordionContent>
+                <div className="mb-4 p-4 bg-muted rounded-lg border">
+                  <p className="text-xs font-semibold mb-2 text-muted-foreground">Endpoint:</p>
+                  <div className="flex items-center gap-2">
+                    <code className="bg-background px-3 py-2 rounded border flex-1 text-sm font-mono">
+                      POST {BASE_URL}/task-operations?action=add_comment
+                    </code>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => copyToClipboard(
+                        `POST ${BASE_URL}/task-operations?action=add_comment`,
+                        'url-comment'
+                      )}
+                    >
+                      {copiedId === 'url-comment' ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+                
                 <Card>
                   <CardContent className="pt-6 space-y-6">
                     
@@ -1019,11 +1133,30 @@ const Api = () => {
             <AccordionItem value="get_history" className="border rounded-lg px-4">
               <AccordionTrigger>
                 <div className="flex items-center gap-3">
-                  <Badge className="bg-green-600">GET</Badge>
-                  <span className="font-mono text-sm">/task-operations?action=get_history&task_id=xxx</span>
+                  <Badge variant="http_get">GET</Badge>
+                  <span className="font-semibold text-base">Ver Histórico</span>
                 </div>
               </AccordionTrigger>
               <AccordionContent>
+                <div className="mb-4 p-4 bg-muted rounded-lg border">
+                  <p className="text-xs font-semibold mb-2 text-muted-foreground">Endpoint:</p>
+                  <div className="flex items-center gap-2">
+                    <code className="bg-background px-3 py-2 rounded border flex-1 text-sm font-mono">
+                      GET {BASE_URL}/task-operations?action=get_history&task_id=xxx
+                    </code>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => copyToClipboard(
+                        `GET ${BASE_URL}/task-operations?action=get_history&task_id=xxx`,
+                        'url-history'
+                      )}
+                    >
+                      {copiedId === 'url-history' ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+                
                 <Card>
                   <CardContent className="pt-6 space-y-6">
                     
