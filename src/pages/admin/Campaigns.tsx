@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CreateABTestDialog } from "@/components/abtest/CreateABTestDialog";
 import { Badge } from "@/components/ui/badge";
 import type { ABTest } from "@/types/ab-test";
+import { generateUniqueSlug } from "@/lib/utils";
 
 interface Campaign {
   id: string;
@@ -141,10 +142,6 @@ export default function Campaigns() {
     setIsLoading(false);
   };
 
-  const generateUniqueLink = () => {
-    return `c-${Math.random().toString(36).substr(2, 9)}`;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -153,11 +150,14 @@ export default function Campaigns() {
       return;
     }
 
+    // Bug #4: Gerar slug amigável baseado no nome da campanha
+    const uniqueLink = await generateUniqueSlug(formData.name);
+
     const campaignData = {
       name: formData.name,
       segment_id: formData.segment_id,
       workflow_template_id: formData.workflow_template_id,
-      unique_link: generateUniqueLink(),
+      unique_link: uniqueLink,
     };
 
     const { error } = await supabase.from("campaigns").insert([campaignData]);

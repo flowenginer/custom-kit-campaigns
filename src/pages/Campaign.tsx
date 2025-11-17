@@ -185,22 +185,24 @@ const Campaign = () => {
   const [debouncedCustomerData] = useDebounce(customerData, 1500);
   const [debouncedCustomizations] = useDebounce(customizations, 2000);
 
-  // Compute active steps from campaign workflow template
+  // Bug #1: Compute active steps from campaign workflow template
   const templateSteps = campaign?.workflow_templates?.workflow_config || [];
-  const steps = templateSteps.length > 0
+  const enabledSteps = templateSteps.length > 0
     ? templateSteps
         .filter(step => step.enabled)
         .sort((a, b) => a.order - b.order)
-        .map(step => step.label)
     : [
-        "Dados Iniciais",
-        "Selecionar Modelo",
-        "Personalizar Frente",
-        "Personalizar Costas",
-        "Manga Direita",
-        "Manga Esquerda",
-        "Revisão e Envio",
+        { id: 'initial_data', label: 'Dados Iniciais', order: 0, enabled: true },
+        { id: 'select_model', label: 'Selecionar Modelo', order: 1, enabled: true },
+        { id: 'customize_front', label: 'Personalizar Frente', order: 2, enabled: true },
+        { id: 'customize_back', label: 'Personalizar Costas', order: 3, enabled: true },
+        { id: 'sleeve_right', label: 'Manga Direita', order: 4, enabled: true },
+        { id: 'sleeve_left', label: 'Manga Esquerda', order: 5, enabled: true },
+        { id: 'review', label: 'Revisão e Envio', order: 6, enabled: true },
       ];
+  
+  const steps = enabledSteps.map(s => s.label);
+  const currentStepId = enabledSteps[currentStep]?.id;
 
   useEffect(() => {
     if (uniqueLink) {
@@ -610,8 +612,11 @@ const Campaign = () => {
   };
 
   const handleNext = async () => {
-    // Validação Step 0: Dados iniciais
-    if (currentStep === 0) {
+    // Bug #1: Validação baseada em step ID ao invés de número hardcoded
+    const stepId = enabledSteps[currentStep]?.id;
+    
+    // Validação initial_data
+    if (stepId === 'initial_data') {
       if (!customerData.name.trim()) {
         toast.error("Por favor, digite seu nome");
         return;
@@ -629,27 +634,25 @@ const Campaign = () => {
         return;
       }
       
-      // Criar/atualizar lead IMEDIATAMENTE ao clicar "Próximo" no Step 0
+      // Criar/atualizar lead IMEDIATAMENTE ao clicar "Próximo"
       setIsSaving(true);
-      await createOrUpdateLead(0);
+      await createOrUpdateLead(currentStep);
       setIsSaving(false);
       
       toast.success("Dados salvos com sucesso!");
     }
 
-    // Validação Step 1 removida - o botão já seleciona o modelo diretamente
-
-    // Step 5: Após Manga Esquerda, navegar para página de upload
-    if (currentStep === 5) {
+    // Após Manga Esquerda, navegar para página de upload
+    if (stepId === 'sleeve_left') {
       if (leadId) {
-        await createOrUpdateLead(5);
+        await createOrUpdateLead(currentStep);
       }
       navigate(`/c/${uniqueLink}/upload-logos`);
       return;
     }
 
-    // Step 6: Revisão - submeter pedido
-    if (currentStep === 6) {
+    // Revisão - submeter pedido
+    if (stepId === 'review') {
       handleSubmitOrder();
       return;
     }
@@ -662,7 +665,7 @@ const Campaign = () => {
       await createOrUpdateLead(nextStep);
     }
 
-    if (nextStep >= 1 && nextStep <= 6) {
+    if (nextStep >= 1 && nextStep < enabledSteps.length) {
       trackEvent(`step_${nextStep}`);
     }
   };
@@ -735,9 +738,34 @@ const Campaign = () => {
   };
 
   const handleSubmitOrder = async () => {
-    if (!campaign || !selectedModel) return;
+    // Bug #2: Validação completa ANTES de processar
+    if (!campaign) {
+      toast.error("Campanha não encontrada");
+      return;
+    }
+    
+    if (!selectedModel) {
+      toast.error("Nenhum modelo selecionado");
+      return;
+    }
+    
+    if (!customerData.name || !customerData.phone) {
+      toast.error("Preencha nome e telefone");
+      return;
+    }
+    
+    if (!customerData.quantity) {
+      toast.error("Selecione a quantidade");
+      return;
+    }
+    
+    if (customerData.quantity === 'custom' && (!customerData.customQuantity || customerData.customQuantity < 1)) {
+      toast.error("Informe a quantidade personalizada");
+      return;
+    }
 
     setIsSaving(true);
+    toast.info("Fazendo upload das imagens...");
 
     try {
       // Upload all logos first
@@ -751,35 +779,78 @@ const Campaign = () => {
         leftLogoUrl: ''
       };
 
+      // Upload individual com tratamento de erro
       if (uploadedLogos.frontLogo) {
-        uploadedUrls.frontLogoUrl = await uploadToSupabase(uploadedLogos.frontLogo, 'logos');
+        try {
+          uploadedUrls.frontLogoUrl = await uploadToSupabase(uploadedLogos.frontLogo, 'logos');
+        } catch (error) {
+          console.error("Erro ao fazer upload do logo frontal:", error);
+          toast.error("Erro ao fazer upload do logo frontal");
+          throw error;
+        }
       }
 
       if (uploadedLogos.backLogo) {
-        uploadedUrls.backLogoUrl = await uploadToSupabase(uploadedLogos.backLogo, 'logos');
+        try {
+          uploadedUrls.backLogoUrl = await uploadToSupabase(uploadedLogos.backLogo, 'logos');
+        } catch (error) {
+          console.error("Erro ao fazer upload do logo das costas:", error);
+          toast.error("Erro ao fazer upload do logo das costas");
+          throw error;
+        }
       }
 
       for (const logo of uploadedLogos.sponsorsLogos) {
         if (logo) {
-          const url = await uploadToSupabase(logo, 'logos');
-          uploadedUrls.sponsorsLogosUrls.push(url);
+          try {
+            const url = await uploadToSupabase(logo, 'logos');
+            uploadedUrls.sponsorsLogosUrls.push(url);
+          } catch (error) {
+            console.error("Erro ao fazer upload de logo de patrocinador:", error);
+            toast.error("Erro ao fazer upload de logo de patrocinador");
+            throw error;
+          }
         }
       }
 
       if (uploadedLogos.rightFlag) {
-        uploadedUrls.rightFlagUrl = await uploadToSupabase(uploadedLogos.rightFlag, 'flags');
+        try {
+          uploadedUrls.rightFlagUrl = await uploadToSupabase(uploadedLogos.rightFlag, 'flags');
+        } catch (error) {
+          console.error("Erro ao fazer upload da bandeira direita:", error);
+          toast.error("Erro ao fazer upload da bandeira direita");
+          throw error;
+        }
       }
 
       if (uploadedLogos.rightLogo) {
-        uploadedUrls.rightLogoUrl = await uploadToSupabase(uploadedLogos.rightLogo, 'logos');
+        try {
+          uploadedUrls.rightLogoUrl = await uploadToSupabase(uploadedLogos.rightLogo, 'logos');
+        } catch (error) {
+          console.error("Erro ao fazer upload do logo direito:", error);
+          toast.error("Erro ao fazer upload do logo direito");
+          throw error;
+        }
       }
 
       if (uploadedLogos.leftFlag) {
-        uploadedUrls.leftFlagUrl = await uploadToSupabase(uploadedLogos.leftFlag, 'flags');
+        try {
+          uploadedUrls.leftFlagUrl = await uploadToSupabase(uploadedLogos.leftFlag, 'flags');
+        } catch (error) {
+          console.error("Erro ao fazer upload da bandeira esquerda:", error);
+          toast.error("Erro ao fazer upload da bandeira esquerda");
+          throw error;
+        }
       }
 
       if (uploadedLogos.leftLogo) {
-        uploadedUrls.leftLogoUrl = await uploadToSupabase(uploadedLogos.leftLogo, 'logos');
+        try {
+          uploadedUrls.leftLogoUrl = await uploadToSupabase(uploadedLogos.leftLogo, 'logos');
+        } catch (error) {
+          console.error("Erro ao fazer upload do logo esquerdo:", error);
+          toast.error("Erro ao fazer upload do logo esquerdo");
+          throw error;
+        }
       }
 
       // Update customizations with uploaded URLs
@@ -805,12 +876,31 @@ const Campaign = () => {
         }
       };
 
-      // Calcular quantidade final
-      const finalQuantity = customerData.quantity === 'custom' 
-        ? customerData.customQuantity 
-        : customerData.quantity === '60+' 
-        ? 60 
-        : parseInt(customerData.quantity);
+      // Calcular quantidade final com validação
+      const calculateFinalQuantity = (): number => {
+        if (customerData.quantity === 'custom') {
+          const qty = customerData.customQuantity;
+          if (!qty || qty < 1) {
+            throw new Error("Quantidade inválida");
+          }
+          return qty;
+        }
+        
+        if (customerData.quantity === '60+') {
+          return 60;
+        }
+        
+        const parsed = parseInt(customerData.quantity);
+        if (isNaN(parsed) || parsed < 1) {
+          throw new Error("Quantidade inválida");
+        }
+        
+        return parsed;
+      };
+      
+      const finalQuantity = calculateFinalQuantity();
+
+      toast.info("Salvando pedido...");
 
       const { data: orderData, error: insertError } = await supabase.from("orders").insert({
         campaign_id: campaign.id,
@@ -896,9 +986,20 @@ const Campaign = () => {
         leftFlag: null,
         leftLogo: null,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao enviar pedido:", error);
-      toast.error("Erro ao enviar pedido");
+      
+      let errorMessage = "Erro ao enviar pedido";
+      
+      if (error.message?.includes("quantity") || error.message?.includes("Quantidade")) {
+        errorMessage = "Quantidade inválida";
+      } else if (error.message?.includes("upload")) {
+        errorMessage = "Erro ao fazer upload das imagens";
+      } else if (error.message?.includes("unique constraint")) {
+        errorMessage = "Este pedido já foi enviado";
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setIsSaving(false);
     }
@@ -1011,9 +1112,9 @@ const Campaign = () => {
           )}
         </div>
 
-        {/* Step Content */}
+        {/* Step Content - Bug #1: Renderizar dinamicamente baseado em step ID */}
         <div className="mb-6">
-          {currentStep === 0 && (
+          {currentStepId === 'initial_data' && (
             <Card className="shadow-lg max-w-2xl mx-auto">
               <CardContent className="p-4 md:p-6">
                 <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-center px-2">
@@ -1102,7 +1203,7 @@ const Campaign = () => {
             </Card>
           )}
 
-          {currentStep === 1 && (
+          {currentStepId === 'select_model' && (
             <div>
               <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-center px-2">Escolha seu modelo</h2>
               <div className="flex flex-col gap-4 max-w-4xl mx-auto">
@@ -1136,7 +1237,7 @@ const Campaign = () => {
             </div>
           )}
 
-          {currentStep === 2 && selectedModel && (
+          {currentStepId === 'customize_front' && selectedModel && (
             <FrontEditor
               model={selectedModel}
               value={customizations.front}
@@ -1146,7 +1247,7 @@ const Campaign = () => {
             />
           )}
 
-          {currentStep === 3 && selectedModel && (
+          {currentStepId === 'customize_back' && selectedModel && (
             <BackEditor
               model={selectedModel}
               value={customizations.back}
@@ -1156,7 +1257,7 @@ const Campaign = () => {
             />
           )}
 
-          {currentStep === 4 && selectedModel && (
+          {currentStepId === 'sleeve_right' && selectedModel && (
             <SleeveEditor
               model={selectedModel}
               side="right"
@@ -1170,7 +1271,7 @@ const Campaign = () => {
             />
           )}
 
-          {currentStep === 5 && selectedModel && (
+          {currentStepId === 'sleeve_left' && selectedModel && (
             <SleeveEditor
               model={selectedModel}
               side="left"
@@ -1184,7 +1285,7 @@ const Campaign = () => {
             />
           )}
 
-          {currentStep === 6 && (
+          {currentStepId === 'review' && (
             <Card className="shadow-lg">
               <CardContent className="p-6">
                 <h2 className="text-2xl font-semibold mb-6">Revisão e Envio</h2>
