@@ -14,6 +14,95 @@ export type Database = {
   }
   public: {
     Tables: {
+      ab_test_events: {
+        Row: {
+          ab_test_id: string
+          campaign_id: string | null
+          created_at: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+          session_id: string | null
+        }
+        Insert: {
+          ab_test_id: string
+          campaign_id?: string | null
+          created_at?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          session_id?: string | null
+        }
+        Update: {
+          ab_test_id?: string
+          campaign_id?: string | null
+          created_at?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ab_test_events_ab_test_id_fkey"
+            columns: ["ab_test_id"]
+            isOneToOne: false
+            referencedRelation: "ab_tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ab_tests: {
+        Row: {
+          actual_distribution: Json | null
+          campaigns: Json
+          completed_at: string | null
+          completion_criteria: Json
+          created_at: string | null
+          created_by: string | null
+          id: string
+          name: string
+          paused_at: string | null
+          started_at: string | null
+          status: string
+          total_visits: number | null
+          unique_link: string
+          updated_at: string | null
+        }
+        Insert: {
+          actual_distribution?: Json | null
+          campaigns: Json
+          completed_at?: string | null
+          completion_criteria?: Json
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          name: string
+          paused_at?: string | null
+          started_at?: string | null
+          status?: string
+          total_visits?: number | null
+          unique_link: string
+          updated_at?: string | null
+        }
+        Update: {
+          actual_distribution?: Json | null
+          campaigns?: Json
+          completed_at?: string | null
+          completion_criteria?: Json
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          name?: string
+          paused_at?: string | null
+          started_at?: string | null
+          status?: string
+          total_visits?: number | null
+          unique_link?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       campaigns: {
         Row: {
           created_at: string | null
@@ -251,6 +340,8 @@ export type Database = {
       }
       leads: {
         Row: {
+          ab_test_id: string | null
+          ab_variant: string | null
           attempt_number: number | null
           campaign_id: string | null
           completed: boolean | null
@@ -276,6 +367,8 @@ export type Database = {
           utm_term: string | null
         }
         Insert: {
+          ab_test_id?: string | null
+          ab_variant?: string | null
           attempt_number?: number | null
           campaign_id?: string | null
           completed?: boolean | null
@@ -301,6 +394,8 @@ export type Database = {
           utm_term?: string | null
         }
         Update: {
+          ab_test_id?: string | null
+          ab_variant?: string | null
           attempt_number?: number | null
           campaign_id?: string | null
           completed?: boolean | null
@@ -326,6 +421,13 @@ export type Database = {
           utm_term?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "leads_ab_test_id_fkey"
+            columns: ["ab_test_id"]
+            isOneToOne: false
+            referencedRelation: "ab_tests"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "leads_campaign_id_fkey"
             columns: ["campaign_id"]
@@ -665,6 +767,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_ab_test_visit: {
+        Args: { test_id: string; variant_id: string }
+        Returns: undefined
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
