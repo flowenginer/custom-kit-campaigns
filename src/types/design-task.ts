@@ -43,6 +43,7 @@ export interface DesignTask {
   designer_name?: string;
   designer_initials?: string;
   model_name?: string;
+  model_code?: string;
 }
 
 export interface DesignTaskHistory {

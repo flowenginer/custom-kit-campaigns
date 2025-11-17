@@ -2,9 +2,9 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
 import { Download, Copy } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { CustomizationSummary } from "./CustomizationSummary";
 import { ShirtPreviewAnnotated } from "./ShirtPreviewAnnotated";
 import { AssetGallery } from "./AssetGallery";
@@ -22,7 +22,7 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
     
     return {
       front: rawData.front ? {
-        logoSize: rawData.front.logoType,
+        logoType: rawData.front.logoType,
         logoFile: rawData.front.logoUrl || undefined,
         text: rawData.front.text || undefined,
       } : undefined,
@@ -81,130 +81,363 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
   };
 
   const allImages = collectAllImages();
+  const totalAssets = allImages.length;
 
   const handleDownloadAll = async () => {
     if (allImages.length === 0) {
-      toast({ title: "Nenhum asset", description: "Não há imagens para baixar", variant: "destructive" });
+      toast.error("Não há imagens para baixar");
       return;
     }
     for (const img of allImages) {
-      window.open(img.url, '_blank');
+      const link = document.createElement('a');
+      link.href = img.url;
+      link.download = img.label;
+      link.click();
       await new Promise(r => setTimeout(r, 500));
     }
-    toast({ title: "Download iniciado", description: `${allImages.length} arquivo${allImages.length > 1 ? 's' : ''} sendo baixado${allImages.length > 1 ? 's' : ''}` });
+    toast.success(`${allImages.length} imagens baixadas!`);
   };
 
-  const copyToClipboard = (text: string, label: string) => {
+  const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast({ title: "Copiado!", description: `${label} copiado para a área de transferência` });
+    toast.success("Texto copiado!");
   };
 
-  const getFrontAnnotations = () => {
-    const annotations = [];
-    if (transformedData.front?.logoFile) {
-      const isLarge = transformedData.front.logoSize === 'large_center';
-      annotations.push({
-        label: isLarge ? 'Logo Grande Centro' : 'Logo Pequeno Esquerda',
-        position: { top: isLarge ? '45%' : '35%', left: isLarge ? '50%' : '30%' },
-        variant: 'default' as const
-      });
+  const formatLogoType = (type: string) => {
+    const types: Record<string, string> = {
+      'small_left': 'Pequeno Esquerda',
+      'small_center': 'Pequeno Centro',
+      'small_right': 'Pequeno Direita',
+      'large_center': 'Grande Centro',
+      'text_only': 'Apenas Texto',
+      'none': 'Nenhum'
+    };
+    return types[type] || type;
+  };
+
+  const getFrontAnnotations = (front: any) => {
+    const annotations: Array<{ label: string; position: { top: string; left: string }; variant?: 'default' | 'secondary' }> = [];
+    if (front.logoType && front.logoType !== 'none' && front.logoType !== 'text_only') {
+      annotations.push({ label: 'Logo', position: { top: '33%', left: '50%' }, variant: 'default' });
     }
-    if (transformedData.front?.text) {
-      annotations.push({ label: `Texto: "${transformedData.front.text}"`, position: { top: '60%', left: '50%' }, variant: 'secondary' as const });
+    if (front.text) {
+      annotations.push({ label: 'Texto', position: { top: '50%', left: '50%' }, variant: 'secondary' });
     }
     return annotations;
   };
 
-  const getBackAnnotations = () => {
-    const annotations = [];
-    if (transformedData.back?.logo) annotations.push({ label: 'Logo Costas', position: { top: '30%', left: '50%' }, variant: 'default' as const });
-    const textFields = [transformedData.back?.name, transformedData.back?.instagram, transformedData.back?.website, transformedData.back?.email, transformedData.back?.whatsapp].filter(f => f?.enabled).length;
-    if (textFields > 0) annotations.push({ label: `${textFields} Campo${textFields > 1 ? 's' : ''} de Texto`, position: { top: '50%', left: '50%' }, variant: 'secondary' as const });
-    if (transformedData.back?.sponsors && transformedData.back.sponsors.length > 0) {
-      annotations.push({ label: `${transformedData.back.sponsors.length} Patrocinador${transformedData.back.sponsors.length > 1 ? 'es' : ''}`, position: { top: '70%', left: '50%' }, variant: 'default' as const });
+  const getBackAnnotations = (back: any) => {
+    const annotations: Array<{ label: string; position: { top: string; left: string }; variant?: 'default' | 'secondary' }> = [];
+    if (back.logo) {
+      annotations.push({ label: 'Logo', position: { top: '25%', left: '50%' }, variant: 'default' });
+    }
+    if (back.sponsors && back.sponsors.length > 0) {
+      annotations.push({ label: 'Patrocinadores', position: { top: '75%', left: '50%' }, variant: 'secondary' });
     }
     return annotations;
   };
+
+  const getModelImageForSection = (section: 'front' | 'back', data: any) => {
+    if (section === 'front') {
+      if (data.logoType === 'large_center' && transformedData.modelImages?.front) {
+        return transformedData.modelImages.front;
+      }
+      return transformedData.modelImages?.front || '';
+    }
+    return transformedData.modelImages?.back || '';
+  };
+
+  const frontAssets = transformedData.front?.logoFile 
+    ? [{ url: transformedData.front.logoFile, label: 'Logo Frente' }]
+    : [];
+
+  const backAssets = [
+    ...(transformedData.back?.logo ? [{ url: transformedData.back.logo, label: 'Logo Costas' }] : []),
+    ...(transformedData.back?.sponsors?.map((s: any, idx: number) => ({ 
+      url: s.logo, 
+      label: `Patrocinador ${idx + 1}` 
+    })) || [])
+  ];
+
+  const sleeveAssets = [
+    ...(transformedData.leftSleeve?.flag ? [{ url: transformedData.leftSleeve.flag, label: 'Bandeira Manga Esquerda' }] : []),
+    ...(transformedData.leftSleeve?.logo ? [{ url: transformedData.leftSleeve.logo, label: 'Logo Manga Esquerda' }] : []),
+    ...(transformedData.rightSleeve?.flag ? [{ url: transformedData.rightSleeve.flag, label: 'Bandeira Manga Direita' }] : []),
+    ...(transformedData.rightSleeve?.logo ? [{ url: transformedData.rightSleeve.logo, label: 'Logo Manga Direita' }] : [])
+  ];
 
   return (
     <div className="space-y-6">
-      <CustomizationSummary front={transformedData.front} back={transformedData.back} leftSleeve={transformedData.leftSleeve} rightSleeve={transformedData.rightSleeve} totalAssets={allImages.length} />
-      {allImages.length > 0 && (
-        <div className="flex justify-end">
-          <Button onClick={handleDownloadAll} variant="default" size="sm">
-            <Download className="h-4 w-4 mr-2" />Baixar Todos os Assets ({allImages.length})
-          </Button>
-        </div>
-      )}
-      <Tabs defaultValue="front" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="front">👕 Frente</TabsTrigger>
-          <TabsTrigger value="back">🔙 Costas</TabsTrigger>
-          <TabsTrigger value="sleeves">💪 Mangas</TabsTrigger>
-          <TabsTrigger value="all">🖼️ Todos</TabsTrigger>
-        </TabsList>
-        <TabsContent value="front" className="mt-6">
-          {transformedData.front ? (
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <h3 className="font-semibold text-sm">Preview Visual</h3>
-                {transformedData.modelImages?.front ? (
-                  <ShirtPreviewAnnotated imageUrl={transformedData.modelImages.front} annotations={getFrontAnnotations()} alt="Preview Frente" onImageClick={() => setZoomImage({ url: transformedData.modelImages.front, alt: "Preview Frente" })} />
-                ) : <p className="text-xs text-muted-foreground">Preview não disponível</p>}
+      {/* RESUMO NO TOPO */}
+      <CustomizationSummary
+        front={transformedData.front}
+        back={transformedData.back}
+        leftSleeve={transformedData.leftSleeve}
+        rightSleeve={transformedData.rightSleeve}
+        totalAssets={totalAssets}
+      />
+
+      {/* Botão Baixar Todos */}
+      <div className="flex justify-end">
+        <Button onClick={handleDownloadAll} variant="outline" size="sm">
+          <Download className="h-4 w-4 mr-2" />
+          Baixar Todos os Assets ({totalAssets})
+        </Button>
+      </div>
+
+      {/* SEÇÃO: FRENTE */}
+      {transformedData.front && (
+        <Card>
+          <CardContent className="p-6">
+            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <Badge variant="default">FRENTE</Badge>
+            </h3>
+            <div className="grid grid-cols-2 gap-6">
+              {/* Coluna Esquerda: Preview Visual */}
+              <div>
+                {transformedData.modelImages?.front && (
+                  <ShirtPreviewAnnotated
+                    imageUrl={getModelImageForSection('front', transformedData.front)}
+                    annotations={getFrontAnnotations(transformedData.front)}
+                    alt="Preview da Frente"
+                    onImageClick={() => setZoomImage({ 
+                      url: getModelImageForSection('front', transformedData.front),
+                      alt: 'Preview da Frente'
+                    })}
+                  />
+                )}
               </div>
+
+              {/* Coluna Direita: Detalhes */}
               <div className="space-y-4">
-                <h3 className="font-semibold text-sm">Especificações</h3>
-                <Card><CardContent className="p-4 space-y-3">
-                  {transformedData.front.logoSize && (<div><p className="text-xs font-medium mb-1">Posição do Logo</p><Badge variant="secondary">{transformedData.front.logoSize === 'small_left' ? 'Pequeno Esquerda' : 'Grande Centro'}</Badge></div>)}
-                  {transformedData.front.text && (<div><div className="flex items-center justify-between mb-1"><p className="text-xs font-medium">Texto</p><Button variant="ghost" size="sm" className="h-6 px-2" onClick={() => copyToClipboard(transformedData.front.text!, "Texto")}><Copy className="h-3 w-3" /></Button></div><p className="text-xs bg-muted p-2 rounded">{transformedData.front.text}</p></div>)}
-                </CardContent></Card>
-                {transformedData.front.logoFile && (<div><h4 className="font-semibold text-sm mb-3">Assets</h4><AssetGallery assets={[{ url: transformedData.front.logoFile, label: 'Logo Frente' }]} columns={2} /></div>)}
-              </div>
-            </div>
-          ) : <p className="text-sm text-muted-foreground text-center py-8">Nenhuma personalização na frente</p>}
-        </TabsContent>
-        <TabsContent value="back" className="mt-6">
-          {transformedData.back ? (
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <h3 className="font-semibold text-sm">Preview Visual</h3>
-                {transformedData.modelImages?.back ? (
-                  <ShirtPreviewAnnotated imageUrl={transformedData.modelImages.back} annotations={getBackAnnotations()} alt="Preview Costas" onImageClick={() => setZoomImage({ url: transformedData.modelImages.back, alt: "Preview Costas" })} />
-                ) : <p className="text-xs text-muted-foreground">Preview não disponível</p>}
-              </div>
-              <div className="space-y-4">
-                <h3 className="font-semibold text-sm">Especificações</h3>
-                <Card><CardContent className="p-4 space-y-3">
-                  {(transformedData.back.name?.enabled || transformedData.back.instagram?.enabled || transformedData.back.website?.enabled || transformedData.back.email?.enabled || transformedData.back.whatsapp?.enabled) && (
-                    <div><p className="text-xs font-medium mb-2">Campos de Texto</p><div className="space-y-2">
-                      {transformedData.back.name?.enabled && transformedData.back.name?.value && (<div className="flex items-center gap-2"><p className="text-xs bg-muted p-2 rounded flex-1"><span className="font-medium">Nome:</span> {transformedData.back.name.value}</p><Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => copyToClipboard(transformedData.back.name.value, "Nome")}><Copy className="h-3 w-3" /></Button></div>)}
-                      {transformedData.back.instagram?.enabled && transformedData.back.instagram?.value && (<div className="flex items-center gap-2"><p className="text-xs bg-muted p-2 rounded flex-1"><span className="font-medium">Instagram:</span> {transformedData.back.instagram.value}</p><Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => copyToClipboard(transformedData.back.instagram.value, "Instagram")}><Copy className="h-3 w-3" /></Button></div>)}
-                      {transformedData.back.website?.enabled && transformedData.back.website?.value && (<div className="flex items-center gap-2"><p className="text-xs bg-muted p-2 rounded flex-1"><span className="font-medium">Website:</span> {transformedData.back.website.value}</p><Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => copyToClipboard(transformedData.back.website.value, "Website")}><Copy className="h-3 w-3" /></Button></div>)}
-                      {transformedData.back.email?.enabled && transformedData.back.email?.value && (<div className="flex items-center gap-2"><p className="text-xs bg-muted p-2 rounded flex-1"><span className="font-medium">Email:</span> {transformedData.back.email.value}</p><Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => copyToClipboard(transformedData.back.email.value, "Email")}><Copy className="h-3 w-3" /></Button></div>)}
-                      {transformedData.back.whatsapp?.enabled && transformedData.back.whatsapp?.value && (<div className="flex items-center gap-2"><p className="text-xs bg-muted p-2 rounded flex-1"><span className="font-medium">WhatsApp:</span> {transformedData.back.whatsapp.value}</p><Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => copyToClipboard(transformedData.back.whatsapp.value, "WhatsApp")}><Copy className="h-3 w-3" /></Button></div>)}
-                    </div></div>
-                  )}
-                </CardContent></Card>
-                {(transformedData.back.logo || (transformedData.back.sponsors && transformedData.back.sponsors.length > 0)) && (
-                  <div><h4 className="font-semibold text-sm mb-3">Assets</h4><AssetGallery assets={[...(transformedData.back.logo ? [{ url: transformedData.back.logo, label: 'Logo Costas' }] : []), ...(transformedData.back.sponsors?.map((s: any, i: number) => ({ url: s.logo, label: `Patrocinador ${i + 1}` })) || [])]} columns={2} /></div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Posicionamento do Logo</Label>
+                  <p className="text-sm font-medium">{formatLogoType(transformedData.front.logoType)}</p>
+                </div>
+                {transformedData.front.text && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Texto</Label>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm bg-muted p-2 rounded flex-1">{transformedData.front.text}</p>
+                      <Button size="sm" variant="ghost" onClick={() => copyToClipboard(transformedData.front.text)}>
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                {frontAssets.length > 0 && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-2 block">Assets</Label>
+                    <AssetGallery
+                      assets={frontAssets}
+                      columns={2}
+                      imageHeight="h-48"
+                    />
+                  </div>
                 )}
               </div>
             </div>
-          ) : <p className="text-sm text-muted-foreground text-center py-8">Nenhuma personalização nas costas</p>}
-        </TabsContent>
-        <TabsContent value="sleeves" className="mt-6">
-          {(transformedData.leftSleeve || transformedData.rightSleeve) ? (
-            <div className="grid md:grid-cols-2 gap-6">
-              {transformedData.leftSleeve && (<Card><CardContent className="p-4 space-y-4"><h3 className="font-semibold text-sm">💪 Manga Esquerda</h3>{transformedData.modelImages?.leftSleeve && (<div className="cursor-pointer" onClick={() => setZoomImage({ url: transformedData.modelImages.leftSleeve, alt: "Manga Esquerda" })}><img src={transformedData.modelImages.leftSleeve} alt="Manga Esquerda" className="w-full rounded-lg border-2 border-border hover:border-primary transition-colors" /></div>)}{transformedData.leftSleeve.text && (<div><div className="flex items-center justify-between mb-1"><p className="text-xs font-medium">Texto</p><Button variant="ghost" size="sm" className="h-6 px-2" onClick={() => copyToClipboard(transformedData.leftSleeve.text!, "Texto Manga Esquerda")}><Copy className="h-3 w-3" /></Button></div><p className="text-xs bg-muted p-2 rounded">{transformedData.leftSleeve.text}</p></div>)}{(transformedData.leftSleeve.flag || transformedData.leftSleeve.logo) && (<AssetGallery assets={[...(transformedData.leftSleeve.flag ? [{ url: transformedData.leftSleeve.flag, label: 'Bandeira' }] : []), ...(transformedData.leftSleeve.logo ? [{ url: transformedData.leftSleeve.logo, label: 'Logo' }] : [])]} columns={2} imageHeight="h-32" />)}</CardContent></Card>)}
-              {transformedData.rightSleeve && (<Card><CardContent className="p-4 space-y-4"><h3 className="font-semibold text-sm">💪 Manga Direita</h3>{transformedData.modelImages?.rightSleeve && (<div className="cursor-pointer" onClick={() => setZoomImage({ url: transformedData.modelImages.rightSleeve, alt: "Manga Direita" })}><img src={transformedData.modelImages.rightSleeve} alt="Manga Direita" className="w-full rounded-lg border-2 border-border hover:border-primary transition-colors" /></div>)}{transformedData.rightSleeve.text && (<div><div className="flex items-center justify-between mb-1"><p className="text-xs font-medium">Texto</p><Button variant="ghost" size="sm" className="h-6 px-2" onClick={() => copyToClipboard(transformedData.rightSleeve.text!, "Texto Manga Direita")}><Copy className="h-3 w-3" /></Button></div><p className="text-xs bg-muted p-2 rounded">{transformedData.rightSleeve.text}</p></div>)}{(transformedData.rightSleeve.flag || transformedData.rightSleeve.logo) && (<AssetGallery assets={[...(transformedData.rightSleeve.flag ? [{ url: transformedData.rightSleeve.flag, label: 'Bandeira' }] : []), ...(transformedData.rightSleeve.logo ? [{ url: transformedData.rightSleeve.logo, label: 'Logo' }] : [])]} columns={2} imageHeight="h-32" />)}</CardContent></Card>)}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* SEÇÃO: COSTAS */}
+      {transformedData.back && (
+        <Card>
+          <CardContent className="p-6">
+            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <Badge variant="default">COSTAS</Badge>
+            </h3>
+            <div className="grid grid-cols-2 gap-6">
+              {/* Coluna Esquerda: Preview Visual */}
+              <div>
+                {transformedData.modelImages?.back && (
+                  <ShirtPreviewAnnotated
+                    imageUrl={transformedData.modelImages.back}
+                    annotations={getBackAnnotations(transformedData.back)}
+                    alt="Preview das Costas"
+                    onImageClick={() => setZoomImage({ 
+                      url: transformedData.modelImages.back,
+                      alt: 'Preview das Costas'
+                    })}
+                  />
+                )}
+              </div>
+
+              {/* Coluna Direita: Detalhes */}
+              <div className="space-y-4">
+                {transformedData.back.name?.enabled && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Nome</Label>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm bg-muted p-2 rounded flex-1">{transformedData.back.name.value}</p>
+                      <Button size="sm" variant="ghost" onClick={() => copyToClipboard(transformedData.back.name.value)}>
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                {transformedData.back.instagram?.enabled && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Instagram</Label>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm bg-muted p-2 rounded flex-1">{transformedData.back.instagram.value}</p>
+                      <Button size="sm" variant="ghost" onClick={() => copyToClipboard(transformedData.back.instagram.value)}>
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                {transformedData.back.website?.enabled && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Website</Label>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm bg-muted p-2 rounded flex-1">{transformedData.back.website.value}</p>
+                      <Button size="sm" variant="ghost" onClick={() => copyToClipboard(transformedData.back.website.value)}>
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                {transformedData.back.email?.enabled && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Email</Label>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm bg-muted p-2 rounded flex-1">{transformedData.back.email.value}</p>
+                      <Button size="sm" variant="ghost" onClick={() => copyToClipboard(transformedData.back.email.value)}>
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                {transformedData.back.whatsapp?.enabled && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">WhatsApp</Label>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm bg-muted p-2 rounded flex-1">{transformedData.back.whatsapp.value}</p>
+                      <Button size="sm" variant="ghost" onClick={() => copyToClipboard(transformedData.back.whatsapp.value)}>
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                {backAssets.length > 0 && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-2 block">Assets</Label>
+                    <AssetGallery
+                      assets={backAssets}
+                      columns={2}
+                      imageHeight="h-48"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
-          ) : <p className="text-sm text-muted-foreground text-center py-8">Nenhuma personalização nas mangas</p>}
-        </TabsContent>
-        <TabsContent value="all" className="mt-6">
-          {allImages.length > 0 ? (<div><h3 className="font-semibold text-sm mb-4">Todos os Assets ({allImages.length})</h3><AssetGallery assets={allImages} columns={3} /></div>) : <p className="text-sm text-muted-foreground text-center py-8">Nenhum asset disponível</p>}
-        </TabsContent>
-      </Tabs>
-      {zoomImage && <ImageZoomModal isOpen={!!zoomImage} onClose={() => setZoomImage(null)} imageUrl={zoomImage.url} alt={zoomImage.alt} />}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* SEÇÃO: MANGAS */}
+      {(transformedData.leftSleeve || transformedData.rightSleeve) && (
+        <Card>
+          <CardContent className="p-6">
+            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <Badge variant="default">MANGAS</Badge>
+            </h3>
+            <div className="grid grid-cols-2 gap-6">
+              {/* Manga Esquerda */}
+              {transformedData.leftSleeve && (
+                <div>
+                  <h4 className="text-sm font-semibold mb-3">Manga Esquerda</h4>
+                  <div className="space-y-3">
+                    {transformedData.leftSleeve.text && (
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Texto</Label>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm bg-muted p-2 rounded flex-1">{transformedData.leftSleeve.text}</p>
+                          <Button size="sm" variant="ghost" onClick={() => copyToClipboard(transformedData.leftSleeve.text)}>
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    {(transformedData.leftSleeve.flag || transformedData.leftSleeve.logo) && (
+                      <div>
+                        <Label className="text-xs text-muted-foreground mb-2 block">Assets</Label>
+                        <AssetGallery
+                          assets={[
+                            ...(transformedData.leftSleeve.flag ? [{ url: transformedData.leftSleeve.flag, label: 'Bandeira' }] : []),
+                            ...(transformedData.leftSleeve.logo ? [{ url: transformedData.leftSleeve.logo, label: 'Logo' }] : [])
+                          ]}
+                          columns={2}
+                          imageHeight="h-32"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {/* Manga Direita */}
+              {transformedData.rightSleeve && (
+                <div>
+                  <h4 className="text-sm font-semibold mb-3">Manga Direita</h4>
+                  <div className="space-y-3">
+                    {transformedData.rightSleeve.text && (
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Texto</Label>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm bg-muted p-2 rounded flex-1">{transformedData.rightSleeve.text}</p>
+                          <Button size="sm" variant="ghost" onClick={() => copyToClipboard(transformedData.rightSleeve.text)}>
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    {(transformedData.rightSleeve.flag || transformedData.rightSleeve.logo) && (
+                      <div>
+                        <Label className="text-xs text-muted-foreground mb-2 block">Assets</Label>
+                        <AssetGallery
+                          assets={[
+                            ...(transformedData.rightSleeve.flag ? [{ url: transformedData.rightSleeve.flag, label: 'Bandeira' }] : []),
+                            ...(transformedData.rightSleeve.logo ? [{ url: transformedData.rightSleeve.logo, label: 'Logo' }] : [])
+                          ]}
+                          columns={2}
+                          imageHeight="h-32"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* SEÇÃO: TODOS OS ASSETS */}
+      {allImages.length > 0 && (
+        <Card>
+          <CardContent className="p-6">
+            <h3 className="text-lg font-bold mb-4">Todos os Assets</h3>
+            <AssetGallery
+              assets={allImages}
+              columns={3}
+              imageHeight="h-48"
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* MODAL DE ZOOM */}
+      {zoomImage && (
+        <ImageZoomModal
+          imageUrl={zoomImage.url}
+          alt={zoomImage.alt}
+          isOpen={!!zoomImage}
+          onClose={() => setZoomImage(null)}
+        />
+      )}
     </div>
   );
 };
