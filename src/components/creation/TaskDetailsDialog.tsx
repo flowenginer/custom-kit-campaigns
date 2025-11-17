@@ -32,7 +32,11 @@ import {
   UserPlus,
   Trash2,
   RefreshCcw,
-  Loader2
+  Loader2,
+  FileText,
+  Palette,
+  History as HistoryIcon,
+  Copy
 } from "lucide-react";
 
 interface TaskDetailsDialogProps {
@@ -314,44 +318,114 @@ export const TaskDetailsDialog = ({
 
         <Tabs defaultValue="details" className="flex-1 overflow-hidden flex flex-col">
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="details">📋 Detalhes</TabsTrigger>
-            <TabsTrigger value="customization">🎨 Personalização</TabsTrigger>
-            <TabsTrigger value="files">
-              🎨 Enviar Mockup ({task.design_files.length})
+            <TabsTrigger value="details">
+              <FileText className="h-4 w-4 mr-2" />
+              Detalhes
             </TabsTrigger>
-            <TabsTrigger value="history">📜 Histórico</TabsTrigger>
+            <TabsTrigger value="customization">
+              <Palette className="h-4 w-4 mr-2" />
+              Personalização
+            </TabsTrigger>
+            <TabsTrigger value="files">
+              <Upload className="h-4 w-4 mr-2" />
+              Enviar Mockup ({task.design_files.length})
+            </TabsTrigger>
+            <TabsTrigger value="history">
+              <HistoryIcon className="h-4 w-4 mr-2" />
+              Histórico
+            </TabsTrigger>
           </TabsList>
 
           <div className="flex-1 mt-4 overflow-y-auto pr-4">
             <TabsContent value="details" className="space-y-4 mt-0">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Cliente</Label>
-                  <p className="text-sm mt-1">{task.customer_name}</p>
-                  <p className="text-xs text-muted-foreground">{task.customer_phone}</p>
-                  <p className="text-xs text-muted-foreground">{task.customer_email}</p>
-                </div>
+              <div className="grid grid-cols-2 gap-6">
+                {/* COLUNA 1: Informações do Cliente */}
+                <Card>
+                  <CardContent className="p-4 space-y-3">
+                    <h3 className="font-semibold text-sm">Informações do Cliente</h3>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Nome</Label>
+                      <p className="text-sm font-medium">{task.customer_name}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Telefone</Label>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm flex-1">{task.customer_phone}</p>
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          onClick={() => {
+                            navigator.clipboard.writeText(task.customer_phone);
+                            toast.success("Telefone copiado!");
+                          }}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Email</Label>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm flex-1 truncate">{task.customer_email}</p>
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          onClick={() => {
+                            navigator.clipboard.writeText(task.customer_email);
+                            toast.success("Email copiado!");
+                          }}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-                <div>
-                  <Label>Campanha</Label>
-                  <p className="text-sm mt-1">{task.campaign_name}</p>
-                </div>
+                {/* COLUNA 2: Informações do Pedido */}
+                <Card>
+                  <CardContent className="p-4 space-y-3">
+                    <h3 className="font-semibold text-sm">Informações do Pedido</h3>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Campanha</Label>
+                      <p className="text-sm font-medium">{task.campaign_name}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Modelo</Label>
+                      <p className="text-sm">{task.model_name}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Código do Produto</Label>
+                      <p className="text-sm font-mono">{task.model_code || "N/A"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Quantidade</Label>
+                      <p className="text-sm">{task.quantity} unidades</p>
+                    </div>
+                  </CardContent>
+                </Card>
 
-                <div>
-                  <Label>Designer Responsável</Label>
-                  <p className="text-sm mt-1">
-                    {task.designer_name || "Não atribuído"}
-                  </p>
-                </div>
-
-                <div>
-                  <Label>Prazo de Entrega</Label>
-                  <p className="text-sm mt-1">
-                    {task.deadline 
-                      ? format(new Date(task.deadline), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
-                      : "Não definido"}
-                  </p>
-                </div>
+                {/* COLUNA 3: Designer Responsável (largura total) */}
+                <Card className="col-span-2">
+                  <CardContent className="p-4">
+                    <Label className="text-xs text-muted-foreground">Designer Responsável</Label>
+                    <div className="flex items-center gap-3 mt-2">
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback>{task.designer_initials || "?"}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-sm font-medium">
+                          {task.designer_name || "Não atribuído"}
+                        </p>
+                        {task.assigned_at && (
+                          <p className="text-xs text-muted-foreground">
+                            Atribuído {format(new Date(task.assigned_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </TabsContent>
 
@@ -414,31 +488,54 @@ export const TaskDetailsDialog = ({
                 <Label>Mockups Enviados</Label>
                 {[...task.design_files].reverse().map((file) => (
                   <Card key={`${file.version}-${file.uploaded_at}`}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Badge variant={file.version === task.current_version ? "default" : "outline"}>
-                              v{file.version} {file.version === task.current_version && "(atual)"}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">
-                              {format(new Date(file.uploaded_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                            </span>
-                          </div>
-                          {file.notes && (
-                            <p className="text-sm text-muted-foreground">{file.notes}</p>
-                          )}
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Badge variant={file.version === task.current_version ? "default" : "outline"}>
+                            v{file.version} {file.version === task.current_version && "(atual)"}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {format(new Date(file.uploaded_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </span>
                         </div>
-                        <div className="flex gap-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => window.open(file.url, '_blank')}
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => window.open(file.url, '_blank')}
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Baixar
+                        </Button>
+                      </div>
+
+                      {/* Preview Visual do Mockup */}
+                      <div 
+                        className="relative w-full h-48 bg-muted rounded-lg overflow-hidden cursor-pointer group"
+                        onClick={() => window.open(file.url, '_blank')}
+                      >
+                        <img 
+                          src={file.url} 
+                          alt={`Mockup v${file.version}`}
+                          className="w-full h-full object-contain group-hover:scale-105 transition-transform"
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            target.style.display = 'none';
+                            const parent = target.parentElement;
+                            if (parent) {
+                              parent.innerHTML = '<div class="flex items-center justify-center h-full"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg></div>';
+                            }
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <ExternalLink className="h-8 w-8 text-white" />
                         </div>
                       </div>
+
+                      {file.notes && (
+                        <p className="text-sm text-muted-foreground bg-muted/50 p-2 rounded">
+                          <strong>Notas:</strong> {file.notes}
+                        </p>
+                      )}
                     </CardContent>
                   </Card>
                 ))}

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { KanbanColumn } from "@/components/creation/KanbanColumn";
 import { TaskDetailsDialog } from "@/components/creation/TaskDetailsDialog";
+import { TaskCardSkeleton } from "@/components/creation/TaskCardSkeleton";
 import { DesignTask } from "@/types/design-task";
 import { toast } from "sonner";
 import { 
@@ -51,7 +52,20 @@ const Creation = () => {
       const { data, error } = await supabase
         .from("design_tasks")
         .select(`
-          *,
+          id,
+          order_id,
+          lead_id,
+          campaign_id,
+          status,
+          priority,
+          deadline,
+          assigned_to,
+          assigned_at,
+          current_version,
+          design_files,
+          created_at,
+          updated_at,
+          completed_at,
           orders!inner (
             customer_name,
             customer_email,
@@ -60,14 +74,16 @@ const Creation = () => {
             customization_data,
             model_id,
             shirt_models (
-              name
+              name,
+              sku
             )
           ),
           campaigns (
             name
           )
         `)
-        .order("created_at", { ascending: false });
+        .order("updated_at", { ascending: false })
+        .limit(100);
 
       if (error) throw error;
 
@@ -80,7 +96,8 @@ const Creation = () => {
         customization_data: task.orders?.customization_data,
         campaign_name: task.campaigns?.name,
         model_name: task.orders?.shirt_models?.name,
-        designer_name: null, // TODO: Join with profiles
+        model_code: task.orders?.shirt_models?.sku,
+        designer_name: null,
         designer_initials: null,
       }));
 
@@ -234,18 +251,26 @@ const Creation = () => {
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {columns.map((column) => (
-            <KanbanColumn
-              key={column.status}
-              title={column.title}
-              status={column.status}
-              icon={column.icon}
-              tasks={column.tasks}
-              onTaskClick={handleTaskClick}
-            />
-          ))}
-        </div>
+        {loading ? (
+          <div className="flex gap-4 overflow-x-auto pb-4">
+            {[...Array(6)].map((_, i) => (
+              <TaskCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : (
+          <div className="flex gap-4 overflow-x-auto pb-4">
+            {columns.map((column) => (
+              <KanbanColumn
+                key={column.status}
+                title={column.title}
+                status={column.status}
+                icon={column.icon}
+                tasks={column.tasks}
+                onTaskClick={handleTaskClick}
+              />
+            ))}
+          </div>
+        )}
         
         <DragOverlay>
           {activeTask ? (
