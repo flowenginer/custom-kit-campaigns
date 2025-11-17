@@ -151,6 +151,19 @@ const AdminLayout = () => {
                 <Workflow className="h-5 w-5" />
                 <span className="font-medium">Workflows</span>
               </NavLink>
+
+              <NavLink 
+                to="/admin/ab-tests" 
+                onClick={() => setIsNavigating(true)}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary",
+                  isNavigating && "opacity-50 pointer-events-none"
+                )}
+                activeClassName="bg-primary text-primary-foreground hover:bg-primary"
+              >
+                <FlaskConical className="h-5 w-5" />
+                <span className="font-medium">Testes A/B</span>
+              </NavLink>
             </>}
 
           {showDesignerLinks && <NavLink 
