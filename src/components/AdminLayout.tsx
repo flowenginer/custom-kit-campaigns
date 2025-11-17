@@ -1,4 +1,4 @@
-import { useNavigate, Outlet } from "react-router-dom";
+import { useNavigate, Outlet, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "./ui/button";
@@ -7,16 +7,24 @@ import { NavLink } from "./NavLink";
 import { Session } from "@supabase/supabase-js";
 import { NotificationsDropdown } from "./NotificationsDropdown";
 import { useUserRole } from "@/hooks/useUserRole";
+import { cn } from "@/lib/utils";
 import logoSS from "@/assets/logo-ss.png";
 const AdminLayout = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [session, setSession] = useState<Session | null>(null);
+  const [isNavigating, setIsNavigating] = useState(false);
   const {
     isSuperAdmin,
     isAdmin,
     isDesigner,
     isLoading
   } = useUserRole();
+  
+  useEffect(() => {
+    // Resetar loading quando a rota mudar
+    setIsNavigating(false);
+  }, [location]);
   useEffect(() => {
     supabase.auth.getSession().then(({
       data: {
@@ -79,43 +87,107 @@ const AdminLayout = () => {
             </>}
 
           {showAdminLinks && <>
-              <NavLink to="/admin/segments" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
+              <NavLink 
+                to="/admin/segments" 
+                onClick={() => setIsNavigating(true)}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary",
+                  isNavigating && "opacity-50 pointer-events-none"
+                )}
+                activeClassName="bg-primary text-primary-foreground hover:bg-primary"
+              >
                 <Tag className="h-5 w-5" />
                 <span className="font-medium">Segmentos</span>
               </NavLink>
 
-              <NavLink to="/admin/models" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
+              <NavLink 
+                to="/admin/models" 
+                onClick={() => setIsNavigating(true)}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary",
+                  isNavigating && "opacity-50 pointer-events-none"
+                )}
+                activeClassName="bg-primary text-primary-foreground hover:bg-primary"
+              >
                 <Tag className="h-5 w-5" />
                 <span className="font-medium">Modelos</span>
               </NavLink>
 
-              <NavLink to="/admin/campaigns" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
+              <NavLink 
+                to="/admin/campaigns" 
+                onClick={() => setIsNavigating(true)}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary",
+                  isNavigating && "opacity-50 pointer-events-none"
+                )}
+                activeClassName="bg-primary text-primary-foreground hover:bg-primary"
+              >
                 <Megaphone className="h-5 w-5" />
                 <span className="font-medium">Campanhas</span>
               </NavLink>
 
-              <NavLink to="/admin/leads" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
+              <NavLink 
+                to="/admin/leads" 
+                onClick={() => setIsNavigating(true)}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary",
+                  isNavigating && "opacity-50 pointer-events-none"
+                )}
+                activeClassName="bg-primary text-primary-foreground hover:bg-primary"
+              >
                 <Users className="h-5 w-5" />
                 <span className="font-medium">Leads</span>
               </NavLink>
 
-              <NavLink to="/admin/workflows" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
+              <NavLink 
+                to="/admin/workflows" 
+                onClick={() => setIsNavigating(true)}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary",
+                  isNavigating && "opacity-50 pointer-events-none"
+                )}
+                activeClassName="bg-primary text-primary-foreground hover:bg-primary"
+              >
                 <Workflow className="h-5 w-5" />
                 <span className="font-medium">Workflows</span>
               </NavLink>
             </>}
 
-          {showDesignerLinks && <NavLink to="/admin/creation" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
+          {showDesignerLinks && <NavLink 
+            to="/admin/creation" 
+            onClick={() => setIsNavigating(true)}
+            className={cn(
+              "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary",
+              isNavigating && "opacity-50 pointer-events-none"
+            )}
+            activeClassName="bg-primary text-primary-foreground hover:bg-primary"
+          >
               <Palette className="h-5 w-5" />
               <span className="font-medium">Criação</span>
             </NavLink>}
 
-          {showAdminLinks && <NavLink to="/admin/api" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
+          {showAdminLinks && <NavLink 
+            to="/admin/api" 
+            onClick={() => setIsNavigating(true)}
+            className={cn(
+              "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary",
+              isNavigating && "opacity-50 pointer-events-none"
+            )}
+            activeClassName="bg-primary text-primary-foreground hover:bg-primary"
+          >
               <Code className="h-5 w-5" />
               <span className="font-medium">API</span>
             </NavLink>}
 
-          {showAll && <NavLink to="/admin/settings" className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary" activeClassName="bg-primary text-primary-foreground hover:bg-primary">
+          {showAll && <NavLink 
+            to="/admin/settings" 
+            onClick={() => setIsNavigating(true)}
+            className={cn(
+              "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary",
+              isNavigating && "opacity-50 pointer-events-none"
+            )}
+            activeClassName="bg-primary text-primary-foreground hover:bg-primary"
+          >
               <Settings className="h-5 w-5" />
               <span className="font-medium">Configurações</span>
             </NavLink>}

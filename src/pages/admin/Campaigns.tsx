@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ExternalLink, Copy, Plus, Trash2, Settings } from "lucide-react";
 import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Campaign {
   id: string;
@@ -42,6 +43,7 @@ export default function Campaigns() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [segments, setSegments] = useState<Segment[]>([]);
   const [workflows, setWorkflows] = useState<WorkflowTemplate[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
   const [showChangeWorkflow, setShowChangeWorkflow] = useState(false);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
@@ -56,6 +58,7 @@ export default function Campaigns() {
   }, []);
 
   const loadData = async () => {
+    setIsLoading(true);
     // Carregar campanhas
     const { data: campaignsData, error: campaignsError } = await supabase
       .from("campaigns")
@@ -117,6 +120,8 @@ export default function Campaigns() {
     } else {
       setWorkflows(workflowsData || []);
     }
+    
+    setIsLoading(false);
   };
 
   const generateUniqueLink = () => {
@@ -200,6 +205,35 @@ export default function Campaigns() {
     navigator.clipboard.writeText(fullLink);
     toast.success("Link copiado!");
   };
+
+  if (isLoading) {
+    return (
+      <div className="p-8 space-y-6">
+        <div className="flex justify-between items-center">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-10 w-40" />
+        </div>
+        
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Card key={i}>
+              <CardHeader>
+                <Skeleton className="h-6 w-3/4 mb-2" />
+                <Skeleton className="h-4 w-1/2" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-20 w-full mb-4" />
+                <div className="flex gap-2">
+                  <Skeleton className="h-9 flex-1" />
+                  <Skeleton className="h-9 flex-1" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 space-y-6">

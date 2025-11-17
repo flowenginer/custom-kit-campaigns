@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
 import { Loader2, TrendingUp, Users, Target, Activity } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 interface Campaign {
   id: string;
   name: string;
@@ -356,11 +357,45 @@ const Dashboard = () => {
   // Obter sources e mediums únicos para filtros
   const uniqueSources = ["all", ...Array.from(new Set(utmData.map(d => d.source)))];
   const uniqueMediums = ["all", ...Array.from(new Set(utmData.map(d => d.medium)))];
+  
   if (isLoading) {
-    return <div className="flex items-center justify-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>;
+    return (
+      <div className="p-8 space-y-6">
+        <Skeleton className="h-8 w-64 mb-4" />
+        
+        {/* Metrics cards skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-4 w-4 rounded" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-20 mb-1" />
+                <Skeleton className="h-3 w-40" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Charts skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {[1, 2].map((i) => (
+            <Card key={i}>
+              <CardHeader>
+                <Skeleton className="h-6 w-48" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-64 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
   }
+  
   const comparativeFunnelData = getComparativeFunnelData();
   const campaignComparisonData = getCampaignComparisonData();
   const topUtmSources = getTopUtmSources();

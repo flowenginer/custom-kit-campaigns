@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2, Eye, Filter, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -155,7 +156,21 @@ const Leads = () => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setLeads(data || []);
+      
+      // ✅ CALCULAR STATUS ONLINE ANTES DE SETAR NO ESTADO
+      const leadsWithCorrectStatus = (data || []).map(lead => {
+        const lastSeenDate = new Date(lead.last_seen);
+        const now = new Date();
+        const diffInSeconds = (now.getTime() - lastSeenDate.getTime()) / 1000;
+        const isActuallyOnline = diffInSeconds < 30;
+        
+        return {
+          ...lead,
+          is_online: isActuallyOnline // Sobrescrever com valor calculado
+        };
+      });
+      
+      setLeads(leadsWithCorrectStatus);
     } catch (error) {
       console.error("Erro ao carregar leads:", error);
     } finally {
@@ -260,8 +275,60 @@ const Leads = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="p-8 space-y-6">
+        {/* Header skeleton */}
+        <div className="flex justify-between items-center">
+          <div>
+            <Skeleton className="h-8 w-48 mb-2" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+          <Skeleton className="h-10 w-32" />
+        </div>
+
+        {/* Stats cards skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <CardHeader>
+                <Skeleton className="h-4 w-32" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-20 mb-2" />
+                <Skeleton className="h-3 w-40" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Filters skeleton */}
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-32" />
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-4">
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-10 w-40" />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Table skeleton */}
+        <Card>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="flex gap-4">
+                  <Skeleton className="h-12 flex-1" />
+                  <Skeleton className="h-12 w-32" />
+                  <Skeleton className="h-12 w-24" />
+                  <Skeleton className="h-12 w-20" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -463,7 +530,7 @@ const Leads = () => {
                   <TableRow key={lead.id}>
                     <TableCell>
                       {lead.is_online ? (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 status-transition">
                           <span className="relative flex h-3 w-3">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
@@ -471,7 +538,7 @@ const Leads = () => {
                           <span className="text-green-600 font-medium text-sm">Online</span>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 status-transition">
                           <span className="relative inline-flex rounded-full h-3 w-3 bg-gray-400"></span>
                           <span className="text-muted-foreground text-sm">Offline</span>
                         </div>
