@@ -103,7 +103,83 @@ serve(async (req) => {
       );
     }
 
-    // 3. ATUALIZAR STATUS
+    // 3. CRIAR NOVA TAREFA
+    if (action === 'create' && req.method === 'POST') {
+      const { order_id, campaign_id, priority, deadline, notes } = await req.json();
+
+      // Validações
+      if (!order_id) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'order_id é obrigatório' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log(`Creating new task for order: ${order_id}`);
+
+      // Buscar lead_id baseado no order_id
+      const { data: orderData } = await supabase
+        .from('orders')
+        .select('campaign_id, session_id')
+        .eq('id', order_id)
+        .maybeSingle();
+
+      if (!orderData) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Pedido não encontrado' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const { data: leadData } = await supabase
+        .from('leads')
+        .select('id')
+        .eq('session_id', orderData.session_id)
+        .maybeSingle();
+
+      // Validar priority se fornecido
+      const validPriorities = ['low', 'normal', 'high', 'urgent'];
+      const taskPriority = priority && validPriorities.includes(priority) ? priority : 'normal';
+
+      // Criar tarefa
+      const { data: newTask, error } = await supabase
+        .from('design_tasks')
+        .insert({
+          order_id,
+          lead_id: leadData?.id || null,
+          campaign_id: campaign_id || orderData.campaign_id,
+          status: 'pending',
+          priority: taskPriority,
+          deadline: deadline || null
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Criar registro no histórico
+      await supabase
+        .from('design_task_history')
+        .insert({
+          task_id: newTask.id,
+          action: 'created',
+          new_status: 'pending',
+          notes: notes || 'Tarefa criada via API'
+        });
+
+      console.log(`New task created: ${newTask.id}`);
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'Tarefa criada com sucesso',
+          data: newTask
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // 4. ATUALIZAR STATUS
     if (action === 'update_status' && req.method === 'PATCH') {
       const { task_id, new_status, notes } = await req.json();
 
