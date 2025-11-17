@@ -319,11 +319,16 @@ const Campaign = () => {
       const stepNumber = parseInt(stepParam);
       if (!isNaN(stepNumber) && stepNumber >= 0 && stepNumber < steps.length) {
         setCurrentStep(stepNumber);
+        
+        // Atualizar current_step no banco quando vier de outra página (ex: UploadLogos)
+        if (leadId && stepNumber === 6) {
+          createOrUpdateLead(6);
+        }
         // Manter o ?step=6 na URL para facilitar debug e deep linking
         // window.history.replaceState({}, '', `/c/${uniqueLink}`);
       }
     }
-  }, [location.search, steps.length, uniqueLink]);
+  }, [location.search, steps.length, uniqueLink, leadId]);
 
   useEffect(() => {
     if (campaign && currentStep === 0) {
