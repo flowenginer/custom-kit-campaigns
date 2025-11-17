@@ -95,6 +95,21 @@ const Campaign = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [sessionId, setSessionId] = useState(() => `session-${Date.now()}-${Math.random()}`);
+  const [abTestId, setAbTestId] = useState<string | null>(null);
+  const [abVariant, setAbVariant] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const testId = params.get('ab_test');
+    const variant = params.get('ab_variant');
+    const session = params.get('session');
+    
+    if (testId && variant) {
+      setAbTestId(testId);
+      setAbVariant(variant);
+      if (session) setSessionId(session);
+    }
+  }, [location.search]);
   const STORAGE_KEY = uniqueLink ? `campaign_progress_${uniqueLink}` : 'campaign_progress_temp';
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [models, setModels] = useState<ShirtModel[]>([]);
@@ -815,6 +830,16 @@ const Campaign = () => {
       // Atualizar lead como completo e vincular ao pedido
       if (orderData) {
         await createOrUpdateLead(6, true, orderData.id);
+      }
+
+      // Registrar evento de conversão no A/B test
+      if (abTestId && abVariant) {
+        await supabase.from('ab_test_events').insert({
+          ab_test_id: abTestId,
+          event_type: 'lead',
+          campaign_id: abVariant,
+          session_id: sessionId
+        });
       }
 
       await trackEvent("completed");

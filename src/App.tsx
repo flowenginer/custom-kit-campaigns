@@ -13,10 +13,12 @@ import Models from "./pages/admin/Models";
 import Campaigns from "./pages/admin/Campaigns";
 import Leads from "./pages/admin/Leads";
 import Workflows from "./pages/admin/Workflows";
+import ABTests from "./pages/admin/ABTests";
 import Creation from "./pages/admin/Creation";
 import Api from "./pages/admin/Api";
 import Settings from "./pages/admin/Settings";
 import Campaign from "./pages/Campaign";
+import ABTestRedirect from "./pages/ABTestRedirect";
 import { UploadLogos } from "./pages/UploadLogos";
 import NotFound from "./pages/NotFound";
 
@@ -31,6 +33,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/t/:testLink" element={<ABTestRedirect />} />
           <Route path="/c/:uniqueLink" element={<Campaign />} />
           <Route path="/c/:uniqueLink/upload-logos" element={<UploadLogos />} />
           <Route path="/admin" element={<AdminLayout />}>
@@ -41,6 +44,7 @@ const App = () => (
             <Route path="campaigns" element={<Campaigns />} />
             <Route path="leads" element={<Leads />} />
             <Route path="workflows" element={<Workflows />} />
+            <Route path="ab-tests" element={<ABTests />} />
             <Route path="creation" element={<Creation />} />
             <Route path="api" element={<Api />} />
             <Route path="settings" element={<Settings />} />
