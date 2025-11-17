@@ -313,6 +313,14 @@ const Campaign = () => {
     }
   }, [models, isRehydrating]);
 
+  // Reset currentStep if it exceeds enabledSteps length
+  useEffect(() => {
+    if (currentStep >= enabledSteps.length && enabledSteps.length > 0) {
+      setCurrentStep(Math.max(0, enabledSteps.length - 1));
+      console.log('⚠️ CurrentStep resetado para:', enabledSteps.length - 1);
+    }
+  }, [enabledSteps.length, currentStep]);
+
   // Sincronizar sessionId com localStorage para UploadLogos
   useEffect(() => {
     if (sessionId) {
@@ -909,7 +917,11 @@ const Campaign = () => {
 
       toast.info("Salvando pedido...");
 
-      const { data: orderData, error: insertError } = await supabase.from("orders").insert({
+      // Generate order ID client-side to avoid RLS SELECT issue
+      const orderId = crypto.randomUUID();
+
+      const { error: insertError } = await supabase.from("orders").insert({
+        id: orderId,
         campaign_id: campaign.id,
         model_id: selectedModel.id,
         session_id: sessionId,
@@ -918,25 +930,33 @@ const Campaign = () => {
         customer_phone: customerData.phone,
         quantity: finalQuantity,
         customization_data: finalCustomizations as any,
-      })
-      .select()
-      .single();
+      });
 
-      if (insertError) throw insertError;
-
-      // Atualizar lead como completo e vincular ao pedido
-      if (orderData) {
-        await createOrUpdateLead(6, true, orderData.id);
+      if (insertError) {
+        console.error('❌ [ORDER] Erro ao inserir pedido:', {
+          message: insertError.message,
+          code: insertError.code,
+          details: insertError.details,
+          hint: insertError.hint
+        });
+        throw insertError;
       }
 
-      // Registrar evento de conversão no A/B test
+      // Atualizar lead como completo e vincular ao pedido (usar último step)
+      await createOrUpdateLead(enabledSteps.length - 1, true, orderId);
+
+      // Registrar evento de conversão no A/B test (não bloquear fluxo principal)
       if (abTestId && abVariant) {
-        await supabase.from('ab_test_events').insert({
-          ab_test_id: abTestId,
-          event_type: 'lead',
-          campaign_id: abVariant,
-          session_id: sessionId
-        });
+        try {
+          await supabase.from('ab_test_events').insert({
+            ab_test_id: abTestId,
+            event_type: 'lead',
+            campaign_id: abVariant,
+            session_id: sessionId
+          });
+        } catch (error) {
+          console.warn('⚠️ Erro ao registrar evento A/B test (não crítico):', error);
+        }
       }
 
       await trackEvent("completed");
@@ -1428,7 +1448,7 @@ const Campaign = () => {
               Voltar
             </Button>
 
-            {currentStep < 6 && (
+            {currentStep < enabledSteps.length - 1 && (
               <Button 
                 onClick={handleNext} 
                 size="lg"
@@ -1439,7 +1459,7 @@ const Campaign = () => {
               </Button>
             )}
 
-            {currentStep === 6 && (
+            {currentStep === enabledSteps.length - 1 && (
               <Button 
                 onClick={handleSubmitOrder}
                 disabled={isSaving || !selectedModel}
