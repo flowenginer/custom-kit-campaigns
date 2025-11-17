@@ -187,19 +187,26 @@ const Campaign = () => {
 
   // Bug #1: Compute active steps from campaign workflow template
   const templateSteps = campaign?.workflow_templates?.workflow_config || [];
-  const enabledSteps = templateSteps.length > 0
+  
+  // Filter and sort enabled steps, with fallback to default workflow
+  let enabledSteps = templateSteps.length > 0
     ? templateSteps
         .filter(step => step.enabled)
         .sort((a, b) => a.order - b.order)
-    : [
-        { id: 'initial_data', label: 'Dados Iniciais', order: 0, enabled: true },
-        { id: 'select_model', label: 'Selecionar Modelo', order: 1, enabled: true },
-        { id: 'customize_front', label: 'Personalizar Frente', order: 2, enabled: true },
-        { id: 'customize_back', label: 'Personalizar Costas', order: 3, enabled: true },
-        { id: 'sleeve_right', label: 'Manga Direita', order: 4, enabled: true },
-        { id: 'sleeve_left', label: 'Manga Esquerda', order: 5, enabled: true },
-        { id: 'review', label: 'Revisão e Envio', order: 6, enabled: true },
-      ];
+    : [];
+
+  // If no enabled steps after filtering, use default workflow
+  if (enabledSteps.length === 0) {
+    enabledSteps = [
+      { id: 'initial_data', label: 'Dados Iniciais', order: 0, enabled: true },
+      { id: 'select_model', label: 'Selecionar Modelo', order: 1, enabled: true },
+      { id: 'customize_front', label: 'Personalizar Frente', order: 2, enabled: true },
+      { id: 'customize_back', label: 'Personalizar Costas', order: 3, enabled: true },
+      { id: 'sleeve_right', label: 'Manga Direita', order: 4, enabled: true },
+      { id: 'sleeve_left', label: 'Manga Esquerda', order: 5, enabled: true },
+      { id: 'review', label: 'Revisão e Envio', order: 6, enabled: true },
+    ];
+  }
   
   const steps = enabledSteps.map(s => s.label);
   const currentStepId = enabledSteps[currentStep]?.id;
