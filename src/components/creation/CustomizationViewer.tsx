@@ -1,15 +1,22 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Download, Check, X } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Download, Copy } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { CustomizationSummary } from "./CustomizationSummary";
+import { ShirtPreviewAnnotated } from "./ShirtPreviewAnnotated";
+import { AssetGallery } from "./AssetGallery";
+import { ImageZoomModal } from "@/components/ui/image-zoom-modal";
 
 interface CustomizationViewerProps {
   data: any;
 }
 
 export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
-  // Transform database customization_data to component format
+  const [zoomImage, setZoomImage] = useState<{ url: string; alt: string } | null>(null);
+
   const transformCustomizationData = (rawData: any) => {
     if (!rawData) return null;
     
@@ -21,26 +28,11 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
       } : undefined,
       
       back: rawData.back ? {
-        name: {
-          enabled: rawData.back.name,
-          value: rawData.back.nameText
-        },
-        instagram: {
-          enabled: rawData.back.instagram,
-          value: rawData.back.instagramText
-        },
-        website: {
-          enabled: rawData.back.website,
-          value: rawData.back.websiteText
-        },
-        email: {
-          enabled: rawData.back.email,
-          value: rawData.back.emailText
-        },
-        whatsapp: {
-          enabled: rawData.back.whatsapp,
-          value: rawData.back.whatsappText
-        },
+        name: { enabled: rawData.back.name, value: rawData.back.nameText },
+        instagram: { enabled: rawData.back.instagram, value: rawData.back.instagramText },
+        website: { enabled: rawData.back.website, value: rawData.back.websiteText },
+        email: { enabled: rawData.back.email, value: rawData.back.emailText },
+        whatsapp: { enabled: rawData.back.whatsapp, value: rawData.back.whatsappText },
         logo: rawData.back.logoUrl || undefined,
         sponsors: rawData.back.sponsorsLogosUrls?.map((url: string) => ({ logo: url })) || []
       } : undefined,
@@ -55,337 +47,164 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
         flag: rawData.sleeves.right.flagUrl || undefined,
         logo: rawData.sleeves.right.logoUrl || undefined,
         text: rawData.sleeves.right.text ? rawData.sleeves.right.textContent : undefined
-      } : undefined
+      } : undefined,
+      
+      modelImages: {
+        front: rawData.modelImages?.front,
+        back: rawData.modelImages?.back,
+        leftSleeve: rawData.modelImages?.left,
+        rightSleeve: rawData.modelImages?.right
+      }
     };
   };
 
   const transformedData = transformCustomizationData(data);
 
   if (!transformedData) {
-    return (
-      <p className="text-sm text-muted-foreground text-center py-8">
-        Nenhum dado de personalização disponível
-      </p>
-    );
+    return <p className="text-sm text-muted-foreground text-center py-8">Nenhum dado de personalização disponível</p>;
   }
 
-  const handleDownload = (url: string, filename: string) => {
-    window.open(url, '_blank');
-  };
-
-  const renderImage = (url: string | undefined, label: string) => {
-    if (!url) return null;
-    
-    return (
-      <div className="flex items-center gap-2">
-        <img 
-          src={url} 
-          alt={label}
-          className="w-24 h-24 object-cover rounded border cursor-pointer hover:border-primary transition-colors"
-          onClick={() => window.open(url, '_blank')}
-          title="Clique para ver em tamanho completo"
-        />
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium truncate">{label}</p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleDownload(url, label)}
-            className="mt-1 h-7 text-xs"
-          >
-            <Download className="h-3 w-3 mr-1" />
-            Download
-          </Button>
-        </div>
-      </div>
-    );
-  };
-
-  const renderCheckBox = (value: boolean, label: string) => {
-    return (
-      <div className="flex items-center gap-1.5">
-        <Check className="h-3.5 w-3.5 text-green-500" />
-        <span className="text-xs">{label}</span>
-      </div>
-    );
-  };
-
-  // Collect all images from customization data
   const collectAllImages = () => {
     const images: Array<{ url: string; label: string }> = [];
-
-    if (transformedData?.front?.logoFile) {
-      images.push({ url: transformedData.front.logoFile, label: 'Logo Frente' });
-    }
-
-    if (transformedData?.back?.logo) {
-      images.push({ url: transformedData.back.logo, label: 'Logo Costas' });
-    }
-
+    if (transformedData?.front?.logoFile) images.push({ url: transformedData.front.logoFile, label: 'Logo Frente' });
+    if (transformedData?.back?.logo) images.push({ url: transformedData.back.logo, label: 'Logo Costas' });
     if (transformedData?.back?.sponsors) {
       transformedData.back.sponsors.forEach((sponsor: any, idx: number) => {
-        if (sponsor.logo) {
-          images.push({ url: sponsor.logo, label: `Patrocinador ${idx + 1}` });
-        }
+        if (sponsor.logo) images.push({ url: sponsor.logo, label: `Patrocinador ${idx + 1}` });
       });
     }
-
-    if (transformedData?.leftSleeve?.flag) {
-      images.push({ url: transformedData.leftSleeve.flag, label: 'Bandeira Manga Esquerda' });
-    }
-
-    if (transformedData?.leftSleeve?.logo) {
-      images.push({ url: transformedData.leftSleeve.logo, label: 'Logo Manga Esquerda' });
-    }
-
-    if (transformedData?.rightSleeve?.flag) {
-      images.push({ url: transformedData.rightSleeve.flag, label: 'Bandeira Manga Direita' });
-    }
-
-    if (transformedData?.rightSleeve?.logo) {
-      images.push({ url: transformedData.rightSleeve.logo, label: 'Logo Manga Direita' });
-    }
-
+    if (transformedData?.leftSleeve?.flag) images.push({ url: transformedData.leftSleeve.flag, label: 'Bandeira Manga Esquerda' });
+    if (transformedData?.leftSleeve?.logo) images.push({ url: transformedData.leftSleeve.logo, label: 'Logo Manga Esquerda' });
+    if (transformedData?.rightSleeve?.flag) images.push({ url: transformedData.rightSleeve.flag, label: 'Bandeira Manga Direita' });
+    if (transformedData?.rightSleeve?.logo) images.push({ url: transformedData.rightSleeve.logo, label: 'Logo Manga Direita' });
     return images;
   };
 
   const allImages = collectAllImages();
 
+  const handleDownloadAll = async () => {
+    if (allImages.length === 0) {
+      toast({ title: "Nenhum asset", description: "Não há imagens para baixar", variant: "destructive" });
+      return;
+    }
+    for (const img of allImages) {
+      window.open(img.url, '_blank');
+      await new Promise(r => setTimeout(r, 500));
+    }
+    toast({ title: "Download iniciado", description: `${allImages.length} arquivo${allImages.length > 1 ? 's' : ''} sendo baixado${allImages.length > 1 ? 's' : ''}` });
+  };
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: "Copiado!", description: `${label} copiado para a área de transferência` });
+  };
+
+  const getFrontAnnotations = () => {
+    const annotations = [];
+    if (transformedData.front?.logoFile) {
+      const isLarge = transformedData.front.logoSize === 'large_center';
+      annotations.push({
+        label: isLarge ? 'Logo Grande Centro' : 'Logo Pequeno Esquerda',
+        position: { top: isLarge ? '45%' : '35%', left: isLarge ? '50%' : '30%' },
+        variant: 'default' as const
+      });
+    }
+    if (transformedData.front?.text) {
+      annotations.push({ label: `Texto: "${transformedData.front.text}"`, position: { top: '60%', left: '50%' }, variant: 'secondary' as const });
+    }
+    return annotations;
+  };
+
+  const getBackAnnotations = () => {
+    const annotations = [];
+    if (transformedData.back?.logo) annotations.push({ label: 'Logo Costas', position: { top: '30%', left: '50%' }, variant: 'default' as const });
+    const textFields = [transformedData.back?.name, transformedData.back?.instagram, transformedData.back?.website, transformedData.back?.email, transformedData.back?.whatsapp].filter(f => f?.enabled).length;
+    if (textFields > 0) annotations.push({ label: `${textFields} Campo${textFields > 1 ? 's' : ''} de Texto`, position: { top: '50%', left: '50%' }, variant: 'secondary' as const });
+    if (transformedData.back?.sponsors && transformedData.back.sponsors.length > 0) {
+      annotations.push({ label: `${transformedData.back.sponsors.length} Patrocinador${transformedData.back.sponsors.length > 1 ? 'es' : ''}`, position: { top: '70%', left: '50%' }, variant: 'default' as const });
+    }
+    return annotations;
+  };
+
   return (
-    <div className="space-y-2 pb-4">
-      {/* FRENTE */}
-      {transformedData.front && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              📍 FRENTE
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {transformedData.front.logoSize && (
-              <div>
-                <p className="text-xs font-medium mb-1">Tamanho do Logo</p>
-                <Badge variant="secondary" className="text-xs">
-                  {transformedData.front.logoSize === 'small_left' ? 'Pequeno Esquerda' : 'Grande Centro'}
-                </Badge>
-              </div>
-            )}
-            
-            {transformedData.front.logoFile && (
-              <div>
-                <p className="text-xs font-medium mb-1">Logo</p>
-                {renderImage(transformedData.front.logoFile, 'Logo Frente')}
-              </div>
-            )}
-            
-            {transformedData.front.text && (
-              <div>
-                <p className="text-xs font-medium mb-1">Texto</p>
-                <p className="text-xs bg-muted p-2 rounded">{transformedData.front.text}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* COSTAS */}
-      {transformedData.back && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              📍 COSTAS
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {/* Logo das Costas - SEMPRE EXIBIR SE EXISTIR */}
-            {transformedData.back.logo && (
-              <div>
-                <p className="text-xs font-medium mb-1">Logo</p>
-                {renderImage(transformedData.back.logo, 'Logo Costas')}
-              </div>
-            )}
-
-            {/* Só exibir campos de texto se algum foi habilitado */}
-            {(transformedData.back.name?.enabled || 
-              transformedData.back.instagram?.enabled || 
-              transformedData.back.website?.enabled || 
-              transformedData.back.email?.enabled || 
-              transformedData.back.whatsapp?.enabled) && (
-              <>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {transformedData.back.name?.enabled && renderCheckBox(true, "Nome")}
-                  {transformedData.back.instagram?.enabled && renderCheckBox(true, "Instagram")}
-                  {transformedData.back.website?.enabled && renderCheckBox(true, "Website")}
-                  {transformedData.back.email?.enabled && renderCheckBox(true, "Email")}
-                  {transformedData.back.whatsapp?.enabled && renderCheckBox(true, "WhatsApp")}
-                </div>
-
-                {transformedData.back.name?.enabled && transformedData.back.name?.value && (
-                  <div>
-                    <p className="text-xs font-medium mb-0.5">Nome</p>
-                    <p className="text-xs bg-muted p-1.5 rounded">{transformedData.back.name.value}</p>
-                  </div>
-                )}
-
-                {transformedData.back.instagram?.enabled && transformedData.back.instagram?.value && (
-                  <div>
-                    <p className="text-xs font-medium mb-0.5">Instagram</p>
-                    <p className="text-xs bg-muted p-1.5 rounded">{transformedData.back.instagram.value}</p>
-                  </div>
-                )}
-
-                {transformedData.back.website?.enabled && transformedData.back.website?.value && (
-                  <div>
-                    <p className="text-xs font-medium mb-0.5">Website</p>
-                    <p className="text-xs bg-muted p-1.5 rounded">{transformedData.back.website.value}</p>
-                  </div>
-                )}
-
-                {transformedData.back.email?.enabled && transformedData.back.email?.value && (
-                  <div>
-                    <p className="text-xs font-medium mb-0.5">Email</p>
-                    <p className="text-xs bg-muted p-1.5 rounded">{transformedData.back.email.value}</p>
-                  </div>
-                )}
-
-                {transformedData.back.whatsapp?.enabled && transformedData.back.whatsapp?.value && (
-                  <div>
-                    <p className="text-xs font-medium mb-0.5">WhatsApp</p>
-                    <p className="text-xs bg-muted p-1.5 rounded">{transformedData.back.whatsapp.value}</p>
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* Patrocinadores */}
-            {transformedData.back.sponsors && transformedData.back.sponsors.length > 0 && (
-              <div>
-                <p className="text-xs font-medium mb-1">Patrocinadores</p>
-                <div className="space-y-2">
-                  {transformedData.back.sponsors.map((sponsor: any, idx: number) => 
-                    renderImage(sponsor.logo, `Patrocinador ${idx + 1}`)
-                  )}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* MANGAS */}
-      {(transformedData.leftSleeve || transformedData.rightSleeve) && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              📍 MANGAS
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {/* Manga Esquerda */}
-            {transformedData.leftSleeve && (
-              <div className="space-y-2">
-                <h4 className="font-semibold text-xs">Manga Esquerda</h4>
-                
-                {transformedData.leftSleeve.flag && (
-                  <div>
-                    <p className="text-xs font-medium mb-1">Bandeira</p>
-                    {renderImage(transformedData.leftSleeve.flag, 'Bandeira Manga Esquerda')}
-                  </div>
-                )}
-                
-                {transformedData.leftSleeve.logo && (
-                  <div>
-                    <p className="text-xs font-medium mb-1">Logo</p>
-                    {renderImage(transformedData.leftSleeve.logo, 'Logo Manga Esquerda')}
-                  </div>
-                )}
-                
-                {transformedData.leftSleeve.text && (
-                  <div>
-                    <p className="text-xs font-medium mb-0.5">Texto</p>
-                    <p className="text-xs bg-muted p-1.5 rounded">{transformedData.leftSleeve.text}</p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Manga Direita */}
-            {transformedData.rightSleeve && (
-              <div className="space-y-2">
-                <h4 className="font-semibold text-xs">Manga Direita</h4>
-                
-                {transformedData.rightSleeve.flag && (
-                  <div>
-                    <p className="text-xs font-medium mb-1">Bandeira</p>
-                    {renderImage(transformedData.rightSleeve.flag, 'Bandeira Manga Direita')}
-                  </div>
-                )}
-                
-                {transformedData.rightSleeve.logo && (
-                  <div>
-                    <p className="text-xs font-medium mb-1">Logo</p>
-                    {renderImage(transformedData.rightSleeve.logo, 'Logo Manga Direita')}
-                  </div>
-                )}
-                
-                {transformedData.rightSleeve.text && (
-                  <div>
-                    <p className="text-xs font-medium mb-0.5">Texto</p>
-                    <p className="text-xs bg-muted p-1.5 rounded">{transformedData.rightSleeve.text}</p>
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* GALERIA DE TODAS AS IMAGENS */}
+    <div className="space-y-6">
+      <CustomizationSummary front={transformedData.front} back={transformedData.back} leftSleeve={transformedData.leftSleeve} rightSleeve={transformedData.rightSleeve} totalAssets={allImages.length} />
       {allImages.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              🖼️ TODAS AS IMAGENS ({allImages.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-[400px] pr-4">
-              <div className="grid grid-cols-3 gap-3">
-                {allImages.map((image, index) => (
-                  <div key={index} className="space-y-1">
-                    <div className="relative group">
-                      <img
-                        src={image.url}
-                        alt={image.label}
-                        className="w-full h-24 object-cover rounded border cursor-pointer hover:border-primary transition-colors"
-                        onClick={() => window.open(image.url, '_blank')}
-                        title="Clique para ver em tamanho completo"
-                      />
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDownload(image.url, image.label);
-                          }}
-                          className="h-7 text-xs"
-                        >
-                          <Download className="h-3 w-3 mr-1" />
-                          Download
-                        </Button>
-                      </div>
-                    </div>
-                    <p className="text-xs font-medium truncate text-center" title={image.label}>
-                      {image.label}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
+        <div className="flex justify-end">
+          <Button onClick={handleDownloadAll} variant="default" size="sm">
+            <Download className="h-4 w-4 mr-2" />Baixar Todos os Assets ({allImages.length})
+          </Button>
+        </div>
       )}
+      <Tabs defaultValue="front" className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="front">👕 Frente</TabsTrigger>
+          <TabsTrigger value="back">🔙 Costas</TabsTrigger>
+          <TabsTrigger value="sleeves">💪 Mangas</TabsTrigger>
+          <TabsTrigger value="all">🖼️ Todos</TabsTrigger>
+        </TabsList>
+        <TabsContent value="front" className="mt-6">
+          {transformedData.front ? (
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <h3 className="font-semibold text-sm">Preview Visual</h3>
+                {transformedData.modelImages?.front ? (
+                  <ShirtPreviewAnnotated imageUrl={transformedData.modelImages.front} annotations={getFrontAnnotations()} alt="Preview Frente" onImageClick={() => setZoomImage({ url: transformedData.modelImages.front, alt: "Preview Frente" })} />
+                ) : <p className="text-xs text-muted-foreground">Preview não disponível</p>}
+              </div>
+              <div className="space-y-4">
+                <h3 className="font-semibold text-sm">Especificações</h3>
+                <Card><CardContent className="p-4 space-y-3">
+                  {transformedData.front.logoSize && (<div><p className="text-xs font-medium mb-1">Posição do Logo</p><Badge variant="secondary">{transformedData.front.logoSize === 'small_left' ? 'Pequeno Esquerda' : 'Grande Centro'}</Badge></div>)}
+                  {transformedData.front.text && (<div><div className="flex items-center justify-between mb-1"><p className="text-xs font-medium">Texto</p><Button variant="ghost" size="sm" className="h-6 px-2" onClick={() => copyToClipboard(transformedData.front.text!, "Texto")}><Copy className="h-3 w-3" /></Button></div><p className="text-xs bg-muted p-2 rounded">{transformedData.front.text}</p></div>)}
+                </CardContent></Card>
+                {transformedData.front.logoFile && (<div><h4 className="font-semibold text-sm mb-3">Assets</h4><AssetGallery assets={[{ url: transformedData.front.logoFile, label: 'Logo Frente' }]} columns={2} /></div>)}
+              </div>
+            </div>
+          ) : <p className="text-sm text-muted-foreground text-center py-8">Nenhuma personalização na frente</p>}
+        </TabsContent>
+        <TabsContent value="back" className="mt-6">
+          {transformedData.back ? (
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <h3 className="font-semibold text-sm">Preview Visual</h3>
+                {transformedData.modelImages?.back ? (
+                  <ShirtPreviewAnnotated imageUrl={transformedData.modelImages.back} annotations={getBackAnnotations()} alt="Preview Costas" onImageClick={() => setZoomImage({ url: transformedData.modelImages.back, alt: "Preview Costas" })} />
+                ) : <p className="text-xs text-muted-foreground">Preview não disponível</p>}
+              </div>
+              <div className="space-y-4">
+                <h3 className="font-semibold text-sm">Especificações</h3>
+                <Card><CardContent className="p-4 space-y-3">
+                  {(transformedData.back.name?.enabled || transformedData.back.instagram?.enabled || transformedData.back.website?.enabled || transformedData.back.email?.enabled || transformedData.back.whatsapp?.enabled) && (
+                    <div><p className="text-xs font-medium mb-2">Campos de Texto</p><div className="space-y-2">
+                      {transformedData.back.name?.enabled && transformedData.back.name?.value && (<div className="flex items-center gap-2"><p className="text-xs bg-muted p-2 rounded flex-1"><span className="font-medium">Nome:</span> {transformedData.back.name.value}</p><Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => copyToClipboard(transformedData.back.name.value, "Nome")}><Copy className="h-3 w-3" /></Button></div>)}
+                      {transformedData.back.instagram?.enabled && transformedData.back.instagram?.value && (<div className="flex items-center gap-2"><p className="text-xs bg-muted p-2 rounded flex-1"><span className="font-medium">Instagram:</span> {transformedData.back.instagram.value}</p><Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => copyToClipboard(transformedData.back.instagram.value, "Instagram")}><Copy className="h-3 w-3" /></Button></div>)}
+                      {transformedData.back.website?.enabled && transformedData.back.website?.value && (<div className="flex items-center gap-2"><p className="text-xs bg-muted p-2 rounded flex-1"><span className="font-medium">Website:</span> {transformedData.back.website.value}</p><Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => copyToClipboard(transformedData.back.website.value, "Website")}><Copy className="h-3 w-3" /></Button></div>)}
+                      {transformedData.back.email?.enabled && transformedData.back.email?.value && (<div className="flex items-center gap-2"><p className="text-xs bg-muted p-2 rounded flex-1"><span className="font-medium">Email:</span> {transformedData.back.email.value}</p><Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => copyToClipboard(transformedData.back.email.value, "Email")}><Copy className="h-3 w-3" /></Button></div>)}
+                      {transformedData.back.whatsapp?.enabled && transformedData.back.whatsapp?.value && (<div className="flex items-center gap-2"><p className="text-xs bg-muted p-2 rounded flex-1"><span className="font-medium">WhatsApp:</span> {transformedData.back.whatsapp.value}</p><Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => copyToClipboard(transformedData.back.whatsapp.value, "WhatsApp")}><Copy className="h-3 w-3" /></Button></div>)}
+                    </div></div>
+                  )}
+                </CardContent></Card>
+                {(transformedData.back.logo || (transformedData.back.sponsors && transformedData.back.sponsors.length > 0)) && (
+                  <div><h4 className="font-semibold text-sm mb-3">Assets</h4><AssetGallery assets={[...(transformedData.back.logo ? [{ url: transformedData.back.logo, label: 'Logo Costas' }] : []), ...(transformedData.back.sponsors?.map((s: any, i: number) => ({ url: s.logo, label: `Patrocinador ${i + 1}` })) || [])]} columns={2} /></div>
+                )}
+              </div>
+            </div>
+          ) : <p className="text-sm text-muted-foreground text-center py-8">Nenhuma personalização nas costas</p>}
+        </TabsContent>
+        <TabsContent value="sleeves" className="mt-6">
+          {(transformedData.leftSleeve || transformedData.rightSleeve) ? (
+            <div className="grid md:grid-cols-2 gap-6">
+              {transformedData.leftSleeve && (<Card><CardContent className="p-4 space-y-4"><h3 className="font-semibold text-sm">💪 Manga Esquerda</h3>{transformedData.modelImages?.leftSleeve && (<div className="cursor-pointer" onClick={() => setZoomImage({ url: transformedData.modelImages.leftSleeve, alt: "Manga Esquerda" })}><img src={transformedData.modelImages.leftSleeve} alt="Manga Esquerda" className="w-full rounded-lg border-2 border-border hover:border-primary transition-colors" /></div>)}{transformedData.leftSleeve.text && (<div><div className="flex items-center justify-between mb-1"><p className="text-xs font-medium">Texto</p><Button variant="ghost" size="sm" className="h-6 px-2" onClick={() => copyToClipboard(transformedData.leftSleeve.text!, "Texto Manga Esquerda")}><Copy className="h-3 w-3" /></Button></div><p className="text-xs bg-muted p-2 rounded">{transformedData.leftSleeve.text}</p></div>)}{(transformedData.leftSleeve.flag || transformedData.leftSleeve.logo) && (<AssetGallery assets={[...(transformedData.leftSleeve.flag ? [{ url: transformedData.leftSleeve.flag, label: 'Bandeira' }] : []), ...(transformedData.leftSleeve.logo ? [{ url: transformedData.leftSleeve.logo, label: 'Logo' }] : [])]} columns={2} imageHeight="h-32" />)}</CardContent></Card>)}
+              {transformedData.rightSleeve && (<Card><CardContent className="p-4 space-y-4"><h3 className="font-semibold text-sm">💪 Manga Direita</h3>{transformedData.modelImages?.rightSleeve && (<div className="cursor-pointer" onClick={() => setZoomImage({ url: transformedData.modelImages.rightSleeve, alt: "Manga Direita" })}><img src={transformedData.modelImages.rightSleeve} alt="Manga Direita" className="w-full rounded-lg border-2 border-border hover:border-primary transition-colors" /></div>)}{transformedData.rightSleeve.text && (<div><div className="flex items-center justify-between mb-1"><p className="text-xs font-medium">Texto</p><Button variant="ghost" size="sm" className="h-6 px-2" onClick={() => copyToClipboard(transformedData.rightSleeve.text!, "Texto Manga Direita")}><Copy className="h-3 w-3" /></Button></div><p className="text-xs bg-muted p-2 rounded">{transformedData.rightSleeve.text}</p></div>)}{(transformedData.rightSleeve.flag || transformedData.rightSleeve.logo) && (<AssetGallery assets={[...(transformedData.rightSleeve.flag ? [{ url: transformedData.rightSleeve.flag, label: 'Bandeira' }] : []), ...(transformedData.rightSleeve.logo ? [{ url: transformedData.rightSleeve.logo, label: 'Logo' }] : [])]} columns={2} imageHeight="h-32" />)}</CardContent></Card>)}
+            </div>
+          ) : <p className="text-sm text-muted-foreground text-center py-8">Nenhuma personalização nas mangas</p>}
+        </TabsContent>
+        <TabsContent value="all" className="mt-6">
+          {allImages.length > 0 ? (<div><h3 className="font-semibold text-sm mb-4">Todos os Assets ({allImages.length})</h3><AssetGallery assets={allImages} columns={3} /></div>) : <p className="text-sm text-muted-foreground text-center py-8">Nenhum asset disponível</p>}
+        </TabsContent>
+      </Tabs>
+      {zoomImage && <ImageZoomModal isOpen={!!zoomImage} onClose={() => setZoomImage(null)} imageUrl={zoomImage.url} alt={zoomImage.alt} />}
     </div>
   );
 };
