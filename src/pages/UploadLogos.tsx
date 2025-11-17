@@ -69,6 +69,26 @@ export const UploadLogos = () => {
 
     try {
       if (uploadChoice === 'agora') {
+        // Validar se os arquivos foram selecionados
+        if (!logos.frontLogo) {
+          toast.error("Por favor, selecione a logo da frente");
+          setIsSaving(false);
+          return;
+        }
+        
+        if (!logos.backLogo) {
+          toast.error("Por favor, selecione a logo das costas");
+          setIsSaving(false);
+          return;
+        }
+        
+        // Se escolheu enviar logos de patrocinadores, validar
+        if (sponsorUploadChoice && logos.sponsorsLogos.length === 0) {
+          toast.error("Por favor, selecione as logos dos patrocinadores");
+          setIsSaving(false);
+          return;
+        }
+
         const uploadedUrls: any = {};
 
         // Upload logo da frente
@@ -97,24 +117,43 @@ export const UploadLogos = () => {
           toast.success("Logos dos patrocinadores enviadas!");
         }
 
-        // Salvar URLs no lead
+        // Salvar URLs no lead E atualizar current_step
         await supabase
           .from('leads')
           .update({ 
             customization_summary: {
               ...customizations,
               uploadedLogos: uploadedUrls
-            }
+            },
+            current_step: 6
+          })
+          .eq('session_id', sessionId);
+      } else {
+        // Se escolheu "depois", apenas atualizar current_step
+        await supabase
+          .from('leads')
+          .update({ 
+            current_step: 6
           })
           .eq('session_id', sessionId);
       }
 
+      toast.success("Progresso salvo!");
+      
       // Navegar de volta para o Campaign no step de revisão
       navigate(`/c/${uniqueLink}?step=6`);
     } catch (error) {
-      console.error("Error uploading logos:", error);
-      toast.error("Erro ao enviar logos");
+      console.error("❌ Erro detalhado ao processar logos:", error);
+      
+      // Identificar tipo de erro
+      if (error instanceof Error) {
+        toast.error(`Erro: ${error.message}`);
+      } else {
+        toast.error("Erro ao processar logos. Tente novamente.");
+      }
+      
       setIsSaving(false);
+      return; // NÃO navegar se houver erro
     }
   };
 
