@@ -111,6 +111,7 @@ export type Database = {
           segment_id: string | null
           unique_link: string
           updated_at: string | null
+          workflow_config: Json | null
           workflow_template_id: string
         }
         Insert: {
@@ -120,6 +121,7 @@ export type Database = {
           segment_id?: string | null
           unique_link: string
           updated_at?: string | null
+          workflow_config?: Json | null
           workflow_template_id: string
         }
         Update: {
@@ -129,6 +131,7 @@ export type Database = {
           segment_id?: string | null
           unique_link?: string
           updated_at?: string | null
+          workflow_config?: Json | null
           workflow_template_id?: string
         }
         Relationships: [

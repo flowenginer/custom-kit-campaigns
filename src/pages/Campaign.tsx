@@ -41,6 +41,7 @@ interface Campaign {
   name: string;
   segment_id: string | null;
   workflow_template_id: string;
+  workflow_config?: WorkflowStep[];
   workflow_templates?: {
     workflow_config: WorkflowStep[];
   };
@@ -185,8 +186,11 @@ const Campaign = () => {
   const [debouncedCustomerData] = useDebounce(customerData, 1500);
   const [debouncedCustomizations] = useDebounce(customizations, 2000);
 
-  // Bug #1: Compute active steps from campaign workflow template
-  const templateSteps = campaign?.workflow_templates?.workflow_config || [];
+  // Bug #1: Compute active steps from campaign workflow (prioritize snapshot)
+  const templateSteps = 
+    campaign?.workflow_config || 
+    campaign?.workflow_templates?.workflow_config || 
+    [];
   
   // Filter and sort enabled steps, with fallback to default workflow
   let enabledSteps = templateSteps.length > 0
@@ -502,7 +506,7 @@ const Campaign = () => {
     try {
       const { data: campaignData, error: campaignError } = await supabase
         .from("campaigns")
-        .select("id, name, segment_id, workflow_template_id, workflow_templates(workflow_config)")
+        .select("id, name, segment_id, workflow_template_id, workflow_config, workflow_templates(workflow_config)")
         .eq("unique_link", uniqueLink)
         .single();
 
