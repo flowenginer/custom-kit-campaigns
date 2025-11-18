@@ -358,6 +358,7 @@ export type Database = {
           campaign_id: string | null
           completed: boolean | null
           created_at: string | null
+          created_by: string | null
           created_by_salesperson: boolean | null
           current_step: number | null
           custom_quantity: number | null
@@ -390,6 +391,7 @@ export type Database = {
           campaign_id?: string | null
           completed?: boolean | null
           created_at?: string | null
+          created_by?: string | null
           created_by_salesperson?: boolean | null
           current_step?: number | null
           custom_quantity?: number | null
@@ -422,6 +424,7 @@ export type Database = {
           campaign_id?: string | null
           completed?: boolean | null
           created_at?: string | null
+          created_by?: string | null
           created_by_salesperson?: boolean | null
           current_step?: number | null
           custom_quantity?: number | null
