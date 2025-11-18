@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Loader2, ArrowLeft, ArrowRight, Check } from "lucide-react";
+import { Loader2, ArrowLeft, ArrowRight, Check, Upload, CheckCircle2 } from "lucide-react";
 import { FrontEditor } from "@/components/customization/FrontEditor";
 import { BackEditor } from "@/components/customization/BackEditor";
 import { SleeveEditor } from "@/components/customization/SleeveEditor";
@@ -181,6 +181,8 @@ const Campaign = () => {
     leftFlag: null,
     leftLogo: null,
   });
+  const [logoChoice, setLogoChoice] = useState<'add_logo' | 'no_logo' | null>(null);
+  const [singleLogo, setSingleLogo] = useState<File | null>(null);
 
   // Debounced values for auto-save
   const [debouncedCustomerData] = useDebounce(customerData, 1500);
@@ -208,7 +210,8 @@ const Campaign = () => {
       { id: 'customize_back', label: 'Personalizar Costas', order: 3, enabled: true },
       { id: 'sleeve_right', label: 'Manga Direita', order: 4, enabled: true },
       { id: 'sleeve_left', label: 'Manga Esquerda', order: 5, enabled: true },
-      { id: 'review', label: 'Revisão e Envio', order: 6, enabled: true },
+      { id: 'adicionar_logo', label: 'Adicionar Logo', order: 6, enabled: true },
+      { id: 'review', label: 'Revisão e Envio', order: 7, enabled: true },
     ];
   }
   
@@ -667,13 +670,57 @@ const Campaign = () => {
       toast.success("Dados salvos com sucesso!");
     }
 
-    // Após Manga Esquerda, navegar para página de upload
-    if (stepId === 'sleeve_left') {
-      if (leadId) {
-        await createOrUpdateLead(currentStep);
+    // Validação e processamento de adicionar_logo
+    if (stepId === 'adicionar_logo') {
+      if (!logoChoice) {
+        toast.error("Por favor, escolha uma opção");
+        return;
       }
-      navigate(`/c/${uniqueLink}/upload-logos`);
-      return;
+      
+      if (logoChoice === 'add_logo' && !singleLogo) {
+        toast.error("Por favor, selecione a logo para upload");
+        return;
+      }
+      
+      setIsSaving(true);
+      
+      try {
+        if (logoChoice === 'add_logo' && singleLogo) {
+          // Upload da logo única
+          const logoUrl = await uploadToSupabase(singleLogo, 'logos');
+          
+          // Atualizar customizations com a mesma logo para frente e costas
+          const updatedCustomizations = {
+            ...customizations,
+            front: { ...customizations.front, logoUrl },
+            back: { ...customizations.back, logoUrl }
+          };
+          setCustomizations(updatedCustomizations);
+          
+          toast.success("Logo enviada com sucesso!");
+        } else if (logoChoice === 'no_logo') {
+          // Marcar needs_logo no lead
+          if (leadId) {
+            await supabase
+              .from('leads')
+              .update({
+                needs_logo: true,
+                salesperson_status: 'awaiting_logo'
+              })
+              .eq('id', leadId);
+          }
+          
+          toast.success("Seguindo para revisão. Você será contatado!");
+        }
+        
+        await createOrUpdateLead(currentStep);
+        setIsSaving(false);
+      } catch (error) {
+        console.error('Erro ao processar logo:', error);
+        toast.error("Erro ao processar logo");
+        setIsSaving(false);
+        return;
+      }
     }
 
     // Revisão - submeter pedido
@@ -1320,6 +1367,99 @@ const Campaign = () => {
                 })
               }
             />
+          )}
+
+          {currentStepId === 'adicionar_logo' && (
+            <Card className="shadow-lg">
+              <CardContent className="p-6">
+                <h2 className="text-2xl font-semibold mb-6 text-center">Adicionar Logo</h2>
+                
+                {!logoChoice ? (
+                  <div className="space-y-4">
+                    <p className="text-center text-muted-foreground mb-6">
+                      Escolha uma das opções abaixo:
+                    </p>
+                    
+                    <Button
+                      size="lg"
+                      className="w-full min-h-[60px] text-lg"
+                      onClick={() => setLogoChoice('add_logo')}
+                    >
+                      <Upload className="w-5 h-5 mr-2" />
+                      Adicionar Logo
+                    </Button>
+                    
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="w-full min-h-[60px] text-lg"
+                      onClick={() => setLogoChoice('no_logo')}
+                    >
+                      Não Tenho Logo
+                    </Button>
+                  </div>
+                ) : logoChoice === 'add_logo' ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold">Upload da Logo</h3>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => {
+                          setLogoChoice(null);
+                          setSingleLogo(null);
+                        }}
+                      >
+                        Voltar
+                      </Button>
+                    </div>
+                    
+                    <div className="border-2 border-dashed rounded-lg p-6 text-center">
+                      <Label htmlFor="single-logo" className="cursor-pointer">
+                        <div className="space-y-2">
+                          <Upload className="w-12 h-12 mx-auto text-muted-foreground" />
+                          <p className="text-sm text-muted-foreground">
+                            Clique para fazer upload da logo
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Esta logo será usada em todas as partes da camisa
+                          </p>
+                        </div>
+                      </Label>
+                      <Input
+                        id="single-logo"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) setSingleLogo(file);
+                        }}
+                      />
+                    </div>
+                    
+                    {singleLogo && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
+                        <CheckCircle2 className="w-5 h-5 text-green-600" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-green-900">
+                            Logo selecionada: {singleLogo.name}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+                    <CheckCircle2 className="w-12 h-12 mx-auto text-blue-600 mb-3" />
+                    <h3 className="font-semibold text-lg mb-2">Sem logo por enquanto</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Você será contatado pelo vendedor para auxiliar com a logo
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           )}
 
           {currentStepId === 'review' && (
