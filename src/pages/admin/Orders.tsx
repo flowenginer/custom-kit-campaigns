@@ -4,311 +4,88 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { CreateOrderForm } from "@/components/orders/CreateOrderForm";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Loader2, Upload, Send, MessageCircle, Plus, RefreshCw, Check, X } from "lucide-react";
-import { cn } from "@/lib/utils";
-
-interface Lead {
-  id: string;
-  name: string;
-  phone: string;
-  email: string | null;
-  quantity: string;
-  customization_summary: any;
-  salesperson_status: string | null;
-  uploaded_logo_url: string | null;
-  campaign_id: string | null;
-  created_by_salesperson: boolean;
-  order_id: string | null;
-  campaign?: { name: string };
-}
+import { Loader2, Plus, RefreshCw } from "lucide-react";
+import { OrderTaskCard } from "@/components/orders/TaskCard";
+import { TaskDetailsDialog } from "@/components/creation/TaskDetailsDialog";
+import { DesignTask } from "@/types/design-task";
 
 export default function Orders() {
-  const [leads, setLeads] = useState<Lead[]>([]);
+  const [tasks, setTasks] = useState<DesignTask[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<DesignTask | null>(null);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    loadLeads();
+    loadTasks();
   }, []);
 
-  const loadLeads = async () => {
+  const loadTasks = async () => {
     setLoading(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast.error("Usuário não autenticado");
+        return;
+      }
+
       const { data, error } = await supabase
-        .from('leads')
+        .from('design_tasks')
         .select(`
           *,
+          order:orders(
+            customer_name,
+            customer_email,
+            customer_phone,
+            quantity,
+            customization_data,
+            model:shirt_models(name, sku)
+          ),
+          designer:profiles!design_tasks_assigned_to_fkey(full_name),
           campaign:campaigns(name)
         `)
-        .or('needs_logo.eq.true,created_by_salesperson.eq.true')
-        .order('created_at', { ascending: false });
+        .eq('created_by', user.id)
+        .in('status', ['awaiting_approval', 'approved', 'completed'])
+        .order('updated_at', { ascending: false });
 
       if (error) throw error;
-      setLeads(data || []);
+
+      // Flatten the joined data
+      const flattenedTasks = (data || []).map((task: any) => ({
+        ...task,
+        customer_name: task.order?.customer_name,
+        customer_email: task.order?.customer_email,
+        customer_phone: task.order?.customer_phone,
+        quantity: task.order?.quantity,
+        customization_data: task.order?.customization_data,
+        model_name: task.order?.model?.name,
+        model_code: task.order?.model?.sku,
+        designer_name: task.designer?.full_name,
+        designer_initials: task.designer?.full_name?.split(' ').map((n: string) => n[0]).join(''),
+        campaign_name: task.campaign?.name,
+      }));
+
+      setTasks(flattenedTasks);
     } catch (error) {
-      console.error("Error loading leads:", error);
+      console.error("Error loading tasks:", error);
       toast.error("Erro ao carregar pedidos");
     } finally {
       setLoading(false);
     }
   };
 
-  const uploadLogo = async () => {
-    if (!selectedLead || !logoFile) return;
-
-    setUploading(true);
-    try {
-      const fileExt = logoFile.name.split('.').pop();
-      const fileName = `${selectedLead.id}-${Date.now()}.${fileExt}`;
-      const filePath = `customer-logos/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('customer-logos')
-        .upload(filePath, logoFile);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('customer-logos')
-        .getPublicUrl(filePath);
-
-      const { error: updateError } = await supabase
-        .from('leads')
-        .update({ uploaded_logo_url: publicUrl })
-        .eq('id', selectedLead.id);
-
-      if (updateError) throw updateError;
-
-      toast.success("Logo enviada com sucesso!");
-      setUploadDialogOpen(false);
-      setLogoFile(null);
-      loadLeads();
-    } catch (error) {
-      console.error("Error uploading logo:", error);
-      toast.error("Erro ao enviar logo");
-    } finally {
-      setUploading(false);
-    }
+  const handleTaskClick = (task: DesignTask) => {
+    setSelectedTask(task);
+    setDetailsDialogOpen(true);
   };
 
-  const sendToDesigner = async (lead: Lead) => {
-    try {
-      if (!lead.uploaded_logo_url) {
-        toast.error("Por favor, faça upload da logo primeiro");
-        return;
-      }
-
-      // Criar order
-      const { data: orderData, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          session_id: lead.id,
-          customer_name: lead.name,
-          customer_phone: lead.phone,
-          customer_email: lead.email,
-          quantity: parseInt(lead.quantity) || 1,
-          customization_data: {
-            ...lead.customization_summary,
-            frontLogoUrl: lead.uploaded_logo_url,
-            backLogoUrl: lead.uploaded_logo_url,
-          },
-          campaign_id: lead.campaign_id,
-        })
-        .select()
-        .single();
-
-      if (orderError) throw orderError;
-
-      // Criar design task
-      const { error: taskError } = await supabase
-        .from('design_tasks')
-        .insert({
-          order_id: orderData.id,
-          lead_id: lead.id,
-          campaign_id: lead.campaign_id,
-          status: 'pending',
-          priority: 'normal',
-          created_by_salesperson: lead.created_by_salesperson,
-        });
-
-      if (taskError) throw taskError;
-
-      // Atualizar lead
-      const { error: updateError } = await supabase
-        .from('leads')
-        .update({
-          salesperson_status: 'sent_to_designer',
-          order_id: orderData.id,
-        })
-        .eq('id', lead.id);
-
-      if (updateError) throw updateError;
-
-      toast.success("Pedido enviado para designer!");
-      loadLeads();
-    } catch (error) {
-      console.error("Error sending to designer:", error);
-      toast.error("Erro ao enviar para designer");
-    }
-  };
-
-  const approveFinal = async (lead: Lead) => {
-    try {
-      const { error: taskError } = await supabase
-        .from('design_tasks')
-        .update({ status: 'completed', completed_at: new Date().toISOString() })
-        .eq('lead_id', lead.id);
-
-      if (taskError) throw taskError;
-
-      const { error: leadError } = await supabase
-        .from('leads')
-        .update({ salesperson_status: null, completed: true })
-        .eq('id', lead.id);
-
-      if (leadError) throw leadError;
-
-      toast.success("Pedido finalizado!");
-      loadLeads();
-    } catch (error) {
-      console.error("Error approving:", error);
-      toast.error("Erro ao finalizar pedido");
-    }
-  };
-
-  const requestChanges = async (lead: Lead) => {
-    try {
-      const { error } = await supabase
-        .from('design_tasks')
-        .update({ status: 'changes_requested' })
-        .eq('lead_id', lead.id);
-
-      if (error) throw error;
-
-      toast.success("Ajustes solicitados!");
-      loadLeads();
-    } catch (error) {
-      console.error("Error requesting changes:", error);
-      toast.error("Erro ao solicitar ajustes");
-    }
-  };
-
-  const getColumnLeads = (status: string) => {
-    return leads.filter(lead => lead.salesperson_status === status);
-  };
-
-  const LeadCard = ({ lead }: { lead: Lead }) => {
-    const initials = lead.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-    const whatsappUrl = `https://wa.me/${lead.phone.replace(/\D/g, '')}`;
-
-    return (
-      <Card className="mb-3">
-        <CardContent className="p-4 space-y-3">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-2">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="font-medium text-sm">{lead.name}</p>
-                <p className="text-xs text-muted-foreground">{lead.phone}</p>
-              </div>
-            </div>
-            {lead.created_by_salesperson && (
-              <Badge variant="secondary" className="text-xs">Manual</Badge>
-            )}
-          </div>
-
-          {lead.campaign && (
-            <p className="text-xs text-muted-foreground">
-              Campanha: {lead.campaign.name}
-            </p>
-          )}
-
-          <div className="text-xs">
-            <span className="text-muted-foreground">Qtd:</span> {lead.quantity}
-          </div>
-
-          {lead.uploaded_logo_url && (
-            <div className="flex items-center gap-2 text-xs text-green-600">
-              <Check className="h-3 w-3" />
-              Logo enviada
-            </div>
-          )}
-
-          <div className="flex gap-2 flex-wrap">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => window.open(whatsappUrl, '_blank')}
-              className="flex-1"
-            >
-              <MessageCircle className="h-3 w-3 mr-1" />
-              WhatsApp
-            </Button>
-
-            {lead.salesperson_status === 'awaiting_logo' && (
-              <>
-                {!lead.uploaded_logo_url ? (
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      setSelectedLead(lead);
-                      setUploadDialogOpen(true);
-                    }}
-                    className="flex-1"
-                  >
-                    <Upload className="h-3 w-3 mr-1" />
-                    Upload Logo
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    onClick={() => sendToDesigner(lead)}
-                    className="flex-1"
-                  >
-                    <Send className="h-3 w-3 mr-1" />
-                    Enviar
-                  </Button>
-                )}
-              </>
-            )}
-
-            {lead.salesperson_status === 'awaiting_final_confirmation' && (
-              <>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => requestChanges(lead)}
-                >
-                  <X className="h-3 w-3 mr-1" />
-                  Ajustes
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => approveFinal(lead)}
-                  className="flex-1"
-                >
-                  <Check className="h-3 w-3 mr-1" />
-                  Aprovar
-                </Button>
-              </>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
+  const awaitingApprovalTasks = tasks.filter(t => t.status === 'awaiting_approval');
+  const approvedTasks = tasks.filter(t => t.status === 'approved');
+  const completedTasks = tasks.filter(t => t.status === 'completed');
 
   if (loading) {
     return (
@@ -319,14 +96,14 @@ export default function Orders() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Pedidos</h1>
-          <p className="text-muted-foreground">Gerenciar pedidos que precisam de logos</p>
+          <p className="text-muted-foreground">Gerencie seus pedidos e aprovações</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={loadLeads} variant="outline">
+          <Button variant="outline" onClick={loadTasks}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Atualizar
           </Button>
@@ -339,13 +116,13 @@ export default function Orders() {
             </DialogTrigger>
             <DialogContent className="max-w-4xl max-h-[90vh]">
               <DialogHeader>
-                <DialogTitle>Criar Pedido do Zero</DialogTitle>
+                <DialogTitle>Criar Novo Pedido</DialogTitle>
               </DialogHeader>
-              <ScrollArea className="h-[calc(90vh-8rem)] pr-4">
+              <ScrollArea className="h-[75vh] pr-4">
                 <CreateOrderForm
                   onSuccess={() => {
                     setCreateDialogOpen(false);
-                    loadLeads();
+                    loadTasks();
                   }}
                   onCancel={() => setCreateDialogOpen(false)}
                 />
@@ -356,80 +133,104 @@ export default function Orders() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold">Aguardando Logo</h2>
-            <Badge variant="secondary">{getColumnLeads('awaiting_logo').length}</Badge>
-          </div>
-          <ScrollArea className="h-[calc(100vh-250px)]">
-            {getColumnLeads('awaiting_logo').map(lead => (
-              <LeadCard key={lead.id} lead={lead} />
-            ))}
-            {getColumnLeads('awaiting_logo').length === 0 && (
-              <p className="text-center text-sm text-muted-foreground py-8">
-                Nenhum pedido
-              </p>
-            )}
-          </ScrollArea>
-        </div>
+        {/* Coluna: Mockup Pronto */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Mockup Pronto</CardTitle>
+              <Badge variant="secondary">{awaitingApprovalTasks.length}</Badge>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Aguardando sua aprovação
+            </p>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-[600px] pr-4">
+              {awaitingApprovalTasks.length === 0 ? (
+                <div className="text-center py-8 text-sm text-muted-foreground">
+                  Nenhum mockup aguardando aprovação
+                </div>
+              ) : (
+                awaitingApprovalTasks.map((task) => (
+                  <OrderTaskCard
+                    key={task.id}
+                    task={task}
+                    onClick={() => handleTaskClick(task)}
+                  />
+                ))
+              )}
+            </ScrollArea>
+          </CardContent>
+        </Card>
 
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold">Enviado para Designer</h2>
-            <Badge variant="secondary">{getColumnLeads('sent_to_designer').length}</Badge>
-          </div>
-          <ScrollArea className="h-[calc(100vh-250px)]">
-            {getColumnLeads('sent_to_designer').map(lead => (
-              <LeadCard key={lead.id} lead={lead} />
-            ))}
-            {getColumnLeads('sent_to_designer').length === 0 && (
-              <p className="text-center text-sm text-muted-foreground py-8">
-                Nenhum pedido
-              </p>
-            )}
-          </ScrollArea>
-        </div>
+        {/* Coluna: Aprovados */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Aprovados</CardTitle>
+              <Badge variant="default">{approvedTasks.length}</Badge>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Mockups aprovados e em produção
+            </p>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-[600px] pr-4">
+              {approvedTasks.length === 0 ? (
+                <div className="text-center py-8 text-sm text-muted-foreground">
+                  Nenhum pedido aprovado
+                </div>
+              ) : (
+                approvedTasks.map((task) => (
+                  <OrderTaskCard
+                    key={task.id}
+                    task={task}
+                    onClick={() => handleTaskClick(task)}
+                  />
+                ))
+              )}
+            </ScrollArea>
+          </CardContent>
+        </Card>
 
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold">Aguardando Confirmação</h2>
-            <Badge variant="secondary">{getColumnLeads('awaiting_final_confirmation').length}</Badge>
-          </div>
-          <ScrollArea className="h-[calc(100vh-250px)]">
-            {getColumnLeads('awaiting_final_confirmation').map(lead => (
-              <LeadCard key={lead.id} lead={lead} />
-            ))}
-            {getColumnLeads('awaiting_final_confirmation').length === 0 && (
-              <p className="text-center text-sm text-muted-foreground py-8">
-                Nenhum pedido
-              </p>
-            )}
-          </ScrollArea>
-        </div>
+        {/* Coluna: Concluídos */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Concluídos</CardTitle>
+              <Badge variant="secondary">{completedTasks.length}</Badge>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Pedidos finalizados
+            </p>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-[600px] pr-4">
+              {completedTasks.length === 0 ? (
+                <div className="text-center py-8 text-sm text-muted-foreground">
+                  Nenhum pedido concluído
+                </div>
+              ) : (
+                completedTasks.map((task) => (
+                  <OrderTaskCard
+                    key={task.id}
+                    task={task}
+                    onClick={() => handleTaskClick(task)}
+                  />
+                ))
+              )}
+            </ScrollArea>
+          </CardContent>
+        </Card>
       </div>
 
-      <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Upload de Logo</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="logo-upload">Selecione a Logo</Label>
-              <Input
-                id="logo-upload"
-                type="file"
-                accept="image/*"
-                onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
-              />
-            </div>
-            <Button onClick={uploadLogo} disabled={!logoFile || uploading} className="w-full">
-              {uploading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
-              Enviar Logo
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Dialog de Detalhes da Task */}
+      <TaskDetailsDialog
+        task={selectedTask}
+        open={detailsDialogOpen}
+        onOpenChange={setDetailsDialogOpen}
+        onTaskUpdated={loadTasks}
+      />
     </div>
   );
 }

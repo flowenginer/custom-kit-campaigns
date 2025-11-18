@@ -58,10 +58,12 @@ export const TaskDetailsDialog = ({
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [uploadedPreviews, setUploadedPreviews] = useState<Array<{url: string, name: string}>>([]);
   const [uploadProgress, setUploadProgress] = useState<string>("");
+  const [userRole, setUserRole] = useState<string>('');
 
   useEffect(() => {
     if (task && open) {
       loadHistory();
+      checkUserRole();
     }
   }, [task, open]);
 
@@ -79,6 +81,19 @@ export const TaskDetailsDialog = ({
   const getCurrentUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     setCurrentUser(user);
+  };
+
+  const checkUserRole = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: roleData } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    
+    setUserRole(roleData?.role || '');
   };
 
   const loadHistory = async () => {
@@ -288,8 +303,32 @@ export const TaskDetailsDialog = ({
 
   const statusBadge = getStatusBadge(task.status);
   const priorityBadge = getPriorityBadge(task.priority);
-  const canUpload = task.assigned_to === currentUser?.id && 
-    ['in_progress', 'changes_requested'].includes(task.status);
+  
+  // Verificações de permissões
+  const isDesigner = task?.assigned_to === currentUser?.id;
+  const isSalesperson = userRole === 'salesperson';
+  const isTaskCreator = task?.created_by === currentUser?.id;
+  
+  const canAssign = task?.status === 'pending' && !task?.assigned_to;
+  const canUpload = isDesigner && 
+                   task?.status !== 'completed' && 
+                   task?.status !== 'approved';
+  const canSendApproval = isDesigner && 
+                         task?.status === 'in_progress';
+  const canRequestChanges = isDesigner && 
+                           task?.status === 'awaiting_approval';
+  const canApprove = isDesigner && 
+                    task?.status === 'awaiting_approval';
+  const canSendProduction = isDesigner && 
+                           task?.status === 'approved';
+  
+  // Permissões para vendedores
+  const canSalespersonApprove = isSalesperson && 
+                                isTaskCreator && 
+                                task?.status === 'awaiting_approval';
+  const canSalespersonRequestChanges = isSalesperson && 
+                                       isTaskCreator && 
+                                       task?.status === 'awaiting_approval';
 
   return (
     <Dialog 
@@ -594,13 +633,14 @@ export const TaskDetailsDialog = ({
             {/* Actions based on status */}
           </div>
           <div className="flex gap-2">
-            {task.status === 'pending' && !task.assigned_to && (
+            {canAssign && (
               <Button onClick={handleAssignSelf}>
                 <UserPlus className="h-4 w-4 mr-2" />
                 Assumir Tarefa
               </Button>
             )}
-            {task.status === 'in_progress' && task.assigned_to === currentUser?.id && (
+            
+            {canSendApproval && (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -622,25 +662,46 @@ export const TaskDetailsDialog = ({
                 </Tooltip>
               </TooltipProvider>
             )}
-            {task.status === 'awaiting_approval' && (
-              <>
-                <Button 
-                  variant="outline"
-                  onClick={() => handleStatusChange('changes_requested')}
-                >
-                  <RefreshCcw className="h-4 w-4 mr-2" />
-                  Solicitar Alterações
-                </Button>
-                <Button onClick={() => handleStatusChange('approved')}>
-                  <Check className="h-4 w-4 mr-2" />
-                  Aprovar
-                </Button>
-              </>
+            
+            {canRequestChanges && !canSalespersonRequestChanges && (
+              <Button 
+                variant="outline"
+                onClick={() => handleStatusChange('changes_requested')}
+              >
+                <RefreshCcw className="h-4 w-4 mr-2" />
+                Solicitar Alterações
+              </Button>
             )}
-            {task.status === 'approved' && (
+            
+            {canApprove && !canSalespersonApprove && (
+              <Button onClick={() => handleStatusChange('approved')}>
+                <Check className="h-4 w-4 mr-2" />
+                Aprovar
+              </Button>
+            )}
+            
+            {canSendProduction && (
               <Button onClick={() => handleStatusChange('completed')}>
                 <Send className="h-4 w-4 mr-2" />
                 Enviar para Produção
+              </Button>
+            )}
+
+            {/* Botões para Vendedores */}
+            {canSalespersonRequestChanges && (
+              <Button 
+                variant="outline"
+                onClick={() => handleStatusChange('changes_requested', 'Cliente solicitou alterações')}
+              >
+                <RefreshCcw className="h-4 w-4 mr-2" />
+                Solicitar Alterações
+              </Button>
+            )}
+            
+            {canSalespersonApprove && (
+              <Button onClick={() => handleStatusChange('approved', 'Mockup aprovado pelo vendedor')}>
+                <Check className="h-4 w-4 mr-2" />
+                Aprovar Mockup
               </Button>
             )}
           </div>

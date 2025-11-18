@@ -237,6 +237,7 @@ export type Database = {
           client_feedback: string | null
           completed_at: string | null
           created_at: string | null
+          created_by: string | null
           created_by_salesperson: boolean | null
           current_version: number | null
           deadline: string | null
@@ -257,6 +258,7 @@ export type Database = {
           client_feedback?: string | null
           completed_at?: string | null
           created_at?: string | null
+          created_by?: string | null
           created_by_salesperson?: boolean | null
           current_version?: number | null
           deadline?: string | null
@@ -277,6 +279,7 @@ export type Database = {
           client_feedback?: string | null
           completed_at?: string | null
           created_at?: string | null
+          created_by?: string | null
           created_by_salesperson?: boolean | null
           current_version?: number | null
           deadline?: string | null
