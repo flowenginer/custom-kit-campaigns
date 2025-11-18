@@ -193,6 +193,31 @@ export const TaskDetailsDialog = ({
     onTaskUpdated();
   };
 
+  const handleDeleteTask = async () => {
+    if (!task) return;
+
+    const confirmed = window.confirm(
+      `Tem certeza que deseja excluir a tarefa de ${task.customer_name}? Esta ação não pode ser desfeita.`
+    );
+    
+    if (!confirmed) return;
+
+    const { error } = await supabase
+      .from('design_tasks')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', task.id);
+
+    if (error) {
+      toast.error('Erro ao excluir tarefa');
+      console.error(error);
+      return;
+    }
+
+    toast.success('Tarefa excluída com sucesso');
+    onTaskUpdated();
+    onOpenChange(false);
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!task || !e.target.files || e.target.files.length === 0) return;
 
@@ -630,7 +655,16 @@ export const TaskDetailsDialog = ({
 
         <div className="flex justify-between pt-4 border-t">
           <div>
-            {/* Actions based on status */}
+            {(userRole === 'super_admin' || userRole === 'admin' || isDesigner) && (
+              <Button 
+                variant="destructive" 
+                onClick={handleDeleteTask}
+                disabled={uploading}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Excluir Tarefa
+              </Button>
+            )}
           </div>
           <div className="flex gap-2">
             {canAssign && (
