@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-export type AppRole = 'super_admin' | 'admin' | 'designer' | 'viewer';
+export type AppRole = 'super_admin' | 'admin' | 'designer' | 'viewer' | 'salesperson';
 
 interface UserRoleRow {
   role: AppRole;
@@ -50,6 +50,7 @@ export const useUserRole = () => {
     isAdmin: roles.includes('admin') || roles.includes('super_admin'),
     isDesigner: roles.includes('designer'),
     isViewer: roles.includes('viewer'),
+    isSalesperson: roles.includes('salesperson'),
     hasRole: (role: AppRole) => roles.includes(role)
   };
 };

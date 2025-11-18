@@ -18,6 +18,7 @@ const AdminLayout = () => {
     isSuperAdmin,
     isAdmin,
     isDesigner,
+    isSalesperson,
     isLoading
   } = useUserRole();
   
@@ -61,6 +62,7 @@ const AdminLayout = () => {
   const showAll = isSuperAdmin;
   const showAdminLinks = showAll || isAdmin;
   const showDesignerLinks = showAll || isDesigner;
+  const showSalespersonLinks = showAll || isSalesperson;
   return <div className="min-h-screen flex">
       {/* Sidebar */}
       <aside className="w-64 bg-card border-r flex flex-col h-screen sticky top-0">
