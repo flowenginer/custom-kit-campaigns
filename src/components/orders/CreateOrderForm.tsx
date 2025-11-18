@@ -112,6 +112,17 @@ export const CreateOrderForm = ({ onSuccess, onCancel }: CreateOrderFormProps) =
     return publicUrl;
   };
 
+  const onInvalid = (errors: any) => {
+    console.error("Erros de validação:", errors);
+    
+    const firstErrorKey = Object.keys(errors)[0];
+    const firstErrorMessage = errors[firstErrorKey]?.message;
+
+    toast.error("Verifique os campos do formulário", {
+      description: firstErrorMessage || "Existem campos obrigatórios não preenchidos ou inválidos."
+    });
+  };
+
   const onSubmit = async (data: FormData) => {
     console.log("=== INÍCIO DO SUBMIT ===");
     console.log("Dados do formulário:", data);
@@ -280,7 +291,7 @@ export const CreateOrderForm = ({ onSuccess, onCancel }: CreateOrderFormProps) =
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-6">
       {/* Dados do Cliente */}
       <div className="space-y-4">
         <h3 className="font-semibold text-lg">Dados do Cliente</h3>
