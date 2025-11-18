@@ -33,6 +33,7 @@ export interface DesignTask {
   created_at: string;
   updated_at: string;
   completed_at: string | null;
+  created_by_salesperson?: boolean;
   // Joined data
   customer_name?: string;
   customer_email?: string;

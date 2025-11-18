@@ -237,6 +237,7 @@ export type Database = {
           client_feedback: string | null
           completed_at: string | null
           created_at: string | null
+          created_by_salesperson: boolean | null
           current_version: number | null
           deadline: string | null
           design_files: Json | null
@@ -256,6 +257,7 @@ export type Database = {
           client_feedback?: string | null
           completed_at?: string | null
           created_at?: string | null
+          created_by_salesperson?: boolean | null
           current_version?: number | null
           deadline?: string | null
           design_files?: Json | null
@@ -275,6 +277,7 @@ export type Database = {
           client_feedback?: string | null
           completed_at?: string | null
           created_at?: string | null
+          created_by_salesperson?: boolean | null
           current_version?: number | null
           deadline?: string | null
           design_files?: Json | null
@@ -349,6 +352,7 @@ export type Database = {
           campaign_id: string | null
           completed: boolean | null
           created_at: string | null
+          created_by_salesperson: boolean | null
           current_step: number | null
           custom_quantity: number | null
           customization_summary: Json | null
@@ -358,11 +362,14 @@ export type Database = {
           last_seen: string | null
           lead_group_identifier: string | null
           name: string
+          needs_logo: boolean | null
           order_id: string | null
           phone: string
           quantity: string
+          salesperson_status: string | null
           session_id: string
           updated_at: string | null
+          uploaded_logo_url: string | null
           utm_campaign: string | null
           utm_content: string | null
           utm_medium: string | null
@@ -376,6 +383,7 @@ export type Database = {
           campaign_id?: string | null
           completed?: boolean | null
           created_at?: string | null
+          created_by_salesperson?: boolean | null
           current_step?: number | null
           custom_quantity?: number | null
           customization_summary?: Json | null
@@ -385,11 +393,14 @@ export type Database = {
           last_seen?: string | null
           lead_group_identifier?: string | null
           name: string
+          needs_logo?: boolean | null
           order_id?: string | null
           phone: string
           quantity: string
+          salesperson_status?: string | null
           session_id: string
           updated_at?: string | null
+          uploaded_logo_url?: string | null
           utm_campaign?: string | null
           utm_content?: string | null
           utm_medium?: string | null
@@ -403,6 +414,7 @@ export type Database = {
           campaign_id?: string | null
           completed?: boolean | null
           created_at?: string | null
+          created_by_salesperson?: boolean | null
           current_step?: number | null
           custom_quantity?: number | null
           customization_summary?: Json | null
@@ -412,11 +424,14 @@ export type Database = {
           last_seen?: string | null
           lead_group_identifier?: string | null
           name?: string
+          needs_logo?: boolean | null
           order_id?: string | null
           phone?: string
           quantity?: string
+          salesperson_status?: string | null
           session_id?: string
           updated_at?: string | null
+          uploaded_logo_url?: string | null
           utm_campaign?: string | null
           utm_content?: string | null
           utm_medium?: string | null

@@ -132,7 +132,23 @@ export const TaskDetailsDialog = ({
       return;
     }
 
-    // Disparar webhook se o status for "awaiting_approval"
+    // Se foi criado por vendedor e está indo para aprovação, atualizar lead ao invés de webhook
+    if (task.created_by_salesperson && newStatus === 'awaiting_approval') {
+      const { error: leadError } = await supabase
+        .from("leads")
+        .update({ salesperson_status: 'awaiting_final_confirmation' })
+        .eq("id", task.lead_id);
+
+      if (leadError) {
+        console.error("Error updating lead:", leadError);
+      }
+
+      toast.success("Status atualizado! Aguardando confirmação do vendedor.");
+      onTaskUpdated();
+      return;
+    }
+
+    // Disparar webhook se o status for "awaiting_approval" e NÃO foi criado por vendedor
     if (newStatus === 'awaiting_approval') {
       try {
         toast.loading("Enviando para aprovação...");

@@ -11,15 +11,10 @@ import { Upload, ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 export const UploadLogos = () => {
   const { uniqueLink } = useParams();
   const navigate = useNavigate();
-  const [uploadChoice, setUploadChoice] = useState<'agora' | 'depois' | null>(null);
-  const [sponsorUploadChoice, setSponsorUploadChoice] = useState<boolean>(false);
+  const [uploadChoice, setUploadChoice] = useState<'add_logo' | 'no_logo' | null>(null);
   const [customizations, setCustomizations] = useState<any>(null);
   const [sessionId] = useState(() => localStorage.getItem('session_id') || '');
-  const [logos, setLogos] = useState({
-    frontLogo: null as File | null,
-    backLogo: null as File | null,
-    sponsorsLogos: [] as File[],
-  });
+  const [logo, setLogo] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -51,7 +46,7 @@ export const UploadLogos = () => {
     const fileName = `${Math.random()}.${fileExt}`;
     const filePath = `${path}/${fileName}`;
 
-    const { error: uploadError, data } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('campaign-assets')
       .upload(filePath, file);
 
@@ -68,300 +63,211 @@ export const UploadLogos = () => {
     setIsSaving(true);
 
     try {
-      if (uploadChoice === 'agora') {
-        // Validar se os arquivos foram selecionados
-        if (!logos.frontLogo) {
-          toast.error("Por favor, selecione a logo da frente");
-          setIsSaving(false);
-          return;
-        }
-        
-        if (!logos.backLogo) {
-          toast.error("Por favor, selecione a logo das costas");
-          setIsSaving(false);
-          return;
-        }
-        
-        // Se escolheu enviar logos de patrocinadores, validar
-        if (sponsorUploadChoice && logos.sponsorsLogos.length === 0) {
-          toast.error("Por favor, selecione as logos dos patrocinadores");
+      if (uploadChoice === 'add_logo') {
+        if (!logo) {
+          toast.error("Por favor, selecione a logo");
           setIsSaving(false);
           return;
         }
 
-        const uploadedUrls: any = {};
+        // Upload da logo (será usada tanto para frente quanto para trás)
+        const logoUrl = await uploadToSupabase(logo, 'logos');
+        toast.success("Logo enviada com sucesso!");
 
-        // Upload logo da frente
-        if (logos.frontLogo) {
-          uploadedUrls.frontLogoUrl = await uploadToSupabase(logos.frontLogo, 'logos/front');
-          toast.success("Logo da frente enviada!");
-        }
-
-        // Upload logo das costas
-        if (logos.backLogo) {
-          uploadedUrls.backLogoUrl = await uploadToSupabase(logos.backLogo, 'logos/back');
-          toast.success("Logo das costas enviada!");
-        }
-
-        // Upload logos dos patrocinadores
-        if (sponsorUploadChoice && logos.sponsorsLogos.length > 0) {
-          const sponsorsUrls = [];
-          for (let i = 0; i < logos.sponsorsLogos.length; i++) {
-            const file = logos.sponsorsLogos[i];
-            if (file) {
-              const url = await uploadToSupabase(file, 'logos/sponsors');
-              sponsorsUrls.push(url);
-            }
-          }
-          uploadedUrls.sponsorsLogosUrls = sponsorsUrls;
-          toast.success("Logos dos patrocinadores enviadas!");
-        }
-
-        // Salvar URLs no lead E atualizar current_step
-        await supabase
+        // Atualizar lead com a logo e avançar step
+        const { data: leadData } = await supabase
           .from('leads')
-          .update({ 
+          .select('current_step')
+          .eq('session_id', sessionId)
+          .single();
+
+        const { error: updateError } = await supabase
+          .from('leads')
+          .update({
             customization_summary: {
               ...customizations,
-              uploadedLogos: uploadedUrls
+              frontLogoUrl: logoUrl,
+              backLogoUrl: logoUrl,
             },
-            current_step: 6
+            current_step: (leadData?.current_step || 0) + 1,
           })
           .eq('session_id', sessionId);
-      } else {
-        // Se escolheu "depois", apenas atualizar current_step
-        await supabase
-          .from('leads')
-          .update({ 
-            current_step: 6
-          })
-          .eq('session_id', sessionId);
-      }
 
-      toast.success("Progresso salvo!");
-      
-      // Navegar de volta para o Campaign no step de revisão
-      navigate(`/c/${uniqueLink}?step=6`);
-    } catch (error) {
-      console.error("❌ Erro detalhado ao processar logos:", error);
-      
-      // Identificar tipo de erro
-      if (error instanceof Error) {
-        toast.error(`Erro: ${error.message}`);
-      } else {
-        toast.error("Erro ao processar logos. Tente novamente.");
+        if (updateError) throw updateError;
+
+        navigate(`/c/${uniqueLink}?step=6`);
+      } else if (uploadChoice === 'no_logo') {
+        // Marcar que não tem logo e precisa da ajuda do vendedor
+        const { data: leadData } = await supabase
+          .from('leads')
+          .select('current_step')
+          .eq('session_id', sessionId)
+          .single();
+
+        const { error: updateError } = await supabase
+          .from('leads')
+          .update({
+            needs_logo: true,
+            salesperson_status: 'awaiting_logo',
+            current_step: (leadData?.current_step || 0) + 1,
+          })
+          .eq('session_id', sessionId);
+
+        if (updateError) throw updateError;
+
+        navigate(`/c/${uniqueLink}?step=6`);
       }
-      
-      setIsSaving(false);
-      return; // NÃO navegar se houver erro
+    } catch (error) {
+      console.error("Error:", error);
+      toast.error("Erro ao processar. Tente novamente.");
     }
+
+    setIsSaving(false);
   };
 
-  const needsFrontLogo = customizations?.front?.logoType !== 'none';
-  const needsBackLogo = customizations?.back?.logoLarge;
-  const hasSponsors = customizations?.back?.hasSponsors && customizations?.back?.sponsors?.length > 0;
+  const needsFrontLogo = customizations?.front?.logo === 'sim';
+  const needsBackLogo = customizations?.back?.logo === 'sim';
+  const needsLogo = needsFrontLogo || needsBackLogo;
 
-  return (
-    <div className="min-h-screen bg-background">
-      <div className="container max-w-3xl mx-auto py-6 md:py-8 px-4">
-        <div className="flex justify-center mb-6 md:mb-8">
-          <img 
-            src="https://cdn.awsli.com.br/400x300/1896/1896367/logo/space-logo-site-wgernz.png" 
-            alt="Space Sports" 
-            className="h-12 md:h-16 w-auto"
-          />
-        </div>
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
-        <Card className="shadow-lg">
-          <CardHeader className="text-center pb-4">
-            <CardTitle className="text-xl md:text-2xl font-bold">
-              Você prefere enviar suas logos agora ou depois?
-            </CardTitle>
+  if (!needsLogo) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-2xl">
+        <Card>
+          <CardHeader>
+            <CardTitle>Upload de Logos</CardTitle>
           </CardHeader>
-
-          <CardContent className="space-y-6">
-            {isLoading ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : (
-              <>
-                {/* 2 BOTÕES GRANDES */}
-                {uploadChoice === null && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <Button
-                      onClick={() => setUploadChoice('agora')}
-                      size="lg"
-                      className="h-32 flex flex-col gap-3 text-lg font-semibold"
-                    >
-                      <Upload className="h-8 w-8" />
-                      Enviar Agora
-                      <span className="text-xs font-normal opacity-90">
-                        Faça upload das suas logos
-                      </span>
-                    </Button>
-
-                    <Button
-                      onClick={() => {
-                        setUploadChoice('depois');
-                        handleContinue();
-                      }}
-                      variant="outline"
-                      size="lg"
-                      className="h-32 flex flex-col gap-3 text-lg font-semibold"
-                    >
-                      <ArrowRight className="h-8 w-8" />
-                      Enviar Depois
-                      <span className="text-xs font-normal opacity-90">
-                        Por email ou WhatsApp
-                      </span>
-                    </Button>
-                  </div>
-                )}
-
-                {/* Se escolheu AGORA */}
-                {uploadChoice === 'agora' && (
-                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-                    <div className="bg-muted/50 p-4 rounded-lg">
-                      <p className="text-sm text-center">
-                        📤 Clique abaixo para adicionar suas logos
-                      </p>
-                    </div>
-
-                    {/* Upload logo da frente */}
-                    {needsFrontLogo && (
-                      <div className="space-y-2">
-                        <Label className="text-base font-semibold">
-                          Logo da Frente *
-                        </Label>
-                        <Input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0] || null;
-                            setLogos({ ...logos, frontLogo: file });
-                          }}
-                          className="min-h-[48px]"
-                        />
-                        {logos.frontLogo && (
-                          <p className="text-xs text-green-600 flex items-center gap-1">
-                            <CheckCircle2 className="h-3 w-3" />
-                            {logos.frontLogo.name}
-                          </p>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Upload logo das costas */}
-                    {needsBackLogo && (
-                      <div className="space-y-2">
-                        <Label className="text-base font-semibold">
-                          Logo Grande das Costas *
-                        </Label>
-                        <Input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0] || null;
-                            setLogos({ ...logos, backLogo: file });
-                          }}
-                          className="min-h-[48px]"
-                        />
-                        {logos.backLogo && (
-                          <p className="text-xs text-green-600 flex items-center gap-1">
-                            <CheckCircle2 className="h-3 w-3" />
-                            {logos.backLogo.name}
-                          </p>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Pergunta sobre patrocinador */}
-                    {hasSponsors && (
-                      <>
-                        <div className="border-t pt-6 space-y-4">
-                          <p className="text-base font-semibold">
-                            Quer enviar as logos dos patrocinadores agora?
-                          </p>
-                          <div className="grid grid-cols-2 gap-3">
-                            <Button
-                              onClick={() => setSponsorUploadChoice(true)}
-                              variant={sponsorUploadChoice ? "default" : "outline"}
-                              size="lg"
-                              className="h-20"
-                            >
-                              Sim
-                            </Button>
-                            <Button
-                              onClick={() => setSponsorUploadChoice(false)}
-                              variant={!sponsorUploadChoice ? "default" : "outline"}
-                              size="lg"
-                              className="h-20"
-                            >
-                              Não
-                            </Button>
-                          </div>
-                        </div>
-
-                        {/* Se SIM, mostrar uploads dos patrocinadores */}
-                        {sponsorUploadChoice && (
-                          <div className="space-y-4 ml-4 animate-in fade-in slide-in-from-bottom-4">
-                            {customizations.back.sponsors.map((sponsor: string, idx: number) => (
-                              <div key={idx} className="space-y-2">
-                                <Label className="text-base">{sponsor}</Label>
-                                <Input
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) {
-                                      const newSponsorsLogos = [...logos.sponsorsLogos];
-                                      newSponsorsLogos[idx] = file;
-                                      setLogos({ ...logos, sponsorsLogos: newSponsorsLogos });
-                                    }
-                                  }}
-                                  className="min-h-[48px]"
-                                />
-                                {logos.sponsorsLogos[idx] && (
-                                  <p className="text-xs text-green-600 flex items-center gap-1">
-                                    <CheckCircle2 className="h-3 w-3" />
-                                    {logos.sponsorsLogos[idx].name}
-                                  </p>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </>
-                    )}
-
-                    {/* Botão de continuar */}
-                    <Button
-                      onClick={handleContinue}
-                      disabled={isSaving}
-                      size="lg"
-                      className="w-full min-h-[56px] text-lg font-semibold mt-6"
-                    >
-                      {isSaving ? (
-                        <>
-                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                          Salvando...
-                        </>
-                      ) : (
-                        <>
-                          Continuar para Revisão
-                          <ArrowRight className="ml-2 h-5 w-5" />
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                )}
-
-              </>
-            )}
+          <CardContent>
+            <p className="text-muted-foreground">
+              Sua customização não requer logos. Clique em continuar para prosseguir.
+            </p>
+            <Button onClick={handleContinue} className="mt-4" disabled={isSaving}>
+              {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Continuar para Revisão
+            </Button>
           </CardContent>
         </Card>
       </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-8 max-w-2xl">
+      <Card>
+        <CardHeader>
+          <CardTitle>Adicione sua Logo</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {!uploadChoice ? (
+            <div className="space-y-4">
+              <p className="text-muted-foreground">
+                Escolha uma das opções abaixo:
+              </p>
+              
+              <div className="grid gap-4">
+                <Button
+                  onClick={() => setUploadChoice('add_logo')}
+                  variant="outline"
+                  className="h-auto py-6 flex flex-col items-center gap-2"
+                >
+                  <Upload className="h-6 w-6" />
+                  <span className="font-semibold">Adicionar Logo Agora</span>
+                  <span className="text-sm text-muted-foreground">
+                    Faça o upload da sua logo
+                  </span>
+                </Button>
+
+                <Button
+                  onClick={() => setUploadChoice('no_logo')}
+                  variant="outline"
+                  className="h-auto py-6 flex flex-col items-center gap-2"
+                >
+                  <CheckCircle2 className="h-6 w-6" />
+                  <span className="font-semibold">Não Tenho Logo</span>
+                  <span className="text-sm text-muted-foreground">
+                    Nossa equipe entrará em contato
+                  </span>
+                </Button>
+              </div>
+            </div>
+          ) : uploadChoice === 'add_logo' ? (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="logo">Logo da Camisa</Label>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Esta logo será usada tanto na frente quanto nas costas da camisa
+                </p>
+                <Input
+                  id="logo"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setLogo(e.target.files?.[0] || null)}
+                />
+                {logo && (
+                  <div className="mt-2 flex items-center gap-2 text-sm text-green-600">
+                    <CheckCircle2 className="h-4 w-4" />
+                    {logo.name}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => {
+                    setUploadChoice(null);
+                    setLogo(null);
+                  }}
+                  variant="outline"
+                >
+                  Voltar
+                </Button>
+                <Button
+                  onClick={handleContinue}
+                  disabled={!logo || isSaving}
+                  className="flex-1"
+                >
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Continuar para Revisão
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="bg-muted p-4 rounded-lg">
+                <p className="font-medium mb-2">Perfeito!</p>
+                <p className="text-sm text-muted-foreground">
+                  Nossa equipe entrará em contato para te ajudar com a logo. 
+                  Você receberá uma mensagem em breve no número fornecido.
+                </p>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => setUploadChoice(null)}
+                  variant="outline"
+                >
+                  Voltar
+                </Button>
+                <Button
+                  onClick={handleContinue}
+                  disabled={isSaving}
+                  className="flex-1"
+                >
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Finalizar
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
