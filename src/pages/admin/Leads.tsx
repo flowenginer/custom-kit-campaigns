@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, Eye, Filter, Trash2 } from "lucide-react";
+import { Loader2, Eye, Filter, Trash2, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -27,6 +27,7 @@ interface Lead {
   current_step: number;
   completed: boolean;
   created_at: string;
+  deleted_at?: string | null;
   customization_summary: any;
   campaigns: { name: string };
   orders: { id: string } | null;
@@ -48,6 +49,7 @@ const Leads = () => {
   const [utmSourceFilter, setUtmSourceFilter] = useState<string>("all");
   const [onlineStatusFilter, setOnlineStatusFilter] = useState<string>("all");
   const [showOnlyFirstAttempt, setShowOnlyFirstAttempt] = useState(false);
+  const [showDeleted, setShowDeleted] = useState(false);
 
   useEffect(() => {
     loadLeads();
@@ -55,7 +57,7 @@ const Leads = () => {
 
   useEffect(() => {
     applyFilters();
-  }, [statusFilter, utmSourceFilter, onlineStatusFilter, showOnlyFirstAttempt, leads]);
+  }, [statusFilter, utmSourceFilter, onlineStatusFilter, showOnlyFirstAttempt, showDeleted, leads]);
 
   // Verificar status online baseado em last_seen (timeout de 30 segundos)
   useEffect(() => {
@@ -146,7 +148,7 @@ const Leads = () => {
 
   const loadLeads = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("leads")
         .select(`
           *,
@@ -154,6 +156,13 @@ const Leads = () => {
           orders(id)
         `)
         .order("created_at", { ascending: false });
+
+      // Filter by deleted status
+      if (!showDeleted) {
+        query = query.is('deleted_at', null);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       
@@ -180,6 +189,11 @@ const Leads = () => {
 
   const applyFilters = () => {
     let filtered = [...leads];
+
+    // Filter deleted items based on showDeleted toggle
+    if (!showDeleted) {
+      filtered = filtered.filter(lead => !lead.deleted_at);
+    }
 
     // Filtro por status
     if (statusFilter === "completed") {
@@ -248,25 +262,44 @@ const Leads = () => {
   };
 
   const handleDeleteLead = async (leadId: string, leadName: string) => {
-    if (!confirm(`Tem certeza que deseja deletar o lead "${leadName}"? Esta ação não pode ser desfeita.`)) {
+    if (!confirm(`Tem certeza que deseja deletar o lead "${leadName}"?`)) {
       return;
     }
 
     try {
       const { error } = await supabase
         .from('leads')
-        .delete()
+        .update({ deleted_at: new Date().toISOString() })
         .eq('id', leadId);
 
       if (error) throw error;
 
       toast.success(`Lead "${leadName}" deletado com sucesso`);
       
-      // Atualizar lista local (o realtime também vai atualizar)
-      setLeads(prev => prev.filter(lead => lead.id !== leadId));
-    } catch (error) {
-      console.error('Erro ao deletar lead:', error);
-      toast.error('Erro ao deletar lead');
+      // Reload to reflect changes
+      loadLeads();
+    } catch (error: any) {
+      console.error('Error soft deleting lead:', error);
+      toast.error(error.message || 'Erro ao deletar lead');
+    }
+  };
+
+  const handleRestoreLead = async (leadId: string, leadName: string) => {
+    try {
+      const { error } = await supabase
+        .from('leads')
+        .update({ deleted_at: null })
+        .eq('id', leadId);
+
+      if (error) throw error;
+
+      toast.success(`Lead "${leadName}" restaurado com sucesso`);
+      
+      // Reload to reflect changes
+      loadLeads();
+    } catch (error: any) {
+      console.error('Error restoring lead:', error);
+      toast.error(error.message || 'Erro ao restaurar lead');
     }
   };
 
@@ -462,6 +495,21 @@ const Leads = () => {
               {showOnlyFirstAttempt ? "Mostrando apenas 1ª tentativa" : "Todas as tentativas"}
             </Button>
           </div>
+          
+          <div className="flex-1">
+            <label className="text-sm font-medium mb-2 block">Itens Deletados</label>
+            <Button
+              variant={showDeleted ? "default" : "outline"}
+              className="w-full"
+              onClick={() => {
+                setShowDeleted(!showDeleted);
+                loadLeads();
+              }}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              {showDeleted ? "Mostrando deletados" : "Esconder deletados"}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -589,14 +637,25 @@ const Leads = () => {
                           Ver Detalhes
                         </Button>
                         
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => handleDeleteLead(lead.id, lead.name)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {lead.deleted_at ? (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-primary hover:text-primary/80 hover:bg-primary/10"
+                            onClick={() => handleRestoreLead(lead.id, lead.name)}
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => handleDeleteLead(lead.id, lead.name)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

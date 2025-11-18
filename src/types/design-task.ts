@@ -33,6 +33,7 @@ export interface DesignTask {
   created_at: string;
   updated_at: string;
   completed_at: string | null;
+  deleted_at?: string | null;
   created_by_salesperson?: boolean;
   created_by?: string | null;
   // Joined data

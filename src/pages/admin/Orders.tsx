@@ -52,6 +52,7 @@ export default function Orders() {
           designer:profiles!design_tasks_assigned_to_fkey(full_name),
           campaign:campaigns(name)
         `)
+        .is('deleted_at', null)
         .eq("created_by", user.id);
 
       // Apply date range filter
