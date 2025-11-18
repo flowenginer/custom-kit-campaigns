@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { CreateOrderForm } from "@/components/orders/CreateOrderForm";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Loader2, Upload, Send, MessageCircle, Plus, RefreshCw, Check, X } from "lucide-react";
@@ -336,13 +337,19 @@ export default function Orders() {
                 Criar Pedido
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-4xl max-h-[90vh]">
               <DialogHeader>
                 <DialogTitle>Criar Pedido do Zero</DialogTitle>
               </DialogHeader>
-              <p className="text-sm text-muted-foreground">
-                Funcionalidade em desenvolvimento. Em breve você poderá criar pedidos manualmente.
-              </p>
+              <ScrollArea className="h-[calc(90vh-8rem)] pr-4">
+                <CreateOrderForm
+                  onSuccess={() => {
+                    setCreateDialogOpen(false);
+                    loadLeads();
+                  }}
+                  onCancel={() => setCreateDialogOpen(false)}
+                />
+              </ScrollArea>
             </DialogContent>
           </Dialog>
         </div>
