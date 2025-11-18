@@ -253,7 +253,7 @@ export default function Orders() {
                 Novo Pedido
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Criar Novo Pedido</DialogTitle>
                 <DialogDescription>
