@@ -241,6 +241,7 @@ export type Database = {
           created_by_salesperson: boolean | null
           current_version: number | null
           deadline: string | null
+          deleted_at: string | null
           design_files: Json | null
           id: string
           lead_id: string | null
@@ -262,6 +263,7 @@ export type Database = {
           created_by_salesperson?: boolean | null
           current_version?: number | null
           deadline?: string | null
+          deleted_at?: string | null
           design_files?: Json | null
           id?: string
           lead_id?: string | null
@@ -283,6 +285,7 @@ export type Database = {
           created_by_salesperson?: boolean | null
           current_version?: number | null
           deadline?: string | null
+          deleted_at?: string | null
           design_files?: Json | null
           id?: string
           lead_id?: string | null
@@ -359,6 +362,7 @@ export type Database = {
           current_step: number | null
           custom_quantity: number | null
           customization_summary: Json | null
+          deleted_at: string | null
           email: string | null
           id: string
           is_online: boolean | null
@@ -390,6 +394,7 @@ export type Database = {
           current_step?: number | null
           custom_quantity?: number | null
           customization_summary?: Json | null
+          deleted_at?: string | null
           email?: string | null
           id?: string
           is_online?: boolean | null
@@ -421,6 +426,7 @@ export type Database = {
           current_step?: number | null
           custom_quantity?: number | null
           customization_summary?: Json | null
+          deleted_at?: string | null
           email?: string | null
           id?: string
           is_online?: boolean | null
@@ -520,6 +526,7 @@ export type Database = {
           customer_name: string
           customer_phone: string | null
           customization_data: Json
+          deleted_at: string | null
           id: string
           model_id: string | null
           quantity: number
@@ -532,6 +539,7 @@ export type Database = {
           customer_name: string
           customer_phone?: string | null
           customization_data: Json
+          deleted_at?: string | null
           id?: string
           model_id?: string | null
           quantity: number
@@ -544,6 +552,7 @@ export type Database = {
           customer_name?: string
           customer_phone?: string | null
           customization_data?: Json
+          deleted_at?: string | null
           id?: string
           model_id?: string | null
           quantity?: number

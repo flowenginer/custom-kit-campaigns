@@ -82,6 +82,7 @@ const Creation = () => {
             name
           )
         `)
+        .is('deleted_at', null)
         .order("updated_at", { ascending: false })
         .limit(100);
 
