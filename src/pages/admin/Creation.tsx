@@ -107,6 +107,14 @@ const Creation = () => {
       }));
 
       setTasks(formattedTasks);
+
+      // Atualizar tarefa selecionada se o modal estiver aberto
+      if (selectedTask) {
+        const updatedSelectedTask = formattedTasks.find(t => t.id === selectedTask.id);
+        if (updatedSelectedTask) {
+          setSelectedTask(updatedSelectedTask);
+        }
+      }
     } catch (error) {
       console.error("Error loading tasks:", error);
       toast.error("Erro ao carregar tarefas");
@@ -122,7 +130,6 @@ const Creation = () => {
 
   const handleTaskUpdated = () => {
     loadTasks();
-    setDialogOpen(false);
   };
 
   const handleDragStart = (event: DragStartEvent) => {
