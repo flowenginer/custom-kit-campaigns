@@ -113,6 +113,9 @@ export const CreateOrderForm = ({ onSuccess, onCancel }: CreateOrderFormProps) =
   };
 
   const onSubmit = async (data: FormData) => {
+    console.log("=== INÍCIO DO SUBMIT ===");
+    console.log("Dados do formulário:", data);
+    
     if (logoFile.length === 0) {
       toast.error("Logo é obrigatória");
       return;
@@ -120,17 +123,23 @@ export const CreateOrderForm = ({ onSuccess, onCancel }: CreateOrderFormProps) =
 
     setLoading(true);
     try {
+      console.log("Obtendo usuário...");
       // Obter usuário atual
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
+        console.error("Usuário não autenticado!");
         toast.error("Usuário não autenticado");
         setLoading(false);
         return;
       }
 
+      console.log("Usuário autenticado:", user.id);
+      console.log("Fazendo upload da logo...");
+      
       // Upload logo principal
       const logoUrl = await uploadFile(logoFile[0], "orders");
+      console.log("Logo uploaded:", logoUrl);
 
       // Upload bandeira (se houver)
       let flagUrl = "";
@@ -196,6 +205,7 @@ export const CreateOrderForm = ({ onSuccess, onCancel }: CreateOrderFormProps) =
         notes: data.observations || "",
       };
 
+      console.log("Criando lead...");
       // Criar lead
       const sessionId = `salesperson-${Date.now()}`;
       const { data: lead, error: leadError } = await supabase
@@ -217,8 +227,13 @@ export const CreateOrderForm = ({ onSuccess, onCancel }: CreateOrderFormProps) =
         .select()
         .single();
 
-      if (leadError) throw leadError;
+      if (leadError) {
+        console.error("Erro ao criar lead:", leadError);
+        throw leadError;
+      }
+      console.log("Lead criado:", lead.id);
 
+      console.log("Criando order...");
       // Criar order
       const { data: order, error: orderError } = await supabase
         .from("orders")
@@ -235,11 +250,25 @@ export const CreateOrderForm = ({ onSuccess, onCancel }: CreateOrderFormProps) =
         .select()
         .single();
 
-      if (orderError) throw orderError;
+      if (orderError) {
+        console.error("Erro ao criar order:", orderError);
+        throw orderError;
+      }
+      console.log("Order criado:", order.id);
 
+      console.log("Atualizando lead com order_id...");
       // Atualizar lead com order_id
-      await supabase.from("leads").update({ order_id: order.id }).eq("id", lead.id);
+      const { error: updateError } = await supabase
+        .from("leads")
+        .update({ order_id: order.id })
+        .eq("id", lead.id);
+      
+      if (updateError) {
+        console.error("Erro ao atualizar lead:", updateError);
+        throw updateError;
+      }
 
+      console.log("=== PEDIDO CRIADO COM SUCESSO ===");
       toast.success("Pedido criado e enviado para designer!");
       onSuccess();
     } catch (error: any) {
