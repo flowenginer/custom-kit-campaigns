@@ -120,6 +120,15 @@ export const CreateOrderForm = ({ onSuccess, onCancel }: CreateOrderFormProps) =
 
     setLoading(true);
     try {
+      // Obter usuário atual
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast.error("Usuário não autenticado");
+        setLoading(false);
+        return;
+      }
+
       // Upload logo principal
       const logoUrl = await uploadFile(logoFile[0], "orders");
 
@@ -226,7 +235,7 @@ export const CreateOrderForm = ({ onSuccess, onCancel }: CreateOrderFormProps) =
 
       if (orderError) throw orderError;
 
-      // Criar design task
+      // Criar design task com created_by
       const { error: taskError } = await supabase.from("design_tasks").insert({
         order_id: order.id,
         lead_id: lead.id,
@@ -234,6 +243,7 @@ export const CreateOrderForm = ({ onSuccess, onCancel }: CreateOrderFormProps) =
         status: "pending",
         priority: "high",
         created_by_salesperson: true,
+        created_by: user.id, // Rastreia quem criou
       });
 
       if (taskError) throw taskError;
