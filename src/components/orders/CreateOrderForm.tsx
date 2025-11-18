@@ -208,6 +208,8 @@ export const CreateOrderForm = ({ onSuccess, onCancel }: CreateOrderFormProps) =
           quantity: data.quantity.toString(),
           customization_summary: customizationData,
           created_by_salesperson: true,
+          created_by: user.id,
+          needs_logo: false,
           salesperson_status: "sent_to_designer",
           uploaded_logo_url: logoUrl,
           campaign_id: null,
@@ -234,19 +236,6 @@ export const CreateOrderForm = ({ onSuccess, onCancel }: CreateOrderFormProps) =
         .single();
 
       if (orderError) throw orderError;
-
-      // Criar design task com created_by
-      const { error: taskError } = await supabase.from("design_tasks").insert({
-        order_id: order.id,
-        lead_id: lead.id,
-        campaign_id: null,
-        status: "pending",
-        priority: "high",
-        created_by_salesperson: true,
-        created_by: user.id, // Rastreia quem criou
-      });
-
-      if (taskError) throw taskError;
 
       // Atualizar lead com order_id
       await supabase.from("leads").update({ order_id: order.id }).eq("id", lead.id);

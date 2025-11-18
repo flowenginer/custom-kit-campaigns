@@ -86,7 +86,6 @@ const Creation = () => {
           )
         `)
         .is('deleted_at', null)
-        .or('lead.needs_logo.is.null,lead.needs_logo.eq.false')
         .order("updated_at", { ascending: false })
         .limit(100);
 
