@@ -56,7 +56,7 @@ export default function Orders() {
           )
         `)
         .is('deleted_at', null)
-        .eq("created_by", user.id)
+        .or(`created_by.eq.${user.id},created_by.is.null`)
         .eq('lead.needs_logo', true);
 
       // Apply date range filter

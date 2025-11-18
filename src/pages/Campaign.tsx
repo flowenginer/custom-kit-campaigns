@@ -564,12 +564,17 @@ const Campaign = () => {
     return (count || 0) + 1;
   };
 
-  const createOrUpdateLead = async (stepNumber: number, isCompleted = false, orderId?: string) => {
+  const createOrUpdateLead = async (
+    stepNumber: number, 
+    isCompleted = false, 
+    orderId?: string,
+    needsLogo?: boolean
+  ) => {
     try {
-      // Se estiver atualizando um lead existente, buscar needs_logo atual
-      let currentNeedsLogo = false;
+      // Usar parâmetro needsLogo se fornecido, senão buscar do banco
+      let currentNeedsLogo = needsLogo ?? false;
       
-      if (leadId) {
+      if (leadId && needsLogo === undefined) {
         const { data: existingLead } = await supabase
           .from('leads')
           .select('completed, needs_logo')
@@ -607,6 +612,7 @@ const Campaign = () => {
         lead_group_identifier: groupId,
         attempt_number: attemptNumber,
         needs_logo: currentNeedsLogo,
+        salesperson_status: currentNeedsLogo ? 'awaiting_logo' : null,
         customization_summary: {
           model: selectedModel?.name,
           front: customizations.front,
@@ -699,21 +705,15 @@ const Campaign = () => {
           
           toast.success("Logo enviada com sucesso!");
         } else if (logoChoice === 'no_logo') {
-          // Marcar needs_logo no lead
-          if (leadId) {
-            await supabase
-              .from('leads')
-              .update({
-                needs_logo: true,
-                salesperson_status: 'awaiting_logo'
-              })
-              .eq('id', leadId);
-          }
-          
           toast.success("Seguindo para revisão. Você será contatado!");
         }
         
-        await createOrUpdateLead(currentStep);
+        await createOrUpdateLead(
+          currentStep, 
+          false, 
+          undefined, 
+          logoChoice === 'no_logo' ? true : false
+        );
         setIsSaving(false);
       } catch (error) {
         console.error('Erro ao processar logo:', error);
@@ -999,8 +999,20 @@ const Campaign = () => {
         throw insertError;
       }
 
+      // Buscar needs_logo atual antes de finalizar
+      const { data: currentLead } = await supabase
+        .from('leads')
+        .select('needs_logo')
+        .eq('id', leadId)
+        .maybeSingle();
+      
       // Atualizar lead como completo e vincular ao pedido (usar último step)
-      await createOrUpdateLead(enabledSteps.length - 1, true, orderId);
+      await createOrUpdateLead(
+        enabledSteps.length - 1, 
+        true, 
+        orderId,
+        currentLead?.needs_logo || false
+      );
 
       // Registrar evento de conversão no A/B test (não bloquear fluxo principal)
       if (abTestId && abVariant) {
