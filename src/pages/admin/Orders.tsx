@@ -73,8 +73,8 @@ export default function Orders() {
       if (debouncedFilters.statuses.length > 0) {
         query = query.in("status", debouncedFilters.statuses as any);
       } else {
-        // Default: show only these 3 statuses
-        query = query.in("status", ["awaiting_approval", "approved", "completed"] as any);
+        // Default: show only these 4 statuses
+        query = query.in("status", ["pending", "awaiting_approval", "approved", "completed"] as any);
       }
 
       // Apply campaign filter
@@ -211,6 +211,10 @@ export default function Orders() {
     setFilters(newFilters);
   }, []);
 
+  const pendingTasks = useMemo(
+    () => tasks.filter((t) => t.status === "pending" && t.needs_logo),
+    [tasks]
+  );
   const awaitingApprovalTasks = useMemo(
     () => tasks.filter((t) => t.status === "awaiting_approval"),
     [tasks]
@@ -272,7 +276,47 @@ export default function Orders() {
       <OrderFilters onFiltersChange={handleFiltersChange} />
 
       {/* Grid de colunas Kanban */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Aguardando Logo - pending */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-yellow-500" />
+              Aguardando Logo
+            </CardTitle>
+            <CardDescription>
+              Cliente precisa enviar logo
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {loading ? (
+              <>
+                <Skeleton className="h-32 w-full" />
+                <Skeleton className="h-32 w-full" />
+              </>
+            ) : pendingTasks.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted mb-4">
+                  <Clock className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {activeFiltersCount > 0
+                    ? "Nenhum pedido encontrado com os filtros aplicados"
+                    : "Nenhum pedido aguardando logo"}
+                </p>
+              </div>
+            ) : (
+              pendingTasks.map((task) => (
+                <OrderTaskCard
+                  key={task.id}
+                  task={task}
+                  onClick={() => handleTaskClick(task)}
+                />
+              ))
+            )}
+          </CardContent>
+        </Card>
+
         {/* Mockup Pronto - awaiting_approval */}
         <Card>
           <CardHeader>
