@@ -1,17 +1,19 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Shirt, Clock, Package } from "lucide-react";
+import { Shirt, Clock } from "lucide-react";
 import { DesignTask } from "@/types/design-task";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 interface TaskCardProps {
   task: DesignTask;
   onClick: () => void;
+  className?: string;
 }
 
-export const OrderTaskCard = ({ task, onClick }: TaskCardProps) => {
+export const OrderTaskCard = ({ task, onClick, className }: TaskCardProps) => {
   const formatDeadline = (deadline: string) => {
     return format(new Date(deadline), "dd/MM", { locale: ptBR });
   };
@@ -32,7 +34,10 @@ export const OrderTaskCard = ({ task, onClick }: TaskCardProps) => {
 
   return (
     <Card 
-      className="mb-3 cursor-pointer hover:border-primary transition-colors"
+      className={cn(
+        "mb-3 cursor-pointer hover:border-primary transition-colors",
+        className
+      )}
       onClick={onClick}
     >
       <CardContent className="p-4">
