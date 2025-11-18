@@ -51,13 +51,13 @@ export default function Orders() {
           ),
           designer:profiles!design_tasks_assigned_to_fkey(full_name),
           campaign:campaigns(name),
-          leads!inner (
+          lead:leads!design_tasks_lead_id_fkey (
             needs_logo
           )
         `)
         .is('deleted_at', null)
         .eq("created_by", user.id)
-        .eq('leads.needs_logo', true);
+        .eq('lead.needs_logo', true);
 
       // Apply date range filter
       if (debouncedFilters.dateRange?.from) {
@@ -96,7 +96,7 @@ export default function Orders() {
         const modelData = orderData?.model && (Array.isArray(orderData.model) ? orderData.model[0] : orderData.model);
         const designerData = Array.isArray(task.designer) ? task.designer[0] : task.designer;
         const campaignData = Array.isArray(task.campaign) ? task.campaign[0] : task.campaign;
-        const leadData = Array.isArray(task.leads) ? task.leads[0] : task.leads;
+        const leadData = task.lead;
 
         return {
           ...task,
