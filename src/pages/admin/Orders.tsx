@@ -50,10 +50,14 @@ export default function Orders() {
             model:shirt_models(name, sku)
           ),
           designer:profiles!design_tasks_assigned_to_fkey(full_name),
-          campaign:campaigns(name)
+          campaign:campaigns(name),
+          leads!inner (
+            needs_logo
+          )
         `)
         .is('deleted_at', null)
-        .eq("created_by", user.id);
+        .eq("created_by", user.id)
+        .eq('leads.needs_logo', true);
 
       // Apply date range filter
       if (debouncedFilters.dateRange?.from) {
@@ -92,6 +96,7 @@ export default function Orders() {
         const modelData = orderData?.model && (Array.isArray(orderData.model) ? orderData.model[0] : orderData.model);
         const designerData = Array.isArray(task.designer) ? task.designer[0] : task.designer;
         const campaignData = Array.isArray(task.campaign) ? task.campaign[0] : task.campaign;
+        const leadData = Array.isArray(task.leads) ? task.leads[0] : task.leads;
 
         return {
           ...task,
@@ -105,6 +110,7 @@ export default function Orders() {
           model_code: modelData?.sku,
           designer_name: designerData?.full_name,
           campaign_name: campaignData?.name,
+          needs_logo: leadData?.needs_logo,
         } as DesignTask;
       });
 

@@ -47,6 +47,7 @@ export interface DesignTask {
   designer_initials?: string;
   model_name?: string;
   model_code?: string;
+  needs_logo?: boolean;
 }
 
 export interface DesignTaskHistory {

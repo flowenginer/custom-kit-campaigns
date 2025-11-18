@@ -41,7 +41,7 @@ export const OrderTaskCard = ({ task, onClick, className }: TaskCardProps) => {
       onClick={onClick}
     >
       <CardContent className="p-4">
-        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-start justify-between mb-3">
           <div className="flex items-start gap-2 flex-1 min-w-0">
             <Avatar className="h-8 w-8 flex-shrink-0">
               <AvatarFallback className="text-xs bg-primary/10">
@@ -55,9 +55,16 @@ export const OrderTaskCard = ({ task, onClick, className }: TaskCardProps) => {
               </p>
             </div>
           </div>
-          <Badge variant={statusInfo.variant} className="ml-2">
-            v{task.current_version}
-          </Badge>
+          <div className="flex flex-col gap-1 ml-2">
+            <Badge variant={statusInfo.variant}>
+              v{task.current_version}
+            </Badge>
+            {task.needs_logo && (
+              <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
+                📎 Aguardando Logo
+              </Badge>
+            )}
+          </div>
         </div>
         
         {latestFile && (

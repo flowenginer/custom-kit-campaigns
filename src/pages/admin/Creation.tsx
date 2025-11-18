@@ -80,9 +80,13 @@ const Creation = () => {
           ),
           campaigns (
             name
+          ),
+          leads (
+            needs_logo
           )
         `)
         .is('deleted_at', null)
+        .or('leads.needs_logo.is.null,leads.needs_logo.eq.false')
         .order("updated_at", { ascending: false })
         .limit(100);
 
@@ -98,6 +102,7 @@ const Creation = () => {
         campaign_name: task.campaigns?.name,
         model_name: task.orders?.shirt_models?.name,
         model_code: task.orders?.shirt_models?.sku,
+        needs_logo: task.leads?.needs_logo,
         designer_name: null,
         designer_initials: null,
       }));
