@@ -563,11 +563,13 @@ const Campaign = () => {
 
   const createOrUpdateLead = async (stepNumber: number, isCompleted = false, orderId?: string) => {
     try {
-      // NUNCA atualizar lead concluído
+      // Se estiver atualizando um lead existente, buscar needs_logo atual
+      let currentNeedsLogo = false;
+      
       if (leadId) {
         const { data: existingLead } = await supabase
           .from('leads')
-          .select('completed')
+          .select('completed, needs_logo')
           .eq('id', leadId)
           .maybeSingle();
         
@@ -575,6 +577,9 @@ const Campaign = () => {
           console.log('Lead já concluído - não será atualizado');
           return;
         }
+        
+        // Preservar needs_logo do lead existente
+        currentNeedsLogo = existingLead?.needs_logo || false;
       }
 
       const groupId = generateLeadGroupId(customerData.email, customerData.phone);
@@ -598,6 +603,7 @@ const Campaign = () => {
         order_id: orderId || null,
         lead_group_identifier: groupId,
         attempt_number: attemptNumber,
+        needs_logo: currentNeedsLogo,
         customization_summary: {
           model: selectedModel?.name,
           front: customizations.front,
