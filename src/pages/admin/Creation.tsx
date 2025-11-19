@@ -66,6 +66,8 @@ const Creation = () => {
           created_at,
           updated_at,
           completed_at,
+          created_by,
+          created_by_salesperson,
           orders!inner (
             customer_name,
             customer_email,
@@ -80,6 +82,9 @@ const Creation = () => {
           ),
           campaigns (
             name
+          ),
+          creator:profiles!design_tasks_created_by_fkey (
+            full_name
           ),
           lead:leads!design_tasks_lead_id_fkey (
             needs_logo
@@ -102,6 +107,8 @@ const Creation = () => {
         model_name: task.orders?.shirt_models?.name,
         model_code: task.orders?.shirt_models?.sku,
         needs_logo: task.lead?.needs_logo,
+        created_by_salesperson: task.created_by_salesperson,
+        creator_name: task.creator?.full_name || null,
         designer_name: null,
         designer_initials: null,
       }));
