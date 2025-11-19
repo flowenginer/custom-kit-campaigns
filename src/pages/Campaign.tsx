@@ -519,47 +519,74 @@ const Campaign = () => {
   }, []);
 
   const loadCampaign = async () => {
+    console.log('🔍 [Campaign] Iniciando carregamento da campanha:', uniqueLink);
     try {
+      console.log('📡 [Campaign] Buscando dados da campanha no Supabase...');
       const { data: campaignData, error: campaignError } = await supabase
         .from("campaigns")
         .select("id, name, segment_id, workflow_template_id, workflow_config, workflow_templates(workflow_config)")
         .eq("unique_link", uniqueLink)
         .single();
 
-      if (campaignError) throw campaignError;
+      console.log('📦 [Campaign] Dados retornados:', campaignData);
+      console.log('❌ [Campaign] Erro (se houver):', campaignError);
+
+      if (campaignError) {
+        console.error('❌ [Campaign] Erro ao buscar campanha:', campaignError);
+        throw campaignError;
+      }
       if (!campaignData) {
+        console.warn('⚠️ [Campaign] Campanha não encontrada');
         toast.error("Campanha não encontrada");
         return;
       }
+
+      console.log('✅ [Campaign] Campanha carregada com sucesso');
+      console.log('🔧 [Campaign] Workflow config:', campaignData.workflow_config);
+      console.log('🔧 [Campaign] Template workflow:', campaignData.workflow_templates);
 
       setCampaign(campaignData as any);
       setCampaignId(campaignData.id);
 
       // Buscar modelos do segmento da campanha
       if (campaignData.segment_id) {
-        const { data: modelsData } = await supabase
+        console.log('👕 [Campaign] Carregando modelos para segment_id:', campaignData.segment_id);
+        const { data: modelsData, error: modelsError } = await supabase
           .from("shirt_models")
           .select("*")
           .eq("segment_id", campaignData.segment_id);
 
-        if (modelsData) setModels(modelsData);
+        if (modelsError) {
+          console.error('❌ [Campaign] Erro ao carregar modelos:', modelsError);
+        } else {
+          console.log('✅ [Campaign] Modelos carregados:', modelsData?.length || 0, 'modelos');
+          if (modelsData) setModels(modelsData);
+        }
+      } else {
+        console.warn('⚠️ [Campaign] Campanha sem segment_id definido');
       }
 
       // Carregar scripts globais
-      const { data: globalSettings } = await supabase
+      console.log('📜 [Campaign] Carregando scripts globais...');
+      const { data: globalSettings, error: settingsError } = await supabase
         .from('global_settings')
         .select('global_head_scripts, global_body_scripts')
         .maybeSingle();
 
-      if (globalSettings) {
-        console.log('📜 Scripts globais carregados:', globalSettings);
+      if (settingsError) {
+        console.error('❌ [Campaign] Erro ao carregar scripts globais:', settingsError);
+      } else if (globalSettings) {
+        console.log('✅ [Campaign] Scripts globais carregados');
         setGlobalHeadScripts(globalSettings.global_head_scripts || '');
         setGlobalBodyScripts(globalSettings.global_body_scripts || '');
+      } else {
+        console.log('ℹ️ [Campaign] Nenhum script global configurado');
       }
     } catch (error) {
-      console.error("Erro ao carregar campanha:", error);
+      console.error("💥 [Campaign] Erro crítico ao carregar campanha:", error);
       toast.error("Erro ao carregar campanha");
     } finally {
+      console.log('🏁 [Campaign] Carregamento finalizado. Loading:', false);
       setIsLoading(false);
     }
   };
