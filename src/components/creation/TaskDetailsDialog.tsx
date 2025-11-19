@@ -460,44 +460,116 @@ export const TaskDetailsDialog = ({
         <DialogHeader>
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
-              <DialogTitle className="text-xl">{task.customer_name}</DialogTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                {task.campaign_name} • {task.quantity} unidades
-              </p>
+              <DialogTitle className="text-xl">
+                {isVendorContext ? 'Upload de Logo - ' : ''}{task.customer_name}
+              </DialogTitle>
+              {!isVendorContext && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  {task.campaign_name} • {task.quantity} unidades
+                </p>
+              )}
             </div>
-            <div className="flex gap-2 flex-shrink-0">
-              <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>
-              <Badge variant={priorityBadge.variant}>{priorityBadge.label}</Badge>
-            </div>
+            {!isVendorContext && (
+              <div className="flex gap-2 flex-shrink-0">
+                <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>
+                <Badge variant={priorityBadge.variant}>{priorityBadge.label}</Badge>
+              </div>
+            )}
           </div>
         </DialogHeader>
 
-        <Tabs defaultValue="details" className="flex-1 overflow-hidden flex flex-col">
-          <TabsList className={`grid w-full ${isVendorContext ? 'grid-cols-2' : 'grid-cols-4'}`}>
-            <TabsTrigger value="details">
-              <FileText className="h-4 w-4 mr-2" />
-              Detalhes
-            </TabsTrigger>
-            <TabsTrigger value="customization">
-              <Palette className="h-4 w-4 mr-2" />
-              {isVendorContext ? 'Upload Logo' : 'Personalização'}
-            </TabsTrigger>
-            {!isVendorContext && (
-              <>
-                <TabsTrigger value="files">
-                  <Upload className="h-4 w-4 mr-2" />
-                  Enviar Mockup ({task.design_files.length})
-                </TabsTrigger>
-                <TabsTrigger value="history">
-                  <HistoryIcon className="h-4 w-4 mr-2" />
-                  Histórico
-                </TabsTrigger>
-              </>
-            )}
-          </TabsList>
+        {isVendorContext ? (
+          // INTERFACE SIMPLIFICADA DO VENDEDOR
+          <div className="space-y-6 p-6 flex-1">
+            {/* Informações Básicas */}
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold">Upload do Logo do Cliente</h3>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Cliente:</span>
+                  <p className="font-medium">{task.customer_name || 'N/A'}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Quantidade:</span>
+                  <p className="font-medium">{task.quantity || 'N/A'} unidades</p>
+                </div>
+              </div>
+            </div>
 
-          <div className="flex-1 mt-4 overflow-y-auto pr-4">
-            <TabsContent value="details" className="space-y-4 mt-0">
+            {/* Upload Area */}
+            <Card className="border-2 border-dashed">
+              <CardContent className="p-6 space-y-4">
+                <div className="text-center space-y-2">
+                  <Upload className="h-12 w-12 mx-auto text-muted-foreground" />
+                  <Label htmlFor="logo-upload" className="text-lg font-medium cursor-pointer">
+                    Selecione o arquivo do logo
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    PNG, JPG, SVG, AI ou PDF • Máximo 10MB
+                  </p>
+                </div>
+                <Input 
+                  id="logo-upload"
+                  type="file" 
+                  accept=".png,.jpg,.jpeg,.svg,.ai,.pdf"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      if (file.size > 10 * 1024 * 1024) {
+                        toast.error("Arquivo muito grande. Máximo 10MB");
+                        return;
+                      }
+                      setLogoFile(file);
+                      toast.success("Logo selecionado com sucesso!");
+                    }
+                  }}
+                  disabled={logoUploading}
+                  className="cursor-pointer"
+                />
+                {logoFile && (
+                  <div className="flex items-center gap-2 p-3 bg-accent rounded-md">
+                    <Check className="h-5 w-5 text-green-600" />
+                    <span className="text-sm font-medium flex-1">{logoFile.name}</span>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => {
+                        setLogoFile(null);
+                        toast.info("Logo removido");
+                      }}
+                      disabled={logoUploading}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          // INTERFACE COMPLETA DO DESIGNER
+          <Tabs defaultValue="details" className="flex-1 overflow-hidden flex flex-col">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="details">
+                <FileText className="h-4 w-4 mr-2" />
+                Detalhes
+              </TabsTrigger>
+              <TabsTrigger value="customization">
+                <Palette className="h-4 w-4 mr-2" />
+                Personalização
+              </TabsTrigger>
+              <TabsTrigger value="files">
+                <Upload className="h-4 w-4 mr-2" />
+                Enviar Mockup ({task.design_files.length})
+              </TabsTrigger>
+              <TabsTrigger value="history">
+                <HistoryIcon className="h-4 w-4 mr-2" />
+                Histórico
+              </TabsTrigger>
+            </TabsList>
+
+            <div className="flex-1 mt-4 overflow-y-auto pr-4">
+              <TabsContent value="details" className="space-y-4 mt-0">
               <div className="grid grid-cols-2 gap-6">
                 {/* COLUNA 1: Informações do Cliente */}
                 <Card>
@@ -775,42 +847,45 @@ export const TaskDetailsDialog = ({
             </TabsContent>
           </div>
         </Tabs>
+        )}
 
-        <div className="flex justify-between pt-4 border-t">
-          <div>
-            {(isSuperAdmin || isAdmin || isDesigner) && !isVendorContext && (
-              <Button 
-                variant="destructive" 
-                onClick={handleDeleteTask}
-                disabled={uploading}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Excluir Tarefa
-              </Button>
-            )}
-          </div>
-          <div className="flex gap-2">
-            {isVendorContext ? (
-              // FLUXO DO VENDEDOR - Upload de logo
-              <Button 
-                onClick={handleSendToDesigner} 
-                disabled={!logoFile || logoUploading}
-              >
-                {logoUploading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Enviando...
-                  </>
-                ) : (
-                  <>
-                    <Send className="h-4 w-4 mr-2" />
-                    Enviar para Designer
-                  </>
+        <div className="flex justify-center pt-4 border-t">
+          {isVendorContext ? (
+            // VENDEDOR - Apenas 1 botão centralizado
+            <Button 
+              onClick={handleSendToDesigner} 
+              disabled={!logoFile || logoUploading}
+              size="lg"
+              className="w-full max-w-md"
+            >
+              {logoUploading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Enviar para Designer
+                </>
+              )}
+            </Button>
+          ) : (
+            // DESIGNER - Footer com todos os botões
+            <div className="flex justify-between w-full">
+              <div>
+                {(isSuperAdmin || isAdmin || isDesigner) && (
+                  <Button 
+                    variant="destructive" 
+                    onClick={handleDeleteTask}
+                    disabled={uploading || logoUploading}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Excluir Tarefa
+                  </Button>
                 )}
-              </Button>
-            ) : (
-              // FLUXO NORMAL - Designer/Admin
-              <>
+              </div>
+              <div className="flex gap-2">
                 {canAssign && (
                   <Button onClick={handleAssignSelf}>
                     <UserPlus className="h-4 w-4 mr-2" />
@@ -882,9 +957,9 @@ export const TaskDetailsDialog = ({
                     Aprovar Mockup
                   </Button>
                 )}
-              </>
-            )}
-          </div>
+              </div>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
