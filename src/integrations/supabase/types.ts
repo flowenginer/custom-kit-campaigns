@@ -103,6 +103,65 @@ export type Database = {
         }
         Relationships: []
       }
+      campaign_themes: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          id: string
+          theme_accent_color: string | null
+          theme_background_color: string | null
+          theme_body_font: string | null
+          theme_border_radius: string | null
+          theme_button_style: string | null
+          theme_font_size_base: string | null
+          theme_heading_font: string | null
+          theme_primary_color: string | null
+          theme_spacing_unit: string | null
+          theme_text_color: string | null
+          updated_at: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          id?: string
+          theme_accent_color?: string | null
+          theme_background_color?: string | null
+          theme_body_font?: string | null
+          theme_border_radius?: string | null
+          theme_button_style?: string | null
+          theme_font_size_base?: string | null
+          theme_heading_font?: string | null
+          theme_primary_color?: string | null
+          theme_spacing_unit?: string | null
+          theme_text_color?: string | null
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          theme_accent_color?: string | null
+          theme_background_color?: string | null
+          theme_body_font?: string | null
+          theme_border_radius?: string | null
+          theme_button_style?: string | null
+          theme_font_size_base?: string | null
+          theme_heading_font?: string | null
+          theme_primary_color?: string | null
+          theme_spacing_unit?: string | null
+          theme_text_color?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_themes_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: true
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaigns: {
         Row: {
           created_at: string | null

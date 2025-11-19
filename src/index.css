@@ -109,4 +109,63 @@ All colors MUST be HSL.
   .status-transition {
     transition: all 0.3s ease-in-out;
   }
+  
+  /* Campaign Theme Variables (Applied dynamically) */
+  .campaign-themed {
+    --campaign-primary: var(--theme-primary, 217 91% 60%);
+    --campaign-background: var(--theme-background, 250 100% 98%);
+    --campaign-text: var(--theme-text, 222 47% 11%);
+    --campaign-accent: var(--theme-accent, 142 76% 36%);
+    
+    --campaign-heading-font: var(--theme-heading-font, 'Inter');
+    --campaign-body-font: var(--theme-body-font, 'Inter');
+    --campaign-font-size: var(--theme-font-size, 16px);
+    
+    --campaign-border-radius: var(--theme-border-radius, 0.75rem);
+    --campaign-spacing: var(--theme-spacing, 8px);
+  }
+  
+  /* Apply theme variables */
+  .campaign-themed {
+    background-color: hsl(var(--campaign-background));
+    color: hsl(var(--campaign-text));
+    font-family: var(--campaign-body-font), sans-serif;
+    font-size: var(--campaign-font-size);
+  }
+  
+  .campaign-themed h1,
+  .campaign-themed h2,
+  .campaign-themed h3,
+  .campaign-themed h4,
+  .campaign-themed h5,
+  .campaign-themed h6 {
+    font-family: var(--campaign-heading-font), sans-serif;
+  }
+  
+  .campaign-themed .btn-primary {
+    background-color: hsl(var(--campaign-primary));
+    color: white;
+  }
+  
+  .campaign-themed .btn-accent {
+    background-color: hsl(var(--campaign-accent));
+    color: white;
+  }
+  
+  .campaign-themed .themed-card {
+    border-radius: var(--campaign-border-radius);
+  }
+  
+  /* Button style variants */
+  .campaign-themed.btn-style-rounded button {
+    border-radius: var(--campaign-border-radius);
+  }
+  
+  .campaign-themed.btn-style-square button {
+    border-radius: 0;
+  }
+  
+  .campaign-themed.btn-style-pill button {
+    border-radius: 9999px;
+  }
 }
