@@ -6,6 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Loader2, TrendingUp, Users, Target, Activity } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { UtmBreakdownDialog } from "@/components/dashboard/UtmBreakdownDialog";
 interface Campaign {
   id: string;
   name: string;
@@ -87,6 +88,11 @@ const Dashboard = () => {
     designerPerformance: []
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [utmDialogOpen, setUtmDialogOpen] = useState(false);
+  const [selectedUtmCampaign, setSelectedUtmCampaign] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   useEffect(() => {
     loadDashboardData();
     loadDesignMetrics();
@@ -534,9 +540,26 @@ const Dashboard = () => {
                     <Legend />
                     {selectedCampaigns.map((campaignId, idx) => {
                   const campaign = campaigns.find(c => c.id === campaignId);
-                  return campaign ? <Bar key={campaignId} dataKey={campaign.name} fill={`url(#barGradient-${idx})`} radius={[8, 8, 0, 0]} style={{
-                    filter: 'drop-shadow(0px 4px 6px rgba(0, 0, 0, 0.15))'
-                  }} /> : null;
+                  return campaign ? <Bar 
+                    key={campaignId} 
+                    dataKey={campaign.name} 
+                    fill={`url(#barGradient-${idx})`} 
+                    radius={[8, 8, 0, 0]} 
+                    style={{
+                      filter: 'drop-shadow(0px 4px 6px rgba(0, 0, 0, 0.15))'
+                    }}
+                    onClick={(data) => {
+                      // Abrir dialog de UTMs apenas quando clicar em "Visitas"
+                      if (data && data.stage === "Visitas") {
+                        setSelectedUtmCampaign({
+                          id: campaignId,
+                          name: campaign.name,
+                        });
+                        setUtmDialogOpen(true);
+                      }
+                    }}
+                    className="cursor-pointer hover:opacity-80 transition-opacity"
+                  /> : null;
                 })}
                   </BarChart>
                 </ResponsiveContainer>
@@ -844,8 +867,18 @@ const Dashboard = () => {
               )}
             </div>
           </CardContent>
-        </Card>
-      </div>
-    </div>;
+      </Card>
+    </div>
+
+    {/* Dialog de Breakdown de UTMs */}
+    {selectedUtmCampaign && (
+      <UtmBreakdownDialog
+        open={utmDialogOpen}
+        onOpenChange={setUtmDialogOpen}
+        campaignId={selectedUtmCampaign.id}
+        campaignName={selectedUtmCampaign.name}
+      />
+    )}
+  </div>;
 };
 export default Dashboard;
