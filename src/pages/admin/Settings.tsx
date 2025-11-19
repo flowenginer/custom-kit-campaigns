@@ -77,12 +77,10 @@ const Settings = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Não autenticado');
 
-      const response = await supabase.functions.invoke('manage-users', {
-        method: 'GET',
+      const response = await supabase.functions.invoke('manage-users?action=list', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
-        },
-        body: new URLSearchParams({ action: 'list' })
+        }
       });
 
       if (response.error) throw response.error;
@@ -174,19 +172,18 @@ const Settings = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Não autenticado');
 
-      const response = await supabase.functions.invoke('manage-users', {
+      const response = await supabase.functions.invoke('manage-users?action=create', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          action: 'create',
+        body: {
           email,
           password,
           full_name: fullName,
           roles: selectedRoles
-        })
+        }
       });
 
       if (response.error) throw response.error;
@@ -208,17 +205,16 @@ const Settings = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Não autenticado');
 
-      const response = await supabase.functions.invoke('manage-users', {
+      const response = await supabase.functions.invoke('manage-users?action=update_roles', {
         method: 'PATCH',
         headers: {
           Authorization: `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          action: 'update_roles',
+        body: {
           user_id: selectedUser.id,
           roles: selectedRoles
-        })
+        }
       });
 
       if (response.error) throw response.error;
@@ -240,16 +236,15 @@ const Settings = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Não autenticado');
 
-      const response = await supabase.functions.invoke('manage-users', {
+      const response = await supabase.functions.invoke('manage-users?action=delete', {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          action: 'delete',
+        body: {
           user_id: selectedUser.id
-        })
+        }
       });
 
       if (response.error) throw response.error;
@@ -274,17 +269,16 @@ const Settings = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Não autenticado');
 
-      const response = await supabase.functions.invoke('manage-users', {
+      const response = await supabase.functions.invoke('manage-users?action=reset_password', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          action: 'reset_password',
+        body: {
           user_id: selectedUserForReset,
           new_password: newPassword
-        })
+        }
       });
 
       if (response.error) throw response.error;
