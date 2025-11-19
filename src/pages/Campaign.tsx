@@ -1289,12 +1289,12 @@ const Campaign = () => {
                         <SelectValue placeholder="Selecione a quantidade" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="10">10 unidades</SelectItem>
-                        <SelectItem value="20">20 unidades</SelectItem>
-                        <SelectItem value="30">30 unidades</SelectItem>
-                        <SelectItem value="40">40 unidades</SelectItem>
-                        <SelectItem value="50">50 unidades</SelectItem>
                         <SelectItem value="60+">60 ou mais</SelectItem>
+                        <SelectItem value="50">50 unidades</SelectItem>
+                        <SelectItem value="40">40 unidades</SelectItem>
+                        <SelectItem value="30">30 unidades</SelectItem>
+                        <SelectItem value="20">20 unidades</SelectItem>
+                        <SelectItem value="10">10 unidades</SelectItem>
                         <SelectItem value="custom">Quantidade personalizada</SelectItem>
                       </SelectContent>
                     </Select>
