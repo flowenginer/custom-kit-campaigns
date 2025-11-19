@@ -165,6 +165,8 @@ export type Database = {
       campaigns: {
         Row: {
           created_at: string | null
+          custom_body_scripts: string | null
+          custom_head_scripts: string | null
           id: string
           name: string
           segment_id: string | null
@@ -175,6 +177,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          custom_body_scripts?: string | null
+          custom_head_scripts?: string | null
           id?: string
           name: string
           segment_id?: string | null
@@ -185,6 +189,8 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          custom_body_scripts?: string | null
+          custom_head_scripts?: string | null
           id?: string
           name?: string
           segment_id?: string | null
