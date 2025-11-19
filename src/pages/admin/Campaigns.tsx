@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ExternalLink, Copy, Plus, Trash2, Settings, FlaskConical, Palette } from "lucide-react";
+import { ExternalLink, Copy, Plus, Trash2, Settings, FlaskConical, Palette, Code2 } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CreateABTestDialog } from "@/components/abtest/CreateABTestDialog";
@@ -21,6 +21,8 @@ interface Campaign {
   unique_link: string;
   segment_id: string | null;
   workflow_template_id: string;
+  custom_head_scripts?: string | null;
+  custom_body_scripts?: string | null;
   segments?: {
     id: string;
     name: string;
