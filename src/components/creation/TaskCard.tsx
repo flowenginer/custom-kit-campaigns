@@ -49,6 +49,7 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
   };
 
   const productionTime = getProductionTime();
+  const isSalespersonOrigin = task.created_by_salesperson === true;
 
   return (
     <Card 
@@ -58,7 +59,8 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
       {...listeners}
       className={cn(
         "cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow relative",
-        isDragging && "opacity-50"
+        isDragging && "opacity-50",
+        isSalespersonOrigin && "border-2 border-amber-500 bg-amber-50/50"
       )}
       onClick={onClick}
     >
@@ -67,6 +69,14 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
           <Badge variant="destructive" className="gap-1">
             <AlertCircle className="h-3 w-3" />
             Urgente
+          </Badge>
+        </div>
+      )}
+      
+      {isSalespersonOrigin && (
+        <div className="absolute -top-2 -left-2 z-10">
+          <Badge className="gap-1 bg-amber-500 hover:bg-amber-600 text-white">
+            👤 Vendedor
           </Badge>
         </div>
       )}
@@ -81,6 +91,11 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-sm truncate">{task.customer_name}</p>
             <p className="text-xs text-muted-foreground truncate">{task.campaign_name}</p>
+            {isSalespersonOrigin && task.creator_name && (
+              <p className="text-xs font-medium text-amber-600 truncate">
+                Por: {task.creator_name}
+              </p>
+            )}
           </div>
         </div>
         
