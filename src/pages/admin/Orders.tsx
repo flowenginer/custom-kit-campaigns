@@ -55,8 +55,7 @@ export default function Orders() {
           )
         `)
         .is('deleted_at', null)
-        .or(`created_by.eq.${user.id},created_by.is.null`)
-        .eq('lead.needs_logo', true);
+        .or(`created_by.eq.${user.id},created_by.is.null`);
 
       // Apply date range filter
       if (debouncedFilters.dateRange?.from) {
@@ -90,6 +89,8 @@ export default function Orders() {
         return;
       }
 
+      console.log('📊 Orders.tsx - Total tasks before filter:', data?.length);
+      
       const flattenedTasks = (data || []).map((task) => {
         const orderData = Array.isArray(task.order) ? task.order[0] : task.order;
         const modelData = orderData?.model && (Array.isArray(orderData.model) ? orderData.model[0] : orderData.model);
@@ -111,7 +112,11 @@ export default function Orders() {
         } as DesignTask;
       });
 
-      setTasks(flattenedTasks);
+      // Filtrar no frontend: APENAS tasks que precisam de logo (true)
+      const filteredTasks = flattenedTasks.filter(task => task.needs_logo === true);
+      console.log('✅ Orders.tsx - Tasks after filter (needs_logo === true):', filteredTasks.length);
+
+      setTasks(filteredTasks);
     } catch (error) {
       console.error("Error in loadTasks:", error);
     } finally {
