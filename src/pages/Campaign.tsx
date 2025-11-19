@@ -1186,11 +1186,20 @@ const Campaign = () => {
 
   return (
     <>
-      {/* Inject global scripts */}
-      <CustomScriptManager 
-        headScripts={globalHeadScripts}
-        bodyScripts={globalBodyScripts}
-      />
+      {/* Inject global scripts with error handling */}
+      {(() => {
+        try {
+          return (
+            <CustomScriptManager
+              headScripts={globalHeadScripts}
+              bodyScripts={globalBodyScripts}
+            />
+          );
+        } catch (error) {
+          console.error('❌ Erro ao renderizar scripts:', error);
+          return null;
+        }
+      })()}
       
       <div className={`min-h-screen campaign-themed ${campaignTheme ? `btn-style-${campaignTheme.theme_button_style}` : ''} bg-gradient-to-br from-primary/5 via-background to-accent/5 py-8`}>
       {/* Barra de progresso fixa - Aparece no scroll mobile */}

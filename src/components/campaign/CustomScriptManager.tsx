@@ -35,30 +35,39 @@ export const CustomScriptManager = ({ headScripts, bodyScripts }: CustomScriptMa
 
   console.log('✅ Renderizando head scripts via Helmet');
 
+  // Parsing robusto de múltiplos scripts usando regex
+  const scriptRegex = /<script([^>]*)>([\s\S]*?)<\/script>/gi;
+  const scripts: Array<{ attributes: string; content: string }> = [];
+  let match;
+
+  while ((match = scriptRegex.exec(headScripts)) !== null) {
+    scripts.push({
+      attributes: match[1] || '',
+      content: match[2] || ''
+    });
+  }
+
+  console.log('✅ Renderizando head scripts via Helmet:', scripts.length, 'scripts encontrados');
+
   return (
     <Helmet>
-      {headScripts.split('</script>').map((scriptContent, index) => {
-        if (!scriptContent.trim()) return null;
-        
-        const scriptMatch = scriptContent.match(/<script[^>]*>([\s\S]*)/i);
-        if (scriptMatch) {
-          const attributes = scriptContent.match(/<script([^>]*)>/i)?.[1] || '';
-          const content = scriptMatch[1];
-          
-          // Parse attributes
-          const typeMatch = attributes.match(/type=["']([^"']*)["']/i);
-          const asyncMatch = attributes.match(/async/i);
+      {scripts.map((script, index) => {
+        try {
+          const typeMatch = script.attributes.match(/type=["']([^"']*)["']/i);
+          const asyncMatch = script.attributes.match(/async/i);
           
           return (
             <script
               key={`head-script-${index}`}
               type={typeMatch ? typeMatch[1] : 'text/javascript'}
               async={!!asyncMatch}
-              dangerouslySetInnerHTML={{ __html: content }}
+              dangerouslySetInnerHTML={{ __html: script.content }}
             />
           );
+        } catch (error) {
+          console.error(`❌ Erro ao processar script ${index}:`, error);
+          return null;
         }
-        return null;
       })}
     </Helmet>
   );
