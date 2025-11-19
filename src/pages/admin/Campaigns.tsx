@@ -6,10 +6,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ExternalLink, Copy, Plus, Trash2, Settings, FlaskConical } from "lucide-react";
+import { ExternalLink, Copy, Plus, Trash2, Settings, FlaskConical, Palette } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CreateABTestDialog } from "@/components/abtest/CreateABTestDialog";
+import { ThemeCustomizer } from "@/components/theme/ThemeCustomizer";
 import { Badge } from "@/components/ui/badge";
 import type { ABTest } from "@/types/ab-test";
 import { generateUniqueSlug } from "@/lib/utils";
@@ -52,6 +53,7 @@ export default function Campaigns() {
   const [showDialog, setShowDialog] = useState(false);
   const [showABTestDialog, setShowABTestDialog] = useState(false);
   const [showChangeWorkflow, setShowChangeWorkflow] = useState(false);
+  const [showThemeDialog, setShowThemeDialog] = useState(false);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
   const [formData, setFormData] = useState({
     name: "",
@@ -401,7 +403,18 @@ export default function Campaigns() {
                     </Button>
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedCampaignId(campaign.id);
+                        setShowThemeDialog(true);
+                      }}
+                    >
+                      <Palette className="w-4 h-4" />
+                      Tema
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
@@ -411,7 +424,7 @@ export default function Campaigns() {
                       }}
                     >
                       <Settings className="w-4 h-4" />
-                      Alterar Workflow
+                      Workflow
                     </Button>
                     <Button
                       variant="destructive"
@@ -458,6 +471,21 @@ export default function Campaigns() {
                 Cancelar
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showThemeDialog} onOpenChange={setShowThemeDialog}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Personalizar Tema da Campanha</DialogTitle>
+              <DialogDescription>
+                Configure as cores, fontes e estilos da interface da campanha
+              </DialogDescription>
+            </DialogHeader>
+            
+            {selectedCampaignId && (
+              <ThemeCustomizer campaignId={selectedCampaignId} />
+            )}
           </DialogContent>
         </Dialog>
 

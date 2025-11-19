@@ -21,6 +21,7 @@ import {
 import { useDebounce } from "use-debounce";
 import { format } from "date-fns";
 import { WorkflowStep } from "@/types/workflow";
+import { useCampaignTheme } from "@/hooks/useCampaignTheme";
 
 interface ShirtModel {
   id: string;
@@ -98,6 +99,10 @@ const Campaign = () => {
   const [sessionId, setSessionId] = useState(() => `session-${Date.now()}-${Math.random()}`);
   const [abTestId, setAbTestId] = useState<string | null>(null);
   const [abVariant, setAbVariant] = useState<string | null>(null);
+  const [campaignId, setCampaignId] = useState<string>('');
+  
+  // Load campaign theme
+  const { theme: campaignTheme } = useCampaignTheme(campaignId);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -520,6 +525,7 @@ const Campaign = () => {
       }
 
       setCampaign(campaignData as any);
+      setCampaignId(campaignData.id);
 
       // Buscar modelos do segmento da campanha
       if (campaignData.segment_id) {
@@ -1121,7 +1127,7 @@ const Campaign = () => {
   const progress = ((currentStep + 1) / steps.length) * 100;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5 py-8">
+    <div className={`min-h-screen campaign-themed ${campaignTheme ? `btn-style-${campaignTheme.theme_button_style}` : ''} bg-gradient-to-br from-primary/5 via-background to-accent/5 py-8`}>
       {/* Barra de progresso fixa - Aparece no scroll mobile */}
       <div 
         className={`fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b shadow-md transition-transform duration-300 md:hidden ${
