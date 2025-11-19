@@ -7,9 +7,15 @@ interface CustomScriptManagerProps {
 }
 
 export const CustomScriptManager = ({ headScripts, bodyScripts }: CustomScriptManagerProps) => {
+  console.log('🔧 CustomScriptManager renderizado:', { 
+    hasHeadScripts: !!headScripts?.trim(), 
+    hasBodyScripts: !!bodyScripts?.trim() 
+  });
+
   useEffect(() => {
     // Inject body scripts
     if (bodyScripts && bodyScripts.trim()) {
+      console.log('💉 Injetando body scripts:', bodyScripts.substring(0, 100));
       const tempDiv = document.createElement('div');
       tempDiv.innerHTML = bodyScripts;
       
@@ -18,12 +24,16 @@ export const CustomScriptManager = ({ headScripts, bodyScripts }: CustomScriptMa
       while (tempDiv.firstChild) {
         bodyElement.insertBefore(tempDiv.firstChild, bodyElement.firstChild);
       }
+      console.log('✅ Body scripts injetados com sucesso');
     }
   }, [bodyScripts]);
 
   if (!headScripts || !headScripts.trim()) {
+    console.log('⚠️ Nenhum head script para renderizar');
     return null;
   }
+
+  console.log('✅ Renderizando head scripts via Helmet');
 
   return (
     <Helmet>
