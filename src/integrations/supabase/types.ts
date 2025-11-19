@@ -422,6 +422,30 @@ export type Database = {
           },
         ]
       }
+      global_settings: {
+        Row: {
+          global_body_scripts: string | null
+          global_head_scripts: string | null
+          id: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          global_body_scripts?: string | null
+          global_head_scripts?: string | null
+          id?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          global_body_scripts?: string | null
+          global_head_scripts?: string | null
+          id?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           ab_test_id: string | null

@@ -22,6 +22,7 @@ import { useDebounce } from "use-debounce";
 import { format } from "date-fns";
 import { WorkflowStep } from "@/types/workflow";
 import { useCampaignTheme } from "@/hooks/useCampaignTheme";
+import { CustomScriptManager } from "@/components/campaign/CustomScriptManager";
 
 interface ShirtModel {
   id: string;
@@ -103,6 +104,10 @@ const Campaign = () => {
   
   // Load campaign theme
   const { theme: campaignTheme } = useCampaignTheme(campaignId);
+  
+  // Global scripts state
+  const [globalHeadScripts, setGlobalHeadScripts] = useState<string>('');
+  const [globalBodyScripts, setGlobalBodyScripts] = useState<string>('');
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -1127,7 +1132,14 @@ const Campaign = () => {
   const progress = ((currentStep + 1) / steps.length) * 100;
 
   return (
-    <div className={`min-h-screen campaign-themed ${campaignTheme ? `btn-style-${campaignTheme.theme_button_style}` : ''} bg-gradient-to-br from-primary/5 via-background to-accent/5 py-8`}>
+    <>
+      {/* Inject global scripts */}
+      <CustomScriptManager 
+        headScripts={globalHeadScripts}
+        bodyScripts={globalBodyScripts}
+      />
+      
+      <div className={`min-h-screen campaign-themed ${campaignTheme ? `btn-style-${campaignTheme.theme_button_style}` : ''} bg-gradient-to-br from-primary/5 via-background to-accent/5 py-8`}>
       {/* Barra de progresso fixa - Aparece no scroll mobile */}
       <div 
         className={`fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b shadow-md transition-transform duration-300 md:hidden ${
@@ -1651,6 +1663,7 @@ const Campaign = () => {
         )}
       </div>
     </div>
+    </>
   );
 };
 
