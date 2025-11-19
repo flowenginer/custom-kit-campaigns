@@ -91,11 +91,12 @@ const Creation = () => {
           )
         `)
         .is('deleted_at', null)
-        .not('lead.needs_logo', 'eq', true)
         .order("updated_at", { ascending: false })
         .limit(100);
 
       if (error) throw error;
+
+      console.log('📊 Creation.tsx - Total tasks before filter:', data?.length);
 
       const formattedTasks: DesignTask[] = (data || []).map((task: any) => ({
         ...task,
@@ -114,7 +115,11 @@ const Creation = () => {
         designer_initials: null,
       }));
 
-      setTasks(formattedTasks);
+      // Filtrar no frontend: APENAS tasks que NÃO precisam de logo (false ou null)
+      const filteredTasks = formattedTasks.filter(task => task.needs_logo !== true);
+      console.log('✅ Creation.tsx - Tasks after filter (needs_logo !== true):', filteredTasks.length);
+
+      setTasks(filteredTasks);
 
       // Atualizar tarefa selecionada se o modal estiver aberto
       if (selectedTask) {

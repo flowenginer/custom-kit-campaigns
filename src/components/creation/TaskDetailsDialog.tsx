@@ -67,6 +67,14 @@ export const TaskDetailsDialog = ({
   
   const { roles, isSalesperson, isDesigner, isSuperAdmin, isAdmin } = useUserRole();
 
+  console.log('👤 User Roles:', { 
+    roles, 
+    isSalesperson, 
+    isDesigner,
+    isAdmin,
+    isSuperAdmin
+  });
+
   useEffect(() => {
     if (task && open) {
       loadHistory();
@@ -407,14 +415,36 @@ export const TaskDetailsDialog = ({
                           context === 'orders' && 
                           task?.needs_logo === true;
   
+  console.log('🔍 TaskDetailsDialog Debug:', {
+    context,
+    isSalesperson,
+    isDesigner,
+    needs_logo: task?.needs_logo,
+    isVendorContext,
+    currentUserId: currentUser?.id,
+    taskCreatedBy: task?.created_by,
+    taskAssignedTo: task?.assigned_to,
+    taskStatus: task?.status
+  });
+  
   // Verificações de permissões
   const isTaskCreator = task?.created_by === currentUser?.id;
   const isAssignedDesigner = task?.assigned_to === currentUser?.id;
   
   const canAssign = task?.status === 'pending' && 
                     !task?.assigned_to && 
-                    isDesigner;
-  const canUpload = isAssignedDesigner && 
+                    isDesigner &&
+                    context === 'creation';
+  
+  console.log('🎯 canAssign Debug:', {
+    canAssign,
+    status: task?.status,
+    assigned_to: task?.assigned_to,
+    isDesigner,
+    context
+  });
+  
+  const canUpload = isAssignedDesigner &&
                    task?.status !== 'completed' && 
                    task?.status !== 'approved' &&
                    !isVendorContext;
