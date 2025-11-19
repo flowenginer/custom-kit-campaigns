@@ -37,7 +37,8 @@ import {
   FileText,
   Palette,
   History as HistoryIcon,
-  Copy
+  Copy,
+  Phone
 } from "lucide-react";
 
 interface TaskDetailsDialogProps {
@@ -45,6 +46,7 @@ interface TaskDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onTaskUpdated: () => void;
+  context?: 'orders' | 'creation';
 }
 
 export const TaskDetailsDialog = ({
@@ -52,6 +54,7 @@ export const TaskDetailsDialog = ({
   open,
   onOpenChange,
   onTaskUpdated,
+  context = 'creation',
 }: TaskDetailsDialogProps) => {
   const [history, setHistory] = useState<DesignTaskHistory[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -401,6 +404,7 @@ export const TaskDetailsDialog = ({
   
   // Identificar contexto do vendedor (precisa de logo e ainda não foi enviado)
   const isVendorContext = isSalesperson && 
+                          context === 'orders' && 
                           task?.needs_logo === true;
   
   // Verificações de permissões
@@ -469,12 +473,27 @@ export const TaskDetailsDialog = ({
                 </p>
               )}
             </div>
-            {!isVendorContext && (
-              <div className="flex gap-2 flex-shrink-0">
-                <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>
-                <Badge variant={priorityBadge.variant}>{priorityBadge.label}</Badge>
-              </div>
-            )}
+            <div className="flex gap-2 flex-shrink-0">
+              {isVendorContext && task.customer_phone && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const phone = task.customer_phone?.replace(/\D/g, '');
+                    window.open(`https://wa.me/55${phone}`, '_blank');
+                  }}
+                >
+                  <Phone className="h-4 w-4 mr-2" />
+                  Chamar no WhatsApp
+                </Button>
+              )}
+              {!isVendorContext && (
+                <>
+                  <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>
+                  <Badge variant={priorityBadge.variant}>{priorityBadge.label}</Badge>
+                </>
+              )}
+            </div>
           </div>
         </DialogHeader>
 
