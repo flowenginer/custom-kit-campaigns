@@ -541,6 +541,18 @@ const Campaign = () => {
 
         if (modelsData) setModels(modelsData);
       }
+
+      // Carregar scripts globais
+      const { data: globalSettings } = await supabase
+        .from('global_settings')
+        .select('global_head_scripts, global_body_scripts')
+        .maybeSingle();
+
+      if (globalSettings) {
+        console.log('📜 Scripts globais carregados:', globalSettings);
+        setGlobalHeadScripts(globalSettings.global_head_scripts || '');
+        setGlobalBodyScripts(globalSettings.global_body_scripts || '');
+      }
     } catch (error) {
       console.error("Erro ao carregar campanha:", error);
       toast.error("Erro ao carregar campanha");
