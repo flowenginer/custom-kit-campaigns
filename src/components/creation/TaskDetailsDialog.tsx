@@ -185,7 +185,20 @@ export const TaskDetailsDialog = ({
   };
 
   const handleSendToDesigner = async () => {
-    if (!task || !currentUser || !logoFile) return;
+    if (!logoFile) {
+      toast.error("Selecione um arquivo de logo primeiro");
+      return;
+    }
+    
+    if (!task || !task.lead_id) {
+      toast.error("Dados da tarefa incompletos");
+      return;
+    }
+    
+    if (!currentUser) {
+      toast.error("Usuário não autenticado");
+      return;
+    }
 
     setLogoUploading(true);
     try {
@@ -386,17 +399,21 @@ export const TaskDetailsDialog = ({
   const statusBadge = getStatusBadge(task.status);
   const priorityBadge = getPriorityBadge(task.priority);
   
+  // Identificar contexto do vendedor (precisa de logo e ainda não foi enviado)
+  const isVendorContext = isSalesperson && 
+                          task?.needs_logo === true;
+  
   // Verificações de permissões
   const isTaskCreator = task?.created_by === currentUser?.id;
   const isAssignedDesigner = task?.assigned_to === currentUser?.id;
   
   const canAssign = task?.status === 'pending' && 
                     !task?.assigned_to && 
-                    isDesigner &&
-                    !task?.needs_logo;
+                    isDesigner;
   const canUpload = isAssignedDesigner && 
                    task?.status !== 'completed' && 
-                   task?.status !== 'approved';
+                   task?.status !== 'approved' &&
+                   !isVendorContext;
   const canSendApproval = isAssignedDesigner && 
                          task?.status === 'in_progress';
   const canRequestChanges = isAssignedDesigner && 
@@ -456,16 +473,16 @@ export const TaskDetailsDialog = ({
         </DialogHeader>
 
         <Tabs defaultValue="details" className="flex-1 overflow-hidden flex flex-col">
-          <TabsList className={`grid w-full ${isSalesperson && task?.needs_logo ? 'grid-cols-2' : 'grid-cols-4'}`}>
+          <TabsList className={`grid w-full ${isVendorContext ? 'grid-cols-2' : 'grid-cols-4'}`}>
             <TabsTrigger value="details">
               <FileText className="h-4 w-4 mr-2" />
               Detalhes
             </TabsTrigger>
             <TabsTrigger value="customization">
               <Palette className="h-4 w-4 mr-2" />
-              {isSalesperson && task?.needs_logo ? 'Upload Logo' : 'Personalização'}
+              {isVendorContext ? 'Upload Logo' : 'Personalização'}
             </TabsTrigger>
-            {(!isSalesperson || !task?.needs_logo) && (
+            {!isVendorContext && (
               <>
                 <TabsTrigger value="files">
                   <Upload className="h-4 w-4 mr-2" />
@@ -573,7 +590,7 @@ export const TaskDetailsDialog = ({
             </TabsContent>
 
             <TabsContent value="customization" className="mt-0">
-              {isSalesperson && task?.needs_logo ? (
+              {isVendorContext ? (
                 <Card>
                   <CardContent className="p-6 space-y-4">
                     <div className="space-y-2">
@@ -761,7 +778,7 @@ export const TaskDetailsDialog = ({
 
         <div className="flex justify-between pt-4 border-t">
           <div>
-            {(isSuperAdmin || isAdmin || isDesigner) && !(isSalesperson && task?.needs_logo) && (
+            {(isSuperAdmin || isAdmin || isDesigner) && !isVendorContext && (
               <Button 
                 variant="destructive" 
                 onClick={handleDeleteTask}
@@ -773,7 +790,7 @@ export const TaskDetailsDialog = ({
             )}
           </div>
           <div className="flex gap-2">
-            {isSalesperson && task?.needs_logo ? (
+            {isVendorContext ? (
               // FLUXO DO VENDEDOR - Upload de logo
               <Button 
                 onClick={handleSendToDesigner} 
