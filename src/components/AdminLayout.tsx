@@ -2,7 +2,7 @@ import { useNavigate, Outlet, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "./ui/button";
-import { LogOut, LayoutDashboard, Tag, Megaphone, Users, Workflow, FlaskConical, Palette, Code, Settings, ShoppingBag } from "lucide-react";
+import { LogOut, LayoutDashboard, Tag, Megaphone, Users, Workflow, FlaskConical, Palette, Code, Settings, ShoppingBag, BarChart3 } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { Session } from "@supabase/supabase-js";
 import { NotificationsDropdown } from "./NotificationsDropdown";

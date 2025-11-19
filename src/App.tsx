@@ -23,6 +23,7 @@ import Campaign from "./pages/Campaign";
 import ABTestRedirect from "./pages/ABTestRedirect";
 import { UploadLogos } from "./pages/UploadLogos";
 import NotFound from "./pages/NotFound";
+import TrafficDashboard from "./pages/admin/TrafficDashboard";
 
 // Componente para rastrear mudanças de rota em SPAs
 const AnalyticsTracker = () => {
@@ -62,6 +63,7 @@ const App = () => (
           <Route path="/c/:uniqueLink/upload-logos" element={<UploadLogos />} />
           <Route path="/admin" element={<AdminLayout />}>
             <Route path="dashboard" element={<Dashboard />} />
+            <Route path="traffic" element={<TrafficDashboard />} />
             <Route path="advanced-dashboard" element={<AdvancedDashboard />} />
             <Route path="segments" element={<Segments />} />
             <Route path="models" element={<Models />} />

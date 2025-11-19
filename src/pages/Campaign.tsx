@@ -381,17 +381,20 @@ const Campaign = () => {
 
   useEffect(() => {
     if (campaign && currentStep === 0) {
-      trackEvent("visit");
-      
       // Capturar parâmetros UTM da URL
       const params = new URLSearchParams(window.location.search);
-      setUtmParams({
+      const capturedUtms = {
         utm_source: params.get('utm_source') || '',
         utm_medium: params.get('utm_medium') || '',
         utm_campaign: params.get('utm_campaign') || '',
         utm_term: params.get('utm_term') || '',
         utm_content: params.get('utm_content') || '',
-      });
+      };
+      
+      setUtmParams(capturedUtms);
+      
+      // Rastrear visita COM as UTMs
+      trackEvent("visit", capturedUtms);
     }
   }, [campaign]);
 
@@ -561,13 +564,24 @@ const Campaign = () => {
     }
   };
 
-  const trackEvent = async (eventType: string) => {
+  const trackEvent = async (eventType: string, additionalData?: {
+    utm_source?: string;
+    utm_medium?: string;
+    utm_campaign?: string;
+    utm_term?: string;
+    utm_content?: string;
+  }) => {
     if (!campaign) return;
-
+    
     await supabase.from("funnel_events").insert({
       campaign_id: campaign.id,
       session_id: sessionId,
       event_type: eventType,
+      utm_source: additionalData?.utm_source || null,
+      utm_medium: additionalData?.utm_medium || null,
+      utm_campaign: additionalData?.utm_campaign || null,
+      utm_term: additionalData?.utm_term || null,
+      utm_content: additionalData?.utm_content || null,
     });
   };
 
