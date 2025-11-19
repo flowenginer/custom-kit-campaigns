@@ -1223,24 +1223,24 @@ const Campaign = () => {
 
       <div className="container max-w-6xl mx-auto px-4">
         {/* Header */}
-        <div className="mb-6 md:mb-8">
+        <div className="mb-4 md:mb-8">
           {/* Logo Space Sports - Menor no mobile */}
-          <div className="flex justify-center mb-3 md:mb-6">
+          <div className="flex justify-center mb-2 md:mb-6">
             <img 
               src="https://cdn.awsli.com.br/400x300/1896/1896367/logo/space-logo-site-wgernz.png" 
               alt="Space Sports" 
-              className="h-8 md:h-16 w-auto"
+              className="h-6 md:h-16 w-auto"
               loading="eager"
             />
           </div>
           
           {/* Título da etapa - Responsivo */}
-          <p className="text-center text-sm md:text-base text-muted-foreground mb-3 md:mb-4 px-2">
+          <p className="text-center text-sm md:text-base text-muted-foreground mb-2 md:mb-4 px-2">
             Etapa {currentStep + 1} de {steps.length}
           </p>
           
           {/* Step Indicator - Otimizado para mobile */}
-          <div className="flex justify-center items-center gap-1 md:gap-2 mb-3 md:mb-4 overflow-x-auto px-4">
+          <div className="flex justify-center items-center gap-1 md:gap-2 mb-2 md:mb-4 overflow-x-auto px-4">
             {steps.map((step, index) => (
               <div key={index} className="flex items-center flex-shrink-0">
                 <div className={`flex flex-col items-center ${index <= currentStep ? 'text-primary' : 'text-muted-foreground'}`}>
@@ -1287,13 +1287,13 @@ const Campaign = () => {
         <div className="mb-6">
           {currentStepId === 'initial_data' && (
             <Card className="shadow-lg max-w-2xl mx-auto">
-              <CardContent className="p-4 md:p-6">
-                <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-center px-2">
+              <CardContent className="p-3 md:p-6">
+                <h2 className="text-xl md:text-2xl font-semibold mb-3 md:mb-6 text-center px-2">
                   Vamos começar! Preencha seus dados
                 </h2>
-                <div className="space-y-6">
+                <div className="space-y-4 md:space-y-6">
                   <div>
-                    <Label htmlFor="initial-name" className="py-2 block text-base">Digite seu nome*</Label>
+                    <Label htmlFor="initial-name" className="py-1 md:py-2 block text-base">Digite seu nome*</Label>
                     <Input
                       id="initial-name"
                       placeholder="Seu nome completo"
@@ -1307,7 +1307,7 @@ const Campaign = () => {
                   </div>
 
                   <div>
-                    <Label htmlFor="initial-whatsapp" className="py-2 block text-base">Digite seu WhatsApp*</Label>
+                    <Label htmlFor="initial-whatsapp" className="py-1 md:py-2 block text-base">Digite seu WhatsApp*</Label>
                     <Input
                       id="initial-whatsapp"
                       type="tel"
@@ -1322,7 +1322,7 @@ const Campaign = () => {
                   </div>
 
                   <div>
-                    <Label htmlFor="quantity-select" className="py-2 block text-base">Quantidade*</Label>
+                    <Label htmlFor="quantity-select" className="py-1 md:py-2 block text-base">Quantidade*</Label>
                     <Select
                       value={customerData.quantity}
                       onValueChange={(value) => {
@@ -1346,7 +1346,7 @@ const Campaign = () => {
 
                   {customerData.quantity === 'custom' && (
                     <div className="mt-4 p-4 bg-muted/30 rounded-lg">
-                      <Label htmlFor="custom-quantity" className="py-2 block text-base">Digite a quantidade (mínimo 10)*</Label>
+                      <Label htmlFor="custom-quantity" className="py-1 md:py-2 block text-base">Digite a quantidade (mínimo 10)*</Label>
                       <Input
                         id="custom-quantity"
                         type="number"
@@ -1562,7 +1562,7 @@ const Campaign = () => {
                   </div>
                 ) : (
                   <>
-                    <div className="space-y-6">
+                    <div className="space-y-4 md:space-y-6">
                   {/* Grid de 4 imagens do modelo */}
                   {selectedModel ? (
                     <div>
