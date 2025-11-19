@@ -2,7 +2,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import AdminLayout from "./components/AdminLayout";
@@ -23,6 +24,27 @@ import ABTestRedirect from "./pages/ABTestRedirect";
 import { UploadLogos } from "./pages/UploadLogos";
 import NotFound from "./pages/NotFound";
 
+// Componente para rastrear mudanças de rota em SPAs
+const AnalyticsTracker = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    // Verifica se o dataLayer existe (GTM)
+    if (typeof window !== 'undefined' && window.dataLayer) {
+      console.log('📊 GTM Pageview:', location.pathname);
+      
+      window.dataLayer.push({
+        event: 'pageview',
+        page_path: location.pathname + location.search,
+        page_location: window.location.href,
+        page_title: document.title
+      });
+    }
+  }, [location]);
+
+  return null;
+};
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -31,6 +53,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <AnalyticsTracker />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
