@@ -708,7 +708,6 @@ const Models = () => {
                         accept="image/*"
                         onChange={(e) => handleFileChange(field, e.target.files?.[0] || null)}
                         disabled={uploading}
-                        required
                       />
                       {imagePreviews[field] && (
                         <div className="flex items-center gap-2">
