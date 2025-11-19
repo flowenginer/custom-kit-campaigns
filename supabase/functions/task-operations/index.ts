@@ -59,18 +59,23 @@ serve(async (req) => {
       );
     }
 
-    // 2. VER DETALHES DE UMA TAREFA
+    // 2. VER DETALHES DE UMA TAREFA (por ID ou TELEFONE)
     if (action === 'get') {
       const task_id = url.searchParams.get('task_id');
+      const phone = url.searchParams.get('phone');
       
-      if (!task_id) {
+      // Validar: precisa ter um dos dois
+      if (!task_id && !phone) {
         return new Response(
-          JSON.stringify({ success: false, error: 'task_id é obrigatório' }),
+          JSON.stringify({ 
+            success: false, 
+            error: 'É necessário fornecer task_id OU phone' 
+          }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('design_tasks')
         .select(`
           *,
@@ -84,18 +89,32 @@ serve(async (req) => {
             shirt_models (name)
           ),
           campaigns (name)
-        `)
-        .eq('id', task_id)
-        .maybeSingle();
+        `);
+
+      // Filtrar por task_id ou phone
+      if (task_id) {
+        query = query.eq('id', task_id);
+      } else if (phone) {
+        query = query.eq('orders.customer_phone', phone);
+      }
+
+      const { data, error } = await query.maybeSingle();
 
       if (error) throw error;
       
       if (!data) {
         return new Response(
-          JSON.stringify({ success: false, error: 'Tarefa não encontrada' }),
+          JSON.stringify({ 
+            success: false, 
+            error: phone 
+              ? 'Nenhuma tarefa encontrada para este telefone' 
+              : 'Tarefa não encontrada'
+          }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+
+      console.log(`Task found via ${task_id ? 'ID' : 'phone'}: ${data.id}`);
 
       return new Response(
         JSON.stringify({ success: true, data }),

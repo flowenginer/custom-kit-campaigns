@@ -100,7 +100,7 @@ const Api = () => {
                       size="sm"
                       variant="ghost"
                       onClick={() => copyToClipboard(
-                        `GET ${BASE_URL}/task-operations?action=list`,
+                        `${BASE_URL}/task-operations?action=list`,
                         'url-list'
                       )}
                     >
@@ -302,7 +302,7 @@ const Api = () => {
               <AccordionTrigger>
                 <div className="flex items-center gap-3">
                   <Badge variant="http_get">GET</Badge>
-                  <span className="font-semibold text-base">Ver Detalhes de Tarefa</span>
+                  <span className="font-semibold text-base">Ver Detalhes de Tarefa (por ID ou Telefone)</span>
                 </div>
               </AccordionTrigger>
               <AccordionContent>
@@ -316,7 +316,7 @@ const Api = () => {
                       size="sm"
                       variant="ghost"
                       onClick={() => copyToClipboard(
-                        `GET ${BASE_URL}/task-operations?action=get&task_id=xxx`,
+                        `${BASE_URL}/task-operations?action=get&task_id=xxx`,
                         'url-get'
                       )}
                     >
@@ -334,7 +334,8 @@ const Api = () => {
                         Descrição
                       </h4>
                       <p className="text-sm">
-                        Retorna os detalhes completos de uma tarefa específica, incluindo dados do pedido, cliente e campanha.
+                        Retorna os detalhes completos de uma tarefa específica, incluindo dados do pedido, cliente e campanha. 
+                        Pode buscar por <strong>ID da tarefa</strong> ou por <strong>telefone do cliente</strong>.
                       </p>
                     </div>
 
@@ -360,12 +361,30 @@ const Api = () => {
                         <div className="border rounded-lg p-3">
                           <div className="flex items-center gap-2 mb-2">
                             <code className="bg-secondary px-2 py-0.5 rounded text-xs font-mono">task_id</code>
-                            <Badge variant="destructive" className="text-xs">Obrigatório</Badge>
+                            <Badge variant="outline" className="text-xs">Opcional*</Badge>
                           </div>
                           <p className="text-sm mb-2">UUID da tarefa que deseja consultar.</p>
                           <div className="bg-muted p-3 rounded text-xs">
                             <p><strong>Formato:</strong> UUID válido</p>
                             <p><strong>Exemplo:</strong> 7d274d4a-3f52-4e85-b594-ed927ca9f6c1</p>
+                          </div>
+                        </div>
+
+                        <div className="border rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            <code className="bg-secondary px-2 py-0.5 rounded text-xs font-mono">phone</code>
+                            <Badge variant="outline" className="text-xs">Opcional*</Badge>
+                          </div>
+                          <p className="text-sm mb-2">
+                            Número de telefone do cliente (com DDD, sem formatação).
+                          </p>
+                          <p className="text-xs text-muted-foreground italic mb-2">
+                            * Use <strong>task_id</strong> OU <strong>phone</strong>, não ambos.
+                          </p>
+                          <div className="bg-muted p-3 rounded text-xs space-y-1">
+                            <p className="font-semibold">Exemplos:</p>
+                            <code className="block">?action=get&phone=5511999999999</code>
+                            <code className="block">?action=get&phone=11999999999</code>
                           </div>
                         </div>
 
@@ -397,17 +416,40 @@ const Api = () => {
                         </div>
                       </div>
 
-                    </div>
-
-                    <div>
-                      <h4 className="font-semibold mb-2">⚠️ Possíveis Erros</h4>
-                      <div className="space-y-2 text-xs">
-                        <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 p-2 rounded">
-                          <p className="font-semibold">404 - Tarefa não encontrada</p>
-                          <p className="text-muted-foreground">O task_id fornecido não existe no banco de dados.</p>
+                      <div className="border rounded-lg p-3">
+                        <p className="text-sm font-medium mb-2">2. Buscar tarefa por telefone do cliente:</p>
+                        <div className="bg-gray-900 p-3 rounded text-xs text-gray-100 overflow-x-auto relative">
+                          <pre className="whitespace-pre-wrap break-all">{`curl -X GET "${BASE_URL}/task-operations?action=get&phone=5511999999999" \\
+  -H "Content-Type: application/json"`}</pre>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="absolute top-2 right-2 h-6 text-white hover:bg-gray-700"
+                            onClick={() => copyToClipboard(
+                              `curl -X GET "${BASE_URL}/task-operations?action=get&phone=5511999999999" -H "Content-Type: application/json"`,
+                              'get-task-phone'
+                            )}
+                          >
+                            {copiedId === 'get-task-phone' ? <CheckCircle2 className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                          </Button>
                         </div>
                       </div>
+
                     </div>
+
+                      <div>
+                        <h4 className="font-semibold mb-2">⚠️ Possíveis Erros</h4>
+                        <div className="space-y-2 text-xs">
+                          <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 p-2 rounded">
+                            <p className="font-semibold">400 - Parâmetros inválidos</p>
+                            <p className="text-muted-foreground">É necessário fornecer task_id OU phone.</p>
+                          </div>
+                          <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 p-2 rounded">
+                            <p className="font-semibold">404 - Tarefa não encontrada</p>
+                            <p className="text-muted-foreground">O task_id ou telefone fornecido não possui tarefa associada.</p>
+                          </div>
+                        </div>
+                      </div>
 
                   </CardContent>
                 </Card>
@@ -434,7 +476,7 @@ const Api = () => {
                       size="sm"
                       variant="ghost"
                       onClick={() => copyToClipboard(
-                        `POST ${BASE_URL}/task-operations?action=create`,
+                        `${BASE_URL}/task-operations?action=create`,
                         'url-create'
                       )}
                     >
@@ -648,7 +690,7 @@ const Api = () => {
                       size="sm"
                       variant="ghost"
                       onClick={() => copyToClipboard(
-                        `PATCH ${BASE_URL}/task-operations?action=update_status`,
+                        `${BASE_URL}/task-operations?action=update_status`,
                         'url-update-status'
                       )}
                     >
@@ -856,7 +898,7 @@ const Api = () => {
                       size="sm"
                       variant="ghost"
                       onClick={() => copyToClipboard(
-                        `PATCH ${BASE_URL}/task-operations?action=assign_designer`,
+                        `${BASE_URL}/task-operations?action=assign_designer`,
                         'url-assign'
                       )}
                     >
@@ -971,7 +1013,7 @@ const Api = () => {
                       size="sm"
                       variant="ghost"
                       onClick={() => copyToClipboard(
-                        `POST ${BASE_URL}/task-operations?action=add_comment`,
+                        `${BASE_URL}/task-operations?action=add_comment`,
                         'url-comment'
                       )}
                     >
@@ -1148,7 +1190,7 @@ const Api = () => {
                       size="sm"
                       variant="ghost"
                       onClick={() => copyToClipboard(
-                        `GET ${BASE_URL}/task-operations?action=get_history&task_id=xxx`,
+                        `${BASE_URL}/task-operations?action=get_history&task_id=xxx`,
                         'url-history'
                       )}
                     >
@@ -1541,6 +1583,70 @@ curl -X GET "${BASE_URL}/task-operations?action=get_history&task_id=TASK_ID" \\
                       {copiedId === 'usecase5-backup' ? <CheckCircle2 className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
                     </Button>
                   </div>
+                </div>
+              </div>
+
+              {/* CASO 6 */}
+              <div className="border rounded-lg p-4 space-y-4">
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  💬 Caso 6: Consultar Status por WhatsApp
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Cliente envia mensagem perguntando sobre o pedido → N8n busca por telefone e responde automaticamente.
+                </p>
+                
+                <div className="bg-muted p-4 rounded-lg">
+                  <h4 className="font-semibold text-sm mb-2">📊 Fluxo do Workflow:</h4>
+                  <ol className="list-decimal list-inside space-y-2 text-sm">
+                    <li>Cliente envia WhatsApp: "Qual o status do meu pedido?"</li>
+                    <li>N8n captura mensagem via WhatsApp Webhook</li>
+                    <li>Extrai número do telefone do cliente</li>
+                    <li>Consulta tarefa usando o parâmetro <code>phone</code></li>
+                    <li>Responde com status atual: "Olá! Seu pedido está: {`{status}`}"</li>
+                  </ol>
+                </div>
+
+                <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 p-3 rounded-lg">
+                  <h4 className="font-semibold text-sm mb-2">✨ Benefícios:</h4>
+                  <ul className="text-sm space-y-1 list-disc list-inside">
+                    <li>Cliente não precisa saber o ID da tarefa</li>
+                    <li>Atendimento instantâneo 24/7</li>
+                    <li>Reduz carga de atendimento manual</li>
+                    <li>Melhora experiência do cliente</li>
+                  </ul>
+                </div>
+
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-sm">📝 Exemplo de CURL:</h4>
+                  
+                  <div className="bg-gray-900 p-3 rounded text-xs text-gray-100 overflow-x-auto relative">
+                    <pre className="whitespace-pre-wrap break-all">{`# Buscar tarefa pelo telefone do cliente:
+curl -X GET "${BASE_URL}/task-operations?action=get&phone={{$json.from}}" \\
+  -H "Content-Type: application/json"
+
+# Responder no WhatsApp:
+# "Olá! Seu pedido está: {{$json.data.status}}"`}</pre>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="absolute top-2 right-2 h-6 text-white hover:bg-gray-700"
+                      onClick={() => copyToClipboard(
+                        `curl -X GET "${BASE_URL}/task-operations?action=get&phone=5511999999999" -H "Content-Type: application/json"`,
+                        'usecase6-whatsapp'
+                      )}
+                    >
+                      {copiedId === 'usecase6-whatsapp' ? <CheckCircle2 className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 p-3 rounded-lg">
+                  <h4 className="font-semibold text-sm mb-2">🔧 Nodes N8n Necessários:</h4>
+                  <ul className="text-sm space-y-1 list-disc list-inside">
+                    <li>WhatsApp Trigger (receber mensagens)</li>
+                    <li>HTTP Request (buscar por phone)</li>
+                    <li>WhatsApp Business API (enviar resposta)</li>
+                  </ul>
                 </div>
               </div>
 
