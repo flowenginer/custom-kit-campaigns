@@ -1,18 +1,43 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
-import { Loader2, TrendingUp, Users, Target, ExternalLink } from "lucide-react";
+import { Users, Target, TrendingUp, Download, Filter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { DateRangeFilter } from "@/components/dashboard/DateRangeFilter";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { FunnelStage } from "@/components/dashboard/FunnelStage";
+import { TrafficInsights } from "@/components/dashboard/TrafficInsights";
+import { SankeyFlow } from "@/components/dashboard/SankeyFlow";
 import { subDays } from "date-fns";
+import { Input } from "@/components/ui/input";
 
 interface Campaign {
   id: string;
   name: string;
+}
+
+interface UtmBreakdown {
+  utm_source: string;
+  utm_medium: string;
+  utm_campaign: string;
+  count: number;
+}
+
+interface TrafficFunnelData {
+  campaignId: string;
+  campaignName: string;
+  totalVisits: number;
+  visitsByUtm: UtmBreakdown[];
+  totalLeads: number;
+  leadsByUtm: UtmBreakdown[];
+  totalConversions: number;
+  conversionsByUtm: UtmBreakdown[];
+  leadConversionRate: number;
+  orderConversionRate: number;
 }
 
 interface TrafficMetrics {
@@ -21,36 +46,28 @@ interface TrafficMetrics {
   totalConversions: number;
   conversionRate: number;
   leadConversionRate: number;
+  previousPeriodVisitors?: number;
+  previousPeriodLeads?: number;
+  previousPeriodConversions?: number;
 }
 
-interface TrafficBySource {
-  source: string;
+interface DetailedTrafficRow {
+  utm_source: string;
+  utm_medium: string;
+  utm_campaign: string;
   visitors: number;
   leads: number;
   conversions: number;
+  leadRate: number;
   conversionRate: number;
 }
 
-interface TrafficByCampaign {
-  campaignId: string;
-  campaignName: string;
-  visitors: number;
-  leads: number;
-  conversions: number;
+interface TrafficInsight {
+  type: "success" | "warning" | "danger" | "info";
+  title: string;
+  description: string;
+  recommendation?: string;
 }
-
-const CHART_COLORS = [
-  "hsl(var(--chart-purple))",
-  "hsl(var(--chart-green))",
-  "hsl(var(--chart-orange))",
-  "hsl(var(--chart-blue))",
-  "hsl(var(--chart-pink))",
-  "hsl(var(--chart-teal))",
-  "hsl(var(--chart-indigo))",
-  "hsl(var(--chart-cyan))",
-  "hsl(var(--chart-amber))",
-  "hsl(var(--chart-red))",
-];
 
 const TrafficDashboard = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -62,11 +79,14 @@ const TrafficDashboard = () => {
     conversionRate: 0,
     leadConversionRate: 0,
   });
-  const [trafficBySource, setTrafficBySource] = useState<TrafficBySource[]>([]);
-  const [trafficByCampaign, setTrafficByCampaign] = useState<TrafficByCampaign[]>([]);
+  const [funnelData, setFunnelData] = useState<TrafficFunnelData[]>([]);
+  const [detailedTraffic, setDetailedTraffic] = useState<DetailedTrafficRow[]>([]);
+  const [insights, setInsights] = useState<TrafficInsight[]>([]);
+  const [sankeyData, setSankeyData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [startDate, setStartDate] = useState<Date>(subDays(new Date(), 30));
   const [endDate, setEndDate] = useState<Date>(new Date());
+  const [searchFilter, setSearchFilter] = useState("");
 
   useEffect(() => {
     loadCampaigns();
@@ -88,376 +108,520 @@ const TrafficDashboard = () => {
   const loadTrafficData = async () => {
     setIsLoading(true);
     try {
-      // Query base para funnel_events
+      // Query para visitas com UTMs
       let visitQuery = supabase
         .from("funnel_events")
-        .select("session_id, utm_source, campaign_id, campaigns(name)")
-        .eq("event_type", "visit");
+        .select("session_id, utm_source, utm_medium, utm_campaign, campaign_id, campaigns(name)")
+        .eq("event_type", "visit")
+        .gte("created_at", startDate.toISOString())
+        .lte("created_at", endDate.toISOString());
 
       if (selectedCampaign !== "all") {
         visitQuery = visitQuery.eq("campaign_id", selectedCampaign);
       }
 
-      visitQuery = visitQuery
-        .gte("created_at", startDate.toISOString())
-        .lte("created_at", endDate.toISOString());
-
       const { data: visitData } = await visitQuery;
 
-      // Query para leads
+      // Query para leads com UTMs (via join com funnel_events)
       let leadsQuery = supabase
         .from("leads")
-        .select("session_id, order_id, campaign_id");
+        .select("id, session_id, order_id, campaign_id, campaigns(name)")
+        .gte("created_at", startDate.toISOString())
+        .lte("created_at", endDate.toISOString());
 
       if (selectedCampaign !== "all") {
         leadsQuery = leadsQuery.eq("campaign_id", selectedCampaign);
       }
 
-      leadsQuery = leadsQuery
-        .gte("created_at", startDate.toISOString())
-        .lte("created_at", endDate.toISOString());
-
       const { data: leadsData } = await leadsQuery;
 
-      if (!visitData || !leadsData) return;
+      if (!visitData || !leadsData) {
+        setIsLoading(false);
+        return;
+      }
 
-      // Calcular visitantes únicos
-      const uniqueVisitors = new Set(visitData.map(v => v.session_id));
-      const totalVisitors = uniqueVisitors.size;
+      // Criar mapa de session_id -> UTMs
+      const sessionUtmMap = new Map();
+      visitData.forEach((visit: any) => {
+        if (!sessionUtmMap.has(visit.session_id)) {
+          sessionUtmMap.set(visit.session_id, {
+            utm_source: visit.utm_source || "direto",
+            utm_medium: visit.utm_medium || "none",
+            utm_campaign: visit.utm_campaign || "none",
+            campaign_id: visit.campaign_id,
+            campaign_name: visit.campaigns?.name || "Sem campanha",
+          });
+        }
+      });
+
+      // Calcular métricas gerais
+      const uniqueVisitors = new Set(visitData.map((v: any) => v.session_id)).size;
       const totalLeads = leadsData.length;
-      const totalConversions = leadsData.filter(l => l.order_id).length;
+      const totalConversions = leadsData.filter((l: any) => l.order_id).length;
 
       setMetrics({
-        totalVisitors,
+        totalVisitors: uniqueVisitors,
         totalLeads,
         totalConversions,
-        conversionRate: totalVisitors > 0 ? (totalConversions / totalVisitors) * 100 : 0,
-        leadConversionRate: totalVisitors > 0 ? (totalLeads / totalVisitors) * 100 : 0,
+        conversionRate: uniqueVisitors > 0 ? (totalConversions / uniqueVisitors) * 100 : 0,
+        leadConversionRate: uniqueVisitors > 0 ? (totalLeads / uniqueVisitors) * 100 : 0,
       });
 
-      // Agrupar por UTM source
-      const sourceMap = new Map<string, { visitors: Set<string>; leads: number; conversions: number }>();
+      // Processar funil por campanha com UTMs
+      const campaignFunnels = new Map<string, TrafficFunnelData>();
       
-      visitData.forEach(visit => {
-        const source = visit.utm_source || "Direto";
-        if (!sourceMap.has(source)) {
-          sourceMap.set(source, { visitors: new Set(), leads: 0, conversions: 0 });
+      visitData.forEach((visit: any) => {
+        const campaignId = visit.campaign_id || "no-campaign";
+        const campaignName = visit.campaigns?.name || "Sem campanha";
+        
+        if (!campaignFunnels.has(campaignId)) {
+          campaignFunnels.set(campaignId, {
+            campaignId,
+            campaignName,
+            totalVisits: 0,
+            visitsByUtm: [],
+            totalLeads: 0,
+            leadsByUtm: [],
+            totalConversions: 0,
+            conversionsByUtm: [],
+            leadConversionRate: 0,
+            orderConversionRate: 0,
+          });
         }
-        sourceMap.get(source)!.visitors.add(visit.session_id);
       });
 
-      leadsData.forEach(lead => {
-        const visit = visitData.find(v => v.session_id === lead.session_id);
-        const source = visit?.utm_source || "Direto";
-        const sourceData = sourceMap.get(source);
-        if (sourceData) {
-          sourceData.leads++;
-          if (lead.order_id) sourceData.conversions++;
+      // Count visits by UTM
+      const visitUtmCounts = new Map<string, Map<string, number>>();
+      visitData.forEach((visit: any) => {
+        const campaignId = visit.campaign_id || "no-campaign";
+        const utmKey = `${visit.utm_source || "direto"}|${visit.utm_medium || "none"}|${visit.utm_campaign || "none"}`;
+        
+        if (!visitUtmCounts.has(campaignId)) {
+          visitUtmCounts.set(campaignId, new Map());
         }
+        const campaignMap = visitUtmCounts.get(campaignId)!;
+        campaignMap.set(utmKey, (campaignMap.get(utmKey) || 0) + 1);
       });
 
-      const sourceArray = Array.from(sourceMap.entries())
-        .map(([source, data]) => ({
-          source,
-          visitors: data.visitors.size,
-          leads: data.leads,
-          conversions: data.conversions,
-          conversionRate: data.visitors.size > 0 ? (data.conversions / data.visitors.size) * 100 : 0,
-        }))
-        .sort((a, b) => b.visitors - a.visitors);
-
-      setTrafficBySource(sourceArray);
-
-      // Agrupar por campanha
-      const campaignMap = new Map<string, { name: string; visitors: Set<string>; leads: number; conversions: number }>();
+      // Count leads and conversions by UTM
+      const leadUtmCounts = new Map<string, Map<string, number>>();
+      const conversionUtmCounts = new Map<string, Map<string, number>>();
       
-      visitData.forEach(visit => {
-        const campaignId = visit.campaign_id || "unknown";
-        const campaignName = (visit.campaigns as any)?.name || "Sem campanha";
-        if (!campaignMap.has(campaignId)) {
-          campaignMap.set(campaignId, { name: campaignName, visitors: new Set(), leads: 0, conversions: 0 });
+      leadsData.forEach((lead: any) => {
+        const utmInfo = sessionUtmMap.get(lead.session_id);
+        if (!utmInfo) return;
+        
+        const campaignId = lead.campaign_id || "no-campaign";
+        const utmKey = `${utmInfo.utm_source}|${utmInfo.utm_medium}|${utmInfo.utm_campaign}`;
+        
+        // Leads
+        if (!leadUtmCounts.has(campaignId)) {
+          leadUtmCounts.set(campaignId, new Map());
         }
-        campaignMap.get(campaignId)!.visitors.add(visit.session_id);
+        const leadMap = leadUtmCounts.get(campaignId)!;
+        leadMap.set(utmKey, (leadMap.get(utmKey) || 0) + 1);
+        
+        // Conversions
+        if (lead.order_id) {
+          if (!conversionUtmCounts.has(campaignId)) {
+            conversionUtmCounts.set(campaignId, new Map());
+          }
+          const convMap = conversionUtmCounts.get(campaignId)!;
+          convMap.set(utmKey, (convMap.get(utmKey) || 0) + 1);
+        }
       });
 
-      leadsData.forEach(lead => {
-        const campaignId = lead.campaign_id || "unknown";
-        const campaignData = campaignMap.get(campaignId);
-        if (campaignData) {
-          campaignData.leads++;
-          if (lead.order_id) campaignData.conversions++;
+      // Build funnel data
+      campaignFunnels.forEach((funnel, campaignId) => {
+        // Visits
+        const visitMap = visitUtmCounts.get(campaignId);
+        if (visitMap) {
+          visitMap.forEach((count, utmKey) => {
+            const [source, medium, campaign] = utmKey.split("|");
+            funnel.visitsByUtm.push({ utm_source: source, utm_medium: medium, utm_campaign: campaign, count });
+            funnel.totalVisits += count;
+          });
+        }
+
+        // Leads
+        const leadMap = leadUtmCounts.get(campaignId);
+        if (leadMap) {
+          leadMap.forEach((count, utmKey) => {
+            const [source, medium, campaign] = utmKey.split("|");
+            funnel.leadsByUtm.push({ utm_source: source, utm_medium: medium, utm_campaign: campaign, count });
+            funnel.totalLeads += count;
+          });
+        }
+
+        // Conversions
+        const convMap = conversionUtmCounts.get(campaignId);
+        if (convMap) {
+          convMap.forEach((count, utmKey) => {
+            const [source, medium, campaign] = utmKey.split("|");
+            funnel.conversionsByUtm.push({ utm_source: source, utm_medium: medium, utm_campaign: campaign, count });
+            funnel.totalConversions += count;
+          });
+        }
+
+        // Calculate rates
+        funnel.leadConversionRate = funnel.totalVisits > 0 ? (funnel.totalLeads / funnel.totalVisits) * 100 : 0;
+        funnel.orderConversionRate = funnel.totalLeads > 0 ? (funnel.totalConversions / funnel.totalLeads) * 100 : 0;
+      });
+
+      setFunnelData(Array.from(campaignFunnels.values()));
+
+      // Build detailed traffic table
+      const detailedMap = new Map<string, DetailedTrafficRow>();
+      
+      visitData.forEach((visit: any) => {
+        const key = `${visit.utm_source || "direto"}|${visit.utm_medium || "none"}|${visit.utm_campaign || "none"}`;
+        if (!detailedMap.has(key)) {
+          detailedMap.set(key, {
+            utm_source: visit.utm_source || "direto",
+            utm_medium: visit.utm_medium || "none",
+            utm_campaign: visit.utm_campaign || "none",
+            visitors: 0,
+            leads: 0,
+            conversions: 0,
+            leadRate: 0,
+            conversionRate: 0,
+          });
+        }
+        detailedMap.get(key)!.visitors++;
+      });
+
+      leadsData.forEach((lead: any) => {
+        const utmInfo = sessionUtmMap.get(lead.session_id);
+        if (!utmInfo) return;
+        
+        const key = `${utmInfo.utm_source}|${utmInfo.utm_medium}|${utmInfo.utm_campaign}`;
+        const row = detailedMap.get(key);
+        if (row) {
+          row.leads++;
+          if (lead.order_id) row.conversions++;
         }
       });
 
-      const campaignArray = Array.from(campaignMap.entries())
-        .map(([campaignId, data]) => ({
-          campaignId,
-          campaignName: data.name,
-          visitors: data.visitors.size,
-          leads: data.leads,
-          conversions: data.conversions,
-        }))
-        .sort((a, b) => b.visitors - a.visitors);
+      detailedMap.forEach((row) => {
+        row.leadRate = row.visitors > 0 ? (row.leads / row.visitors) * 100 : 0;
+        row.conversionRate = row.visitors > 0 ? (row.conversions / row.visitors) * 100 : 0;
+      });
 
-      setTrafficByCampaign(campaignArray);
+      const detailedRows = Array.from(detailedMap.values()).sort((a, b) => b.visitors - a.visitors);
+      setDetailedTraffic(detailedRows);
 
+      // Generate insights
+      generateInsights(detailedRows, metrics);
+
+      // Build Sankey data
+      const sankeyLinks: any[] = [];
+      detailedRows.slice(0, 5).forEach((row) => {
+        const sourceLabel = `${row.utm_source}/${row.utm_medium}`;
+        sankeyLinks.push({
+          source: sourceLabel,
+          target: "Leads",
+          value: row.leads,
+        });
+      });
+      setSankeyData(sankeyLinks);
+
+    } catch (error) {
+      console.error("Error loading traffic data:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (isLoading && campaigns.length === 0) {
+  const generateInsights = (detailedRows: DetailedTrafficRow[], metrics: TrafficMetrics) => {
+    const newInsights: TrafficInsight[] = [];
+
+    // Best converter
+    const bestConverter = detailedRows.reduce((best, row) => 
+      row.conversionRate > best.conversionRate ? row : best
+    , detailedRows[0]);
+
+    if (bestConverter && bestConverter.conversionRate > 5) {
+      newInsights.push({
+        type: "success",
+        title: "🚀 Melhor Fonte de Conversão",
+        description: `${bestConverter.utm_source}/${bestConverter.utm_medium} está convertendo ${bestConverter.conversionRate.toFixed(1)}% dos visitantes, acima da média de ${metrics.conversionRate.toFixed(1)}%.`,
+        recommendation: "Considere aumentar o investimento nesta fonte!",
+      });
+    }
+
+    // High traffic, low conversion
+    const poorPerformers = detailedRows.filter(row => row.visitors > 50 && row.conversionRate < 2);
+    if (poorPerformers.length > 0) {
+      const worst = poorPerformers[0];
+      newInsights.push({
+        type: "warning",
+        title: "⚠️ Alto Tráfego, Baixa Conversão",
+        description: `${worst.utm_source}/${worst.utm_medium} traz ${worst.visitors} visitas mas só ${worst.conversions} conversões (${worst.conversionRate.toFixed(1)}%).`,
+        recommendation: "Analise a qualidade do tráfego e otimize a landing page.",
+      });
+    }
+
+    // Lead conversion opportunity
+    const highLeadLowOrder = detailedRows.filter(row => row.leadRate > 10 && row.conversions === 0);
+    if (highLeadLowOrder.length > 0) {
+      newInsights.push({
+        type: "info",
+        title: "💡 Oportunidade de Conversão",
+        description: `Você tem ${highLeadLowOrder.reduce((sum, r) => sum + r.leads, 0)} leads que não converteram em pedidos.`,
+        recommendation: "Implemente estratégias de follow-up e remarketing.",
+      });
+    }
+
+    setInsights(newInsights);
+  };
+
+  const exportToCSV = () => {
+    const headers = ["UTM Source", "UTM Medium", "UTM Campaign", "Visitantes", "Leads", "Conversões", "Taxa Lead %", "Taxa Conversão %"];
+    const rows = detailedTraffic.map(row => [
+      row.utm_source,
+      row.utm_medium,
+      row.utm_campaign,
+      row.visitors,
+      row.leads,
+      row.conversions,
+      row.leadRate.toFixed(2),
+      row.conversionRate.toFixed(2),
+    ]);
+
+    const csvContent = [headers, ...rows].map(row => row.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `traffic-report-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+  };
+
+  const filteredTraffic = detailedTraffic.filter(row => 
+    row.utm_source.toLowerCase().includes(searchFilter.toLowerCase()) ||
+    row.utm_medium.toLowerCase().includes(searchFilter.toLowerCase()) ||
+    row.utm_campaign.toLowerCase().includes(searchFilter.toLowerCase())
+  );
+
+  if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="space-y-6 p-6">
+        <Skeleton className="h-8 w-64" />
+        <div className="grid gap-4 md:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-32" />
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="space-y-6 p-6">
+      {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold mb-2">Análise de Tráfego</h1>
-        <p className="text-muted-foreground">
-          Rastreamento completo de visitantes, leads e conversões
-        </p>
+        <h1 className="text-3xl font-bold text-foreground">📊 Dashboard de Tráfego</h1>
+        <p className="text-muted-foreground">Análise completa de visitantes, leads e conversões com UTMs</p>
       </div>
 
-      {/* Filtros */}
-      <div className="flex flex-wrap gap-4">
-        <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
-          <SelectTrigger className="w-[300px]">
-            <SelectValue placeholder="Selecionar Campanha" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas as Campanhas</SelectItem>
-            {campaigns.map((campaign) => (
-              <SelectItem key={campaign.id} value={campaign.id}>
-                {campaign.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      {/* Filters */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma campanha" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as Campanhas</SelectItem>
+                  {campaigns.map((campaign) => (
+                    <SelectItem key={campaign.id} value={campaign.id}>
+                      {campaign.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <DateRangeFilter
+              startDate={startDate}
+              endDate={endDate}
+              onDateChange={(start, end) => {
+                setStartDate(start);
+                setEndDate(end);
+              }}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
-        <DateRangeFilter 
-          startDate={startDate} 
-          endDate={endDate} 
-          onDateChange={(start, end) => {
-            setStartDate(start);
-            setEndDate(end);
-          }} 
-        />
-      </div>
-
-      {/* Cards de Métricas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Users className="h-4 w-4 text-chart-purple" />
-              Visitantes Únicos
-            </CardTitle>
+      {/* Metrics Cards */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card className="bg-gradient-to-br from-chart-blue/10 to-chart-blue/5 border-chart-blue/20">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total de Visitantes</CardTitle>
+            <Users className="h-5 w-5 text-chart-blue" />
           </CardHeader>
           <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-24" />
-            ) : (
-              <div className="text-2xl font-bold">{metrics.totalVisitors.toLocaleString()}</div>
-            )}
+            <div className="text-3xl font-bold text-foreground">{metrics.totalVisitors.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground mt-1">Sessões únicas no período</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Target className="h-4 w-4 text-chart-blue" />
-              Leads Gerados
-            </CardTitle>
+        <Card className="bg-gradient-to-br from-chart-purple/10 to-chart-purple/5 border-chart-purple/20">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Leads Gerados</CardTitle>
+            <Target className="h-5 w-5 text-chart-purple" />
           </CardHeader>
           <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-24" />
-            ) : (
-              <>
-                <div className="text-2xl font-bold">{metrics.totalLeads.toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {metrics.leadConversionRate.toFixed(1)}% dos visitantes
-                </p>
-              </>
-            )}
+            <div className="text-3xl font-bold text-foreground">{metrics.totalLeads.toLocaleString()}</div>
+            <Badge variant="secondary" className="mt-2">
+              {metrics.leadConversionRate.toFixed(1)}% dos visitantes
+            </Badge>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-chart-green" />
-              Conversões
-            </CardTitle>
+        <Card className="bg-gradient-to-br from-chart-green/10 to-chart-green/5 border-chart-green/20">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Conversões</CardTitle>
+            <TrendingUp className="h-5 w-5 text-chart-green" />
           </CardHeader>
           <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-24" />
-            ) : (
-              <>
-                <div className="text-2xl font-bold">{metrics.totalConversions.toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {metrics.conversionRate.toFixed(1)}% dos visitantes
-                </p>
-              </>
-            )}
+            <div className="text-3xl font-bold text-foreground">{metrics.totalConversions.toLocaleString()}</div>
+            <Badge variant="secondary" className="mt-2">
+              {metrics.conversionRate.toFixed(1)}% dos visitantes
+            </Badge>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Taxa Lead</CardTitle>
+        <Card className="bg-gradient-to-br from-chart-orange/10 to-chart-orange/5 border-chart-orange/20">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Taxa de Fechamento</CardTitle>
+            <Target className="h-5 w-5 text-chart-orange" />
           </CardHeader>
           <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-24" />
-            ) : (
-              <div className="text-2xl font-bold text-chart-blue">
-                {metrics.leadConversionRate.toFixed(1)}%
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Taxa Conversão</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-24" />
-            ) : (
-              <div className="text-2xl font-bold text-chart-green">
-                {metrics.conversionRate.toFixed(1)}%
-              </div>
-            )}
+            <div className="text-3xl font-bold text-foreground">
+              {metrics.totalLeads > 0 ? ((metrics.totalConversions / metrics.totalLeads) * 100).toFixed(1) : 0}%
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Leads → Pedidos</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Gráficos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Tráfego por Fonte */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Tráfego por Fonte (UTM Source)</CardTitle>
-            <CardDescription>Visitantes únicos por origem</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-[300px]" />
-            ) : trafficBySource.length === 0 ? (
-              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                Nenhum dado disponível
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={trafficBySource}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="source" stroke="hsl(var(--muted-foreground))" />
-                  <YAxis stroke="hsl(var(--muted-foreground))" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                    }}
-                  />
-                  <Legend />
-                  <Bar dataKey="visitors" fill={CHART_COLORS[0]} name="Visitantes" />
-                  <Bar dataKey="leads" fill={CHART_COLORS[1]} name="Leads" />
-                  <Bar dataKey="conversions" fill={CHART_COLORS[2]} name="Conversões" />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
+      {/* Insights */}
+      {insights.length > 0 && <TrafficInsights insights={insights} />}
 
-        {/* Tráfego por Campanha */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Tráfego por Campanha</CardTitle>
-            <CardDescription>Performance de cada campanha</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-[300px]" />
-            ) : trafficByCampaign.length === 0 ? (
-              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                Nenhum dado disponível
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={trafficByCampaign.slice(0, 5)}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="campaignName" stroke="hsl(var(--muted-foreground))" />
-                  <YAxis stroke="hsl(var(--muted-foreground))" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                    }}
-                  />
-                  <Legend />
-                  <Bar dataKey="visitors" fill={CHART_COLORS[3]} name="Visitantes" />
-                  <Bar dataKey="leads" fill={CHART_COLORS[4]} name="Leads" />
-                  <Bar dataKey="conversions" fill={CHART_COLORS[5]} name="Conversões" />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      {/* Sankey Flow */}
+      {sankeyData.length > 0 && <SankeyFlow data={sankeyData} />}
 
-      {/* Tabela Detalhada */}
+      {/* Funnel by Campaign */}
       <Card>
         <CardHeader>
-          <CardTitle>Detalhamento por Fonte de Tráfego</CardTitle>
-          <CardDescription>Métricas completas de cada origem</CardDescription>
+          <CardTitle>🎯 Funil Comparativo por Campanha</CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <Skeleton className="h-[200px]" />
-          ) : trafficBySource.length === 0 ? (
-            <div className="text-center text-muted-foreground py-8">
-              Nenhum dado disponível
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left py-3 px-4 font-medium">Fonte (UTM Source)</th>
-                    <th className="text-right py-3 px-4 font-medium">Visitantes</th>
-                    <th className="text-right py-3 px-4 font-medium">Leads</th>
-                    <th className="text-right py-3 px-4 font-medium">Conversões</th>
-                    <th className="text-right py-3 px-4 font-medium">Taxa Conv.</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {trafficBySource.map((source, idx) => (
-                    <tr key={idx} className="border-b border-border hover:bg-muted/50">
-                      <td className="py-3 px-4">
-                        <Badge variant="outline">{source.source}</Badge>
-                      </td>
-                      <td className="text-right py-3 px-4">{source.visitors.toLocaleString()}</td>
-                      <td className="text-right py-3 px-4">{source.leads.toLocaleString()}</td>
-                      <td className="text-right py-3 px-4">{source.conversions.toLocaleString()}</td>
-                      <td className="text-right py-3 px-4">
-                        <span className={source.conversionRate >= 5 ? "text-chart-green font-medium" : ""}>
-                          {source.conversionRate.toFixed(1)}%
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <Accordion type="single" collapsible className="w-full">
+            {funnelData.map((funnel) => (
+              <AccordionItem key={funnel.campaignId} value={funnel.campaignId}>
+                <AccordionTrigger>
+                  <div className="flex items-center gap-4 w-full">
+                    <span className="font-semibold text-foreground">{funnel.campaignName}</span>
+                    <div className="flex gap-2">
+                      <Badge variant="outline">{funnel.totalVisits} visitas</Badge>
+                      <Badge variant="secondary">{funnel.totalLeads} leads</Badge>
+                      <Badge>{funnel.totalConversions} conversões</Badge>
+                    </div>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="grid gap-4 md:grid-cols-3 mt-4">
+                    <FunnelStage
+                      title="Visitas"
+                      total={funnel.totalVisits}
+                      data={funnel.visitsByUtm}
+                      color="blue"
+                    />
+                    <FunnelStage
+                      title="Leads"
+                      total={funnel.totalLeads}
+                      data={funnel.leadsByUtm}
+                      color="purple"
+                      parentTotal={funnel.totalVisits}
+                    />
+                    <FunnelStage
+                      title="Conversões"
+                      total={funnel.totalConversions}
+                      data={funnel.conversionsByUtm}
+                      color="green"
+                      parentTotal={funnel.totalLeads}
+                    />
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </CardContent>
+      </Card>
+
+      {/* Detailed Table */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>📋 Análise Detalhada por UTM</CardTitle>
+            <Button onClick={exportToCSV} variant="outline" size="sm">
+              <Download className="h-4 w-4 mr-2" />
+              Exportar CSV
+            </Button>
+          </div>
+          <div className="flex items-center gap-2 mt-4">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Filtrar por source, medium ou campaign..."
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
+              className="max-w-sm"
+            />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>UTM Source</TableHead>
+                  <TableHead>UTM Medium</TableHead>
+                  <TableHead>UTM Campaign</TableHead>
+                  <TableHead className="text-right">Visitantes</TableHead>
+                  <TableHead className="text-right">Leads</TableHead>
+                  <TableHead className="text-right">Conversões</TableHead>
+                  <TableHead className="text-right">Taxa Lead</TableHead>
+                  <TableHead className="text-right">Taxa Conversão</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredTraffic.map((row, idx) => (
+                  <TableRow key={idx}>
+                    <TableCell className="font-medium">{row.utm_source}</TableCell>
+                    <TableCell>{row.utm_medium}</TableCell>
+                    <TableCell>{row.utm_campaign}</TableCell>
+                    <TableCell className="text-right">{row.visitors}</TableCell>
+                    <TableCell className="text-right">{row.leads}</TableCell>
+                    <TableCell className="text-right">{row.conversions}</TableCell>
+                    <TableCell className="text-right">
+                      <Badge variant={row.leadRate > 10 ? "default" : "secondary"}>
+                        {row.leadRate.toFixed(1)}%
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Badge variant={row.conversionRate > 5 ? "default" : "secondary"}>
+                        {row.conversionRate.toFixed(1)}%
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>
