@@ -1182,9 +1182,6 @@ const Campaign = () => {
             </span>
           </div>
           <Progress value={progress} className="h-2" />
-          <p className="text-xs text-center text-muted-foreground mt-2 truncate">
-            {steps[currentStep]}
-          </p>
         </div>
       </div>
 
@@ -1203,7 +1200,7 @@ const Campaign = () => {
           
           {/* Título da etapa - Responsivo */}
           <p className="text-center text-sm md:text-base text-muted-foreground mb-3 md:mb-4 px-2">
-            {steps[currentStep]} - Etapa {currentStep + 1} de {steps.length}
+            Etapa {currentStep + 1} de {steps.length}
           </p>
           
           {/* Step Indicator - Otimizado para mobile */}
@@ -1219,8 +1216,6 @@ const Campaign = () => {
                   }`}>
                     {index < currentStep ? <Check className="h-3 w-3 md:h-4 md:w-4" /> : index + 1}
                   </div>
-                  {/* Texto visível apenas em tablets+ */}
-                  <span className="text-xs mt-1 hidden lg:block max-w-[80px] text-center leading-tight">{step}</span>
                 </div>
                 {/* Linha conectora mais fina no mobile */}
                 {index < steps.length - 1 && (
