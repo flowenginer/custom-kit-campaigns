@@ -1094,58 +1094,14 @@ const Campaign = () => {
 
       await trackEvent("completed");
 
-      toast.success("Pedido enviado com sucesso!");
-      
-      // Limpar cache do sessionStorage após sucesso
-      sessionStorage.removeItem(STORAGE_KEY);
-      
-      // RESETAR TUDO para nova tentativa
-      setCurrentStep(0);
-      setLeadId(null); // ← Forçar criação de novo lead
-      setSessionId(`session-${Date.now()}-${Math.random()}`); // ← Novo session_id
-      setSelectedModel(null);
-      setCustomizations({
-        front: {
-          logoType: 'none',
-          textColor: '#000000',
-          text: '',
-          logoUrl: ''
-        },
-        back: {
-          logoLarge: false,
-          logoUrl: '',
-          name: false,
-          nameText: '',
-          whatsapp: false,
-          whatsappText: '',
-          instagram: false,
-          instagramText: '',
-          email: false,
-          emailText: '',
-          website: false,
-          websiteText: '',
-          sponsors: []
-        },
-        sleeves: {
-          right: { flag: false, flagUrl: '', logoSmall: false, logoUrl: '', text: false, textContent: '' },
-          left: { flag: false, flagUrl: '', logoSmall: false, logoUrl: '', text: false, textContent: '' }
-        }
+      toast.success("Pedido enviado com sucesso! Redirecionando para nosso Instagram...", {
+        duration: 3000,
       });
-      // Manter dados do cliente para facilitar nova tentativa
-      setCustomerData({ 
-        ...customerData, 
-        quantity: "", 
-        customQuantity: 10 
-      });
-      setUploadedLogos({
-        frontLogo: null,
-        backLogo: null,
-        sponsorsLogos: [],
-        rightFlag: null,
-        rightLogo: null,
-        leftFlag: null,
-        leftLogo: null,
-      });
+
+      // Redirecionar para Instagram após 3 segundos
+      setTimeout(() => {
+        window.location.href = 'https://www.instagram.com/spacesports.oficial/';
+      }, 3000);
     } catch (error: any) {
       console.error("Erro ao enviar pedido:", error);
       
