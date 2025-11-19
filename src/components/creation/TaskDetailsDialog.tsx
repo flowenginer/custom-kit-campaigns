@@ -22,6 +22,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CustomizationViewer } from "./CustomizationViewer";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useUserRole } from "@/hooks/useUserRole";
 import { 
   Download, 
   ExternalLink, 
@@ -58,12 +59,14 @@ export const TaskDetailsDialog = ({
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [uploadedPreviews, setUploadedPreviews] = useState<Array<{url: string, name: string}>>([]);
   const [uploadProgress, setUploadProgress] = useState<string>("");
-  const [userRole, setUserRole] = useState<string>('');
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  
+  const { roles, isSalesperson, isDesigner, isSuperAdmin, isAdmin } = useUserRole();
 
   useEffect(() => {
     if (task && open) {
       loadHistory();
-      checkUserRole();
     }
   }, [task, open]);
 
@@ -75,25 +78,13 @@ export const TaskDetailsDialog = ({
     if (!open) {
       setUploadedPreviews([]);
       setUploadProgress("");
+      setLogoFile(null);
     }
   }, [open]);
 
   const getCurrentUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     setCurrentUser(user);
-  };
-
-  const checkUserRole = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .maybeSingle();
-    
-    setUserRole(roleData?.role || '');
   };
 
   const loadHistory = async () => {
@@ -191,6 +182,72 @@ export const TaskDetailsDialog = ({
 
     toast.success("Status atualizado!");
     onTaskUpdated();
+  };
+
+  const handleSendToDesigner = async () => {
+    if (!task || !currentUser || !logoFile) return;
+
+    setLogoUploading(true);
+    try {
+      // Upload logo para o storage
+      const fileExt = logoFile.name.split('.').pop();
+      const fileName = `${task.lead_id}_${Date.now()}.${fileExt}`;
+      const filePath = `logos/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('customer-logos')
+        .upload(filePath, logoFile);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('customer-logos')
+        .getPublicUrl(filePath);
+
+      // Atualizar lead
+      const { error: leadError } = await supabase
+        .from('leads')
+        .update({
+          needs_logo: false,
+          uploaded_logo_url: publicUrl,
+          salesperson_status: 'sent_to_designer'
+        })
+        .eq('id', task.lead_id);
+
+      if (leadError) throw leadError;
+
+      // Atualizar design task
+      const { error: taskError } = await supabase
+        .from('design_tasks')
+        .update({
+          status: 'pending'
+        })
+        .eq('id', task.id);
+
+      if (taskError) throw taskError;
+
+      // Adicionar histórico
+      await supabase
+        .from('design_task_history')
+        .insert({
+          task_id: task.id,
+          user_id: currentUser.id,
+          action: 'sent_to_designer',
+          old_status: task.status,
+          new_status: 'pending',
+          notes: 'Logo enviado. Tarefa encaminhada para o designer.'
+        });
+
+      toast.success("Logo enviado! Tarefa encaminhada para o designer.");
+      setLogoFile(null);
+      onOpenChange(false);
+      onTaskUpdated();
+    } catch (error) {
+      console.error("Error sending to designer:", error);
+      toast.error("Erro ao enviar para designer");
+    } finally {
+      setLogoUploading(false);
+    }
   };
 
   const handleDeleteTask = async () => {
@@ -330,21 +387,23 @@ export const TaskDetailsDialog = ({
   const priorityBadge = getPriorityBadge(task.priority);
   
   // Verificações de permissões
-  const isDesigner = task?.assigned_to === currentUser?.id;
-  const isSalesperson = userRole === 'salesperson';
   const isTaskCreator = task?.created_by === currentUser?.id;
+  const isAssignedDesigner = task?.assigned_to === currentUser?.id;
   
-  const canAssign = task?.status === 'pending' && !task?.assigned_to;
-  const canUpload = isDesigner && 
+  const canAssign = task?.status === 'pending' && 
+                    !task?.assigned_to && 
+                    isDesigner &&
+                    !task?.needs_logo;
+  const canUpload = isAssignedDesigner && 
                    task?.status !== 'completed' && 
                    task?.status !== 'approved';
-  const canSendApproval = isDesigner && 
+  const canSendApproval = isAssignedDesigner && 
                          task?.status === 'in_progress';
-  const canRequestChanges = isDesigner && 
+  const canRequestChanges = isAssignedDesigner && 
                            task?.status === 'awaiting_approval';
-  const canApprove = isDesigner && 
+  const canApprove = isAssignedDesigner && 
                     task?.status === 'awaiting_approval';
-  const canSendProduction = isDesigner && 
+  const canSendProduction = isAssignedDesigner && 
                            task?.status === 'approved';
   
   // Permissões para vendedores
@@ -397,23 +456,27 @@ export const TaskDetailsDialog = ({
         </DialogHeader>
 
         <Tabs defaultValue="details" className="flex-1 overflow-hidden flex flex-col">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className={`grid w-full ${isSalesperson && task?.needs_logo ? 'grid-cols-2' : 'grid-cols-4'}`}>
             <TabsTrigger value="details">
               <FileText className="h-4 w-4 mr-2" />
               Detalhes
             </TabsTrigger>
             <TabsTrigger value="customization">
               <Palette className="h-4 w-4 mr-2" />
-              Personalização
+              {isSalesperson && task?.needs_logo ? 'Upload Logo' : 'Personalização'}
             </TabsTrigger>
-            <TabsTrigger value="files">
-              <Upload className="h-4 w-4 mr-2" />
-              Enviar Mockup ({task.design_files.length})
-            </TabsTrigger>
-            <TabsTrigger value="history">
-              <HistoryIcon className="h-4 w-4 mr-2" />
-              Histórico
-            </TabsTrigger>
+            {(!isSalesperson || !task?.needs_logo) && (
+              <>
+                <TabsTrigger value="files">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Enviar Mockup ({task.design_files.length})
+                </TabsTrigger>
+                <TabsTrigger value="history">
+                  <HistoryIcon className="h-4 w-4 mr-2" />
+                  Histórico
+                </TabsTrigger>
+              </>
+            )}
           </TabsList>
 
           <div className="flex-1 mt-4 overflow-y-auto pr-4">
@@ -510,7 +573,50 @@ export const TaskDetailsDialog = ({
             </TabsContent>
 
             <TabsContent value="customization" className="mt-0">
-              <CustomizationViewer data={task.customization_data} />
+              {isSalesperson && task?.needs_logo ? (
+                <Card>
+                  <CardContent className="p-6 space-y-4">
+                    <div className="space-y-2">
+                      <Label>Upload do Logo do Cliente</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Faça o upload do logo do cliente para encaminhar a tarefa ao designer.
+                      </p>
+                    </div>
+                    <Input 
+                      type="file" 
+                      accept=".png,.jpg,.jpeg,.svg,.ai,.pdf"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          if (file.size > 10 * 1024 * 1024) {
+                            toast.error("Arquivo muito grande. Máximo: 10MB");
+                            return;
+                          }
+                          setLogoFile(file);
+                          toast.success("Logo selecionado!");
+                        }
+                      }}
+                      disabled={logoUploading}
+                    />
+                    {logoFile && (
+                      <div className="flex items-center gap-2 p-3 bg-accent rounded-md">
+                        <Check className="h-4 w-4 text-green-600" />
+                        <span className="text-sm font-medium">{logoFile.name}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setLogoFile(null)}
+                          disabled={logoUploading}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ) : (
+                <CustomizationViewer data={task.customization_data} />
+              )}
             </TabsContent>
 
             <TabsContent value="files" className="space-y-4 mt-0">
@@ -655,7 +761,7 @@ export const TaskDetailsDialog = ({
 
         <div className="flex justify-between pt-4 border-t">
           <div>
-            {(userRole === 'super_admin' || userRole === 'admin' || isDesigner) && (
+            {(isSuperAdmin || isAdmin || isDesigner) && !(isSalesperson && task?.needs_logo) && (
               <Button 
                 variant="destructive" 
                 onClick={handleDeleteTask}
@@ -667,76 +773,99 @@ export const TaskDetailsDialog = ({
             )}
           </div>
           <div className="flex gap-2">
-            {canAssign && (
-              <Button onClick={handleAssignSelf}>
-                <UserPlus className="h-4 w-4 mr-2" />
-                Assumir Tarefa
-              </Button>
-            )}
-            
-            {canSendApproval && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div>
-                      <Button 
-                        onClick={() => handleStatusChange('awaiting_approval')}
-                        disabled={task.design_files.length === 0}
-                      >
-                        <Send className="h-4 w-4 mr-2" />
-                        Enviar para Aprovação
-                      </Button>
-                    </div>
-                  </TooltipTrigger>
-                  {task.design_files.length === 0 && (
-                    <TooltipContent>
-                      <p>Envie pelo menos um mockup antes de enviar para aprovação</p>
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              </TooltipProvider>
-            )}
-            
-            {canRequestChanges && !canSalespersonRequestChanges && (
+            {isSalesperson && task?.needs_logo ? (
+              // FLUXO DO VENDEDOR - Upload de logo
               <Button 
-                variant="outline"
-                onClick={() => handleStatusChange('changes_requested')}
+                onClick={handleSendToDesigner} 
+                disabled={!logoFile || logoUploading}
               >
-                <RefreshCcw className="h-4 w-4 mr-2" />
-                Solicitar Alterações
+                {logoUploading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4 mr-2" />
+                    Enviar para Designer
+                  </>
+                )}
               </Button>
-            )}
-            
-            {canApprove && !canSalespersonApprove && (
-              <Button onClick={() => handleStatusChange('approved')}>
-                <Check className="h-4 w-4 mr-2" />
-                Aprovar
-              </Button>
-            )}
-            
-            {canSendProduction && (
-              <Button onClick={() => handleStatusChange('completed')}>
-                <Send className="h-4 w-4 mr-2" />
-                Enviar para Produção
-              </Button>
-            )}
+            ) : (
+              // FLUXO NORMAL - Designer/Admin
+              <>
+                {canAssign && (
+                  <Button onClick={handleAssignSelf}>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Assumir Tarefa
+                  </Button>
+                )}
+                
+                {canSendApproval && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <Button 
+                            onClick={() => handleStatusChange('awaiting_approval')}
+                            disabled={task.design_files.length === 0}
+                          >
+                            <Send className="h-4 w-4 mr-2" />
+                            Enviar para Aprovação
+                          </Button>
+                        </div>
+                      </TooltipTrigger>
+                      {task.design_files.length === 0 && (
+                        <TooltipContent>
+                          <p>Envie pelo menos um mockup antes de enviar para aprovação</p>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+                
+                {canRequestChanges && !canSalespersonRequestChanges && (
+                  <Button 
+                    variant="outline"
+                    onClick={() => handleStatusChange('changes_requested')}
+                  >
+                    <RefreshCcw className="h-4 w-4 mr-2" />
+                    Solicitar Alterações
+                  </Button>
+                )}
+                
+                {canApprove && !canSalespersonApprove && (
+                  <Button onClick={() => handleStatusChange('approved')}>
+                    <Check className="h-4 w-4 mr-2" />
+                    Aprovar
+                  </Button>
+                )}
+                
+                {canSendProduction && (
+                  <Button onClick={() => handleStatusChange('completed')}>
+                    <Send className="h-4 w-4 mr-2" />
+                    Enviar para Produção
+                  </Button>
+                )}
 
-            {/* Botões para Vendedores */}
-            {canSalespersonRequestChanges && (
-              <Button 
-                variant="outline"
-                onClick={() => handleStatusChange('changes_requested', 'Cliente solicitou alterações')}
-              >
-                <RefreshCcw className="h-4 w-4 mr-2" />
-                Solicitar Alterações
-              </Button>
-            )}
-            
-            {canSalespersonApprove && (
-              <Button onClick={() => handleStatusChange('approved', 'Mockup aprovado pelo vendedor')}>
-                <Check className="h-4 w-4 mr-2" />
-                Aprovar Mockup
-              </Button>
+                {/* Botões para Vendedores (quando não é needs_logo) */}
+                {canSalespersonRequestChanges && (
+                  <Button 
+                    variant="outline"
+                    onClick={() => handleStatusChange('changes_requested', 'Cliente solicitou alterações')}
+                  >
+                    <RefreshCcw className="h-4 w-4 mr-2" />
+                    Solicitar Alterações
+                  </Button>
+                )}
+                
+                {canSalespersonApprove && (
+                  <Button onClick={() => handleStatusChange('approved', 'Mockup aprovado pelo vendedor')}>
+                    <Check className="h-4 w-4 mr-2" />
+                    Aprovar Mockup
+                  </Button>
+                )}
+              </>
             )}
           </div>
         </div>
