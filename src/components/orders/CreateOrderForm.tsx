@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { MultiWhatsAppInput } from "./MultiWhatsAppInput";
 import { MultiFileUpload } from "./MultiFileUpload";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,12 +53,13 @@ export const CreateOrderForm = ({ onSuccess, onCancel }: CreateOrderFormProps) =
   const [sponsors, setSponsors] = useState<string[]>([]);
   const [whatsappNumbers, setWhatsappNumbers] = useState<string[]>([""]);
 
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, watch, setValue, control, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(createOrderSchema),
     defaultValues: {
       whatsappNumbers: [""],
       quantity: 1,
       frontLogoSmall: true,
+      frontLogoLarge: false,
       backLogo: true,
       hasFlag: false,
       hasSponsors: false,
@@ -67,8 +68,8 @@ export const CreateOrderForm = ({ onSuccess, onCancel }: CreateOrderFormProps) =
   });
 
   const selectedSegmentId = watch("segmentId");
-  const hasFlag = watch("hasFlag");
-  const hasSponsors = watch("hasSponsors");
+  const hasFlag = !!watch("hasFlag");
+  const hasSponsors = !!watch("hasSponsors");
 
   useEffect(() => {
     loadSegments();
@@ -398,15 +399,45 @@ export const CreateOrderForm = ({ onSuccess, onCancel }: CreateOrderFormProps) =
           <Label>Posição da Logo *</Label>
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              <Checkbox id="frontSmall" {...register("frontLogoSmall")} defaultChecked />
+              <Controller
+                name="frontLogoSmall"
+                control={control}
+                render={({ field }) => (
+                  <Checkbox
+                    id="frontSmall"
+                    checked={!!field.value}
+                    onCheckedChange={(checked) => field.onChange(!!checked)}
+                  />
+                )}
+              />
               <label htmlFor="frontSmall" className="text-sm">Frente Pequena</label>
             </div>
             <div className="flex items-center space-x-2">
-              <Checkbox id="frontLarge" {...register("frontLogoLarge")} />
+              <Controller
+                name="frontLogoLarge"
+                control={control}
+                render={({ field }) => (
+                  <Checkbox
+                    id="frontLarge"
+                    checked={!!field.value}
+                    onCheckedChange={(checked) => field.onChange(!!checked)}
+                  />
+                )}
+              />
               <label htmlFor="frontLarge" className="text-sm">Frente Grande</label>
             </div>
             <div className="flex items-center space-x-2">
-              <Checkbox id="backLogo" {...register("backLogo")} defaultChecked />
+              <Controller
+                name="backLogo"
+                control={control}
+                render={({ field }) => (
+                  <Checkbox
+                    id="backLogo"
+                    checked={!!field.value}
+                    onCheckedChange={(checked) => field.onChange(!!checked)}
+                  />
+                )}
+              />
               <label htmlFor="backLogo" className="text-sm">Costas</label>
             </div>
           </div>
@@ -421,7 +452,17 @@ export const CreateOrderForm = ({ onSuccess, onCancel }: CreateOrderFormProps) =
         />
 
         <div className="flex items-center space-x-2">
-          <Checkbox id="hasFlag" {...register("hasFlag")} />
+          <Controller
+            name="hasFlag"
+            control={control}
+            render={({ field }) => (
+              <Checkbox
+                id="hasFlag"
+                checked={!!field.value}
+                onCheckedChange={(checked) => field.onChange(!!checked)}
+              />
+            )}
+          />
           <label htmlFor="hasFlag" className="text-sm">Adicionar Bandeira nas Mangas</label>
         </div>
 
@@ -435,7 +476,17 @@ export const CreateOrderForm = ({ onSuccess, onCancel }: CreateOrderFormProps) =
         )}
 
         <div className="flex items-center space-x-2">
-          <Checkbox id="hasSponsors" {...register("hasSponsors")} />
+          <Controller
+            name="hasSponsors"
+            control={control}
+            render={({ field }) => (
+              <Checkbox
+                id="hasSponsors"
+                checked={!!field.value}
+                onCheckedChange={(checked) => field.onChange(!!checked)}
+              />
+            )}
+          />
           <label htmlFor="hasSponsors" className="text-sm">Adicionar Patrocínios nas Costas</label>
         </div>
 
