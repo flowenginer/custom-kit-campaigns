@@ -140,6 +140,90 @@ const Models = () => {
     reader.readAsDataURL(file);
   };
 
+  const detectImageType = (filename: string): keyof typeof imageFiles | null => {
+    // Remove extensão e converte para uppercase
+    const name = filename
+      .replace(/\.[^/.]+$/, '') // Remove extensão (.jpg, .png, etc)
+      .toUpperCase()
+      .trim();
+    
+    // Remove números do início (01, 02, etc)
+    const cleanName = name.replace(/^\d+\s*/, '');
+    
+    // Mapeamento
+    if (cleanName.includes('CAPA')) return 'photo_main';
+    if (cleanName.includes('FRENTE')) return 'image_front';
+    if (cleanName.includes('COSTAS')) return 'image_back';
+    if (cleanName.includes('LATERAL DIREITO') || cleanName.includes('DIREITO')) return 'image_right';
+    if (cleanName.includes('LATERAL ESQUERDO') || cleanName.includes('ESQUERDO')) return 'image_left';
+    if (cleanName.includes('LOGO PEQUENO') || cleanName.includes('SMALL LOGO')) return 'image_front_small_logo';
+    if (cleanName.includes('LOGO GRANDE') || cleanName.includes('LARGE LOGO')) return 'image_front_large_logo';
+    if (cleanName.includes('LIMPA') || cleanName.includes('CLEAN')) return 'image_front_clean';
+    
+    return null; // Arquivo não reconhecido
+  };
+
+  const handleMultipleFilesUpload = (files: FileList) => {
+    const newImageFiles = { ...imageFiles };
+    const newImagePreviews = { ...imagePreviews };
+    const recognized: string[] = [];
+    const unrecognized: string[] = [];
+    
+    Array.from(files).forEach(file => {
+      // Validar tipo
+      if (!file.type.startsWith("image/")) {
+        unrecognized.push(file.name);
+        return;
+      }
+      
+      // Validar tamanho (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error(`${file.name} é muito grande (máx. 5MB)`);
+        return;
+      }
+      
+      // Detectar tipo
+      const fieldType = detectImageType(file.name);
+      
+      if (fieldType) {
+        // Arquivo reconhecido!
+        newImageFiles[fieldType] = file;
+        
+        // Gerar preview
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImagePreviews(prev => ({
+            ...prev,
+            [fieldType]: reader.result as string
+          }));
+        };
+        reader.readAsDataURL(file);
+        
+        recognized.push(file.name);
+      } else {
+        unrecognized.push(file.name);
+      }
+    });
+    
+    // Atualizar estado
+    setImageFiles(newImageFiles);
+    
+    // Feedback ao usuário
+    if (recognized.length > 0) {
+      toast.success(
+        `✅ ${recognized.length} ${recognized.length === 1 ? 'imagem distribuída' : 'imagens distribuídas'} automaticamente!`,
+        { duration: 3000 }
+      );
+    }
+    
+    if (unrecognized.length > 0) {
+      toast.warning(
+        `⚠️ ${unrecognized.length} ${unrecognized.length === 1 ? 'arquivo não reconhecido' : 'arquivos não reconhecidos'}. Verifique os nomes.`,
+        { duration: 5000 }
+      );
+    }
+  };
+
   const uploadImage = async (modelId: string, field: string, file: File) => {
     const fileExt = file.name.split('.').pop();
     const filePath = `${formData.segment_id}/${modelId}/${field}.${fileExt}`;
@@ -549,8 +633,62 @@ const Models = () => {
                 )}
               </div>
 
+              {/* UPLOAD MÚLTIPLO INTELIGENTE */}
+              <div className="space-y-3 p-4 border-2 border-dashed border-primary/30 rounded-lg bg-primary/5">
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-semibold">
+                    🚀 Upload Rápido (Recomendado)
+                  </Label>
+                </div>
+                
+                <p className="text-sm text-muted-foreground">
+                  Selecione todas as fotos de uma vez. O sistema irá distribuí-las automaticamente baseado nos nomes dos arquivos:
+                </p>
+                
+                <div className="bg-background/50 p-3 rounded text-xs space-y-1 font-mono">
+                  <div>✓ <strong>CAPA</strong> → Foto Principal</div>
+                  <div>✓ <strong>FRENTE</strong> → Imagem Frente</div>
+                  <div>✓ <strong>COSTAS</strong> → Imagem Costas</div>
+                  <div>✓ <strong>LATERAL DIREITO</strong> → Lado Direito</div>
+                  <div>✓ <strong>LATERAL ESQUERDO</strong> → Lado Esquerdo</div>
+                  <p className="text-muted-foreground mt-2">
+                    * Números no início são ignorados (ex: "01 FRENTE")
+                  </p>
+                </div>
+                
+                <Input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files.length > 0) {
+                      handleMultipleFilesUpload(e.target.files);
+                    }
+                  }}
+                  disabled={uploading}
+                  className="cursor-pointer"
+                />
+                
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <ImageIcon className="h-4 w-4" />
+                  <span>Selecione 5 imagens ou mais</span>
+                </div>
+              </div>
+
+              {/* SEPARADOR */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    ou upload individual
+                  </span>
+                </div>
+              </div>
+
               <div className="space-y-4">
-                <Label>Imagens Obrigatórias*</Label>
+                <Label>Imagens Obrigatórias* (ou use o upload rápido acima)</Label>
                 
                 {[
                   { field: "photo_main" as const, label: "Foto Principal (para seleção)" },
@@ -573,12 +711,19 @@ const Models = () => {
                         required
                       />
                       {imagePreviews[field] && (
-                        <div className="w-20 h-20 border rounded flex-shrink-0">
-                          <img
-                            src={imagePreviews[field]}
-                            alt={label}
-                            className="w-full h-full object-cover rounded"
-                          />
+                        <div className="flex items-center gap-2">
+                          <div className="w-20 h-20 border rounded flex-shrink-0">
+                            <img
+                              src={imagePreviews[field]}
+                              alt={label}
+                              className="w-full h-full object-cover rounded"
+                            />
+                          </div>
+                          {imageFiles[field] && (
+                            <span className="text-xs text-green-600 font-medium">
+                              ✓ Auto
+                            </span>
+                          )}
                         </div>
                       )}
                     </div>
