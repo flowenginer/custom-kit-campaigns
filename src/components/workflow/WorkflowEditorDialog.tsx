@@ -81,7 +81,8 @@ export const WorkflowEditorDialog = ({ workflowId, open, onOpenChange, onSave }:
         { id: "customize_back", label: "Personalizar Costas", order: 3, enabled: true, is_custom: false },
         { id: "sleeve_right", label: "Manga Direita", order: 4, enabled: true, is_custom: false },
         { id: "sleeve_left", label: "Manga Esquerda", order: 5, enabled: true, is_custom: false },
-        { id: "review", label: "Revisão e Envio", order: 6, enabled: true, is_custom: false },
+        { id: "adicionar_logo", label: "Adicionar Logo", order: 6, enabled: true, is_custom: false },
+        { id: "review", label: "Revisão e Envio", order: 7, enabled: true, is_custom: false },
       ]);
     }
   }, [open, workflowId]);
