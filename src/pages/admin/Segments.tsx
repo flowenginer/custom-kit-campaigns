@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Eye } from "lucide-react";
 
@@ -14,6 +16,7 @@ interface Segment {
   id: string;
   name: string;
   description: string | null;
+  model_tag: string | null;
   created_at: string;
 }
 
@@ -23,7 +26,7 @@ const Segments = () => {
   const [modelCounts, setModelCounts] = useState<Record<string, number>>({});
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSegment, setEditingSegment] = useState<Segment | null>(null);
-  const [formData, setFormData] = useState({ name: "", description: "" });
+  const [formData, setFormData] = useState({ name: "", description: "", model_tag: "" });
 
   useEffect(() => {
     loadSegments();
@@ -78,7 +81,7 @@ const Segments = () => {
       }
 
       setIsDialogOpen(false);
-      setFormData({ name: "", description: "" });
+      setFormData({ name: "", description: "", model_tag: "" });
       setEditingSegment(null);
       loadSegments();
     } catch (error: any) {
@@ -112,7 +115,7 @@ const Segments = () => {
 
   const openEditDialog = (segment: Segment) => {
     setEditingSegment(segment);
-    setFormData({ name: segment.name, description: segment.description || "" });
+    setFormData({ name: segment.name, description: segment.description || "", model_tag: segment.model_tag || "" });
     setIsDialogOpen(true);
   };
 
@@ -128,7 +131,7 @@ const Segments = () => {
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => { setEditingSegment(null); setFormData({ name: "", description: "" }); }}>
+            <Button onClick={() => { setEditingSegment(null); setFormData({ name: "", description: "", model_tag: "" }); }}>
               <Plus className="mr-2 h-4 w-4" />
               Novo Segmento
             </Button>
@@ -160,6 +163,25 @@ const Segments = () => {
                   placeholder="Descreva este segmento..."
                 />
               </div>
+              <div>
+                <Label htmlFor="model_tag">Etiqueta de Modelo*</Label>
+                <Select
+                  value={formData.model_tag}
+                  onValueChange={(value) => setFormData({ ...formData, model_tag: value })}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo de modelo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="manga_longa">👕 Manga Longa</SelectItem>
+                    <SelectItem value="ziper">🧥 Ziper</SelectItem>
+                    <SelectItem value="manga_curta">👔 Manga Curta</SelectItem>
+                    <SelectItem value="regata">🎽 Regata</SelectItem>
+                    <SelectItem value="kit">📦 Kit</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <Button type="submit" className="w-full">
                 {editingSegment ? "Atualizar" : "Criar"} Segmento
               </Button>
@@ -173,7 +195,18 @@ const Segments = () => {
           <Card key={segment.id}>
             <CardHeader>
               <CardTitle className="flex items-start justify-between">
-                <span className="line-clamp-1">{segment.name}</span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="line-clamp-1">{segment.name}</span>
+                  {segment.model_tag && (
+                    <Badge variant="secondary" className="text-xs">
+                      {segment.model_tag === 'manga_longa' && '👕 Manga Longa'}
+                      {segment.model_tag === 'ziper' && '🧥 Ziper'}
+                      {segment.model_tag === 'manga_curta' && '👔 Manga Curta'}
+                      {segment.model_tag === 'regata' && '🎽 Regata'}
+                      {segment.model_tag === 'kit' && '📦 Kit'}
+                    </Badge>
+                  )}
+                </div>
                 <div className="flex gap-2">
                   <Button
                     variant="ghost"
