@@ -1225,11 +1225,11 @@ const Campaign = () => {
         {/* Header */}
         <div className="mb-6 md:mb-8">
           {/* Logo Space Sports - Menor no mobile */}
-          <div className="flex justify-center mb-4 md:mb-6">
+          <div className="flex justify-center mb-3 md:mb-6">
             <img 
               src="https://cdn.awsli.com.br/400x300/1896/1896367/logo/space-logo-site-wgernz.png" 
               alt="Space Sports" 
-              className="h-12 md:h-16 w-auto"
+              className="h-8 md:h-16 w-auto"
               loading="eager"
             />
           </div>
