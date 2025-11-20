@@ -91,6 +91,7 @@ export default function AdvancedDashboard() {
           campaign_id,
           campaigns(segment_id, segments(name))
         `)
+        .is("deleted_at", null)
         .gte("created_at", startDate.toISOString())
         .lte("created_at", endDate.toISOString());
 
