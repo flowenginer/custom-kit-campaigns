@@ -57,7 +57,8 @@ const Settings = () => {
 
   // 🆕 Lista de todas as colunas possíveis no Kanban
   const allKanbanColumns = [
-    { id: 'pending', label: 'Novos (Com Logo)', description: 'Tarefas prontas para iniciar' },
+    { id: 'logo_needed', label: 'Leads sem Logo', description: 'Tarefas aguardando logo do cliente (Vendas)' },
+    { id: 'pending', label: 'Novos Com Logo', description: 'Tarefas prontas para iniciar (Design)' },
     { id: 'in_progress', label: 'Em Progresso', description: 'Tarefas sendo trabalhadas' },
     { id: 'awaiting_approval', label: 'Aguard. Aprovação', description: 'Mockups aguardando aprovação do cliente' },
     { id: 'changes_requested', label: 'Revisão Necessária', description: 'Cliente solicitou alterações' },

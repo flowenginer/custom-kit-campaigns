@@ -121,11 +121,12 @@ const Creation = () => {
         designer_initials: null,
       }));
 
-      // Filtrar no frontend: APENAS tasks que NÃO precisam de logo (false ou null)
-      const filteredTasks = formattedTasks.filter(task => task.needs_logo !== true);
-      console.log('✅ Creation.tsx - Tasks after filter (needs_logo !== true):', filteredTasks.length);
+      // ✅ Filtrar no frontend: Designers NÃO veem tarefas que precisam de logo
+      // Tasks com needs_logo=true aparecem APENAS na página Orders (Vendedores)
+      const designerTasks = formattedTasks.filter(task => task.needs_logo !== true);
+      console.log('✅ Creation.tsx - Designer tasks (needs_logo !== true):', designerTasks.length);
 
-      setTasks(filteredTasks);
+      setTasks(designerTasks);
 
       // Atualizar tarefa selecionada se o modal estiver aberto
       if (selectedTask) {
@@ -164,6 +165,18 @@ const Creation = () => {
 
     const task = active.data.current?.task as DesignTask;
     const newStatus = over.id as DesignTask['status'];
+
+    // ✅ VALIDAÇÃO: Não permitir mover para coluna "logo_needed" (é apenas visual)
+    if (newStatus === 'logo_needed') {
+      toast.error("Não é possível mover tarefas para 'Leads sem Logo'. Use a página Pedidos para gerenciar logos.");
+      return;
+    }
+
+    // ✅ VALIDAÇÃO: Não permitir mover DE "logo_needed" por drag (use o botão no modal)
+    if (task.needs_logo === true) {
+      toast.error("Para enviar esta tarefa ao designer, use o botão 'Enviar para Designer' no modal da tarefa.");
+      return;
+    }
 
     // Validações de negócio
     if (newStatus === 'awaiting_approval' && !task.assigned_to) {
@@ -208,10 +221,18 @@ const Creation = () => {
 
   const columns = [
     {
-      title: "Novos",
+      title: "Leads sem Logo", // 🆕 PRIMEIRA COLUNA - Visível apenas se permitida
+      status: "logo_needed" as const,
+      icon: Inbox,
+      // Filtra tarefas que precisam de logo (needs_logo = true)
+      tasks: tasks.filter(t => t.needs_logo === true),
+    },
+    {
+      title: "Novos Com Logo", // 🆕 RENOMEADO de "Novos"
       status: "pending" as const,
       icon: Inbox,
-      tasks: tasks.filter(t => t.status === "pending"),
+      // Filtra tarefas que NÃO precisam de logo E estão com status 'pending'
+      tasks: tasks.filter(t => !t.needs_logo && t.status === "pending"),
     },
     {
       title: "Em Progresso",
