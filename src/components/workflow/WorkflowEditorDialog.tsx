@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +12,7 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Trash2, Plus } from "lucide-react";
+import { GripVertical, Trash2, Plus, Paintbrush } from "lucide-react";
 import { AddStepDialog } from "./AddStepDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { WorkflowStep } from "@/types/workflow";
@@ -23,7 +24,19 @@ interface WorkflowEditorDialogProps {
   onSave: () => void;
 }
 
-const SortableItem = ({ step, onToggle, onRemove }: { step: WorkflowStep; onToggle: () => void; onRemove: () => void }) => {
+const SortableItem = ({ 
+  step, 
+  onToggle, 
+  onRemove, 
+  onEditLayout,
+  workflowId 
+}: { 
+  step: WorkflowStep; 
+  onToggle: () => void; 
+  onRemove: () => void;
+  onEditLayout: () => void;
+  workflowId: string | null;
+}) => {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: step.id });
 
   const style = {
@@ -41,7 +54,18 @@ const SortableItem = ({ step, onToggle, onRemove }: { step: WorkflowStep; onTogg
         <p className="font-medium">{step.label}</p>
         {step.description && <p className="text-sm text-muted-foreground">{step.description}</p>}
         {step.is_custom && <span className="text-xs text-primary">Personalizada</span>}
+        {step.page_layout && <span className="text-xs text-green-600 ml-2">✓ Layout personalizado</span>}
       </div>
+
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        onClick={onEditLayout}
+        disabled={!workflowId}
+        title="Editar Layout da Página"
+      >
+        <Paintbrush className="w-4 h-4 text-primary" />
+      </Button>
 
       <Switch checked={step.enabled} onCheckedChange={onToggle} />
       
@@ -55,6 +79,7 @@ const SortableItem = ({ step, onToggle, onRemove }: { step: WorkflowStep; onTogg
 };
 
 export const WorkflowEditorDialog = ({ workflowId, open, onOpenChange, onSave }: WorkflowEditorDialogProps) => {
+  const navigate = useNavigate();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [steps, setSteps] = useState<WorkflowStep[]>([]);
@@ -145,6 +170,14 @@ export const WorkflowEditorDialog = ({ workflowId, open, onOpenChange, onSave }:
     setShowAddStep(false);
   };
 
+  const handleEditLayout = (stepId: string) => {
+    if (!workflowId) {
+      toast.error("Salve o workflow primeiro antes de editar o layout");
+      return;
+    }
+    navigate(`/admin/workflows/${workflowId}/step/${stepId}/builder`);
+  };
+
   const handleSave = async () => {
     if (!name.trim()) {
       toast.error("Nome do workflow é obrigatório");
@@ -209,7 +242,14 @@ export const WorkflowEditorDialog = ({ workflowId, open, onOpenChange, onSave }:
                 <SortableContext items={steps.map((s) => s.id)} strategy={verticalListSortingStrategy}>
                   <div className="space-y-2">
                     {steps.map((step) => (
-                      <SortableItem key={step.id} step={step} onToggle={() => handleToggleStep(step.id)} onRemove={() => handleRemoveStep(step.id)} />
+                      <SortableItem 
+                        key={step.id} 
+                        step={step} 
+                        onToggle={() => handleToggleStep(step.id)} 
+                        onRemove={() => handleRemoveStep(step.id)} 
+                        onEditLayout={() => handleEditLayout(step.id)}
+                        workflowId={workflowId}
+                      />
                     ))}
                   </div>
                 </SortableContext>

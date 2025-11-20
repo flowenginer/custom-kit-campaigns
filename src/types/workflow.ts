@@ -1,3 +1,5 @@
+import { PageLayout } from './page-builder';
+
 export interface WorkflowStep {
   id: string;
   label: string;
@@ -5,6 +7,7 @@ export interface WorkflowStep {
   enabled: boolean;
   is_custom?: boolean;
   description?: string;
+  page_layout?: PageLayout; // Layout editável da página
 }
 
 export interface WorkflowTemplate {

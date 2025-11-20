@@ -70,6 +70,7 @@ const App = () => (
             <Route path="campaigns" element={<Campaigns />} />
             <Route path="leads" element={<Leads />} />
             <Route path="workflows" element={<Workflows />} />
+            <Route path="workflows/:workflowId/step/:stepId/builder" element={<PageBuilder />} />
             <Route path="ab-tests" element={<ABTests />} />
             <Route path="creation" element={<Creation />} />
             <Route path="orders" element={<Orders />} /> {/* 🆕 Rota de Pedidos */}
