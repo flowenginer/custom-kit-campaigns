@@ -26,12 +26,14 @@ export const RealtimeMetrics = () => {
       const { count: activeCount } = await supabase
         .from("leads")
         .select("*", { count: "exact", head: true })
+        .is("deleted_at", null)
         .gte("created_at", last24h);
 
       // Best converter
       const { data: converterData } = await supabase
         .from("leads")
         .select("utm_source, order_id")
+        .is("deleted_at", null)
         .gte("created_at", last24h)
         .not("utm_source", "is", null);
 
@@ -54,6 +56,7 @@ export const RealtimeMetrics = () => {
       const { data: campaignData } = await supabase
         .from("leads")
         .select("campaign_id, campaigns(name)")
+        .is("deleted_at", null)
         .gte("created_at", new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString())
         .not("campaign_id", "is", null);
 
@@ -72,6 +75,7 @@ export const RealtimeMetrics = () => {
       const { data: warningData } = await supabase
         .from("leads")
         .select("utm_source, order_id")
+        .is("deleted_at", null)
         .gte("created_at", today)
         .not("utm_source", "is", null);
 

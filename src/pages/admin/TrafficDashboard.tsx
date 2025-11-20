@@ -126,6 +126,7 @@ const TrafficDashboard = () => {
       let leadsQuery = supabase
         .from("leads")
         .select("id, session_id, order_id, campaign_id, campaigns(name)")
+        .is("deleted_at", null)
         .gte("created_at", startDate.toISOString())
         .lte("created_at", endDate.toISOString());
 

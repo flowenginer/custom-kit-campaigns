@@ -67,6 +67,7 @@ export function DynamicFilters({ startDate, endDate, onFiltersChange }: DynamicF
     const { data: leadsData } = await supabase
       .from("leads")
       .select("utm_source, utm_medium, utm_campaign")
+      .is("deleted_at", null)
       .gte("created_at", startDate.toISOString())
       .lte("created_at", endDate.toISOString());
 
