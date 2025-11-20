@@ -14,7 +14,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { PageComponent, PageLayout, ComponentType } from "@/types/page-builder";
 import { WorkflowStep } from "@/types/workflow";
-import { ComponentRenderer } from "@/components/page-builder/ComponentRenderer";
+import { VisualPageRenderer } from "@/components/page-builder/VisualPageRenderer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -802,14 +802,45 @@ export const PageBuilder = () => {
               </div>
             </div>
 
-            {/* Canvas Central */}
-            <div className="flex-1 overflow-y-auto p-8 bg-muted/50">
-              <div className="mx-auto" style={{ maxWidth: layout.containerWidth }}>
-                <Card>
-                  <CardContent className="p-8">
-                    <ComponentRenderer layout={layout} />
-                  </CardContent>
-                </Card>
+            {/* Canvas Central - Renderização Visual Real */}
+            <div className="flex-1 overflow-y-auto p-8 bg-gradient-to-br from-muted/30 to-muted/50">
+              {/* Barra de Info */}
+              <div className="mb-4 flex items-center justify-between px-4 py-2 bg-background rounded-lg shadow-sm border">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 rounded-full bg-primary animate-pulse"></div>
+                    <span className="text-sm font-medium">Editor Visual</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    Clique nos elementos para editar
+                  </span>
+                </div>
+                {selectedComponent && (
+                  <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-md">
+                    <span className="text-xs font-medium text-primary">
+                      Selecionado: {selectedComponent.type === 'heading' ? `Título H${(selectedComponent as any).level}` :
+                                    selectedComponent.type === 'text' ? 'Texto' :
+                                    selectedComponent.type === 'form_field' ? `Campo: ${(selectedComponent as any).label}` :
+                                    selectedComponent.type}
+                    </span>
+                  </div>
+                )}
+              </div>
+              
+              {/* Canvas */}
+              <div className="mx-auto shadow-2xl rounded-lg overflow-hidden bg-background border-2" style={{ maxWidth: layout.containerWidth }}>
+                <VisualPageRenderer 
+                  layout={layout}
+                  selectedComponentId={selectedComponent?.id || null}
+                  onSelectComponent={(id) => {
+                    if (id) {
+                      const comp = layout.components.find(c => c.id === id);
+                      setSelectedComponent(comp || null);
+                    } else {
+                      setSelectedComponent(null);
+                    }
+                  }}
+                />
               </div>
             </div>
 
@@ -1197,11 +1228,21 @@ export const PageBuilder = () => {
             </div>
           </>
         ) : (
-          <div className="flex-1 overflow-y-auto p-8">
-            <div className="mx-auto" style={{ maxWidth: layout.containerWidth }}>
-              <ComponentRenderer layout={layout} />
+          <>
+            <div className="flex-1 overflow-y-auto p-8 bg-gradient-to-br from-muted/30 to-muted/50">
+              <div className="mb-4 text-center">
+                <h3 className="text-lg font-semibold mb-2">Preview Completo</h3>
+                <p className="text-sm text-muted-foreground">Visualização final da página como será exibida aos usuários</p>
+              </div>
+              <div className="mx-auto shadow-2xl rounded-lg overflow-hidden bg-background" style={{ maxWidth: layout.containerWidth }}>
+                <VisualPageRenderer 
+                  layout={layout}
+                  selectedComponentId={null}
+                  onSelectComponent={() => {}}
+                />
+              </div>
             </div>
-          </div>
+          </>
         )}
       </div>
     </div>
