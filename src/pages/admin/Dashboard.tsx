@@ -143,7 +143,7 @@ const Dashboard = () => {
       // Carregar métricas de leads com UTMs
       const {
         data: leadsData
-      } = await supabase.from("leads").select("completed, utm_source, utm_medium, utm_campaign, utm_term, utm_content, campaign_id");
+      } = await supabase.from("leads").select("completed, utm_source, utm_medium, utm_campaign, utm_term, utm_content, campaign_id").is("deleted_at", null);
       if (leadsData) {
         const total = leadsData.length;
         const converted = leadsData.filter(l => l.completed).length;
@@ -254,9 +254,10 @@ const Dashboard = () => {
   const loadDesignMetrics = async () => {
     try {
       // 1. Buscar contagem de tarefas por status
-      const { data: tasksData } = await supabase
-        .from("design_tasks")
-        .select("status, assigned_to, created_at, completed_at");
+    const { data: tasksData } = await supabase
+      .from("design_tasks")
+      .select("status, assigned_to, created_at, completed_at")
+      .is("deleted_at", null);
 
       const statusLabels: Record<string, { label: string; color: string }> = {
         pending: { label: "Aguardando", color: "hsl(var(--chart-blue))" },
