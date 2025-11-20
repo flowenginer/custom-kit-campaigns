@@ -61,6 +61,12 @@ export function UtmBreakdownDialog({
   }, [open, campaignId]);
 
   const loadUtmData = async () => {
+    if (!campaignId) {
+      console.error('[UTM Breakdown] campaignId não fornecido');
+      toast.error('ID da campanha inválido');
+      return;
+    }
+    
     setIsLoading(true);
     try {
       // 1. Buscar todas as visitas da campanha com UTMs
@@ -72,15 +78,21 @@ export function UtmBreakdownDialog({
 
       if (visitsError) throw visitsError;
 
-      // 2. Buscar leads relacionados às visitas
-      const sessionIds = visits?.map((v) => v.session_id) || [];
+      // ✅ Log para debug
+      console.log(`[UTM Breakdown] Campanha: ${campaignName}`);
+      console.log(`[UTM Breakdown] Visitas encontradas: ${visits?.length || 0}`);
+      console.log(`[UTM Breakdown] Sessions únicas: ${new Set(visits?.map(v => v.session_id)).size}`);
+
+      // 2. Buscar TODOS os leads da campanha (mais eficiente - removido limitação do .in())
       const { data: leads, error: leadsError } = await supabase
         .from("leads")
         .select("session_id, completed")
-        .eq("campaign_id", campaignId)
-        .in("session_id", sessionIds);
+        .eq("campaign_id", campaignId);
 
       if (leadsError) throw leadsError;
+
+      // ✅ Log para debug
+      console.log(`[UTM Breakdown] Leads encontrados: ${leads?.length || 0}`);
 
       // 3. Criar mapa de sessions -> lead info
       const leadsMap = new Map(
@@ -133,6 +145,9 @@ export function UtmBreakdownDialog({
 
       setUtmStats(statsArray);
 
+      // ✅ Log para debug
+      console.log(`[UTM Breakdown] Stats processados: ${statsArray.length} grupos de UTM`);
+
       // 7. Calcular totais
       const totalVisits = statsArray.reduce((sum, s) => sum + s.total_visits, 0);
       const totalLeads = statsArray.reduce((sum, s) => sum + s.leads_count, 0);
@@ -147,6 +162,9 @@ export function UtmBreakdownDialog({
         completed: totalCompleted,
         conversionRate: totalVisits > 0 ? (totalLeads / totalVisits) * 100 : 0,
       });
+
+      // ✅ Log para debug
+      console.log(`[UTM Breakdown] Total: ${totalVisits} visitas, ${totalLeads} leads, ${totalCompleted} concluídos`);
     } catch (error) {
       console.error("Erro ao carregar UTMs:", error);
       toast.error("Erro ao carregar breakdown de UTMs");
