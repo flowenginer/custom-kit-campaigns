@@ -783,3 +783,5 @@ export const PageBuilder = () => {
     </div>
   );
 };
+
+export default PageBuilder;

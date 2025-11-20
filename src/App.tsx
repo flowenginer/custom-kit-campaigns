@@ -19,6 +19,7 @@ import Creation from "./pages/admin/Creation";
 import Orders from "./pages/admin/Orders"; // 🆕 Página de Pedidos (Vendedores)
 import Api from "./pages/admin/Api";
 import Settings from "./pages/admin/Settings";
+import PageBuilder from "./pages/admin/PageBuilder";
 import Campaign from "./pages/Campaign";
 import ABTestRedirect from "./pages/ABTestRedirect";
 import { UploadLogos } from "./pages/UploadLogos";
