@@ -150,59 +150,48 @@ export const PageBuilder = () => {
             {
               id: 'heading-1',
               type: 'heading',
-              content: 'Dados Iniciais',
-              level: 2,
+              content: 'Vamos começar! Preencha seus dados',
+              level: 1,
               align: 'center',
-              order: 0
+              order: 0,
+              className: 'text-3xl font-bold mb-2'
             },
             {
-              id: 'text-1',
-              type: 'text',
-              content: 'Preencha seus dados para começar',
-              align: 'center',
-              order: 1,
-              className: 'text-muted-foreground mb-6'
+              id: 'spacer-1',
+              type: 'spacer',
+              height: '2rem',
+              order: 1
             },
             {
               id: 'field-name',
               type: 'form_field',
               fieldType: 'text',
-              label: 'Nome Completo',
-              placeholder: 'Digite seu nome',
+              label: 'Digite seu nome*',
+              placeholder: 'Nome completo',
               required: true,
               dataKey: 'name',
               order: 2
             },
             {
-              id: 'field-email',
-              type: 'form_field',
-              fieldType: 'email',
-              label: 'E-mail',
-              placeholder: 'seu@email.com',
-              required: false,
-              dataKey: 'email',
-              order: 3
-            },
-            {
               id: 'field-phone',
               type: 'form_field',
               fieldType: 'tel',
-              label: 'Telefone',
+              label: 'Digite seu WhatsApp*',
               placeholder: '(00) 00000-0000',
               required: true,
               dataKey: 'phone',
-              order: 4
+              order: 3
             },
             {
               id: 'field-quantity',
               type: 'form_field',
               fieldType: 'select',
-              label: 'Quantidade',
-              placeholder: 'Selecione',
+              label: 'Quantidade*',
+              placeholder: 'Selecione a quantidade',
               required: true,
               dataKey: 'quantity',
-              options: ['10-49 unidades', '50-99 unidades', '100+ unidades', 'Personalizado'],
-              order: 5
+              options: ['10 unidades', '20 unidades', '30 unidades', '50 unidades', '100 unidades', 'Personalizado'],
+              order: 4
             }
           ],
           backgroundColor: '#ffffff',
@@ -216,22 +205,31 @@ export const PageBuilder = () => {
             {
               id: 'heading-1',
               type: 'heading',
-              content: 'Escolha seu Modelo',
-              level: 2,
+              content: 'Escolha seu modelo',
+              level: 1,
               align: 'center',
-              order: 0
+              order: 0,
+              className: 'text-3xl font-bold mb-8'
             },
             {
-              id: 'text-1',
+              id: 'text-info',
               type: 'text',
-              content: 'Selecione o modelo de camisa que melhor se adequa ao seu projeto',
+              content: 'Os modelos são exibidos dinamicamente do banco de dados',
               align: 'center',
               order: 1,
-              className: 'text-muted-foreground mb-8'
+              className: 'text-muted-foreground mb-6'
+            },
+            {
+              id: 'text-note',
+              type: 'text',
+              content: 'Nota: A galeria de modelos é renderizada dinamicamente e não pode ser editada aqui',
+              align: 'center',
+              order: 2,
+              className: 'text-sm italic text-muted-foreground'
             }
           ],
           backgroundColor: '#ffffff',
-          containerWidth: '1000px',
+          containerWidth: '1200px',
           padding: '2rem'
         };
 
@@ -241,20 +239,51 @@ export const PageBuilder = () => {
             {
               id: 'heading-1',
               type: 'heading',
-              content: 'Personalize a Frente',
+              content: 'Preview - Frente',
               level: 2,
-              align: 'center',
-              order: 0
+              align: 'left',
+              order: 0,
+              className: 'text-2xl font-bold mb-4'
+            },
+            {
+              id: 'text-1',
+              type: 'text',
+              content: 'Opções de Personalização',
+              align: 'left',
+              order: 1,
+              className: 'text-xl font-semibold mb-2'
+            },
+            {
+              id: 'text-2',
+              type: 'text',
+              content: 'Escolha abaixo o que você quer que tenha no seu modelo',
+              align: 'left',
+              order: 2,
+              className: 'text-muted-foreground mb-6'
+            },
+            {
+              id: 'divider-1',
+              type: 'divider',
+              order: 3,
+              className: 'my-4'
+            },
+            {
+              id: 'text-3',
+              type: 'text',
+              content: 'Tipo de Logo',
+              align: 'left',
+              order: 4,
+              className: 'font-semibold mb-3'
             },
             {
               id: 'editor-front',
               type: 'custom_editor',
               editorType: 'front',
-              order: 1
+              order: 5
             }
           ],
           backgroundColor: '#ffffff',
-          containerWidth: '1000px',
+          containerWidth: '1200px',
           padding: '2rem'
         };
 
@@ -264,20 +293,37 @@ export const PageBuilder = () => {
             {
               id: 'heading-1',
               type: 'heading',
-              content: 'Personalize as Costas',
+              content: 'Preview - Costas',
               level: 2,
-              align: 'center',
-              order: 0
+              align: 'left',
+              order: 0,
+              className: 'text-2xl font-bold mb-4'
+            },
+            {
+              id: 'text-1',
+              type: 'text',
+              content: 'Personalizações das Costas',
+              align: 'left',
+              order: 1,
+              className: 'text-xl font-semibold mb-2'
+            },
+            {
+              id: 'text-2',
+              type: 'text',
+              content: 'Escolha abaixo o que você quer que tenha no seu modelo',
+              align: 'left',
+              order: 2,
+              className: 'text-muted-foreground mb-6'
             },
             {
               id: 'editor-back',
               type: 'custom_editor',
               editorType: 'back',
-              order: 1
+              order: 3
             }
           ],
           backgroundColor: '#ffffff',
-          containerWidth: '1000px',
+          containerWidth: '1200px',
           padding: '2rem'
         };
 
@@ -287,20 +333,37 @@ export const PageBuilder = () => {
             {
               id: 'heading-1',
               type: 'heading',
-              content: 'Manga Direita',
+              content: 'Preview - Manga Direita',
               level: 2,
-              align: 'center',
-              order: 0
+              align: 'left',
+              order: 0,
+              className: 'text-2xl font-bold mb-4'
+            },
+            {
+              id: 'text-1',
+              type: 'text',
+              content: 'Personalizações - Manga Direita',
+              align: 'left',
+              order: 1,
+              className: 'text-xl font-semibold mb-2'
+            },
+            {
+              id: 'text-2',
+              type: 'text',
+              content: 'Escolha abaixo o que você quer que tenha no seu modelo',
+              align: 'left',
+              order: 2,
+              className: 'text-muted-foreground mb-6'
             },
             {
               id: 'editor-sleeve',
               type: 'custom_editor',
               editorType: 'sleeve_right',
-              order: 1
+              order: 3
             }
           ],
           backgroundColor: '#ffffff',
-          containerWidth: '800px',
+          containerWidth: '1000px',
           padding: '2rem'
         };
 
@@ -310,20 +373,37 @@ export const PageBuilder = () => {
             {
               id: 'heading-1',
               type: 'heading',
-              content: 'Manga Esquerda',
+              content: 'Preview - Manga Esquerda',
               level: 2,
-              align: 'center',
-              order: 0
+              align: 'left',
+              order: 0,
+              className: 'text-2xl font-bold mb-4'
+            },
+            {
+              id: 'text-1',
+              type: 'text',
+              content: 'Personalizações - Manga Esquerda',
+              align: 'left',
+              order: 1,
+              className: 'text-xl font-semibold mb-2'
+            },
+            {
+              id: 'text-2',
+              type: 'text',
+              content: 'Escolha abaixo o que você quer que tenha no seu modelo',
+              align: 'left',
+              order: 2,
+              className: 'text-muted-foreground mb-6'
             },
             {
               id: 'editor-sleeve',
               type: 'custom_editor',
               editorType: 'sleeve_left',
-              order: 1
+              order: 3
             }
           ],
           backgroundColor: '#ffffff',
-          containerWidth: '800px',
+          containerWidth: '1000px',
           padding: '2rem'
         };
 
@@ -334,35 +414,45 @@ export const PageBuilder = () => {
               id: 'heading-1',
               type: 'heading',
               content: 'Adicionar Logo',
-              level: 2,
+              level: 1,
               align: 'center',
-              order: 0
+              order: 0,
+              className: 'text-3xl font-bold mb-4'
             },
             {
               id: 'text-1',
               type: 'text',
-              content: 'Você deseja adicionar sua logo agora ou depois?',
+              content: 'Escolha uma das opções abaixo:',
               align: 'center',
               order: 1,
-              className: 'text-muted-foreground mb-6'
+              className: 'text-muted-foreground mb-8'
             },
             {
-              id: 'divider-1',
-              type: 'divider',
-              order: 2
+              id: 'button-add',
+              type: 'button',
+              text: '📤 Adicionar Logo',
+              variant: 'default',
+              size: 'lg',
+              align: 'center',
+              onClick: 'add_logo',
+              order: 2,
+              className: 'w-full max-w-2xl mb-4'
             },
             {
-              id: 'text-2',
-              type: 'text',
-              content: 'Escolha uma das opções abaixo:',
-              align: 'left',
+              id: 'button-skip',
+              type: 'button',
+              text: 'Não Tenho Logo',
+              variant: 'outline',
+              size: 'lg',
+              align: 'center',
+              onClick: 'skip_logo',
               order: 3,
-              className: 'font-semibold mt-6 mb-4'
+              className: 'w-full max-w-2xl'
             }
           ],
           backgroundColor: '#ffffff',
-          containerWidth: '600px',
-          padding: '2rem'
+          containerWidth: '800px',
+          padding: '3rem'
         };
 
       case 'review':
@@ -371,27 +461,69 @@ export const PageBuilder = () => {
             {
               id: 'heading-1',
               type: 'heading',
-              content: 'Revisão do Pedido',
-              level: 2,
-              align: 'center',
-              order: 0
+              content: 'Revisão e Envio',
+              level: 1,
+              align: 'left',
+              order: 0,
+              className: 'text-3xl font-bold mb-6'
             },
             {
-              id: 'text-1',
+              id: 'text-model',
               type: 'text',
-              content: 'Revise todas as informações antes de finalizar',
-              align: 'center',
+              content: 'Modelo Selecionado:',
+              align: 'left',
               order: 1,
-              className: 'text-muted-foreground mb-8'
+              className: 'text-lg font-semibold mb-4'
+            },
+            {
+              id: 'text-note',
+              type: 'text',
+              content: 'As imagens do modelo e resumo das personalizações são gerados dinamicamente',
+              align: 'left',
+              order: 2,
+              className: 'text-sm italic text-muted-foreground mb-4'
             },
             {
               id: 'divider-1',
               type: 'divider',
-              order: 2
+              order: 3,
+              className: 'my-6'
+            },
+            {
+              id: 'text-summary',
+              type: 'text',
+              content: 'Resumo das Personalizações:',
+              align: 'left',
+              order: 4,
+              className: 'text-lg font-semibold mb-4'
+            },
+            {
+              id: 'text-front',
+              type: 'text',
+              content: 'Frente: (Dinâmico)',
+              align: 'left',
+              order: 5,
+              className: 'text-primary font-medium mb-2'
+            },
+            {
+              id: 'text-back',
+              type: 'text',
+              content: 'Costas: (Dinâmico)',
+              align: 'left',
+              order: 6,
+              className: 'text-primary font-medium mb-2'
+            },
+            {
+              id: 'text-sleeves',
+              type: 'text',
+              content: 'Mangas: (Dinâmico)',
+              align: 'left',
+              order: 7,
+              className: 'text-primary font-medium mb-4'
             }
           ],
           backgroundColor: '#ffffff',
-          containerWidth: '800px',
+          containerWidth: '1000px',
           padding: '2rem'
         };
 
@@ -409,7 +541,7 @@ export const PageBuilder = () => {
             {
               id: 'text-1',
               type: 'text',
-              content: 'Comece adicionando componentes à sua página',
+              content: 'Adicione componentes para construir esta página',
               align: 'center',
               order: 1,
               className: 'text-muted-foreground'
