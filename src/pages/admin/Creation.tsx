@@ -6,6 +6,7 @@ import { KanbanColumn } from "@/components/creation/KanbanColumn";
 import { TaskDetailsDialog } from "@/components/creation/TaskDetailsDialog";
 import { TaskCardSkeleton } from "@/components/creation/TaskCardSkeleton";
 import { DesignTask } from "@/types/design-task";
+import { useUserRole } from "@/hooks/useUserRole"; // 🆕 Import do hook
 import { toast } from "sonner";
 import { 
   RefreshCw, 
@@ -33,6 +34,9 @@ const Creation = () => {
   const [selectedTask, setSelectedTask] = useState<DesignTask | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTask, setActiveTask] = useState<DesignTask | null>(null);
+  
+  // 🆕 Buscar colunas permitidas para o usuário
+  const { allowedKanbanColumns, isSuperAdmin } = useUserRole();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -241,6 +245,13 @@ const Creation = () => {
     },
   ];
 
+  // 🆕 FILTRAR COLUNAS BASEADO EM PERMISSÕES (Super Admin vê todas)
+  const visibleColumns = isSuperAdmin 
+    ? columns 
+    : columns.filter(col => allowedKanbanColumns.includes(col.status));
+
+  console.log('📊 Colunas Visíveis:', visibleColumns.map(c => c.title), '| Total:', visibleColumns.length);
+
   const inProgressCount = tasks.filter(t => t.status === "in_progress").length;
 
   return (
@@ -292,7 +303,7 @@ const Creation = () => {
           </div>
         ) : (
           <div className="flex gap-4 overflow-x-auto pb-4">
-            {columns.map((column) => (
+            {visibleColumns.map((column) => (
               <KanbanColumn
                 key={column.status}
                 title={column.title}

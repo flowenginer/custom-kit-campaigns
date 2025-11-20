@@ -22,6 +22,7 @@ interface User {
   last_sign_in_at: string | null;
   profile: {
     full_name: string | null;
+    allowed_kanban_columns?: string[] | null; // 🆕 Adicionar colunas permitidas
   } | null;
   roles: AppRole[];
 }
@@ -40,6 +41,7 @@ const Settings = () => {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [selectedRoles, setSelectedRoles] = useState<AppRole[]>([]);
+  const [allowedKanbanColumns, setAllowedKanbanColumns] = useState<string[]>([]); // 🆕 Estado para colunas permitidas
   
   // Password reset states
   const [selectedUserForReset, setSelectedUserForReset] = useState("");
@@ -52,6 +54,16 @@ const Settings = () => {
   const [globalBodyScripts, setGlobalBodyScripts] = useState("");
   const [isLoadingScripts, setIsLoadingScripts] = useState(true);
   const [isSavingScripts, setIsSavingScripts] = useState(false);
+
+  // 🆕 Lista de todas as colunas possíveis no Kanban
+  const allKanbanColumns = [
+    { id: 'pending', label: 'Novos (Com Logo)', description: 'Tarefas prontas para iniciar' },
+    { id: 'in_progress', label: 'Em Progresso', description: 'Tarefas sendo trabalhadas' },
+    { id: 'awaiting_approval', label: 'Aguard. Aprovação', description: 'Mockups aguardando aprovação do cliente' },
+    { id: 'changes_requested', label: 'Revisão Necessária', description: 'Cliente solicitou alterações' },
+    { id: 'approved', label: 'Aprovado', description: 'Aprovado pelo cliente' },
+    { id: 'completed', label: 'Produção', description: 'Enviado para produção' },
+  ];
 
   const allRoles: { value: AppRole; label: string; description: string }[] = [
     { value: 'super_admin', label: 'Super Admin', description: 'Acesso total + gerenciar usuários' },
@@ -213,13 +225,14 @@ const Settings = () => {
         },
         body: {
           user_id: selectedUser.id,
-          roles: selectedRoles
+          roles: selectedRoles,
+          allowed_kanban_columns: allowedKanbanColumns // 🆕 ENVIAR COLUNAS
         }
       });
 
       if (response.error) throw response.error;
       if (response.data?.success) {
-        toast.success('Roles atualizados com sucesso');
+        toast.success('Roles e permissões atualizados com sucesso'); // 🆕 Mensagem atualizada
         setIsEditDialogOpen(false);
         resetForm();
         fetchUsers();
@@ -322,6 +335,12 @@ const Settings = () => {
   const openEditDialog = (user: User) => {
     setSelectedUser(user);
     setSelectedRoles(user.roles);
+    
+    // 🆕 Carregar colunas permitidas
+    setAllowedKanbanColumns(
+      user.profile?.allowed_kanban_columns || allKanbanColumns.map(c => c.id)
+    );
+    
     setIsEditDialogOpen(true);
   };
 
@@ -685,46 +704,97 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
       {/* Dialog: Editar Roles */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Permissões</DialogTitle>
             <DialogDescription>
               Atualize as permissões de acesso de {selectedUser?.email}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2">
-            {allRoles.map((role) => (
-              <div key={role.value} className="flex items-start space-x-2">
-                <Checkbox
-                  id={`edit-${role.value}`}
-                  checked={selectedRoles.includes(role.value)}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      setSelectedRoles([...selectedRoles, role.value]);
-                    } else {
-                      setSelectedRoles(selectedRoles.filter(r => r !== role.value));
-                    }
-                  }}
-                />
-                <div className="grid gap-1.5 leading-none">
-                  <label
-                    htmlFor={`edit-${role.value}`}
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    {role.label}
-                  </label>
-                  <p className="text-sm text-muted-foreground">
-                    {role.description}
-                  </p>
+          
+          <div className="space-y-6">
+            {/* 🆕 SEÇÃO DE ROLES */}
+            <div className="space-y-2">
+              <Label className="text-base font-semibold">Funções do Usuário</Label>
+              {allRoles.map((role) => (
+                <div key={role.value} className="flex items-start space-x-2">
+                  <Checkbox
+                    id={`edit-${role.value}`}
+                    checked={selectedRoles.includes(role.value)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedRoles([...selectedRoles, role.value]);
+                      } else {
+                        setSelectedRoles(selectedRoles.filter(r => r !== role.value));
+                      }
+                    }}
+                  />
+                  <div className="grid gap-1.5 leading-none">
+                    <label
+                      htmlFor={`edit-${role.value}`}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      {role.label}
+                    </label>
+                    <p className="text-sm text-muted-foreground">
+                      {role.description}
+                    </p>
+                  </div>
                 </div>
+              ))}
+            </div>
+
+            {/* 🆕 SEÇÃO DE PERMISSÕES DE COLUNAS KANBAN */}
+            <div className="space-y-4 border-t pt-4">
+              <div>
+                <Label className="text-base font-semibold">Colunas Kanban Permitidas</Label>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Selecione quais colunas este usuário pode visualizar na tela de Criação
+                </p>
               </div>
-            ))}
+              
+              <div className="grid grid-cols-1 gap-3">
+                {allKanbanColumns.map((col) => (
+                  <div key={col.id} className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-accent/50 transition-colors">
+                    <Checkbox
+                      id={`kanban-col-${col.id}`}
+                      checked={allowedKanbanColumns.includes(col.id)}
+                      onCheckedChange={(checked) => {
+                        setAllowedKanbanColumns(prev => 
+                          checked ? [...prev, col.id] : prev.filter(c => c !== col.id)
+                        );
+                      }}
+                    />
+                    <div className="flex-1">
+                      <label 
+                        htmlFor={`kanban-col-${col.id}`} 
+                        className="text-sm font-medium cursor-pointer block"
+                      >
+                        {col.label}
+                      </label>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {col.description}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {allowedKanbanColumns.length === 0 && (
+                <div className="bg-destructive/10 text-destructive text-xs p-2 rounded-md">
+                  ⚠️ Selecione pelo menos uma coluna
+                </div>
+              )}
+            </div>
           </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleUpdateRoles}>Salvar Alterações</Button>
+            <Button onClick={handleUpdateRoles} disabled={allowedKanbanColumns.length === 0}>
+              Salvar Alterações
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

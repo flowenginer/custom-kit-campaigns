@@ -691,6 +691,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          allowed_kanban_columns: Json | null
           avatar_url: string | null
           created_at: string | null
           full_name: string | null
@@ -698,6 +699,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          allowed_kanban_columns?: Json | null
           avatar_url?: string | null
           created_at?: string | null
           full_name?: string | null
@@ -705,6 +707,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          allowed_kanban_columns?: Json | null
           avatar_url?: string | null
           created_at?: string | null
           full_name?: string | null
