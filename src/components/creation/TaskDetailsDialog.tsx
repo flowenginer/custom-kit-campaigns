@@ -134,6 +134,7 @@ export const TaskDetailsDialog = ({
 
     toast.success("Tarefa atribuída com sucesso!");
     onTaskUpdated();
+    onOpenChange(false); // ✅ Fecha o modal para forçar recarregamento ao reabrir
   };
 
   const handleStatusChange = async (newStatus: DesignTask['status'], notes?: string) => {
@@ -193,6 +194,7 @@ export const TaskDetailsDialog = ({
 
     toast.success("Status atualizado!");
     onTaskUpdated();
+    onOpenChange(false); // ✅ Fecha o modal para forçar recarregamento ao reabrir
   };
 
   const handleSendToDesigner = async () => {
@@ -264,8 +266,8 @@ export const TaskDetailsDialog = ({
 
       toast.success("Logo enviado! Tarefa encaminhada para o designer.");
       setLogoFile(null);
-      onOpenChange(false);
       onTaskUpdated();
+      onOpenChange(false); // ✅ Fecha o modal
     } catch (error) {
       console.error("Error sending to designer:", error);
       toast.error("Erro ao enviar para designer");
@@ -295,8 +297,8 @@ export const TaskDetailsDialog = ({
     }
 
     toast.success('Tarefa excluída com sucesso');
-    onTaskUpdated();
     onOpenChange(false);
+    onTaskUpdated(); // ✅ Garante ordem correta
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -370,10 +372,11 @@ export const TaskDetailsDialog = ({
 
       if (updateError) throw updateError;
 
-      toast.success("Mockup enviado com sucesso!");
+    toast.success("Mockup enviado com sucesso!");
       setUploadNotes("");
       setUploadProgress("");
       onTaskUpdated();
+      onOpenChange(false); // ✅ Fecha o modal para forçar recarregamento ao reabrir
     } catch (error) {
       console.error("Error uploading files:", error);
       toast.error("Erro ao enviar mockup");
@@ -432,18 +435,24 @@ export const TaskDetailsDialog = ({
   const isTaskCreator = task?.created_by === currentUser?.id;
   const isAssignedDesigner = task?.assigned_to === currentUser?.id;
   
-  const canAssign = task?.status === 'pending' && 
+  // ✅ PERMITIR assumir tarefas em 'pending' OU 'in_progress' que não têm designer
+  const canAssign = (task?.status === 'pending' || task?.status === 'in_progress') && 
                     !task?.assigned_to && 
                     isDesigner &&
                     context === 'creation';
   
-  console.log('🎯 canAssign Debug:', {
+  console.log('🎯 Permissões Debug:', {
     canAssign,
+    canUpload: isAssignedDesigner && task?.status !== 'completed' && task?.status !== 'approved' && !isVendorContext,
+    canSendApproval: isAssignedDesigner && task?.status === 'in_progress',
     status: task?.status,
     assigned_to: task?.assigned_to,
+    isAssignedDesigner,
+    currentUserId: currentUser?.id,
     isDesigner,
     context,
-    uploaded_logo_url: task?.uploaded_logo_url
+    uploaded_logo_url: task?.uploaded_logo_url,
+    design_files_count: task?.design_files?.length || 0
   });
   
   const canUpload = isAssignedDesigner &&
@@ -622,39 +631,54 @@ export const TaskDetailsDialog = ({
             <div className="flex-1 mt-4 overflow-y-auto pr-4">
               <TabsContent value="details" className="space-y-4 mt-0">
               <div className="grid grid-cols-2 gap-6">
-                {/* Logo do Cliente (se existir) */}
-                {task.uploaded_logo_url && !isVendorContext && (
+                {/* Logo do Cliente - SEMPRE mostrar se não for vendedor */}
+                {!isVendorContext && (
                   <Card className="col-span-2">
                     <CardContent className="p-4 space-y-3">
                       <div className="flex items-center justify-between">
                         <h3 className="font-semibold text-sm">📎 Logo do Cliente</h3>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => window.open(task.uploaded_logo_url!, '_blank')}
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          Baixar Logo
-                        </Button>
+                        {task.uploaded_logo_url && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => window.open(task.uploaded_logo_url!, '_blank')}
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            Baixar Logo
+                          </Button>
+                        )}
                       </div>
-                      <div className="relative w-full h-40 bg-muted rounded-lg overflow-hidden border-2 border-dashed">
-                        <img 
-                          src={task.uploaded_logo_url} 
-                          alt="Logo do cliente"
-                          className="w-full h-full object-contain p-2"
-                          onError={(e) => {
-                            const target = e.currentTarget;
-                            target.style.display = 'none';
-                            const parent = target.parentElement;
-                            if (parent) {
-                              parent.innerHTML = '<div class="flex items-center justify-center h-full text-muted-foreground"><p>Logo não pode ser visualizado</p></div>';
-                            }
-                          }}
-                        />
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Logo enviado pelo vendedor. Use este arquivo para criar o mockup.
-                      </p>
+                      
+                      {task.uploaded_logo_url ? (
+                        <>
+                          <div className="relative w-full h-40 bg-muted rounded-lg overflow-hidden border-2 border-dashed">
+                            <img 
+                              src={task.uploaded_logo_url} 
+                              alt="Logo do cliente"
+                              className="w-full h-full object-contain p-2"
+                              onError={(e) => {
+                                const target = e.currentTarget;
+                                target.style.display = 'none';
+                                const parent = target.parentElement;
+                                if (parent) {
+                                  parent.innerHTML = '<div class="flex items-center justify-center h-full text-muted-foreground text-sm"><p>❌ Erro ao carregar logo</p></div>';
+                                }
+                              }}
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Logo enviado pelo vendedor. Use este arquivo para criar o mockup.
+                          </p>
+                        </>
+                      ) : (
+                        <div className="relative w-full h-40 bg-muted/50 rounded-lg overflow-hidden border-2 border-dashed flex items-center justify-center">
+                          <div className="text-center text-muted-foreground">
+                            <Upload className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                            <p className="text-sm">Cliente não enviou logo</p>
+                            <p className="text-xs mt-1">Prossiga sem logo ou solicite ao vendedor</p>
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 )}

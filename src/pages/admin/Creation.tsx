@@ -167,6 +167,12 @@ const Creation = () => {
       return;
     }
 
+    // ✅ NOVA VALIDAÇÃO: Impedir ir para "in_progress" sem designer
+    if (newStatus === 'in_progress' && !task.assigned_to) {
+      toast.error("Você precisa assumir a tarefa antes de movê-la para 'Em Progresso'. Clique na tarefa e use o botão 'Assumir Tarefa'.");
+      return;
+    }
+
     if (task.status === 'completed' && newStatus !== 'completed') {
       toast.error("Não é possível mover tarefas de volta da Produção");
       return;
