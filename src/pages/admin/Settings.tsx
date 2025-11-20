@@ -190,12 +190,12 @@ const Settings = () => {
           Authorization: `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: {
+        body: JSON.stringify({
           email,
           password,
           full_name: fullName,
           roles: selectedRoles
-        }
+        })
       });
 
       if (response.error) throw response.error;
@@ -223,11 +223,11 @@ const Settings = () => {
           Authorization: `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: {
+        body: JSON.stringify({
           user_id: selectedUser.id,
           roles: selectedRoles,
-          allowed_kanban_columns: allowedKanbanColumns // 🆕 ENVIAR COLUNAS
-        }
+          allowed_kanban_columns: allowedKanbanColumns
+        })
       });
 
       if (response.error) throw response.error;
@@ -255,9 +255,9 @@ const Settings = () => {
           Authorization: `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: {
+        body: JSON.stringify({
           user_id: selectedUser.id
-        }
+        })
       });
 
       if (response.error) throw response.error;
@@ -288,10 +288,10 @@ const Settings = () => {
           Authorization: `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: {
+        body: JSON.stringify({
           user_id: selectedUserForReset,
           new_password: newPassword
-        }
+        })
       });
 
       if (response.error) throw response.error;
