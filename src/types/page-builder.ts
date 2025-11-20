@@ -9,10 +9,32 @@ export type ComponentType =
   | 'card'
   | 'custom_editor'; // Para os editores existentes (FrontEditor, etc)
 
+export interface ProgressIndicator {
+  showLogo: boolean;
+  logoUrl: string;
+  logoHeight: string;
+  showStepNumbers: boolean;
+  showProgressBar: boolean;
+  currentStep: number;
+  totalSteps: number;
+  progressBarColor?: string;
+  completedStepColor?: string;
+  pendingStepColor?: string;
+}
+
+export interface HeaderConfig {
+  backgroundColor?: string;
+  showSaveIndicator?: boolean;
+}
+
 export interface BaseComponent {
   id: string;
   type: ComponentType;
   order: number;
+  width?: string;
+  height?: string;
+  padding?: string;
+  margin?: string;
 }
 
 export interface HeadingComponent extends BaseComponent {
@@ -67,6 +89,7 @@ export interface FormFieldComponent extends BaseComponent {
 export interface SpacerComponent extends BaseComponent {
   type: 'spacer';
   height: string; // e.g. "20px", "2rem"
+  className?: string;
 }
 
 export interface DividerComponent extends BaseComponent {
@@ -85,6 +108,7 @@ export interface CardComponent extends BaseComponent {
 export interface CustomEditorComponent extends BaseComponent {
   type: 'custom_editor';
   editorType: 'front' | 'back' | 'sleeve_right' | 'sleeve_left';
+  className?: string;
 }
 
 export type PageComponent =
@@ -103,4 +127,6 @@ export interface PageLayout {
   backgroundColor?: string;
   containerWidth?: string;
   padding?: string;
+  header?: HeaderConfig;
+  progressIndicator?: ProgressIndicator;
 }

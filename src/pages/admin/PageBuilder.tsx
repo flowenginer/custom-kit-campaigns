@@ -8,13 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Trash2, Save, Eye } from "lucide-react";
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent, DragStartEvent, DragOverlay } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { PageComponent, PageLayout, ComponentType } from "@/types/page-builder";
 import { WorkflowStep } from "@/types/workflow";
 import { VisualPageRenderer } from "@/components/page-builder/VisualPageRenderer";
+import { PropertyPanel } from "@/components/page-builder/PropertyPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -83,10 +84,20 @@ export const PageBuilder = () => {
     components: [],
     backgroundColor: '',
     containerWidth: '800px',
-    padding: '2rem'
+    padding: '2rem',
+    progressIndicator: {
+      showLogo: true,
+      logoUrl: 'https://cdn.awsli.com.br/2638/logo/logo-1738787896-space-logo-site-wgernz.png',
+      logoHeight: '64px',
+      showStepNumbers: true,
+      showProgressBar: true,
+      currentStep: 1,
+      totalSteps: 8,
+    }
   });
   const [selectedComponent, setSelectedComponent] = useState<PageComponent | null>(null);
   const [previewMode, setPreviewMode] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -554,18 +565,48 @@ export const PageBuilder = () => {
     }
   };
 
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (over && active.id !== over.id) {
-      setLayout((prev) => {
-        const oldIndex = prev.components.findIndex((c) => c.id === active.id);
-        const newIndex = prev.components.findIndex((c) => c.id === over.id);
-        const newComponents = arrayMove(prev.components, oldIndex, newIndex);
-        return {
-          ...prev,
-          components: newComponents.map((c, i) => ({ ...c, order: i }))
-        };
-      });
+    setActiveId(null);
+    
+    if (over) {
+      const overId = over.id as string;
+      
+      if (overId.startsWith('drop-zone-')) {
+        const targetIndex = over.data.current?.index;
+        if (targetIndex !== undefined) {
+          setLayout(prev => {
+            const oldIndex = prev.components.findIndex(c => c.id === active.id);
+            if (oldIndex === -1) return prev;
+            
+            const newComponents = [...prev.components];
+            const [movedComponent] = newComponents.splice(oldIndex, 1);
+            newComponents.splice(targetIndex > oldIndex ? targetIndex - 1 : targetIndex, 0, movedComponent);
+            
+            return {
+              ...prev,
+              components: newComponents.map((c, i) => ({ ...c, order: i }))
+            };
+          });
+        }
+      } else if (active.id !== over.id) {
+        setLayout(prev => {
+          const oldIndex = prev.components.findIndex(c => c.id === active.id);
+          const newIndex = prev.components.findIndex(c => c.id === over.id);
+          
+          if (oldIndex === -1 || newIndex === -1) return prev;
+          
+          const newComponents = arrayMove(prev.components, oldIndex, newIndex);
+          return {
+            ...prev,
+            components: newComponents.map((c, i) => ({ ...c, order: i }))
+          };
+        });
+      }
     }
   };
 
@@ -713,6 +754,52 @@ export const PageBuilder = () => {
     setSaving(false);
   };
 
+  const duplicateComponent = () => {
+    if (!selectedComponent) return;
+    
+    const newComponent = {
+      ...selectedComponent,
+      id: `comp-${Date.now()}`,
+      order: selectedComponent.order + 0.5
+    };
+    
+    setLayout(prev => ({
+      ...prev,
+      components: [...prev.components, newComponent].sort((a, b) => a.order - b.order).map((c, i) => ({ ...c, order: i }))
+    }));
+    setSelectedComponent(newComponent);
+  };
+
+  const moveComponentUp = () => {
+    if (!selectedComponent) return;
+    
+    const index = layout.components.findIndex(c => c.id === selectedComponent.id);
+    if (index <= 0) return;
+    
+    setLayout(prev => {
+      const newComponents = arrayMove(prev.components, index, index - 1);
+      return {
+        ...prev,
+        components: newComponents.map((c, i) => ({ ...c, order: i }))
+      };
+    });
+  };
+
+  const moveComponentDown = () => {
+    if (!selectedComponent) return;
+    
+    const index = layout.components.findIndex(c => c.id === selectedComponent.id);
+    if (index >= layout.components.length - 1) return;
+    
+    setLayout(prev => {
+      const newComponents = arrayMove(prev.components, index, index + 1);
+      return {
+        ...prev,
+        components: newComponents.map((c, i) => ({ ...c, order: i }))
+      };
+    });
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center h-screen">Carregando...</div>;
   }
@@ -803,436 +890,55 @@ export const PageBuilder = () => {
             </div>
 
             {/* Canvas Central - Renderização Visual Real */}
-            <div className="flex-1 overflow-y-auto p-8 bg-gradient-to-br from-muted/30 to-muted/50">
-              {/* Barra de Info */}
-              <div className="mb-4 flex items-center justify-between px-4 py-2 bg-background rounded-lg shadow-sm border">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 rounded-full bg-primary animate-pulse"></div>
-                    <span className="text-sm font-medium">Editor Visual</span>
-                  </div>
-                  <span className="text-xs text-muted-foreground">
-                    Clique nos elementos para editar
-                  </span>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              <div className="flex-1 overflow-y-auto p-8 bg-gradient-to-br from-muted/30 to-muted/50">
+                {/* Canvas */}
+                <div className="mx-auto shadow-2xl rounded-lg overflow-hidden bg-background border-2" style={{ maxWidth: layout.containerWidth }}>
+                  <VisualPageRenderer 
+                    layout={layout}
+                    selectedComponentId={selectedComponent?.id || null}
+                    onSelectComponent={(id) => {
+                      if (id) {
+                        const comp = layout.components.find(c => c.id === id);
+                        setSelectedComponent(comp || null);
+                      } else {
+                        setSelectedComponent(null);
+                      }
+                    }}
+                  />
                 </div>
-                {selectedComponent && (
-                  <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-md">
-                    <span className="text-xs font-medium text-primary">
-                      Selecionado: {selectedComponent.type === 'heading' ? `Título H${(selectedComponent as any).level}` :
-                                    selectedComponent.type === 'text' ? 'Texto' :
-                                    selectedComponent.type === 'form_field' ? `Campo: ${(selectedComponent as any).label}` :
-                                    selectedComponent.type}
-                    </span>
-                  </div>
-                )}
               </div>
               
-              {/* Canvas */}
-              <div className="mx-auto shadow-2xl rounded-lg overflow-hidden bg-background border-2" style={{ maxWidth: layout.containerWidth }}>
-                <VisualPageRenderer 
-                  layout={layout}
-                  selectedComponentId={selectedComponent?.id || null}
-                  onSelectComponent={(id) => {
-                    if (id) {
-                      const comp = layout.components.find(c => c.id === id);
-                      setSelectedComponent(comp || null);
-                    } else {
-                      setSelectedComponent(null);
-                    }
-                  }}
-                />
-              </div>
-            </div>
+              <DragOverlay>
+                {activeId ? (
+                  <div className="opacity-50 bg-primary/10 p-4 rounded border-2 border-primary">
+                    Movendo componente...
+                  </div>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
 
             {/* Painel de Propriedades */}
-            <div className="w-80 border-l p-4 overflow-y-auto">
-              {selectedComponent ? (
-                <div className="space-y-4">
-                  <h3 className="font-semibold">Propriedades</h3>
-                  
-                  {selectedComponent.type === 'heading' && (
-                    <>
-                      <div>
-                        <Label>Conteúdo</Label>
-                        <Input
-                          value={selectedComponent.content}
-                          onChange={(e) => updateComponent({ content: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <Label>Nível</Label>
-                        <Select
-                          value={String(selectedComponent.level)}
-                          onValueChange={(v) => updateComponent({ level: parseInt(v) as any })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {[1, 2, 3, 4, 5, 6].map(n => (
-                              <SelectItem key={n} value={String(n)}>H{n}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>Alinhamento</Label>
-                        <Select
-                          value={selectedComponent.align}
-                          onValueChange={(v: any) => updateComponent({ align: v })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="left">Esquerda</SelectItem>
-                            <SelectItem value="center">Centro</SelectItem>
-                            <SelectItem value="right">Direita</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>Cor</Label>
-                        <Input
-                          type="color"
-                          value={selectedComponent.color || '#000000'}
-                          onChange={(e) => updateComponent({ color: e.target.value })}
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {selectedComponent.type === 'text' && (
-                    <>
-                      <div>
-                        <Label>Conteúdo</Label>
-                        <Textarea
-                          value={selectedComponent.content}
-                          onChange={(e) => updateComponent({ content: e.target.value })}
-                          rows={4}
-                        />
-                      </div>
-                      <div>
-                        <Label>Alinhamento</Label>
-                        <Select
-                          value={selectedComponent.align}
-                          onValueChange={(v: any) => updateComponent({ align: v })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="left">Esquerda</SelectItem>
-                            <SelectItem value="center">Centro</SelectItem>
-                            <SelectItem value="right">Direita</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>Cor</Label>
-                        <Input
-                          type="color"
-                          value={selectedComponent.color || '#000000'}
-                          onChange={(e) => updateComponent({ color: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <Label>Tamanho da Fonte</Label>
-                        <Input
-                          value={selectedComponent.fontSize || ''}
-                          onChange={(e) => updateComponent({ fontSize: e.target.value })}
-                          placeholder="Ex: 16px, 1rem"
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {selectedComponent.type === 'image' && (
-                    <>
-                      <div>
-                        <Label>URL da Imagem</Label>
-                        <Input
-                          value={selectedComponent.src}
-                          onChange={(e) => updateComponent({ src: e.target.value })}
-                          placeholder="https://..."
-                        />
-                      </div>
-                      <div>
-                        <Label>Texto Alternativo</Label>
-                        <Input
-                          value={selectedComponent.alt}
-                          onChange={(e) => updateComponent({ alt: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <Label>Largura</Label>
-                        <Input
-                          value={selectedComponent.width || ''}
-                          onChange={(e) => updateComponent({ width: e.target.value })}
-                          placeholder="Ex: 300px, 100%"
-                        />
-                      </div>
-                      <div>
-                        <Label>Altura</Label>
-                        <Input
-                          value={selectedComponent.height || ''}
-                          onChange={(e) => updateComponent({ height: e.target.value })}
-                          placeholder="Ex: 200px, auto"
-                        />
-                      </div>
-                      <div>
-                        <Label>Alinhamento</Label>
-                        <Select
-                          value={selectedComponent.align}
-                          onValueChange={(v: any) => updateComponent({ align: v })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="left">Esquerda</SelectItem>
-                            <SelectItem value="center">Centro</SelectItem>
-                            <SelectItem value="right">Direita</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </>
-                  )}
-
-                  {selectedComponent.type === 'button' && (
-                    <>
-                      <div>
-                        <Label>Texto</Label>
-                        <Input
-                          value={selectedComponent.text}
-                          onChange={(e) => updateComponent({ text: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <Label>Variante</Label>
-                        <Select
-                          value={selectedComponent.variant}
-                          onValueChange={(v: any) => updateComponent({ variant: v })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="default">Padrão</SelectItem>
-                            <SelectItem value="outline">Outline</SelectItem>
-                            <SelectItem value="secondary">Secundário</SelectItem>
-                            <SelectItem value="ghost">Ghost</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>Tamanho</Label>
-                        <Select
-                          value={selectedComponent.size}
-                          onValueChange={(v: any) => updateComponent({ size: v })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="sm">Pequeno</SelectItem>
-                            <SelectItem value="default">Padrão</SelectItem>
-                            <SelectItem value="lg">Grande</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>Ação (onClick)</Label>
-                        <Input
-                          value={selectedComponent.onClick || ''}
-                          onChange={(e) => updateComponent({ onClick: e.target.value })}
-                          placeholder="Ex: next_step"
-                        />
-                      </div>
-                      <div>
-                        <Label>Alinhamento</Label>
-                        <Select
-                          value={selectedComponent.align}
-                          onValueChange={(v: any) => updateComponent({ align: v })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="left">Esquerda</SelectItem>
-                            <SelectItem value="center">Centro</SelectItem>
-                            <SelectItem value="right">Direita</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </>
-                  )}
-
-                  {selectedComponent.type === 'form_field' && (
-                    <>
-                      <div>
-                        <Label>Label</Label>
-                        <Input
-                          value={selectedComponent.label}
-                          onChange={(e) => updateComponent({ label: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <Label>Tipo de Campo</Label>
-                        <Select
-                          value={selectedComponent.fieldType}
-                          onValueChange={(v: any) => updateComponent({ fieldType: v })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="text">Texto</SelectItem>
-                            <SelectItem value="email">Email</SelectItem>
-                            <SelectItem value="tel">Telefone</SelectItem>
-                            <SelectItem value="number">Número</SelectItem>
-                            <SelectItem value="select">Select</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>Placeholder</Label>
-                        <Input
-                          value={selectedComponent.placeholder || ''}
-                          onChange={(e) => updateComponent({ placeholder: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <Label>Chave de Dados</Label>
-                        <Input
-                          value={selectedComponent.dataKey}
-                          onChange={(e) => updateComponent({ dataKey: e.target.value })}
-                        />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          checked={selectedComponent.required || false}
-                          onCheckedChange={(checked) => updateComponent({ required: checked })}
-                        />
-                        <Label>Obrigatório</Label>
-                      </div>
-                      {selectedComponent.fieldType === 'select' && (
-                        <div>
-                          <Label>Opções (uma por linha)</Label>
-                          <Textarea
-                            value={selectedComponent.options?.join('\n') || ''}
-                            onChange={(e) => updateComponent({ options: e.target.value.split('\n').filter(Boolean) })}
-                            rows={4}
-                          />
-                        </div>
-                      )}
-                    </>
-                  )}
-
-                  {selectedComponent.type === 'spacer' && (
-                    <div>
-                      <Label>Altura</Label>
-                      <Input
-                        value={selectedComponent.height}
-                        onChange={(e) => updateComponent({ height: e.target.value })}
-                        placeholder="Ex: 2rem, 20px"
-                      />
-                    </div>
-                  )}
-
-                  {selectedComponent.type === 'divider' && (
-                    <>
-                      <div>
-                        <Label>Cor</Label>
-                        <Input
-                          type="color"
-                          value={selectedComponent.color || '#e5e7eb'}
-                          onChange={(e) => updateComponent({ color: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <Label>Espessura</Label>
-                        <Input
-                          value={selectedComponent.thickness || ''}
-                          onChange={(e) => updateComponent({ thickness: e.target.value })}
-                          placeholder="Ex: 1px, 2px"
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {selectedComponent.type === 'custom_editor' && (
-                    <div>
-                      <Label>Tipo de Editor</Label>
-                      <Select
-                        value={selectedComponent.editorType}
-                        onValueChange={(v: any) => updateComponent({ editorType: v })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="front">Frente</SelectItem>
-                          <SelectItem value="back">Costas</SelectItem>
-                          <SelectItem value="sleeve_right">Manga Direita</SelectItem>
-                          <SelectItem value="sleeve_left">Manga Esquerda</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  <div>
-                    <Label>Classes CSS Customizadas</Label>
-                    <Input
-                      value={(selectedComponent as any).className || ''}
-                      onChange={(e) => updateComponent({ className: e.target.value })}
-                      placeholder="Ex: mt-4 font-bold"
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center text-muted-foreground py-8">
-                  Selecione um componente para editar
-                </div>
-              )}
-
-              <div className="mt-6 pt-6 border-t">
-                <h3 className="font-semibold mb-3">Configurações da Página</h3>
-                <div className="space-y-4">
-                  <div>
-                    <Label>Cor de Fundo</Label>
-                    <Input
-                      type="color"
-                      value={layout.backgroundColor || '#ffffff'}
-                      onChange={(e) => setLayout(prev => ({ ...prev, backgroundColor: e.target.value }))}
-                    />
-                  </div>
-                  <div>
-                    <Label>Largura do Container</Label>
-                    <Input
-                      value={layout.containerWidth || ''}
-                      onChange={(e) => setLayout(prev => ({ ...prev, containerWidth: e.target.value }))}
-                      placeholder="Ex: 800px, 100%"
-                    />
-                  </div>
-                  <div>
-                    <Label>Padding</Label>
-                    <Input
-                      value={layout.padding || ''}
-                      onChange={(e) => setLayout(prev => ({ ...prev, padding: e.target.value }))}
-                      placeholder="Ex: 2rem, 20px"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
+            <PropertyPanel
+              component={selectedComponent}
+              onUpdate={updateComponent}
+              onDelete={() => selectedComponent && removeComponent(selectedComponent.id)}
+              onDuplicate={duplicateComponent}
+              onMoveUp={moveComponentUp}
+              onMoveDown={moveComponentDown}
+            />
           </>
         ) : (
           <>
             <div className="flex-1 overflow-y-auto p-8 bg-gradient-to-br from-muted/30 to-muted/50">
               <div className="mb-4 text-center">
                 <h3 className="text-lg font-semibold mb-2">Preview Completo</h3>
-                <p className="text-sm text-muted-foreground">Visualização final da página como será exibida aos usuários</p>
+                <p className="text-sm text-muted-foreground">Visualização final da página</p>
               </div>
               <div className="mx-auto shadow-2xl rounded-lg overflow-hidden bg-background" style={{ maxWidth: layout.containerWidth }}>
                 <VisualPageRenderer 
