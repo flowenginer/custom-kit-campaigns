@@ -424,7 +424,8 @@ export const TaskDetailsDialog = ({
     currentUserId: currentUser?.id,
     taskCreatedBy: task?.created_by,
     taskAssignedTo: task?.assigned_to,
-    taskStatus: task?.status
+    taskStatus: task?.status,
+    uploaded_logo_url: task?.uploaded_logo_url
   });
   
   // Verificações de permissões
@@ -441,7 +442,8 @@ export const TaskDetailsDialog = ({
     status: task?.status,
     assigned_to: task?.assigned_to,
     isDesigner,
-    context
+    context,
+    uploaded_logo_url: task?.uploaded_logo_url
   });
   
   const canUpload = isAssignedDesigner &&
@@ -620,6 +622,43 @@ export const TaskDetailsDialog = ({
             <div className="flex-1 mt-4 overflow-y-auto pr-4">
               <TabsContent value="details" className="space-y-4 mt-0">
               <div className="grid grid-cols-2 gap-6">
+                {/* Logo do Cliente (se existir) */}
+                {task.uploaded_logo_url && !isVendorContext && (
+                  <Card className="col-span-2">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold text-sm">📎 Logo do Cliente</h3>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => window.open(task.uploaded_logo_url!, '_blank')}
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Baixar Logo
+                        </Button>
+                      </div>
+                      <div className="relative w-full h-40 bg-muted rounded-lg overflow-hidden border-2 border-dashed">
+                        <img 
+                          src={task.uploaded_logo_url} 
+                          alt="Logo do cliente"
+                          className="w-full h-full object-contain p-2"
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            target.style.display = 'none';
+                            const parent = target.parentElement;
+                            if (parent) {
+                              parent.innerHTML = '<div class="flex items-center justify-center h-full text-muted-foreground"><p>Logo não pode ser visualizado</p></div>';
+                            }
+                          }}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Logo enviado pelo vendedor. Use este arquivo para criar o mockup.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* COLUNA 1: Informações do Cliente */}
                 <Card>
                   <CardContent className="p-4 space-y-3">

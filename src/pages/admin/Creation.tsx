@@ -87,7 +87,8 @@ const Creation = () => {
             full_name
           ),
           lead:leads!design_tasks_lead_id_fkey (
-            needs_logo
+            needs_logo,
+            uploaded_logo_url
           )
         `)
         .is('deleted_at', null)
@@ -109,6 +110,7 @@ const Creation = () => {
         model_name: task.orders?.shirt_models?.name,
         model_code: task.orders?.shirt_models?.sku,
         needs_logo: task.lead?.needs_logo,
+        uploaded_logo_url: task.lead?.uploaded_logo_url || null,
         created_by_salesperson: task.created_by_salesperson,
         creator_name: task.creator?.full_name || null,
         designer_name: null,
