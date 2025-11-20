@@ -742,8 +742,48 @@ export const TaskDetailsDialog = ({
                       <Label className="text-xs text-muted-foreground">Quantidade</Label>
                       <p className="text-sm">{task.quantity} unidades</p>
                     </div>
+                    
+                    {/* 🆕 FASE 6: Exibir nome do criador/vendedor */}
+                    {task.creator_name && (
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Criado por</Label>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-300">
+                            Vendedor
+                          </Badge>
+                          <p className="text-sm font-medium">
+                            {task.creator_name}
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
+
+                {/* 🆕 FASE 6: Logo do Cliente (se enviada) */}
+                {task.uploaded_logo_url && (
+                  <Card className="col-span-2">
+                    <CardContent className="p-4 space-y-2">
+                      <Label className="text-xs text-muted-foreground font-semibold">Logo do Cliente</Label>
+                      <div className="relative w-full h-32 bg-muted rounded-lg overflow-hidden border flex items-center justify-center">
+                        <img 
+                          src={task.uploaded_logo_url} 
+                          alt="Logo enviado"
+                          className="max-w-full max-h-full object-contain p-2"
+                        />
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="w-full"
+                        onClick={() => window.open(task.uploaded_logo_url!, '_blank')}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Baixar Logo Original
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* COLUNA 3: Designer Responsável (largura total) */}
                 <Card className="col-span-2">

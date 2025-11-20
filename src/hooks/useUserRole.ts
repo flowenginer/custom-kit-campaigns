@@ -9,6 +9,7 @@ interface UserRoleRow {
 
 export const useUserRole = () => {
   const [roles, setRoles] = useState<AppRole[]>([]);
+  const [allowedKanbanColumns, setAllowedKanbanColumns] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -36,6 +37,28 @@ export const useUserRole = () => {
       } else if (error) {
         console.error('Error fetching roles:', error);
       }
+
+      // 🆕 BUSCAR COLUNAS PERMITIDAS DO KANBAN
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('allowed_kanban_columns')
+        .eq('id', user.id)
+        .single();
+
+      if (!profileError && profileData) {
+        // Garantir que sempre seja um array de strings
+        const rawColumns = profileData.allowed_kanban_columns;
+        let columns: string[];
+        
+        if (Array.isArray(rawColumns)) {
+          columns = rawColumns as string[];
+        } else {
+          columns = ['pending', 'in_progress', 'awaiting_approval', 'changes_requested', 'approved', 'completed'];
+        }
+        
+        setAllowedKanbanColumns(columns);
+        console.log('📊 Allowed Kanban Columns:', columns);
+      }
       
       setIsLoading(false);
     };
@@ -45,6 +68,7 @@ export const useUserRole = () => {
 
   return {
     roles,
+    allowedKanbanColumns, // 🆕 NOVO RETORNO
     isLoading,
     isSuperAdmin: roles.includes('super_admin'),
     isAdmin: roles.includes('admin') || roles.includes('super_admin'),
