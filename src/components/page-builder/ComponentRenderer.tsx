@@ -163,18 +163,30 @@ const RenderComponent = ({
       );
 
     case 'custom_editor':
-      switch (component.editorType) {
-        case 'front':
-          return <FrontEditor {...customizationProps.front} />;
-        case 'back':
-          return <BackEditor {...customizationProps.back} />;
-        case 'sleeve_right':
-          return <SleeveEditor {...customizationProps.sleeveRight} />;
-        case 'sleeve_left':
-          return <SleeveEditor {...customizationProps.sleeveLeft} />;
-        default:
-          return null;
-      }
+      // Renderizar placeholder visual para editores customizados no Page Builder
+      const editorLabels = {
+        front: 'Editor de Personalização - Frente',
+        back: 'Editor de Personalização - Costas',
+        sleeve_right: 'Editor de Personalização - Manga Direita',
+        sleeve_left: 'Editor de Personalização - Manga Esquerda'
+      };
+      
+      return (
+        <Card className="bg-muted/30 border-2 border-dashed border-primary/30">
+          <CardContent className="p-8 text-center">
+            <div className="text-4xl mb-4">🎨</div>
+            <h3 className="text-lg font-semibold mb-2">
+              {editorLabels[component.editorType]}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Este componente renderiza o editor interativo completo com preview da camisa e opções de personalização.
+            </p>
+            <p className="text-xs text-muted-foreground mt-2 italic">
+              (O editor completo é exibido apenas na página de campanha real)
+            </p>
+          </CardContent>
+        </Card>
+      );
 
     default:
       return null;
