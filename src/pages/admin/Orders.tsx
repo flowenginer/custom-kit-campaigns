@@ -51,7 +51,8 @@ export default function Orders() {
           ),
           campaign:campaigns(name),
           lead:leads!design_tasks_lead_id_fkey (
-            needs_logo
+            needs_logo,
+            uploaded_logo_url
           )
         `)
         .is('deleted_at', null)
@@ -109,6 +110,7 @@ export default function Orders() {
           model_code: modelData?.sku,
           campaign_name: campaignData?.name,
           needs_logo: leadData?.needs_logo,
+          uploaded_logo_url: leadData?.uploaded_logo_url || null,
         } as DesignTask;
       });
 
