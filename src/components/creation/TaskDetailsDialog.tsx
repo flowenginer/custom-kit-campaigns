@@ -1,3 +1,25 @@
+/**
+ * TaskDetailsDialog - Modal de detalhes da tarefa
+ * 
+ * CONTEXTOS:
+ * 
+ * 1. ORDERS (Vendedores):
+ *    - Visualizam tarefas onde needs_logo === true
+ *    - Podem fazer upload do LOGO DO CLIENTE
+ *    - Podem enviar tarefa para designer após upload
+ *    - NÃO veem mockups ou customização detalhada
+ * 
+ * 2. CREATION (Designers):
+ *    - Visualizam tarefas onde needs_logo !== true (ou logo já foi enviado)
+ *    - Podem assumir tarefas não atribuídas
+ *    - Podem fazer upload de MOCKUPS
+ *    - Podem enviar para aprovação
+ *    - NÃO veem nada sobre "logo do cliente não enviado"
+ * 
+ * IMPORTANTE: As duas páginas usam o mesmo componente mas com lógicas
+ * completamente diferentes baseadas no contexto (orders vs creation).
+ */
+
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -441,24 +463,47 @@ export const TaskDetailsDialog = ({
                     isDesigner &&
                     context === 'creation';
   
-  console.log('🎯 Permissões Debug:', {
+  // ✅ FASE 2: Corrigir lógica de upload - permitir qualquer designer na tarefa in_progress
+  const canUpload = (task?.status === 'in_progress' || task?.status === 'changes_requested') &&
+                   isDesigner &&
+                   context === 'creation' &&
+                   !isVendorContext;
+  
+  // ✅ FASE 5: Log de debug detalhado
+  console.log('🎯 Permissões Debug (DETALHADO):', {
+    // Permissões
     canAssign,
-    canUpload: isAssignedDesigner && task?.status !== 'completed' && task?.status !== 'approved' && !isVendorContext,
+    canUpload,
     canSendApproval: isAssignedDesigner && task?.status === 'in_progress',
+    
+    // Estado da tarefa
+    taskId: task?.id,
     status: task?.status,
     assigned_to: task?.assigned_to,
-    isAssignedDesigner,
+    needs_logo: task?.needs_logo,
+    
+    // Dados do usuário
     currentUserId: currentUser?.id,
     isDesigner,
+    isSalesperson,
+    isAssignedDesigner,
+    
+    // Contexto
     context,
-    uploaded_logo_url: task?.uploaded_logo_url,
-    design_files_count: task?.design_files?.length || 0
+    isVendorContext,
+    
+    // Dados relevantes
+    uploaded_logo_url: task?.uploaded_logo_url ? 'EXISTS' : 'NULL',
+    design_files_count: task?.design_files?.length || 0,
+    
+    // Cálculos de permissão
+    uploadPermissionBreakdown: {
+      statusOK: task?.status === 'in_progress' || task?.status === 'changes_requested',
+      isDesignerOK: isDesigner,
+      contextOK: context === 'creation',
+      notVendorContextOK: !isVendorContext,
+    }
   });
-  
-  const canUpload = isAssignedDesigner &&
-                   task?.status !== 'completed' && 
-                   task?.status !== 'approved' &&
-                   !isVendorContext;
   const canSendApproval = isAssignedDesigner && 
                          task?.status === 'in_progress';
   const canRequestChanges = isAssignedDesigner && 
@@ -631,57 +676,8 @@ export const TaskDetailsDialog = ({
             <div className="flex-1 mt-4 overflow-y-auto pr-4">
               <TabsContent value="details" className="space-y-4 mt-0">
               <div className="grid grid-cols-2 gap-6">
-                {/* Logo do Cliente - SEMPRE mostrar se não for vendedor */}
-                {!isVendorContext && (
-                  <Card className="col-span-2">
-                    <CardContent className="p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-semibold text-sm">📎 Logo do Cliente</h3>
-                        {task.uploaded_logo_url && (
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => window.open(task.uploaded_logo_url!, '_blank')}
-                          >
-                            <Download className="h-4 w-4 mr-2" />
-                            Baixar Logo
-                          </Button>
-                        )}
-                      </div>
-                      
-                      {task.uploaded_logo_url ? (
-                        <>
-                          <div className="relative w-full h-40 bg-muted rounded-lg overflow-hidden border-2 border-dashed">
-                            <img 
-                              src={task.uploaded_logo_url} 
-                              alt="Logo do cliente"
-                              className="w-full h-full object-contain p-2"
-                              onError={(e) => {
-                                const target = e.currentTarget;
-                                target.style.display = 'none';
-                                const parent = target.parentElement;
-                                if (parent) {
-                                  parent.innerHTML = '<div class="flex items-center justify-center h-full text-muted-foreground text-sm"><p>❌ Erro ao carregar logo</p></div>';
-                                }
-                              }}
-                            />
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            Logo enviado pelo vendedor. Use este arquivo para criar o mockup.
-                          </p>
-                        </>
-                      ) : (
-                        <div className="relative w-full h-40 bg-muted/50 rounded-lg overflow-hidden border-2 border-dashed flex items-center justify-center">
-                          <div className="text-center text-muted-foreground">
-                            <Upload className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                            <p className="text-sm">Cliente não enviou logo</p>
-                            <p className="text-xs mt-1">Prossiga sem logo ou solicite ao vendedor</p>
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
+                {/* ✅ FASE 1: Seção "Logo do Cliente" REMOVIDA do contexto designer */}
+                {/* Designers só veem as informações do cliente e pedido, não precisam saber sobre logo */}
 
                 {/* COLUNA 1: Informações do Cliente */}
                 <Card>
@@ -775,73 +771,115 @@ export const TaskDetailsDialog = ({
 
             <TabsContent value="customization" className="mt-0">
               {isVendorContext ? (
-                <Card>
-                  <CardContent className="p-6 space-y-4">
-                    <div className="space-y-2">
-                      <Label>Upload do Logo do Cliente</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Faça o upload do logo do cliente para encaminhar a tarefa ao designer.
-                      </p>
-                    </div>
-                    <Input 
-                      type="file" 
-                      accept=".png,.jpg,.jpeg,.svg,.ai,.pdf"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          if (file.size > 10 * 1024 * 1024) {
-                            toast.error("Arquivo muito grande. Máximo: 10MB");
-                            return;
-                          }
-                          setLogoFile(file);
-                          toast.success("Logo selecionado!");
-                        }
-                      }}
-                      disabled={logoUploading}
-                    />
-                    {logoFile && (
-                      <div className="flex items-center gap-2 p-3 bg-accent rounded-md">
-                        <Check className="h-4 w-4 text-green-600" />
-                        <span className="text-sm font-medium">{logoFile.name}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setLogoFile(null)}
-                          disabled={logoUploading}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
+                <div className="space-y-4">
+                  <Card>
+                    <CardContent className="p-6 space-y-4">
+                      <div className="space-y-2">
+                        <Label>Upload do Logo do Cliente</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Faça o upload do logo do cliente para encaminhar a tarefa ao designer.
+                        </p>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
+                      <Input 
+                        type="file" 
+                        accept=".png,.jpg,.jpeg,.svg,.ai,.pdf"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            if (file.size > 10 * 1024 * 1024) {
+                              toast.error("Arquivo muito grande. Máximo: 10MB");
+                              return;
+                            }
+                            setLogoFile(file);
+                            toast.success("Logo selecionado!");
+                          }
+                        }}
+                        disabled={logoUploading}
+                      />
+                      {logoFile && (
+                        <div className="flex items-center gap-2 p-3 bg-accent rounded-md">
+                          <Check className="h-4 w-4 text-green-600" />
+                          <span className="text-sm font-medium">{logoFile.name}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setLogoFile(null)}
+                            disabled={logoUploading}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* ✅ FASE 3: Preview do logo enviado (apenas para vendedores) */}
+                  {task.uploaded_logo_url && (
+                    <Card>
+                      <CardContent className="p-4 space-y-2">
+                        <Label className="text-sm font-medium">Logo Enviado</Label>
+                        <div className="relative w-full h-48 bg-muted rounded-lg overflow-hidden border">
+                          <img 
+                            src={task.uploaded_logo_url} 
+                            alt="Logo enviado"
+                            className="w-full h-full object-contain p-4"
+                          />
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="w-full"
+                          onClick={() => window.open(task.uploaded_logo_url!, '_blank')}
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Baixar Logo Enviado
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
               ) : (
                 <CustomizationViewer data={task.customization_data} />
               )}
             </TabsContent>
 
             <TabsContent value="files" className="space-y-4 mt-0">
+              {/* ✅ FASE 4: Melhor feedback visual do upload de mockup */}
               {canUpload && (
-                <Card>
-                  <CardContent className="p-4 space-y-3">
-                    <Label>Enviar Mockup para Cliente</Label>
+                <Card className="border-2 border-dashed hover:border-primary transition-colors">
+                  <CardContent className="p-6 space-y-4">
+                    <div className="text-center space-y-2">
+                      <Upload className="h-12 w-12 mx-auto text-muted-foreground" />
+                      <Label htmlFor="mockup-upload" className="text-lg font-medium cursor-pointer">
+                        Enviar Mockup para Cliente
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        PDF, PNG, JPG, AI, PSD ou ZIP • Múltiplos arquivos permitidos • Máximo 10MB cada
+                      </p>
+                    </div>
+                    
                     <Input 
+                      id="mockup-upload"
                       type="file" 
                       accept=".pdf,.png,.jpg,.jpeg,.ai,.psd,.zip"
                       onChange={handleFileUpload}
                       multiple
                       disabled={uploading}
+                      className="cursor-pointer"
                     />
+                    
                     <Textarea 
                       placeholder="Notas desta versão (opcional)..."
                       value={uploadNotes}
                       onChange={(e) => setUploadNotes(e.target.value)}
                       disabled={uploading}
+                      className="min-h-[80px]"
                     />
+                    
                     {uploading && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        {uploadProgress}
+                      <div className="flex items-center gap-2 text-sm">
+                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                        <span className="font-medium">{uploadProgress}</span>
                       </div>
                     )}
                   </CardContent>
