@@ -37,7 +37,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
-import { DesignTask, DesignTaskHistory } from "@/types/design-task";
+import { DesignTask, DesignTaskHistory, DbTaskStatus } from "@/types/design-task";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -159,7 +159,7 @@ export const TaskDetailsDialog = ({
     onOpenChange(false); // ✅ Fecha o modal para forçar recarregamento ao reabrir
   };
 
-  const handleStatusChange = async (newStatus: DesignTask['status'], notes?: string) => {
+  const handleStatusChange = async (newStatus: DbTaskStatus, notes?: string) => {
     if (!task) return;
 
     const { error } = await supabase
@@ -277,14 +277,14 @@ export const TaskDetailsDialog = ({
       // Adicionar histórico
       await supabase
         .from('design_task_history')
-        .insert({
+        .insert([{
           task_id: task.id,
           user_id: currentUser.id,
           action: 'sent_to_designer',
-          old_status: task.status,
-          new_status: 'pending',
+          old_status: task.status as DbTaskStatus,
+          new_status: 'pending' as DbTaskStatus,
           notes: 'Logo enviado. Tarefa encaminhada para o designer.'
-        });
+        }]);
 
       toast.success("Logo enviado! Tarefa encaminhada para o designer.");
       setLogoFile(null);
@@ -457,9 +457,10 @@ export const TaskDetailsDialog = ({
   const isTaskCreator = task?.created_by === currentUser?.id;
   const isAssignedDesigner = task?.assigned_to === currentUser?.id;
   
-  // ✅ PERMITIR assumir tarefas em 'pending' OU 'in_progress' que não têm designer
-  const canAssign = (task?.status === 'pending' || task?.status === 'in_progress') && 
+  // ✅ PERMITIR assumir tarefas em 'pending' que não têm designer E não precisam de logo
+  const canAssign = task?.status === 'pending' && 
                     !task?.assigned_to && 
+                    !task?.needs_logo && // Não permitir assumir tarefas que ainda precisam de logo
                     isDesigner &&
                     context === 'creation';
   

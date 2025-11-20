@@ -1,10 +1,14 @@
-export type TaskStatus = 
+// Status do banco de dados (valores reais persistidos)
+export type DbTaskStatus = 
   | 'pending'
   | 'in_progress'
   | 'awaiting_approval'
   | 'approved'
   | 'changes_requested'
   | 'completed';
+
+// Status da UI (inclui filtros virtuais)
+export type TaskStatus = DbTaskStatus | 'logo_needed';
 
 export type TaskPriority = 'low' | 'normal' | 'high' | 'urgent';
 
