@@ -2,7 +2,7 @@ import { useNavigate, Outlet, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "./ui/button";
-import { LogOut, LayoutDashboard, Tag, Megaphone, Users, Workflow, FlaskConical, Palette, Code, Settings, ShoppingBag, BarChart3 } from "lucide-react";
+import { LogOut, LayoutDashboard, Tag, Megaphone, Users, Workflow, FlaskConical, Palette, Code, Settings, BarChart3 } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { Session } from "@supabase/supabase-js";
 import { NotificationsDropdown } from "./NotificationsDropdown";
@@ -181,20 +181,7 @@ const AdminLayout = () => {
               <span className="font-medium">Criação</span>
             </NavLink>}
 
-          {showSalespersonLinks && <NavLink 
-            to="/admin/orders" 
-            onClick={() => setIsNavigating(true)}
-            className={cn(
-              "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-secondary",
-              isNavigating && "opacity-50 pointer-events-none"
-            )}
-            activeClassName="bg-primary text-primary-foreground hover:bg-primary"
-          >
-              <ShoppingBag className="h-5 w-5" />
-              <span className="font-medium">Pedidos</span>
-            </NavLink>}
-
-          {showAdminLinks && <NavLink 
+          {showAdminLinks && <NavLink
             to="/admin/api"
             onClick={() => setIsNavigating(true)}
             className={cn(
