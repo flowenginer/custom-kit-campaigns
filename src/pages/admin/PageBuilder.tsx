@@ -105,11 +105,17 @@ export const PageBuilder = () => {
       .from("workflow_templates")
       .select("*")
       .eq("id", workflowId)
-      .single();
+      .maybeSingle();
 
     if (error) {
       toast.error("Erro ao carregar workflow");
       console.error(error);
+      setLoading(false);
+      return;
+    }
+
+    if (!data) {
+      toast.error("Workflow não encontrado");
       setLoading(false);
       return;
     }
@@ -120,14 +126,300 @@ export const PageBuilder = () => {
 
     if (step) {
       setCurrentStep(step);
+      
+      // Se já tem layout personalizado, usar ele
       if (step.page_layout) {
         setLayout(step.page_layout);
+      } else {
+        // Criar layout padrão baseado no tipo de etapa
+        const defaultLayout = createDefaultLayout(stepId, step);
+        setLayout(defaultLayout);
       }
     } else {
       toast.error("Etapa não encontrada");
     }
 
     setLoading(false);
+  };
+
+  const createDefaultLayout = (stepId: string, step?: WorkflowStep): PageLayout => {
+    switch (stepId) {
+      case 'initial_data':
+        return {
+          components: [
+            {
+              id: 'heading-1',
+              type: 'heading',
+              content: 'Dados Iniciais',
+              level: 2,
+              align: 'center',
+              order: 0
+            },
+            {
+              id: 'text-1',
+              type: 'text',
+              content: 'Preencha seus dados para começar',
+              align: 'center',
+              order: 1,
+              className: 'text-muted-foreground mb-6'
+            },
+            {
+              id: 'field-name',
+              type: 'form_field',
+              fieldType: 'text',
+              label: 'Nome Completo',
+              placeholder: 'Digite seu nome',
+              required: true,
+              dataKey: 'name',
+              order: 2
+            },
+            {
+              id: 'field-email',
+              type: 'form_field',
+              fieldType: 'email',
+              label: 'E-mail',
+              placeholder: 'seu@email.com',
+              required: false,
+              dataKey: 'email',
+              order: 3
+            },
+            {
+              id: 'field-phone',
+              type: 'form_field',
+              fieldType: 'tel',
+              label: 'Telefone',
+              placeholder: '(00) 00000-0000',
+              required: true,
+              dataKey: 'phone',
+              order: 4
+            },
+            {
+              id: 'field-quantity',
+              type: 'form_field',
+              fieldType: 'select',
+              label: 'Quantidade',
+              placeholder: 'Selecione',
+              required: true,
+              dataKey: 'quantity',
+              options: ['10-49 unidades', '50-99 unidades', '100+ unidades', 'Personalizado'],
+              order: 5
+            }
+          ],
+          backgroundColor: '#ffffff',
+          containerWidth: '600px',
+          padding: '2rem'
+        };
+
+      case 'select_model':
+        return {
+          components: [
+            {
+              id: 'heading-1',
+              type: 'heading',
+              content: 'Escolha seu Modelo',
+              level: 2,
+              align: 'center',
+              order: 0
+            },
+            {
+              id: 'text-1',
+              type: 'text',
+              content: 'Selecione o modelo de camisa que melhor se adequa ao seu projeto',
+              align: 'center',
+              order: 1,
+              className: 'text-muted-foreground mb-8'
+            }
+          ],
+          backgroundColor: '#ffffff',
+          containerWidth: '1000px',
+          padding: '2rem'
+        };
+
+      case 'customize_front':
+        return {
+          components: [
+            {
+              id: 'heading-1',
+              type: 'heading',
+              content: 'Personalize a Frente',
+              level: 2,
+              align: 'center',
+              order: 0
+            },
+            {
+              id: 'editor-front',
+              type: 'custom_editor',
+              editorType: 'front',
+              order: 1
+            }
+          ],
+          backgroundColor: '#ffffff',
+          containerWidth: '1000px',
+          padding: '2rem'
+        };
+
+      case 'customize_back':
+        return {
+          components: [
+            {
+              id: 'heading-1',
+              type: 'heading',
+              content: 'Personalize as Costas',
+              level: 2,
+              align: 'center',
+              order: 0
+            },
+            {
+              id: 'editor-back',
+              type: 'custom_editor',
+              editorType: 'back',
+              order: 1
+            }
+          ],
+          backgroundColor: '#ffffff',
+          containerWidth: '1000px',
+          padding: '2rem'
+        };
+
+      case 'sleeve_right':
+        return {
+          components: [
+            {
+              id: 'heading-1',
+              type: 'heading',
+              content: 'Manga Direita',
+              level: 2,
+              align: 'center',
+              order: 0
+            },
+            {
+              id: 'editor-sleeve',
+              type: 'custom_editor',
+              editorType: 'sleeve_right',
+              order: 1
+            }
+          ],
+          backgroundColor: '#ffffff',
+          containerWidth: '800px',
+          padding: '2rem'
+        };
+
+      case 'sleeve_left':
+        return {
+          components: [
+            {
+              id: 'heading-1',
+              type: 'heading',
+              content: 'Manga Esquerda',
+              level: 2,
+              align: 'center',
+              order: 0
+            },
+            {
+              id: 'editor-sleeve',
+              type: 'custom_editor',
+              editorType: 'sleeve_left',
+              order: 1
+            }
+          ],
+          backgroundColor: '#ffffff',
+          containerWidth: '800px',
+          padding: '2rem'
+        };
+
+      case 'adicionar_logo':
+        return {
+          components: [
+            {
+              id: 'heading-1',
+              type: 'heading',
+              content: 'Adicionar Logo',
+              level: 2,
+              align: 'center',
+              order: 0
+            },
+            {
+              id: 'text-1',
+              type: 'text',
+              content: 'Você deseja adicionar sua logo agora ou depois?',
+              align: 'center',
+              order: 1,
+              className: 'text-muted-foreground mb-6'
+            },
+            {
+              id: 'divider-1',
+              type: 'divider',
+              order: 2
+            },
+            {
+              id: 'text-2',
+              type: 'text',
+              content: 'Escolha uma das opções abaixo:',
+              align: 'left',
+              order: 3,
+              className: 'font-semibold mt-6 mb-4'
+            }
+          ],
+          backgroundColor: '#ffffff',
+          containerWidth: '600px',
+          padding: '2rem'
+        };
+
+      case 'review':
+        return {
+          components: [
+            {
+              id: 'heading-1',
+              type: 'heading',
+              content: 'Revisão do Pedido',
+              level: 2,
+              align: 'center',
+              order: 0
+            },
+            {
+              id: 'text-1',
+              type: 'text',
+              content: 'Revise todas as informações antes de finalizar',
+              align: 'center',
+              order: 1,
+              className: 'text-muted-foreground mb-8'
+            },
+            {
+              id: 'divider-1',
+              type: 'divider',
+              order: 2
+            }
+          ],
+          backgroundColor: '#ffffff',
+          containerWidth: '800px',
+          padding: '2rem'
+        };
+
+      default:
+        return {
+          components: [
+            {
+              id: 'heading-1',
+              type: 'heading',
+              content: step?.label || 'Etapa Personalizada',
+              level: 2,
+              align: 'center',
+              order: 0
+            },
+            {
+              id: 'text-1',
+              type: 'text',
+              content: 'Comece adicionando componentes à sua página',
+              align: 'center',
+              order: 1,
+              className: 'text-muted-foreground'
+            }
+          ],
+          backgroundColor: '#ffffff',
+          containerWidth: '800px',
+          padding: '2rem'
+        };
+    }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
