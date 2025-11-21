@@ -424,11 +424,6 @@ export default function Campaign() {
   // Handle next step
   const handleNext = async () => {
     // Validations per step
-    if (currentStepId === 'select_type' && !selectedUniformType) {
-      toast.error('Selecione um tipo de uniforme antes de continuar');
-      return;
-    }
-
     if (currentStepId === 'choose_model' && !selectedModel) {
       toast.error('Selecione um modelo antes de continuar');
       return;
@@ -484,7 +479,6 @@ export default function Campaign() {
     await trackEvent(`step_${nextStep + 1}`);
     await createOrUpdateLead(nextStep);
   };
-
   // Handle back
   const handleBack = () => {
     if (currentStep > 0) {
