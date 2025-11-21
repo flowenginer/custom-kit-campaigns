@@ -52,15 +52,22 @@ export default function Campaigns() {
   const [segments, setSegments] = useState<Segment[]>([]);
   const [workflows, setWorkflows] = useState<WorkflowTemplate[]>([]);
   const [abTests, setAbTests] = useState<ABTest[]>([]);
+  const [segmentTags, setSegmentTags] = useState<string[]>([]);
+  const [modelTags, setModelTags] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
   const [showABTestDialog, setShowABTestDialog] = useState(false);
   const [showChangeWorkflow, setShowChangeWorkflow] = useState(false);
   const [showThemeDialog, setShowThemeDialog] = useState(false);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
+  const [isCreatingSegmentTag, setIsCreatingSegmentTag] = useState(false);
+  const [isCreatingModelTag, setIsCreatingModelTag] = useState(false);
+  const [newSegmentTag, setNewSegmentTag] = useState("");
+  const [newModelTag, setNewModelTag] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     segment_tag: "",
+    model_tag: "",
     workflow_template_id: "",
   });
 
@@ -133,6 +140,28 @@ export default function Campaigns() {
       setWorkflows(workflowsData || []);
     }
 
+    // Carregar tags de segmento
+    const { data: segmentTagsData } = await supabase
+      .from("tags")
+      .select("tag_value")
+      .eq("tag_type", "segment_tag")
+      .order("tag_value");
+    
+    if (segmentTagsData) {
+      setSegmentTags(segmentTagsData.map(t => t.tag_value));
+    }
+
+    // Carregar tags de modelo
+    const { data: modelTagsData } = await supabase
+      .from("tags")
+      .select("tag_value")
+      .eq("tag_type", "model_tag")
+      .order("tag_value");
+    
+    if (modelTagsData) {
+      setModelTags(modelTagsData.map(t => t.tag_value));
+    }
+
     // Carregar testes A/B ativos
     const { data: abTestsData, error: abTestsError } = await supabase
       .from("ab_tests")
@@ -148,15 +177,77 @@ export default function Campaigns() {
     setIsLoading(false);
   };
 
+  const handleCreateSegmentTag = async () => {
+    if (!newSegmentTag.trim()) {
+      toast.error("Digite o nome da tag");
+      return;
+    }
+
+    const formattedTag = newSegmentTag
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '_')
+      .replace(/_+/g, '_');
+
+    const { error } = await supabase
+      .from("tags")
+      .insert({ tag_value: formattedTag, tag_type: "segment_tag" });
+
+    if (error) {
+      if (error.code === '23505') {
+        toast.error("Esta tag já existe!");
+      } else {
+        toast.error("Erro ao criar tag");
+      }
+      return;
+    }
+
+    toast.success("Tag criada com sucesso!");
+    setNewSegmentTag("");
+    setIsCreatingSegmentTag(false);
+    setFormData({ ...formData, segment_tag: formattedTag });
+    loadData();
+  };
+
+  const handleCreateModelTag = async () => {
+    if (!newModelTag.trim()) {
+      toast.error("Digite o nome da tag");
+      return;
+    }
+
+    const formattedTag = newModelTag
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '_')
+      .replace(/_+/g, '_');
+
+    const { error } = await supabase
+      .from("tags")
+      .insert({ tag_value: formattedTag, tag_type: "model_tag" });
+
+    if (error) {
+      if (error.code === '23505') {
+        toast.error("Esta tag já existe!");
+      } else {
+        toast.error("Erro ao criar tag");
+      }
+      return;
+    }
+
+    toast.success("Tag criada com sucesso!");
+    setNewModelTag("");
+    setIsCreatingModelTag(false);
+    setFormData({ ...formData, model_tag: formattedTag });
+    loadData();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name || !formData.segment_tag || !formData.workflow_template_id) {
+    if (!formData.name || !formData.segment_tag || !formData.model_tag || !formData.workflow_template_id) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
 
-    // Bug #4: Gerar slug amigável baseado no nome da campanha
+    // Gerar slug amigável baseado no nome da campanha
     const uniqueLink = await generateUniqueSlug(formData.name);
 
     const campaignData = {
@@ -174,7 +265,11 @@ export default function Campaigns() {
     } else {
       toast.success("Campanha criada com sucesso!");
       setShowDialog(false);
-      setFormData({ name: "", segment_tag: "", workflow_template_id: "" });
+      setFormData({ name: "", segment_tag: "", model_tag: "", workflow_template_id: "" });
+      setIsCreatingSegmentTag(false);
+      setIsCreatingModelTag(false);
+      setNewSegmentTag("");
+      setNewModelTag("");
       loadData();
     }
   };
@@ -273,9 +368,15 @@ export default function Campaigns() {
             <p className="text-muted-foreground">Gerencie suas campanhas de vendas</p>
           </div>
           <div className="flex gap-2">
-            <Dialog open={showDialog} onOpenChange={setShowDialog}>
+          <Dialog open={showDialog} onOpenChange={setShowDialog}>
               <DialogTrigger asChild>
-                <Button>
+                <Button onClick={() => {
+                  setFormData({ name: "", segment_tag: "", model_tag: "", workflow_template_id: "" });
+                  setIsCreatingSegmentTag(false);
+                  setIsCreatingModelTag(false);
+                  setNewSegmentTag("");
+                  setNewModelTag("");
+                }}>
                   <Plus className="w-4 h-4" />
                   Nova Campanha
                 </Button>
@@ -301,23 +402,131 @@ export default function Campaigns() {
                 </div>
 
                 <div>
-                  <Label htmlFor="segment">Segmento*</Label>
-                  <Select
-                    value={formData.segment_tag}
-                    onValueChange={(value) => setFormData({ ...formData, segment_tag: value })}
-                    required
-                  >
-                    <SelectTrigger id="segment">
-                      <SelectValue placeholder="Selecione um segmento" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {segments.map((segment) => (
-                        <SelectItem key={segment.id} value={segment.segment_tag}>
-                          {segment.name}
+                  <Label htmlFor="segment_tag">Tag do Segmento*</Label>
+                  {!isCreatingSegmentTag ? (
+                    <Select
+                      value={formData.segment_tag}
+                      onValueChange={(value) => {
+                        if (value === "__create_new__") {
+                          setIsCreatingSegmentTag(true);
+                        } else {
+                          setFormData({ ...formData, segment_tag: value });
+                        }
+                      }}
+                      required
+                    >
+                      <SelectTrigger id="segment_tag">
+                        <SelectValue placeholder="Selecione uma tag de segmento" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {segmentTags.map(tag => (
+                          <SelectItem key={tag} value={tag}>
+                            📁 {tag}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="__create_new__" className="text-primary font-semibold">
+                          ➕ Criar nova tag de segmento
                         </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Input
+                        value={newSegmentTag}
+                        onChange={(e) => setNewSegmentTag(e.target.value)}
+                        placeholder="Digite a nova tag (ex: construcao_civil)"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleCreateSegmentTag();
+                          }
+                        }}
+                      />
+                      <Button type="button" onClick={handleCreateSegmentTag} size="sm">
+                        Criar
+                      </Button>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          setIsCreatingSegmentTag(false);
+                          setNewSegmentTag("");
+                        }}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Ex: energia_solar, agro, futevoelei
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="model_tag">Tag do Modelo*</Label>
+                  {!isCreatingModelTag ? (
+                    <Select
+                      value={formData.model_tag}
+                      onValueChange={(value) => {
+                        if (value === "__create_new__") {
+                          setIsCreatingModelTag(true);
+                        } else {
+                          setFormData({ ...formData, model_tag: value });
+                        }
+                      }}
+                      required
+                    >
+                      <SelectTrigger id="model_tag">
+                        <SelectValue placeholder="Selecione uma tag de modelo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {modelTags.map(tag => (
+                          <SelectItem key={tag} value={tag}>
+                            {tag === 'ziper' && '🧥 '}
+                            {tag === 'manga_longa' && '👕 '}
+                            {tag === 'manga_curta' && '👔 '}
+                            {tag === 'regata' && '🎽 '}
+                            {tag}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="__create_new__" className="text-primary font-semibold">
+                          ➕ Criar nova tag de modelo
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Input
+                        value={newModelTag}
+                        onChange={(e) => setNewModelTag(e.target.value)}
+                        placeholder="Digite a nova tag (ex: jaqueta)"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleCreateModelTag();
+                          }
+                        }}
+                      />
+                      <Button type="button" onClick={handleCreateModelTag} size="sm">
+                        Criar
+                      </Button>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          setIsCreatingModelTag(false);
+                          setNewModelTag("");
+                        }}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Ex: ziper, manga_longa, manga_curta, regata
+                  </p>
                 </div>
 
                 <div>
