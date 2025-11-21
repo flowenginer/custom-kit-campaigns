@@ -57,6 +57,11 @@ const Models = () => {
     features: [] as string[],
   });
   const [newFeature, setNewFeature] = useState('');
+  const [searchName, setSearchName] = useState("");
+  const [filterSegmentTag, setFilterSegmentTag] = useState<string>("all");
+  const [filterModelTag, setFilterModelTag] = useState<string>("all");
+  const [availableSegmentTags, setAvailableSegmentTags] = useState<string[]>([]);
+  const [availableModelTags, setAvailableModelTags] = useState<string[]>([]);
   const [imageFiles, setImageFiles] = useState<{
     photo_main: File | null;
     image_front: File | null;
@@ -99,6 +104,7 @@ const Models = () => {
   useEffect(() => {
     loadModels();
     loadSegments();
+    loadTags();
   }, []);
 
   const loadModels = async () => {
@@ -117,6 +123,30 @@ const Models = () => {
       .order("name");
     
     if (data) setSegments(data);
+  };
+
+  const loadTags = async () => {
+    // Buscar segment_tags
+    const { data: segmentTagsData } = await supabase
+      .from("tags")
+      .select("tag_value")
+      .eq("tag_type", "segment_tag")
+      .order("tag_value");
+    
+    if (segmentTagsData) {
+      setAvailableSegmentTags(segmentTagsData.map(t => t.tag_value));
+    }
+
+    // Buscar model_tags
+    const { data: modelTagsData } = await supabase
+      .from("tags")
+      .select("tag_value")
+      .eq("tag_type", "model_tag")
+      .order("tag_value");
+    
+    if (modelTagsData) {
+      setAvailableModelTags(modelTagsData.map(t => t.tag_value));
+    }
   };
 
   const handleFileChange = (field: keyof typeof imageFiles, file: File | null) => {
@@ -361,18 +391,19 @@ const Models = () => {
   };
 
   const handleDelete = async (id: string, segmentId: string) => {
-    // Verificar se há orders associados
+    // Avisar ao usuário se houver orders associados
     const { count: orderCount } = await supabase
       .from('orders')
       .select('*', { count: 'exact', head: true })
       .eq('model_id', id);
 
+    let confirmMessage = "Tem certeza que deseja excluir este modelo?";
+    
     if (orderCount && orderCount > 0) {
-      toast.error(`Não é possível deletar. Este modelo possui ${orderCount} pedido(s) associado(s).`);
-      return;
+      confirmMessage = `⚠️ ATENÇÃO: Este modelo possui ${orderCount} pedido(s) associado(s).\n\nTem certeza que deseja excluir mesmo assim?`;
     }
 
-    if (!confirm("Tem certeza que deseja excluir este modelo?")) return;
+    if (!confirm(confirmMessage)) return;
 
     try {
       // Delete images from storage
@@ -388,7 +419,7 @@ const Models = () => {
       
       if (error) throw error;
       
-      toast.success("Modelo excluído!");
+      toast.success("Modelo excluído com sucesso!");
       loadModels();
     } catch (error: any) {
       toast.error("Erro ao excluir modelo: " + error.message);
@@ -508,9 +539,32 @@ const Models = () => {
     }
   };
 
-  const filteredModels = segmentFilter
-    ? models.filter((m) => m.segment_id === segmentFilter)
-    : models;
+  const filteredModels = models.filter((model) => {
+    // Filtro por segment_id (via URL)
+    if (segmentFilter && model.segment_id !== segmentFilter) {
+      return false;
+    }
+
+    // Filtro por nome (busca case-insensitive)
+    if (searchName.trim() !== "") {
+      const searchLower = searchName.toLowerCase();
+      if (!model.name.toLowerCase().includes(searchLower)) {
+        return false;
+      }
+    }
+
+    // Filtro por segment_tag
+    if (filterSegmentTag !== "all" && model.segment_tag !== filterSegmentTag) {
+      return false;
+    }
+
+    // Filtro por model_tag
+    if (filterModelTag !== "all" && model.model_tag !== filterModelTag) {
+      return false;
+    }
+
+    return true;
+  });
 
   const filteredSegment = segments.find((s) => s.id === segmentFilter);
 
@@ -811,6 +865,104 @@ const Models = () => {
         </Dialog>
       </div>
 
+      {/* Seção de Filtros */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Filtros</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Busca por Nome */}
+          <div className="space-y-2">
+            <Label htmlFor="search-name">Buscar por Nome</Label>
+            <Input
+              id="search-name"
+              placeholder="Digite o nome do modelo..."
+              value={searchName}
+              onChange={(e) => setSearchName(e.target.value)}
+              className="max-w-sm"
+            />
+          </div>
+
+          {/* Filtros de Tags */}
+          <div className="grid md:grid-cols-2 gap-4">
+            {/* Filtro Segment Tag */}
+            <div className="space-y-2">
+              <Label htmlFor="filter-segment-tag">Tag do Segmento</Label>
+              <Select
+                value={filterSegmentTag}
+                onValueChange={(value) => setFilterSegmentTag(value)}
+              >
+                <SelectTrigger id="filter-segment-tag">
+                  <SelectValue placeholder="Todos os segmentos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">📁 Todos os Segmentos</SelectItem>
+                  {availableSegmentTags.map((tag) => (
+                    <SelectItem key={tag} value={tag}>
+                      📁 {tag}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Filtro Model Tag */}
+            <div className="space-y-2">
+              <Label htmlFor="filter-model-tag">Tipo de Uniforme</Label>
+              <Select
+                value={filterModelTag}
+                onValueChange={(value) => setFilterModelTag(value)}
+              >
+                <SelectTrigger id="filter-model-tag">
+                  <SelectValue placeholder="Todos os tipos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">🎽 Todos os Tipos</SelectItem>
+                  {availableModelTags.map((tag) => {
+                    const icon = 
+                      tag === 'manga_longa' ? '👕' :
+                      tag === 'ziper' ? '🧥' :
+                      tag === 'manga_curta' ? '👔' :
+                      tag === 'regata' ? '🎽' : '👕';
+                    const label = 
+                      tag === 'manga_longa' ? 'Manga Longa' :
+                      tag === 'ziper' ? 'Zíper' :
+                      tag === 'manga_curta' ? 'Manga Curta' :
+                      tag === 'regata' ? 'Regata' : tag;
+                    return (
+                      <SelectItem key={tag} value={tag}>
+                        {icon} {label}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Botão Limpar Filtros */}
+          {(searchName !== "" || filterSegmentTag !== "all" || filterModelTag !== "all") && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSearchName("");
+                setFilterSegmentTag("all");
+                setFilterModelTag("all");
+              }}
+            >
+              <X className="mr-2 h-4 w-4" />
+              Limpar Todos os Filtros
+            </Button>
+          )}
+
+          {/* Contador de Resultados */}
+          <p className="text-sm text-muted-foreground">
+            {filteredModels.length} {filteredModels.length === 1 ? "modelo encontrado" : "modelos encontrados"}
+          </p>
+        </CardContent>
+      </Card>
+
       {segmentFilter && filteredSegment && (
         <Card className="bg-primary/5 border-primary/20">
           <CardContent className="pt-6">
@@ -866,8 +1018,28 @@ const Models = () => {
                   </Button>
                 </div>
               </CardTitle>
-              <CardDescription>
-                {model.segments?.name || "Sem segmento"} • 5 imagens
+              <CardDescription className="space-y-1">
+                <div>{model.segments?.name || "Sem segmento"} • 5 imagens</div>
+                <div className="flex gap-2 flex-wrap mt-2">
+                  {model.segment_tag && (
+                    <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-2 py-0.5 rounded">
+                      📁 {model.segment_tag}
+                    </span>
+                  )}
+                  {model.model_tag && (
+                    <span className="text-xs bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 px-2 py-0.5 rounded">
+                      {model.model_tag === 'manga_longa' && '👕'}
+                      {model.model_tag === 'ziper' && '🧥'}
+                      {model.model_tag === 'manga_curta' && '👔'}
+                      {model.model_tag === 'regata' && '🎽'}
+                      {' '}
+                      {model.model_tag === 'manga_longa' ? 'Manga Longa' :
+                       model.model_tag === 'ziper' ? 'Zíper' :
+                       model.model_tag === 'manga_curta' ? 'Manga Curta' :
+                       model.model_tag === 'regata' ? 'Regata' : model.model_tag}
+                    </span>
+                  )}
+                </div>
               </CardDescription>
             </CardHeader>
           </Card>
