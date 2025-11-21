@@ -110,6 +110,11 @@ interface DesignMetrics {
     efficiency_score: number;
   }[];
 }
+
+interface DailyVisitsData {
+  date: string;
+  [campaignName: string]: string | number;
+}
 const CHART_COLORS = ["hsl(var(--chart-purple))", "hsl(var(--chart-green))", "hsl(var(--chart-orange))", "hsl(var(--chart-blue))", "hsl(var(--chart-pink))", "hsl(var(--chart-teal))", "hsl(var(--chart-indigo))", "hsl(var(--chart-cyan))", "hsl(var(--chart-amber))", "hsl(var(--chart-red))"];
 const Dashboard = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -129,6 +134,7 @@ const Dashboard = () => {
     avgTimeByStage: [],
     designerPerformance: []
   });
+  const [dailyVisitsData, setDailyVisitsData] = useState<DailyVisitsData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [utmDialogOpen, setUtmDialogOpen] = useState(false);
   const [selectedUtmCampaign, setSelectedUtmCampaign] = useState<{
@@ -138,6 +144,7 @@ const Dashboard = () => {
   useEffect(() => {
     loadDashboardData();
     loadDesignMetrics();
+    loadDailyVisits();
   }, []);
   useEffect(() => {
     if (campaigns.length > 0) {
@@ -414,6 +421,57 @@ const Dashboard = () => {
     }
   };
 
+  const loadDailyVisits = async () => {
+    try {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const { data: visitsData, error } = await supabase
+        .from("funnel_events")
+        .select(`
+          created_at,
+          campaign_id,
+          campaigns (
+            id,
+            name
+          )
+        `)
+        .eq("event_type", "campaign_visit")
+        .gte("created_at", thirtyDaysAgo.toISOString())
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+      if (!visitsData) return;
+
+      const visitsByDateAndCampaign: { [date: string]: { [campaignName: string]: number } } = {};
+      
+      visitsData.forEach((visit: any) => {
+        const date = new Date(visit.created_at);
+        const dateKey = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+        const campaignName = visit.campaigns?.name || 'Sem Campanha';
+        
+        if (!visitsByDateAndCampaign[dateKey]) {
+          visitsByDateAndCampaign[dateKey] = {};
+        }
+        
+        if (!visitsByDateAndCampaign[dateKey][campaignName]) {
+          visitsByDateAndCampaign[dateKey][campaignName] = 0;
+        }
+        
+        visitsByDateAndCampaign[dateKey][campaignName]++;
+      });
+
+      const formattedData: DailyVisitsData[] = Object.entries(visitsByDateAndCampaign).map(([date, campaigns]) => ({
+        date,
+        ...campaigns
+      }));
+
+      setDailyVisitsData(formattedData);
+    } catch (error) {
+      console.error("Erro ao carregar visitas diárias:", error);
+    }
+  };
+
   // Obter sources e mediums únicos para filtros
   const uniqueSources = ["all", ...Array.from(new Set(utmData.map(d => d.source)))];
   const uniqueMediums = ["all", ...Array.from(new Set(utmData.map(d => d.medium)))];
@@ -682,6 +740,69 @@ const Dashboard = () => {
                     </div>)}
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Gráfico de Visitas Diárias por Campanha */}
+          <Card className="shadow-xl">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5" />
+                Visitas Diárias por Campanha
+              </CardTitle>
+              <CardDescription>
+                Evolução de visitas nos últimos 30 dias
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <Skeleton className="h-[400px] w-full" />
+              ) : dailyVisitsData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={400}>
+                  <LineChart data={dailyVisitsData}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                    <XAxis 
+                      dataKey="date" 
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={12}
+                    />
+                    <YAxis 
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={12}
+                    />
+                    <Tooltip 
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px",
+                      }}
+                      labelStyle={{ color: "hsl(var(--foreground))" }}
+                    />
+                    <Legend 
+                      wrapperStyle={{ paddingTop: "20px" }}
+                      iconType="line"
+                    />
+                    {campaigns
+                      .filter(campaign => selectedCampaigns.includes(campaign.id))
+                      .map((campaign, idx) => (
+                        <Line
+                          key={campaign.id}
+                          type="monotone"
+                          dataKey={campaign.name}
+                          stroke={CHART_COLORS[idx % CHART_COLORS.length]}
+                          strokeWidth={2}
+                          dot={{ r: 4 }}
+                          activeDot={{ r: 6 }}
+                          name={campaign.name}
+                        />
+                      ))}
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[400px] flex items-center justify-center text-muted-foreground">
+                  Nenhum dado de visitas disponível
+                </div>
+              )}
             </CardContent>
           </Card>
         </>}
