@@ -47,13 +47,13 @@ export const UploadLogos = () => {
     const filePath = `${path}/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
-      .from('campaign-assets')
+      .from('customer-logos')
       .upload(filePath, file);
 
     if (uploadError) throw uploadError;
 
     const { data: { publicUrl } } = supabase.storage
-      .from('campaign-assets')
+      .from('customer-logos')
       .getPublicUrl(filePath);
 
     return publicUrl;
