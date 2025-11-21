@@ -311,63 +311,7 @@ export const VisualPageRenderer = ({
         
         {layout.progressIndicator && (
           <>
-            {/* Step Text */}
-            <p className="text-center text-base text-muted-foreground mb-4">
-              Etapa {layout.progressIndicator.currentStep} de {layout.progressIndicator.totalSteps}
-            </p>
-            
-            {/* Step Indicator with Circles */}
-            {layout.progressIndicator.showStepNumbers && (
-              <div className="flex justify-center items-center gap-2 mb-4 overflow-x-auto px-4">
-                {Array.from({ length: layout.progressIndicator.totalSteps }, (_, index) => (
-                  <div key={index} className="flex items-center flex-shrink-0">
-                    <div className={`flex flex-col items-center ${
-                      index + 1 <= layout.progressIndicator.currentStep 
-                        ? 'text-primary' 
-                        : 'text-muted-foreground'
-                    }`}>
-                      <div 
-                        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-colors ${
-                          index + 1 <= layout.progressIndicator.currentStep
-                            ? 'bg-primary text-primary-foreground border-primary' 
-                            : 'bg-background border-muted'
-                        }`}
-                        style={{
-                          backgroundColor: index + 1 <= layout.progressIndicator.currentStep 
-                            ? layout.progressIndicator.completedStepColor 
-                            : undefined,
-                          borderColor: index + 1 <= layout.progressIndicator.currentStep
-                            ? layout.progressIndicator.completedStepColor
-                            : layout.progressIndicator.pendingStepColor
-                        }}
-                      >
-                        {index + 1 < layout.progressIndicator.currentStep ? (
-                          <Check className="h-4 w-4" />
-                        ) : (
-                          index + 1
-                        )}
-                      </div>
-                    </div>
-                    {index < layout.progressIndicator.totalSteps - 1 && (
-                      <div 
-                        className={`w-8 h-0.5 mx-1 ${
-                          index + 1 < layout.progressIndicator.currentStep 
-                            ? 'bg-primary' 
-                            : 'bg-muted'
-                        }`}
-                        style={{
-                          backgroundColor: index + 1 < layout.progressIndicator.currentStep
-                            ? layout.progressIndicator.completedStepColor
-                            : layout.progressIndicator.pendingStepColor
-                        }}
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-            
-            {/* Progress Bar */}
+            {/* Progress Bar - Apenas a barra com degradê verde */}
             {layout.progressIndicator.showProgressBar && (
               <Progress 
                 value={progressPercentage} 
