@@ -52,13 +52,13 @@ export const SleeveEditor = ({ model, side, value, onChange, onNext }: SleeveEdi
         </CardHeader>
         <CardContent>
           <div 
-            className="relative bg-muted rounded-lg overflow-hidden h-[200px] md:aspect-square md:min-h-auto cursor-pointer flex items-center justify-center"
+            className="relative bg-muted rounded-lg overflow-hidden h-[200px] md:min-h-[600px] cursor-pointer flex items-center justify-center"
             onClick={() => setIsZoomOpen(true)}
           >
             <img 
               src={imageUrl} 
               alt={`Preview ${title}`}
-              className="max-w-full max-h-full object-contain"
+              className="w-full h-full object-contain"
               loading="lazy"
             />
           </div>

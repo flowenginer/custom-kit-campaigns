@@ -60,13 +60,13 @@ export const FrontEditor = ({ model, value, onChange, onNext }: FrontEditorProps
         </CardHeader>
         <CardContent>
           <div 
-            className="relative bg-muted rounded-lg overflow-hidden flex items-center justify-center min-h-[180px] md:min-h-[500px] cursor-pointer"
+            className="relative bg-muted rounded-lg overflow-hidden flex items-center justify-center min-h-[180px] md:min-h-[600px] cursor-pointer"
             onClick={() => setIsZoomOpen(true)}
           >
             <img 
               src={getImageUrl()} 
               alt="Preview da frente"
-              className="w-full h-auto object-contain md:transition-transform md:duration-300 md:hover:scale-150"
+              className="w-full h-full object-contain md:transition-transform md:duration-300 md:hover:scale-150"
               loading="lazy"
             />
           </div>

@@ -67,13 +67,13 @@ export const BackEditor = ({ model, value, onChange, onNext }: BackEditorProps) 
         </CardHeader>
         <CardContent>
           <div 
-            className="relative bg-muted rounded-lg overflow-hidden h-[200px] md:aspect-square md:min-h-auto cursor-pointer flex items-center justify-center"
+            className="relative bg-muted rounded-lg overflow-hidden h-[200px] md:min-h-[600px] cursor-pointer flex items-center justify-center"
             onClick={() => setIsZoomOpen(true)}
           >
             <img 
               src={model.image_back} 
               alt="Preview das costas"
-              className="max-w-full max-h-full object-contain"
+              className="w-full h-full object-contain"
               loading="lazy"
             />
           </div>
