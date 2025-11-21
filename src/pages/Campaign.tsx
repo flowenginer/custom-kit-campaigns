@@ -854,64 +854,34 @@ export default function Campaign() {
                       }`}
                     >
                       <CardContent className="p-0">
-                        <div className="grid md:grid-cols-[35%_65%] gap-0">
-                          {/* Left side - Info */}
-                          <div className="p-6 md:p-8 flex flex-col justify-center bg-gradient-to-br from-muted/50 to-muted/30">
-                            <div className="mb-6">
-                              <h3 className="text-2xl md:text-3xl font-bold mb-2">
-                                {model.name}
-                              </h3>
+                        {/* Container da foto principal */}
+                        <div className="relative bg-muted">
+                          {/* SKU no canto superior direito */}
+                          {model.sku && (
+                            <div className="absolute top-4 right-4 z-10">
+                              <span className="text-xl md:text-2xl font-bold tracking-wider">
+                                {model.sku}
+                              </span>
                             </div>
+                          )}
 
-                            {model.features && model.features.length > 0 && (
-                              <div className="space-y-3">
-                                {model.features.map((feature: string, idx: number) => (
-                                  <div key={idx} className="flex items-start gap-3">
-                                    <div className="mt-0.5">
-                                      <Check className="h-5 w-5 text-green-500" />
-                                    </div>
-                                    <span className="text-sm leading-relaxed">
-                                      {feature}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Right side - Images */}
-                          <div className="relative bg-muted flex items-center justify-center p-8">
-                            {model.sku && (
-                              <div className="absolute top-4 right-4 z-10">
-                                <span className="text-xl md:text-2xl font-bold tracking-wider">
-                                  {model.sku}
-                                </span>
-                              </div>
-                            )}
-
-                            <div className="grid grid-cols-2 gap-4 w-full max-w-2xl">
-                              <div className="aspect-square flex items-center justify-center">
-                                <img
-                                  src={model.image_front}
-                                  alt={`${model.name} - Frente`}
-                                  className="w-full h-full object-contain"
-                                />
-                              </div>
-                              <div className="aspect-square flex items-center justify-center">
-                                <img
-                                  src={model.image_back}
-                                  alt={`${model.name} - Costas`}
-                                  className="w-full h-full object-contain"
-                                />
-                              </div>
-                            </div>
+                          {/* Foto Principal */}
+                          <div className="w-full flex items-center justify-center p-8">
+                            <img
+                              src={model.photo_main}
+                              alt={model.name}
+                              className="w-full max-w-3xl h-auto object-contain"
+                            />
                           </div>
                         </div>
 
-                        {/* Button below */}
+                        {/* Botão "Selecionar Modelo" */}
                         <div className="p-4 border-t">
                           <Button
-                            onClick={() => handleSelectModel(model)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectModel(model);
+                            }}
                             size="lg"
                             className="w-full h-14 text-lg"
                           >
