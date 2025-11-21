@@ -7,6 +7,48 @@ import { Loader2, TrendingUp, Users, Target, Activity } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UtmBreakdownDialog } from "@/components/dashboard/UtmBreakdownDialog";
+
+// LocalStorage helpers for campaign selection persistence
+const STORAGE_KEY = 'dashboard_selected_campaigns';
+
+const loadSelectedCampaigns = (): string[] => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? JSON.parse(saved) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveSelectedCampaigns = (campaigns: string[]) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(campaigns));
+  } catch (error) {
+    console.error('Erro ao salvar seleção:', error);
+  }
+};
+
+// Custom label component for bar charts
+const CustomBarLabel = (props: any) => {
+  const { x, y, width, value } = props;
+  
+  // Don't render if value is 0 or undefined
+  if (!value || value === 0) return null;
+  
+  return (
+    <text
+      x={x + width / 2}
+      y={y - 5}
+      fill="hsl(var(--foreground))"
+      textAnchor="middle"
+      fontSize="11"
+      fontWeight="500"
+      opacity="0.7"
+    >
+      {value}
+    </text>
+  );
+};
 interface Campaign {
   id: string;
   name: string;
@@ -72,7 +114,7 @@ const CHART_COLORS = ["hsl(var(--chart-purple))", "hsl(var(--chart-green))", "hs
 const Dashboard = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [funnelData, setFunnelData] = useState<FunnelData[]>([]);
-  const [selectedCampaigns, setSelectedCampaigns] = useState<string[]>([]);
+  const [selectedCampaigns, setSelectedCampaigns] = useState<string[]>(loadSelectedCampaigns());
   const [leadsMetrics, setLeadsMetrics] = useState<LeadsMetrics>({
     total: 0,
     converted: 0,
@@ -98,8 +140,19 @@ const Dashboard = () => {
     loadDesignMetrics();
   }, []);
   useEffect(() => {
-    if (campaigns.length > 0 && selectedCampaigns.length === 0) {
-      setSelectedCampaigns([campaigns[0].id]);
+    if (campaigns.length > 0) {
+      const saved = loadSelectedCampaigns();
+      
+      // If no saved selection OR saved campaigns no longer exist
+      if (saved.length === 0 || !saved.every(id => campaigns.find(c => c.id === id))) {
+        // Select ALL campaigns by default
+        const allCampaignIds = campaigns.map(c => c.id);
+        setSelectedCampaigns(allCampaignIds);
+        saveSelectedCampaigns(allCampaignIds);
+      } else {
+        // Use saved selection
+        setSelectedCampaigns(saved);
+      }
     }
   }, [campaigns]);
   const loadDashboardData = async () => {
@@ -508,7 +561,12 @@ const Dashboard = () => {
                 backgroundColor: CHART_COLORS[idx % CHART_COLORS.length],
                 borderColor: CHART_COLORS[idx % CHART_COLORS.length]
               } : {}} onClick={() => {
-                setSelectedCampaigns(prev => prev.includes(campaign.id) ? prev.filter(id => id !== campaign.id) : [...prev, campaign.id]);
+                const newSelection = selectedCampaigns.includes(campaign.id) 
+                  ? selectedCampaigns.filter(id => id !== campaign.id) 
+                  : [...selectedCampaigns, campaign.id];
+                
+                setSelectedCampaigns(newSelection);
+                saveSelectedCampaigns(newSelection);
               }}>
                       {campaign.name}
                     </Badge>)}
@@ -545,7 +603,8 @@ const Dashboard = () => {
                     key={campaignId} 
                     dataKey={campaign.name} 
                     fill={`url(#barGradient-${idx})`} 
-                    radius={[8, 8, 0, 0]} 
+                    radius={[8, 8, 0, 0]}
+                    label={<CustomBarLabel />}
                     style={{
                       filter: 'drop-shadow(0px 4px 6px rgba(0, 0, 0, 0.15))'
                     }}
