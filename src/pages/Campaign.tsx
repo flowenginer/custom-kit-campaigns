@@ -590,55 +590,9 @@ export default function Campaign() {
         
         {/* Área branca com indicadores de progresso */}
         <div className="container mx-auto px-4 py-4">
-          {/* Step indicator text */}
-          <div className="text-center mb-3">
-            <p className="text-sm font-medium text-muted-foreground">
-              Etapa {currentStep + 1} de {TOTAL_STEPS.length}
-            </p>
-          </div>
-
-          {/* Progress bar */}
-          <div className="mb-4">
-            <Progress value={progress} className="h-2" />
-          </div>
-
-          {/* Step circles - mostrar apenas primeiras 4 etapas nos círculos */}
-          <div className="flex justify-center items-center gap-1 mb-2 flex-wrap">
-            {TOTAL_STEPS.slice(0, 10).map((step, index) => (
-              <div key={step.id} className="flex items-center">
-                <div
-                  className={`w-6 h-6 md:w-8 md:h-8 rounded-full flex items-center justify-center text-xs md:text-sm font-semibold transition-all ${
-                    index < currentStep
-                      ? 'bg-primary text-primary-foreground'
-                      : index === currentStep
-                      ? 'bg-primary text-primary-foreground ring-2 md:ring-4 ring-primary/20'
-                      : 'bg-muted text-muted-foreground'
-                  }`}
-                >
-                  {index < currentStep ? (
-                    <Check className="w-3 h-3 md:w-4 md:h-4" />
-                  ) : (
-                    index + 1
-                  )}
-                </div>
-                {index < TOTAL_STEPS.length - 1 && (
-                  <div
-                    className={`w-4 md:w-8 h-0.5 mx-0.5 md:mx-1 ${
-                      index < currentStep ? 'bg-primary' : 'bg-muted'
-                    }`}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Step labels */}
-          <div className="flex justify-center gap-2 text-xs text-muted-foreground">
-            <span className="text-center max-w-[120px] truncate">
-              {TOTAL_STEPS[currentStep]?.label}
-            </span>
-          </div>
-
+          {/* Progress bar - apenas a barra com degradê verde */}
+          <Progress value={progress} className="h-2" />
+          
           {/* Saving indicator */}
           {isSaving && (
             <div className="text-center mt-2">
@@ -660,11 +614,11 @@ export default function Campaign() {
               Selecione o modelo que melhor se adapta às suas necessidades
             </h3>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+            <div className="flex flex-wrap justify-center items-center gap-4 md:gap-6">
               {availableUniformTypes.map((type) => (
                 <Card
                   key={type}
-                  className={`cursor-pointer hover:shadow-xl transition-all border-2 hover:border-primary ${
+                  className={`cursor-pointer hover:shadow-xl transition-all border-2 hover:border-primary w-[calc(50%-8px)] md:w-[200px] ${
                     selectedUniformType === type ? 'border-primary ring-4 ring-primary/20' : ''
                   }`}
                   onClick={() => {
@@ -866,7 +820,7 @@ export default function Campaign() {
                           )}
 
                           {/* Foto Principal */}
-                          <div className="w-full flex items-center justify-center p-8">
+                          <div className="w-full flex items-center justify-center">
                             <img
                               src={model.photo_main}
                               alt={model.name}
@@ -999,52 +953,116 @@ export default function Campaign() {
         {currentStepId === 'review' && (
           <div className="max-w-4xl mx-auto">
             <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">
-              Revise seu Pedido
+              Revisão e Envio
             </h2>
+            
             <Card>
               <CardContent className="p-6 space-y-6">
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="font-semibold text-lg mb-2">Dados do Pedido</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Nome:</p>
-                        <p className="font-medium">{customerData.name}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">WhatsApp:</p>
-                        <p className="font-medium">{customerData.phone}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Modelo:</p>
-                        <p className="font-medium">{selectedModel?.name}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Quantidade:</p>
-                        <p className="font-medium">
-                          {customerData.quantity === 'custom' 
-                            ? customerData.customQuantity 
-                            : customerData.quantity} unidades
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                {/* Modelo Selecionado */}
+                <div>
+                  <h3 className="font-semibold text-lg mb-4">Modelo Selecionado:</h3>
+                  <p className="text-muted-foreground mb-2">{selectedModel?.name}</p>
+                  <p className="font-bold text-2xl">{selectedModel?.sku}</p>
+                </div>
 
-                  <div className="border-t pt-4">
-                    <h3 className="font-semibold text-lg mb-2">Personalizações</h3>
-                    <CustomizationSummary
-                      front={customizations.front}
-                      back={customizations.back}
-                      leftSleeve={customizations.sleeves.left}
-                      rightSleeve={customizations.sleeves.right}
-                      totalAssets={0}
+                {/* 4 Vistas do Modelo em Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <img 
+                      src={selectedModel?.image_front} 
+                      alt="Frente" 
+                      className="w-full rounded-lg border"
                     />
+                    <p className="text-center text-sm font-medium">Frente</p>
                   </div>
+                  
+                  <div className="space-y-2">
+                    <img 
+                      src={selectedModel?.image_back} 
+                      alt="Costas" 
+                      className="w-full rounded-lg border"
+                    />
+                    <p className="text-center text-sm font-medium">Costas</p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <img 
+                      src={selectedModel?.image_right} 
+                      alt="Direita" 
+                      className="w-full rounded-lg border"
+                    />
+                    <p className="text-center text-sm font-medium">Direita</p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <img 
+                      src={selectedModel?.image_left} 
+                      alt="Esquerda" 
+                      className="w-full rounded-lg border"
+                    />
+                    <p className="text-center text-sm font-medium">Esquerda</p>
+                  </div>
+                </div>
 
-                  <div className="border-t pt-4">
-                    <p className="text-sm text-muted-foreground">
-                      Logos: {uploadChoice === 'agora' ? 'Enviadas agora' : 'Serão enviadas depois'}
-                    </p>
+                {/* Resumo das Personalizações */}
+                <div className="border-t pt-6">
+                  <h3 className="font-semibold text-lg mb-4">
+                    Resumo das Personalizações:
+                  </h3>
+                  
+                  <div className="space-y-3 text-sm">
+                    {/* Frente */}
+                    <div>
+                      <p className="font-medium text-primary">Frente:</p>
+                      <p className="text-muted-foreground ml-4">
+                        Tipo: {customizations.front.logoType === 'small_left' ? 'Logo pequena centro' : 
+                               customizations.front.logoType === 'large_center' ? 'Logo grande centro' : 
+                               customizations.front.logoType === 'custom' ? 'Custom' : 'Sem logo'}
+                      </p>
+                    </div>
+
+                    {/* Costas */}
+                    <div>
+                      <p className="font-medium text-primary">Costas:</p>
+                      {customizations.back.logoLarge && (
+                        <p className="text-muted-foreground ml-4">• Logo grande</p>
+                      )}
+                      {customizations.back.hasSponsors && customizations.back.sponsors.length > 0 && (
+                        <p className="text-muted-foreground ml-4">• Patrocinadores: {customizations.back.sponsors.join(', ')}</p>
+                      )}
+                      {!customizations.back.logoLarge && (!customizations.back.hasSponsors || customizations.back.sponsors.length === 0) && (
+                        <p className="text-muted-foreground ml-4">• Sem personalizações</p>
+                      )}
+                    </div>
+
+                    {/* Mangas */}
+                    <div>
+                      <p className="font-medium text-primary">Mangas:</p>
+                      {customizations.sleeves.left.logoSmall && (
+                        <p className="text-muted-foreground ml-4">• Logo pequena (Esquerda)</p>
+                      )}
+                      {customizations.sleeves.left.flag && (
+                        <p className="text-muted-foreground ml-4">• Bandeira (Esquerda)</p>
+                      )}
+                      {customizations.sleeves.right.logoSmall && (
+                        <p className="text-muted-foreground ml-4">• Logo pequena (Direita)</p>
+                      )}
+                      {customizations.sleeves.right.flag && (
+                        <p className="text-muted-foreground ml-4">• Bandeira (Direita)</p>
+                      )}
+                      {!customizations.sleeves.left.logoSmall && !customizations.sleeves.left.flag && 
+                       !customizations.sleeves.right.logoSmall && !customizations.sleeves.right.flag && (
+                        <p className="text-muted-foreground ml-4">• Sem personalizações</p>
+                      )}
+                    </div>
+
+                    {/* Upload de Logos */}
+                    <div className="border-t pt-3 mt-3">
+                      <p className="font-medium">Upload de Logos:</p>
+                      <p className="text-muted-foreground ml-4">
+                        {uploadChoice === 'agora' ? '✓ Enviadas agora' : '⏳ Serão enviadas depois'}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -1052,29 +1070,31 @@ export default function Campaign() {
           </div>
         )}
 
-        {/* Navigation buttons */}
-        <div className="max-w-3xl mx-auto mt-8 flex gap-4 justify-between">
-          {currentStep > 0 && (
+        {/* Navigation buttons - NÃO mostrar na seleção de modelo */}
+        {currentStepId !== 'choose_model' && (
+          <div className="max-w-3xl mx-auto mt-8 flex gap-4 justify-between">
+            {currentStep > 0 && (
+              <Button
+                variant="outline"
+                onClick={handleBack}
+                disabled={isSaving}
+                size="lg"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Voltar
+              </Button>
+            )}
+
             <Button
-              variant="outline"
-              onClick={handleBack}
+              onClick={handleNext}
               disabled={isSaving}
               size="lg"
+              className="ml-auto"
             >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Voltar
+              {currentStepId === 'review' ? 'Finalizar Pedido' : 'Próximo'}
             </Button>
-          )}
-
-          <Button
-            onClick={handleNext}
-            disabled={isSaving}
-            size="lg"
-            className="ml-auto"
-          >
-            {currentStepId === 'review' ? 'Finalizar Pedido' : 'Próximo'}
-          </Button>
-        </div>
+          </div>
+        )}
       </main>
     </div>
   );
