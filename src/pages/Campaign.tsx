@@ -616,9 +616,9 @@ export default function Campaign() {
 
       toast.success('Pedido enviado com sucesso!');
 
-      // Redirect to confirmation page
+      // Redirect to Instagram
       setTimeout(() => {
-        navigate(`/obrigado?order=${order.id}`);
+        window.location.href = 'https://www.instagram.com/spacesports.oficial/';
       }, 1000);
     } catch (error) {
       console.error('Erro ao enviar pedido:', error);
