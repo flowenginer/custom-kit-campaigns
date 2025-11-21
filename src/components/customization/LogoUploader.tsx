@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Upload, X } from "lucide-react";
+import { Upload, X, Check } from "lucide-react";
+import { useRef } from "react";
 
 interface CustomizationData {
   front: {
@@ -44,6 +45,8 @@ export const LogoUploader = ({
   currentLogos,
   onNext,
 }: LogoUploaderProps) => {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  
   const needsFrontLogo = customizations.front.logoType !== 'none';
   const needsBackLogo = customizations.back.logoLarge;
   const hasSponsors = customizations.back.hasSponsors && customizations.back.sponsors.length > 0;
@@ -54,6 +57,19 @@ export const LogoUploader = ({
 
   const needsAnyLogo = needsFrontLogo || needsBackLogo || hasSponsors || 
                        needsRightFlag || needsRightLogo || needsLeftFlag || needsLeftLogo;
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    console.log('Arquivo selecionado:', file?.name);
+    
+    if (!file) return;
+
+    // Atualiza o estado com a logo selecionada
+    onLogosUpload({
+      ...currentLogos,
+      frontLogo: file,
+    });
+  };
 
   // Se não precisa de logos, mostrar mensagem
   if (!needsAnyLogo) {
@@ -88,15 +104,24 @@ export const LogoUploader = ({
             size="lg"
             className="h-16 text-lg"
             onClick={() => {
+              console.log('Botão "Adicionar Logo" clicado');
               onUploadChoiceChange('agora');
-              setTimeout(() => {
-                onNext();
-              }, 300);
+              // Abrir a galeria do celular
+              fileInputRef.current?.click();
             }}
           >
             <Upload className="mr-2 h-5 w-5" />
             Adicionar Logo
           </Button>
+
+          {/* Input de arquivo oculto */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileChange}
+          />
 
           {/* Botão Não Tenho Logo */}
           <Button
@@ -104,10 +129,8 @@ export const LogoUploader = ({
             size="lg"
             className="h-16 text-lg"
             onClick={() => {
+              console.log('Botão "Não Tenho Logo" clicado');
               onUploadChoiceChange('depois');
-              setTimeout(() => {
-                onNext();
-              }, 300);
             }}
           >
             <X className="mr-2 h-5 w-5" />
@@ -115,12 +138,21 @@ export const LogoUploader = ({
           </Button>
         </div>
 
-        {/* Mensagem explicativa baseada na escolha */}
+        {/* Feedback visual da logo selecionada */}
         {uploadChoice === 'agora' && (
           <div className="mt-6 p-4 bg-primary/10 rounded-lg border border-primary/20">
-            <p className="text-sm text-center">
-              Você poderá enviar as logos por WhatsApp após finalizar o pedido.
-            </p>
+            {currentLogos.frontLogo ? (
+              <div className="flex items-center justify-center gap-2">
+                <Check className="h-5 w-5 text-green-600" />
+                <p className="text-sm font-medium text-green-700">
+                  Logo selecionada: {currentLogos.frontLogo.name}
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-center">
+                Toque em "Adicionar Logo" para escolher uma imagem da sua galeria.
+              </p>
+            )}
           </div>
         )}
 

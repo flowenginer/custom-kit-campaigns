@@ -473,6 +473,23 @@ export default function Campaign() {
         toast.error('Escolha quando deseja enviar as logos');
         return;
       }
+
+      // Se escolheu enviar agora, precisa ter pelo menos uma logo
+      if (uploadChoice === 'agora') {
+        const hasAnyLogo =
+          uploadedLogos.frontLogo ||
+          uploadedLogos.backLogo ||
+          uploadedLogos.rightFlag ||
+          uploadedLogos.rightLogo ||
+          uploadedLogos.leftFlag ||
+          uploadedLogos.leftLogo ||
+          (uploadedLogos.sponsorsLogos && uploadedLogos.sponsorsLogos.length > 0);
+
+        if (!hasAnyLogo) {
+          toast.error('Envie pelo menos uma logo para continuar');
+          return;
+        }
+      }
     }
 
     // Última etapa - submit order
@@ -490,6 +507,38 @@ export default function Campaign() {
     }
   };
 
+  // Upload logo file to Supabase Storage
+  const uploadLogoFile = async (file: File | null, path: string): Promise<string | null> => {
+    if (!file) return null;
+
+    try {
+      const ext = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const filePath = `${path}/${fileName}`;
+
+      console.log('Fazendo upload da logo:', filePath);
+
+      const { error: uploadError } = await supabase.storage
+        .from('customer-logos')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        console.error('Erro ao fazer upload:', uploadError);
+        throw uploadError;
+      }
+
+      const { data } = supabase.storage
+        .from('customer-logos')
+        .getPublicUrl(filePath);
+
+      console.log('URL pública da logo:', data.publicUrl);
+      return data.publicUrl;
+    } catch (error) {
+      console.error('Erro no upload da logo:', error);
+      return null;
+    }
+  };
+
   // Submit order
   const handleSubmitOrder = async () => {
     try {
@@ -498,6 +547,41 @@ export default function Campaign() {
       const finalQuantity = customerData.quantity === 'custom' 
         ? customerData.customQuantity 
         : customerData.quantity;
+
+      // Upload logos se a escolha for "agora"
+      let finalCustomizations = { ...customizations };
+
+      if (uploadChoice === 'agora') {
+        console.log('Fazendo upload das logos...');
+        
+        // Upload front logo
+        const frontUrl = await uploadLogoFile(uploadedLogos.frontLogo, 'front');
+        
+        // Upload back logo (se não tiver, usa a mesma da frente)
+        const backUrl = await uploadLogoFile(
+          uploadedLogos.backLogo || uploadedLogos.frontLogo,
+          'back'
+        );
+
+        if (frontUrl) {
+          finalCustomizations = {
+            ...finalCustomizations,
+            front: { ...finalCustomizations.front, logoUrl: frontUrl },
+          };
+        }
+
+        if (backUrl) {
+          finalCustomizations = {
+            ...finalCustomizations,
+            back: { ...finalCustomizations.back, logoUrl: backUrl },
+          };
+        }
+
+        // Atualizar o estado
+        setCustomizations(finalCustomizations);
+        
+        console.log('Logos enviadas com sucesso!');
+      }
 
       const orderData = {
         campaign_id: campaign.id,
@@ -508,9 +592,9 @@ export default function Campaign() {
         customization_data: {
           model: selectedModel.name,
           model_id: selectedModel.id,
-          front: customizations.front,
-          back: customizations.back,
-          sleeves: customizations.sleeves,
+          front: finalCustomizations.front,
+          back: finalCustomizations.back,
+          sleeves: finalCustomizations.sleeves,
           uploadChoice: uploadChoice
         }
       };
