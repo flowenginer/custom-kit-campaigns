@@ -20,6 +20,8 @@ interface ShirtModel {
   id: string;
   name: string;
   segment_id: string;
+  segment_tag: string;
+  model_tag: string;
   sku?: string | null;
   photo_main: string;
   image_front: string;
@@ -49,6 +51,8 @@ const Models = () => {
   const [formData, setFormData] = useState({
     name: "",
     segment_id: "",
+    segment_tag: "",
+    model_tag: "",
     sku: "",
     features: [] as string[],
   });
@@ -269,7 +273,9 @@ const Models = () => {
         .from("shirt_models")
         .insert({
           name: formData.name,
-          segment_id: formData.segment_id,
+          segment_tag: formData.segment_tag,
+          model_tag: formData.model_tag,
+          segment_id: segments.find((s: any) => s.segment_tag === formData.segment_tag)?.id || null,
           sku: formData.sku || null,
           photo_main: "temp",
           image_front: "temp",
@@ -323,7 +329,7 @@ const Models = () => {
 
       toast.success("Modelo criado com sucesso!");
       setIsDialogOpen(false);
-      setFormData({ name: "", segment_id: "", sku: "", features: [] });
+      setFormData({ name: "", segment_id: "", segment_tag: "", model_tag: "", sku: "", features: [] });
       setNewFeature('');
       setImageFiles({
         photo_main: null,
@@ -394,6 +400,8 @@ const Models = () => {
     setFormData({
       name: model.name,
       segment_id: model.segment_id,
+      segment_tag: model.segment_tag || "",
+      model_tag: model.model_tag || "",
       sku: model.sku || "",
       features: model.features || [],
     });
@@ -469,7 +477,7 @@ const Models = () => {
       toast.success("Modelo atualizado com sucesso!");
       setIsEditDialogOpen(false);
       setEditingModel(null);
-      setFormData({ name: "", segment_id: "", sku: "", features: [] });
+      setFormData({ name: "", segment_id: "", segment_tag: "", model_tag: "", sku: "", features: [] });
       setNewFeature('');
       setImageFiles({
         photo_main: null,
@@ -544,22 +552,42 @@ const Models = () => {
               </div>
 
               <div>
-                <Label htmlFor="segment">Segmento*</Label>
+                <Label htmlFor="segment_tag">Tag do Segmento*</Label>
                 <Select
-                  value={formData.segment_id}
-                  onValueChange={(value) => setFormData({ ...formData, segment_id: value })}
+                  value={formData.segment_tag}
+                  onValueChange={(value) => setFormData({ ...formData, segment_tag: value })}
                   disabled={uploading}
                   required
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione um segmento" />
+                    <SelectValue placeholder="Selecione a tag do segmento" />
                   </SelectTrigger>
                   <SelectContent>
-                    {segments.map((segment) => (
-                      <SelectItem key={segment.id} value={segment.id}>
-                        {segment.name}
+                    {segments.map((segment: any) => (
+                      <SelectItem key={segment.id} value={segment.segment_tag || ""}>
+                        {segment.name} ({segment.segment_tag})
                       </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="model_tag">Tipo de Uniforme*</Label>
+                <Select
+                  value={formData.model_tag}
+                  onValueChange={(value) => setFormData({ ...formData, model_tag: value })}
+                  disabled={uploading}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo de uniforme" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="manga_longa">👕 Manga Longa</SelectItem>
+                    <SelectItem value="ziper">🧥 Zíper</SelectItem>
+                    <SelectItem value="manga_curta">👔 Manga Curta</SelectItem>
+                    <SelectItem value="regata">🎽 Regata</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1004,7 +1032,7 @@ const Models = () => {
                 onClick={() => {
                   setIsEditDialogOpen(false);
                   setEditingModel(null);
-                  setFormData({ name: "", segment_id: "", sku: "", features: [] });
+                  setFormData({ name: "", segment_id: "", segment_tag: "", model_tag: "", sku: "", features: [] });
                   setNewFeature('');
                   setImageFiles({
                     photo_main: null,

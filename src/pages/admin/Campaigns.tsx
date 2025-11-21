@@ -20,10 +20,12 @@ interface Campaign {
   name: string;
   unique_link: string;
   segment_id: string | null;
+  segment_tag: string | null;
   workflow_template_id: string;
   segments?: {
     id: string;
     name: string;
+    segment_tag: string;
   };
   workflow_templates?: {
     id: string;
@@ -42,6 +44,7 @@ interface WorkflowTemplate {
 interface Segment {
   id: string;
   name: string;
+  segment_tag: string;
 }
 
 export default function Campaigns() {
@@ -57,7 +60,7 @@ export default function Campaigns() {
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
   const [formData, setFormData] = useState({
     name: "",
-    segment_id: "",
+    segment_tag: "",
     workflow_template_id: "",
   });
 
@@ -74,7 +77,8 @@ export default function Campaigns() {
         *,
         segments (
           id,
-          name
+          name,
+          segment_tag
         ),
         workflow_templates (
           id,
@@ -90,11 +94,11 @@ export default function Campaigns() {
       // Count models for each campaign
       const campaignsWithCounts = await Promise.all(
         campaignsData.map(async (campaign) => {
-          if (campaign.segment_id) {
+          if (campaign.segment_tag) {
             const { count } = await supabase
               .from("shirt_models")
               .select("*", { count: "exact", head: true })
-              .eq("segment_id", campaign.segment_id);
+              .eq("segment_tag", campaign.segment_tag);
             return { ...campaign, model_count: count || 0 };
           }
           return { ...campaign, model_count: 0 };
@@ -147,7 +151,7 @@ export default function Campaigns() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name || !formData.segment_id || !formData.workflow_template_id) {
+    if (!formData.name || !formData.segment_tag || !formData.workflow_template_id) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
@@ -157,7 +161,7 @@ export default function Campaigns() {
 
     const campaignData = {
       name: formData.name,
-      segment_id: formData.segment_id,
+      segment_tag: formData.segment_tag,
       workflow_template_id: formData.workflow_template_id,
       unique_link: uniqueLink,
     };
@@ -170,7 +174,7 @@ export default function Campaigns() {
     } else {
       toast.success("Campanha criada com sucesso!");
       setShowDialog(false);
-      setFormData({ name: "", segment_id: "", workflow_template_id: "" });
+      setFormData({ name: "", segment_tag: "", workflow_template_id: "" });
       loadData();
     }
   };
@@ -299,8 +303,8 @@ export default function Campaigns() {
                 <div>
                   <Label htmlFor="segment">Segmento*</Label>
                   <Select
-                    value={formData.segment_id}
-                    onValueChange={(value) => setFormData({ ...formData, segment_id: value })}
+                    value={formData.segment_tag}
+                    onValueChange={(value) => setFormData({ ...formData, segment_tag: value })}
                     required
                   >
                     <SelectTrigger id="segment">
@@ -308,7 +312,7 @@ export default function Campaigns() {
                     </SelectTrigger>
                     <SelectContent>
                       {segments.map((segment) => (
-                        <SelectItem key={segment.id} value={segment.id}>
+                        <SelectItem key={segment.id} value={segment.segment_tag}>
                           {segment.name}
                         </SelectItem>
                       ))}

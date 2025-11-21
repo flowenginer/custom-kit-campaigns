@@ -23,44 +23,32 @@ import regataImg from "@/assets/uniforms/regata.png";
 import ziperMangaLongaImg from "@/assets/uniforms/ziper-manga-longa.png";
 import logoImg from "@/assets/logo-ss.png";
 
-const UNIFORM_MODELS = [
-  {
-    id: 'ziper-manga-longa',
-    name: 'Manga Longa com Zíper',
-    image: ziperMangaLongaImg,
-    order: 1
-  },
-  {
-    id: 'manga-longa',
-    name: 'Manga Longa',
-    image: mangaLongaImg,
-    order: 2
-  },
-  {
-    id: 'manga-curta',
-    name: 'Manga Curta',
-    image: mangaCurtaImg,
-    order: 3
-  },
-  {
-    id: 'regata',
-    name: 'Regata',
-    image: regataImg,
-    order: 4
-  }
-];
+const UNIFORM_IMAGES: Record<string, string> = {
+  'ziper': ziperMangaLongaImg,
+  'manga_longa': mangaLongaImg,
+  'manga_curta': mangaCurtaImg,
+  'regata': regataImg,
+};
+
+const UNIFORM_LABELS: Record<string, string> = {
+  'ziper': 'Zíper',
+  'manga_longa': 'Manga Longa',
+  'manga_curta': 'Manga Curta',
+  'regata': 'Regata',
+};
 
 const TOTAL_STEPS = [
-  { id: 'select_model', label: 'Modelo', order: 0, enabled: true },
+  { id: 'select_type', label: 'Tipo', order: 0, enabled: true },
   { id: 'enter_name', label: 'Nome', order: 1, enabled: true },
   { id: 'enter_phone', label: 'WhatsApp', order: 2, enabled: true },
   { id: 'select_quantity', label: 'Quantidade', order: 3, enabled: true },
-  { id: 'customize_front', label: 'Frente', order: 4, enabled: true },
-  { id: 'customize_back', label: 'Costas', order: 5, enabled: true },
-  { id: 'customize_sleeves_left', label: 'Manga Esq.', order: 6, enabled: true },
-  { id: 'customize_sleeves_right', label: 'Manga Dir.', order: 7, enabled: true },
-  { id: 'upload_logos', label: 'Logos', order: 8, enabled: true },
-  { id: 'review', label: 'Revisão', order: 9, enabled: true }
+  { id: 'choose_model', label: 'Modelo', order: 4, enabled: true },
+  { id: 'customize_front', label: 'Frente', order: 5, enabled: true },
+  { id: 'customize_back', label: 'Costas', order: 6, enabled: true },
+  { id: 'customize_sleeves_left', label: 'Manga Esq.', order: 7, enabled: true },
+  { id: 'customize_sleeves_right', label: 'Manga Dir.', order: 8, enabled: true },
+  { id: 'upload_logos', label: 'Logos', order: 9, enabled: true },
+  { id: 'review', label: 'Revisão', order: 10, enabled: true }
 ];
 
 const STORAGE_KEY = 'campaign_progress';
@@ -76,6 +64,11 @@ export default function Campaign() {
   const [isSaving, setIsSaving] = useState(false);
   const [sessionId, setSessionId] = useState<string>("");
   const [leadId, setLeadId] = useState<string | null>(null);
+  
+  // New states for models and types
+  const [availableModels, setAvailableModels] = useState<any[]>([]);
+  const [availableUniformTypes, setAvailableUniformTypes] = useState<string[]>([]);
+  const [selectedUniformType, setSelectedUniformType] = useState<string | null>(null);
   
   // Estados simplificados
   const [selectedModel, setSelectedModel] = useState<any>(null);
@@ -181,6 +174,22 @@ export default function Campaign() {
         }
 
         setCampaign(campaignData);
+        
+        // Load models based on segment_tag
+        if (campaignData.segment_tag) {
+          const { data: modelsData } = await supabase
+            .from("shirt_models")
+            .select("*")
+            .eq("segment_tag", campaignData.segment_tag);
+
+          if (modelsData) {
+            setAvailableModels(modelsData);
+            
+            // Get unique model_tags
+            const uniqueTypes = [...new Set(modelsData.map((m: any) => m.model_tag))].filter(Boolean);
+            setAvailableUniformTypes(uniqueTypes as string[]);
+          }
+        }
         
         // Load global scripts
         const { data: globalSettings } = await supabase
@@ -409,7 +418,12 @@ export default function Campaign() {
   // Handle next step
   const handleNext = async () => {
     // Validations per step
-    if (currentStepId === 'select_model' && !selectedModel) {
+    if (currentStepId === 'select_type' && !selectedUniformType) {
+      toast.error('Selecione um tipo de uniforme antes de continuar');
+      return;
+    }
+
+    if (currentStepId === 'choose_model' && !selectedModel) {
       toast.error('Selecione um modelo antes de continuar');
       return;
     }
@@ -529,12 +543,11 @@ export default function Campaign() {
   // Select model and auto-advance
   const handleSelectModel = async (model: any) => {
     setSelectedModel(model);
-    await createOrUpdateLead(0);
+    await createOrUpdateLead(currentStep);
     
     // Wait a bit for better UX
     setTimeout(() => {
-      setCurrentStep(1);
-      trackEvent('step_2');
+      handleNext();
     }, 300);
   };
 
@@ -637,35 +650,38 @@ export default function Campaign() {
 
       {/* Main content */}
       <main className="container mx-auto px-4 py-8">
-        {/* Step 1: Select Model */}
-        {currentStepId === 'select_model' && (
+        {/* Step 1: Select Uniform Type */}
+        {currentStepId === 'select_type' && (
           <div className="max-w-6xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
-              Dê vida ao seu uniforme
+              Escolha o tipo de uniforme
             </h2>
             <h3 className="text-xl md:text-2xl text-center mb-12 text-muted-foreground">
-              Escolha o modelo ideal
+              Selecione o modelo que melhor se adapta às suas necessidades
             </h3>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-              {UNIFORM_MODELS.map((model) => (
+              {availableUniformTypes.map((type) => (
                 <Card
-                  key={model.id}
+                  key={type}
                   className={`cursor-pointer hover:shadow-xl transition-all border-2 hover:border-primary ${
-                    selectedModel?.id === model.id ? 'border-primary ring-4 ring-primary/20' : ''
+                    selectedUniformType === type ? 'border-primary ring-4 ring-primary/20' : ''
                   }`}
-                  onClick={() => handleSelectModel(model)}
+                  onClick={() => {
+                    setSelectedUniformType(type);
+                    setTimeout(() => handleNext(), 300);
+                  }}
                 >
                   <CardContent className="p-4">
                     <div className="aspect-square mb-4 flex items-center justify-center bg-muted/30 rounded-lg overflow-hidden">
                       <img
-                        src={model.image}
-                        alt={model.name}
+                        src={UNIFORM_IMAGES[type] || mangaCurtaImg}
+                        alt={UNIFORM_LABELS[type] || type}
                         className="w-full h-full object-contain"
                       />
                     </div>
                     <h4 className="text-center font-semibold text-sm">
-                      {model.name}
+                      {UNIFORM_LABELS[type] || type}
                     </h4>
                   </CardContent>
                 </Card>
@@ -808,7 +824,70 @@ export default function Campaign() {
           </Card>
         )}
 
-        {/* Step 5: Customize Front */}
+        {/* Step 5: Choose Specific Model */}
+        {currentStepId === 'choose_model' && selectedUniformType && (
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
+              Escolha o modelo
+            </h2>
+            <h3 className="text-xl md:text-2xl text-center mb-12 text-muted-foreground">
+              {UNIFORM_LABELS[selectedUniformType]}
+            </h3>
+
+            {availableModels.filter(m => m.model_tag === selectedUniformType).length === 0 ? (
+              <Card className="max-w-lg mx-auto">
+                <CardContent className="p-8 text-center">
+                  <p className="text-muted-foreground">
+                    Nenhum modelo disponível para este tipo de uniforme.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+                {availableModels
+                  .filter(m => m.model_tag === selectedUniformType)
+                  .map((model) => (
+                    <Card
+                      key={model.id}
+                      className={`cursor-pointer hover:shadow-xl transition-all border-2 hover:border-primary ${
+                        selectedModel?.id === model.id ? 'border-primary ring-4 ring-primary/20' : ''
+                      }`}
+                      onClick={() => handleSelectModel(model)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="aspect-square mb-4 flex items-center justify-center bg-muted/30 rounded-lg overflow-hidden">
+                          <img
+                            src={model.photo_main}
+                            alt={model.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <h4 className="text-center font-semibold text-sm mb-2">
+                          {model.name}
+                        </h4>
+                        {model.sku && (
+                          <p className="text-xs text-center text-muted-foreground">
+                            SKU: {model.sku}
+                          </p>
+                        )}
+                        {model.features && model.features.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1 justify-center">
+                            {model.features.slice(0, 2).map((feature: string, idx: number) => (
+                              <span key={idx} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
+                                {feature}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Step 6: Customize Front */}
         {currentStepId === 'customize_front' && selectedModel && (
           <div className="max-w-6xl mx-auto">
             <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">
@@ -825,7 +904,7 @@ export default function Campaign() {
           </div>
         )}
 
-        {/* Step 6: Customize Back */}
+        {/* Step 7: Customize Back */}
         {currentStepId === 'customize_back' && selectedModel && (
           <div className="max-w-6xl mx-auto">
             <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">
@@ -842,7 +921,7 @@ export default function Campaign() {
           </div>
         )}
 
-        {/* Step 7: Customize Left Sleeve */}
+        {/* Step 8: Customize Left Sleeve */}
         {currentStepId === 'customize_sleeves_left' && selectedModel && (
           <div className="max-w-6xl mx-auto">
             <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">
@@ -863,7 +942,7 @@ export default function Campaign() {
           </div>
         )}
 
-        {/* Step 8: Customize Right Sleeve */}
+        {/* Step 9: Customize Right Sleeve */}
         {currentStepId === 'customize_sleeves_right' && selectedModel && (
           <div className="max-w-6xl mx-auto">
             <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">
@@ -884,7 +963,7 @@ export default function Campaign() {
           </div>
         )}
 
-        {/* Step 9: Upload Logos */}
+        {/* Step 10: Upload Logos */}
         {currentStepId === 'upload_logos' && (
           <div className="max-w-4xl mx-auto">
             <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">
@@ -900,7 +979,7 @@ export default function Campaign() {
           </div>
         )}
 
-        {/* Step 10: Review */}
+        {/* Step 11: Review */}
         {currentStepId === 'review' && (
           <div className="max-w-4xl mx-auto">
             <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">
