@@ -99,6 +99,7 @@ const Leads = () => {
         },
         async (payload) => {
           console.log('Realtime update:', payload);
+          toast.info('Lead atualizado em tempo real', { duration: 2000 });
 
           if (payload.eventType === 'INSERT') {
             // Novo lead - buscar dados completos com relations
@@ -240,13 +241,17 @@ const Leads = () => {
 
   const getStepLabel = (step: number) => {
     const labels = [
-      "Dados Iniciais",
-      "Selecionar Modelo",
-      "Personalizar Frente",
-      "Personalizar Costas",
-      "Manga Direita",
-      "Manga Esquerda",
-      "Revisão e Envio"
+      "Selecionar Tipo",          // 0
+      "Informar Nome",             // 1
+      "Informar Telefone",         // 2
+      "Selecionar Quantidade",     // 3
+      "Escolher Modelo",           // 4
+      "Personalizar Frente",       // 5
+      "Personalizar Costas",       // 6
+      "Manga Esquerda",            // 7
+      "Manga Direita",             // 8
+      "Upload de Logos",           // 9
+      "Revisão e Envio"            // 10
     ];
     return labels[step] || `Etapa ${step}`;
   };
