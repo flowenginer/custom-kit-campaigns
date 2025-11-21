@@ -817,6 +817,27 @@ export type Database = {
           },
         ]
       }
+      tags: {
+        Row: {
+          created_at: string | null
+          id: string
+          tag_type: string
+          tag_value: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          tag_type: string
+          tag_value: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          tag_type?: string
+          tag_value?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
