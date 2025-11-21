@@ -45,7 +45,7 @@ export const FrontEditor = ({ model, value, onChange, onNext }: FrontEditorProps
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6 pb-4">
       <Card className="order-1 md:order-1">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base md:text-lg">Preview - Frente</CardTitle>
@@ -60,7 +60,7 @@ export const FrontEditor = ({ model, value, onChange, onNext }: FrontEditorProps
         </CardHeader>
         <CardContent>
           <div 
-            className="relative bg-muted rounded-lg overflow-hidden flex items-center justify-center min-h-[300px] md:min-h-[500px] cursor-pointer"
+            className="relative bg-muted rounded-lg overflow-hidden flex items-center justify-center min-h-[180px] md:min-h-[500px] cursor-pointer"
             onClick={() => setIsZoomOpen(true)}
           >
             <img 
@@ -87,7 +87,7 @@ export const FrontEditor = ({ model, value, onChange, onNext }: FrontEditorProps
             Escolha abaixo o que você quer que tenha no seu modelo
           </p>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 pb-8 md:pb-6">
           <div className="space-y-4">
             <Label className="text-base">Tipo de Logo</Label>
             <p className="text-sm text-muted-foreground">
