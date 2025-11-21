@@ -3,10 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
-import { Loader2, TrendingUp, Users, Target, Activity } from "lucide-react";
+import { Loader2, TrendingUp, Users, Target, Activity, Calendar as CalendarIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UtmBreakdownDialog } from "@/components/dashboard/UtmBreakdownDialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Button } from "@/components/ui/button";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 // LocalStorage helpers for campaign selection persistence
 const STORAGE_KEY = 'dashboard_selected_campaigns';
@@ -115,6 +120,9 @@ interface DailyVisitsData {
   date: string;
   [campaignName: string]: string | number;
 }
+
+type DateFilterType = "today" | "7days" | "15days" | "30days" | "custom";
+
 const CHART_COLORS = ["hsl(var(--chart-purple))", "hsl(var(--chart-green))", "hsl(var(--chart-orange))", "hsl(var(--chart-blue))", "hsl(var(--chart-pink))", "hsl(var(--chart-teal))", "hsl(var(--chart-indigo))", "hsl(var(--chart-cyan))", "hsl(var(--chart-amber))", "hsl(var(--chart-red))"];
 const Dashboard = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -141,11 +149,45 @@ const Dashboard = () => {
     id: string;
     name: string;
   } | null>(null);
+  const [dateFilter, setDateFilter] = useState<DateFilterType>("30days");
+  const [customStartDate, setCustomStartDate] = useState<Date | undefined>();
+  const [customEndDate, setCustomEndDate] = useState<Date | undefined>();
+  const getDateRange = () => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    switch (dateFilter) {
+      case "today":
+        return { start: today, end: now };
+      case "7days":
+        const sevenDaysAgo = new Date(today);
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        return { start: sevenDaysAgo, end: now };
+      case "15days":
+        const fifteenDaysAgo = new Date(today);
+        fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
+        return { start: fifteenDaysAgo, end: now };
+      case "30days":
+        const thirtyDaysAgo = new Date(today);
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        return { start: thirtyDaysAgo, end: now };
+      case "custom":
+        if (customStartDate && customEndDate) {
+          return { start: customStartDate, end: customEndDate };
+        }
+        return { start: thirtyDaysAgo, end: now };
+      default:
+        const defaultThirtyDaysAgo = new Date(today);
+        defaultThirtyDaysAgo.setDate(defaultThirtyDaysAgo.getDate() - 30);
+        return { start: defaultThirtyDaysAgo, end: now };
+    }
+  };
+
   useEffect(() => {
     loadDashboardData();
     loadDesignMetrics();
     loadDailyVisits();
-  }, []);
+  }, [dateFilter, customStartDate, customEndDate]);
   useEffect(() => {
     if (campaigns.length > 0) {
       const saved = loadSelectedCampaigns();
@@ -164,6 +206,8 @@ const Dashboard = () => {
   }, [campaigns]);
   const loadDashboardData = async () => {
     try {
+      const dateRange = getDateRange();
+      
       // Carregar campanhas
       const {
         data: campaignsData
@@ -177,7 +221,12 @@ const Dashboard = () => {
         const funnelPromises = campaignsData.map(async campaign => {
           const {
             data: events
-          } = await supabase.from("funnel_events").select("event_type").eq("campaign_id", campaign.id);
+          } = await supabase
+            .from("funnel_events")
+            .select("event_type")
+            .eq("campaign_id", campaign.id)
+            .gte("created_at", dateRange.start.toISOString())
+            .lte("created_at", dateRange.end.toISOString());
           const counts = {
             visits: 0,
             step1: 0,
@@ -203,7 +252,12 @@ const Dashboard = () => {
       // Carregar métricas de leads com UTMs
       const {
         data: leadsData
-      } = await supabase.from("leads").select("completed, utm_source, utm_medium, utm_campaign, utm_term, utm_content, campaign_id").is("deleted_at", null);
+      } = await supabase
+        .from("leads")
+        .select("completed, utm_source, utm_medium, utm_campaign, utm_term, utm_content, campaign_id")
+        .is("deleted_at", null)
+        .gte("created_at", dateRange.start.toISOString())
+        .lte("created_at", dateRange.end.toISOString());
       if (leadsData) {
         const total = leadsData.length;
         const converted = leadsData.filter(l => l.completed).length;
@@ -313,11 +367,15 @@ const Dashboard = () => {
   // Carregar métricas de criação
   const loadDesignMetrics = async () => {
     try {
+      const dateRange = getDateRange();
+      
       // 1. Buscar contagem de tarefas por status
     const { data: tasksData } = await supabase
       .from("design_tasks")
       .select("status, assigned_to, created_at, completed_at")
-      .is("deleted_at", null);
+      .is("deleted_at", null)
+      .gte("created_at", dateRange.start.toISOString())
+      .lte("created_at", dateRange.end.toISOString());
 
       const statusLabels: Record<string, { label: string; color: string }> = {
         pending: { label: "Aguardando", color: "hsl(var(--chart-blue))" },
@@ -423,8 +481,7 @@ const Dashboard = () => {
 
   const loadDailyVisits = async () => {
     try {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const dateRange = getDateRange();
 
       const { data: visitsData, error } = await supabase
         .from("funnel_events")
@@ -437,7 +494,8 @@ const Dashboard = () => {
           )
         `)
         .eq("event_type", "campaign_visit")
-        .gte("created_at", thirtyDaysAgo.toISOString())
+        .gte("created_at", dateRange.start.toISOString())
+        .lte("created_at", dateRange.end.toISOString())
         .order("created_at", { ascending: true });
 
       if (error) throw error;
@@ -519,11 +577,83 @@ const Dashboard = () => {
   const topUtmSources = getTopUtmSources();
   const filteredUtmData = getFilteredUtmData();
   return <div className="p-8 space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-chart-purple bg-clip-text text-transparent">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">
-          Visualize a performance de suas campanhas em tempo real
-        </p>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-chart-purple bg-clip-text text-transparent">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">
+            Visualize a performance de suas campanhas em tempo real
+          </p>
+        </div>
+        
+        {/* Filtro de Data */}
+        <div className="flex items-center gap-3">
+          <Select value={dateFilter} onValueChange={(value: DateFilterType) => setDateFilter(value)}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Período" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="today">Hoje</SelectItem>
+              <SelectItem value="7days">Últimos 7 dias</SelectItem>
+              <SelectItem value="15days">Últimos 15 dias</SelectItem>
+              <SelectItem value="30days">Últimos 30 dias</SelectItem>
+              <SelectItem value="custom">Personalizar</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          {dateFilter === "custom" && (
+            <div className="flex items-center gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-[140px] justify-start text-left font-normal",
+                      !customStartDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {customStartDate ? format(customStartDate, "dd/MM/yyyy") : "Data início"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={customStartDate}
+                    onSelect={setCustomStartDate}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+              
+              <span className="text-muted-foreground">até</span>
+              
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-[140px] justify-start text-left font-normal",
+                      !customEndDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {customEndDate ? format(customEndDate, "dd/MM/yyyy") : "Data fim"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={customEndDate}
+                    onSelect={setCustomEndDate}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Seção 1: Métricas Cards com Visual Moderno */}
