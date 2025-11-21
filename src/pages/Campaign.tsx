@@ -826,7 +826,7 @@ export default function Campaign() {
 
         {/* Step 5: Choose Specific Model */}
         {currentStepId === 'choose_model' && selectedUniformType && (
-          <div className="max-w-6xl mx-auto">
+          <div className="max-w-4xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
               Escolha o modelo
             </h2>
@@ -843,42 +843,82 @@ export default function Campaign() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+              <div className="space-y-6">
                 {availableModels
                   .filter(m => m.model_tag === selectedUniformType)
                   .map((model) => (
                     <Card
                       key={model.id}
-                      className={`cursor-pointer hover:shadow-xl transition-all border-2 hover:border-primary ${
-                        selectedModel?.id === model.id ? 'border-primary ring-4 ring-primary/20' : ''
+                      className={`overflow-hidden hover:shadow-xl transition-all border-2 ${
+                        selectedModel?.id === model.id ? 'border-primary ring-4 ring-primary/20' : 'border-border'
                       }`}
-                      onClick={() => handleSelectModel(model)}
                     >
-                      <CardContent className="p-4">
-                        <div className="aspect-square mb-4 flex items-center justify-center bg-muted/30 rounded-lg overflow-hidden">
-                          <img
-                            src={model.photo_main}
-                            alt={model.name}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <h4 className="text-center font-semibold text-sm mb-2">
-                          {model.name}
-                        </h4>
-                        {model.sku && (
-                          <p className="text-xs text-center text-muted-foreground">
-                            SKU: {model.sku}
-                          </p>
-                        )}
-                        {model.features && model.features.length > 0 && (
-                          <div className="mt-2 flex flex-wrap gap-1 justify-center">
-                            {model.features.slice(0, 2).map((feature: string, idx: number) => (
-                              <span key={idx} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                                {feature}
-                              </span>
-                            ))}
+                      <CardContent className="p-0">
+                        <div className="grid md:grid-cols-2 gap-0">
+                          {/* Left side - Info */}
+                          <div className="p-6 md:p-8 flex flex-col justify-between bg-muted/30">
+                            <div>
+                              <h3 className="text-2xl md:text-3xl font-bold mb-4">
+                                {model.name}
+                              </h3>
+                              
+                              {model.sku && (
+                                <p className="text-sm text-muted-foreground mb-4">
+                                  Código: {model.sku}
+                                </p>
+                              )}
+
+                              {model.features && model.features.length > 0 && (
+                                <div className="space-y-2 mb-6">
+                                  <p className="text-sm font-semibold text-muted-foreground">Características:</p>
+                                  <div className="flex flex-wrap gap-2">
+                                    {model.features.map((feature: string, idx: number) => (
+                                      <span 
+                                        key={idx} 
+                                        className="text-xs bg-primary/10 text-primary px-3 py-1 rounded-full"
+                                      >
+                                        {feature}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            <Button
+                              onClick={() => handleSelectModel(model)}
+                              size="lg"
+                              className="w-full mt-4"
+                            >
+                              {selectedModel?.id === model.id ? (
+                                <>
+                                  <Check className="mr-2 h-5 w-5" />
+                                  Modelo Selecionado
+                                </>
+                              ) : (
+                                'Encomendar agora'
+                              )}
+                            </Button>
                           </div>
-                        )}
+
+                          {/* Right side - Images */}
+                          <div className="grid grid-cols-2 gap-1 bg-muted">
+                            <div className="aspect-square flex items-center justify-center p-4">
+                              <img
+                                src={model.image_front}
+                                alt={`${model.name} - Frente`}
+                                className="w-full h-full object-contain"
+                              />
+                            </div>
+                            <div className="aspect-square flex items-center justify-center p-4">
+                              <img
+                                src={model.image_back}
+                                alt={`${model.name} - Costas`}
+                                className="w-full h-full object-contain"
+                              />
+                            </div>
+                          </div>
+                        </div>
                       </CardContent>
                     </Card>
                   ))}
