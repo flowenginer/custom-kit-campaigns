@@ -253,6 +253,7 @@ export default function Campaigns() {
     const campaignData = {
       name: formData.name,
       segment_tag: formData.segment_tag,
+      model_tag: formData.model_tag,
       workflow_template_id: formData.workflow_template_id,
       unique_link: uniqueLink,
     };
