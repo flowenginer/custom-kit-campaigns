@@ -1,1683 +1,745 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { ArrowLeft, Check } from "lucide-react";
 import { toast } from "sonner";
-import { Loader2, ArrowLeft, ArrowRight, Check, Upload, CheckCircle2 } from "lucide-react";
-import { FrontEditor } from "@/components/customization/FrontEditor";
-import { BackEditor } from "@/components/customization/BackEditor";
-import { SleeveEditor } from "@/components/customization/SleeveEditor";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useDebounce } from "use-debounce";
-import { format } from "date-fns";
-import { WorkflowStep } from "@/types/workflow";
 import { useCampaignTheme } from "@/hooks/useCampaignTheme";
 import { CustomScriptManager } from "@/components/campaign/CustomScriptManager";
 
-interface ShirtModel {
-  id: string;
-  name: string;
-  photo_main: string;
-  image_front: string;
-  image_back: string;
-  image_right: string;
-  image_left: string;
-  image_front_small_logo?: string | null;
-  image_front_large_logo?: string | null;
-  image_front_clean?: string | null;
-  features?: string[] | null;
-}
+// Importar imagens dos uniformes
+import mangaCurtaImg from "@/assets/uniforms/manga-curta.png";
+import mangaLongaImg from "@/assets/uniforms/manga-longa.png";
+import regataImg from "@/assets/uniforms/regata.png";
+import ziperMangaLongaImg from "@/assets/uniforms/ziper-manga-longa.png";
+import logoImg from "@/assets/logo-ss.png";
 
-interface Campaign {
-  id: string;
-  name: string;
-  segment_id: string | null;
-  workflow_template_id: string;
-  workflow_config?: WorkflowStep[];
-  workflow_templates?: {
-    workflow_config: WorkflowStep[];
-  };
-}
+const UNIFORM_MODELS = [
+  {
+    id: 'ziper-manga-longa',
+    name: 'Manga Longa com Zíper',
+    image: ziperMangaLongaImg,
+    order: 1
+  },
+  {
+    id: 'manga-longa',
+    name: 'Manga Longa',
+    image: mangaLongaImg,
+    order: 2
+  },
+  {
+    id: 'manga-curta',
+    name: 'Manga Curta',
+    image: mangaCurtaImg,
+    order: 3
+  },
+  {
+    id: 'regata',
+    name: 'Regata',
+    image: regataImg,
+    order: 4
+  }
+];
 
-interface FrontCustomization {
-  logoType: 'none' | 'small_left' | 'large_center' | 'custom';
-  textColor: string;
-  text: string;
-  logoUrl: string;
-}
+const SIMPLIFIED_STEPS = [
+  { id: 'select_model', label: 'Escolha o modelo', order: 0, enabled: true },
+  { id: 'enter_name', label: 'Seu nome', order: 1, enabled: true },
+  { id: 'enter_phone', label: 'Seu WhatsApp', order: 2, enabled: true },
+  { id: 'select_quantity', label: 'Quantidade', order: 3, enabled: true }
+];
 
-interface BackCustomization {
-  logoLarge: boolean;
-  logoUrl: string;
-  name: boolean;
-  nameText: string;
-  whatsapp: boolean;
-  whatsappText: string;
-  instagram: boolean;
-  instagramText: string;
-  email: boolean;
-  emailText: string;
-  website: boolean;
-  websiteText: string;
-  hasSponsors?: boolean;
-  sponsorsLocation?: string;
-  sponsors: string[];
-  sponsorsLogosUrls?: string[];
-}
+const STORAGE_KEY = 'campaign_progress';
 
-interface SleeveCustomization {
-  flag: boolean;
-  flagUrl: string;
-  logoSmall: boolean;
-  logoUrl: string;
-  text: boolean;
-  textContent: string;
-}
-
-interface CustomizationData {
-  front: FrontCustomization;
-  back: BackCustomization;
-  sleeves: {
-    right: SleeveCustomization;
-    left: SleeveCustomization;
-  };
-}
-
-const Campaign = () => {
+export default function Campaign() {
   const { uniqueLink } = useParams<{ uniqueLink: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const [sessionId, setSessionId] = useState(() => `session-${Date.now()}-${Math.random()}`);
-  const [abTestId, setAbTestId] = useState<string | null>(null);
-  const [abVariant, setAbVariant] = useState<string | null>(null);
-  const [campaignId, setCampaignId] = useState<string>('');
   
-  // Load campaign theme
-  const { theme: campaignTheme } = useCampaignTheme(campaignId);
-  
-  // Global scripts state
-  const [globalHeadScripts, setGlobalHeadScripts] = useState<string>('');
-  const [globalBodyScripts, setGlobalBodyScripts] = useState<string>('');
-
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const testId = params.get('ab_test');
-    const variant = params.get('ab_variant');
-    const session = params.get('session');
-    
-    if (testId && variant) {
-      setAbTestId(testId);
-      setAbVariant(variant);
-      if (session) setSessionId(session);
-    }
-  }, [location.search]);
-  const STORAGE_KEY = uniqueLink ? `campaign_progress_${uniqueLink}` : 'campaign_progress_temp';
-  const [campaign, setCampaign] = useState<Campaign | null>(null);
-  const [models, setModels] = useState<ShirtModel[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [campaign, setCampaign] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
-  const [selectedModel, setSelectedModel] = useState<ShirtModel | null>(null);
-  const [showFixedProgress, setShowFixedProgress] = useState(false);
-  const [isRehydrating, setIsRehydrating] = useState(true);
-  const [customizations, setCustomizations] = useState<CustomizationData>({
-    front: {
-      logoType: 'none',
-      textColor: '#000000',
-      text: '',
-      logoUrl: ''
-    },
-    back: {
-      logoLarge: false,
-      logoUrl: '',
-      name: false,
-      nameText: '',
-      whatsapp: false,
-      whatsappText: '',
-      instagram: false,
-      instagramText: '',
-      email: false,
-      emailText: '',
-      website: false,
-      websiteText: '',
-      sponsors: []
-    },
-    sleeves: {
-      right: { flag: false, flagUrl: '', logoSmall: false, logoUrl: '', text: false, textContent: '' },
-      left: { flag: false, flagUrl: '', logoSmall: false, logoUrl: '', text: false, textContent: '' }
-    }
-  });
-  const [customerData, setCustomerData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    quantity: "",
-    customQuantity: 10,
-  });
-  const [utmParams, setUtmParams] = useState({
-    utm_source: '',
-    utm_medium: '',
-    utm_campaign: '',
-    utm_term: '',
-    utm_content: '',
-  });
-  const [leadId, setLeadId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [uploadChoice, setUploadChoice] = useState<'agora' | 'depois' | null>(null);
-  const [uploadedLogos, setUploadedLogos] = useState<{
-    frontLogo: File | null;
-    backLogo: File | null;
-    sponsorsLogos: File[];
-    rightFlag: File | null;
-    rightLogo: File | null;
-    leftFlag: File | null;
-    leftLogo: File | null;
-  }>({
-    frontLogo: null,
-    backLogo: null,
-    sponsorsLogos: [],
-    rightFlag: null,
-    rightLogo: null,
-    leftFlag: null,
-    leftLogo: null,
+  const [sessionId, setSessionId] = useState<string>("");
+  const [leadId, setLeadId] = useState<string | null>(null);
+  
+  // Estados simplificados
+  const [selectedModel, setSelectedModel] = useState<any>(null);
+  const [customerData, setCustomerData] = useState({
+    name: '',
+    ddd: '',
+    phone: '',
+    quantity: null as number | 'custom' | null,
+    customQuantity: null as number | null
   });
-  const [logoChoice, setLogoChoice] = useState<'add_logo' | 'no_logo' | null>(null);
-  const [singleLogo, setSingleLogo] = useState<File | null>(null);
-
-  // Debounced values for auto-save
-  const [debouncedCustomerData] = useDebounce(customerData, 1500);
-  const [debouncedCustomizations] = useDebounce(customizations, 2000);
-
-  // Bug #1: Compute active steps from campaign workflow (prioritize snapshot)
-  const templateSteps = 
-    campaign?.workflow_config || 
-    campaign?.workflow_templates?.workflow_config || 
-    [];
   
-  // Filter and sort enabled steps, with fallback to default workflow
-  let enabledSteps = templateSteps.length > 0
-    ? templateSteps
-        .filter(step => step.enabled)
-        .sort((a, b) => a.order - b.order)
-    : [];
+  // UTM Parameters
+  const [utmParams, setUtmParams] = useState({
+    utm_source: null as string | null,
+    utm_medium: null as string | null,
+    utm_campaign: null as string | null,
+    utm_term: null as string | null,
+    utm_content: null as string | null,
+  });
 
-  // If no enabled steps after filtering, use default workflow
-  if (enabledSteps.length === 0) {
-    enabledSteps = [
-      { id: 'initial_data', label: 'Dados Iniciais', order: 0, enabled: true },
-      { id: 'select_model', label: 'Selecionar Modelo', order: 1, enabled: true },
-      { id: 'customize_front', label: 'Personalizar Frente', order: 2, enabled: true },
-      { id: 'customize_back', label: 'Personalizar Costas', order: 3, enabled: true },
-      { id: 'sleeve_right', label: 'Manga Direita', order: 4, enabled: true },
-      { id: 'sleeve_left', label: 'Manga Esquerda', order: 5, enabled: true },
-      { id: 'adicionar_logo', label: 'Adicionar Logo', order: 6, enabled: true },
-      { id: 'review', label: 'Revisão e Envio', order: 7, enabled: true },
-    ];
-  }
-  
-  const steps = enabledSteps.map(s => s.label);
-  const currentStepId = enabledSteps[currentStep]?.id;
+  // A/B Testing
+  const [abTestId, setAbTestId] = useState<string | null>(null);
+  const [abVariantId, setAbVariantId] = useState<string | null>(null);
 
+  // Load campaign theme (applies CSS variables automatically)
+  useCampaignTheme(campaign?.id);
+
+  const currentStepId = SIMPLIFIED_STEPS[currentStep]?.id;
+  const progress = ((currentStep + 1) / SIMPLIFIED_STEPS.length) * 100;
+
+  // Carregar campanha
   useEffect(() => {
-    if (uniqueLink) {
-      loadCampaign();
-    }
-  }, [uniqueLink]);
+    const loadCampaign = async () => {
+      if (!uniqueLink) return;
 
-  // Persistir progresso no sessionStorage
+      try {
+        const { data: campaignData, error } = await supabase
+          .from("campaigns")
+          .select("*")
+          .eq("unique_link", uniqueLink)
+          .single();
+
+        if (error || !campaignData) {
+          navigate("/404");
+          return;
+        }
+
+        setCampaign(campaignData);
+        
+        // Load global scripts
+        const { data: globalSettings } = await supabase
+          .from('global_settings')
+          .select('*')
+          .single();
+      } catch (error) {
+        console.error("Erro ao carregar campanha:", error);
+        navigate("/404");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadCampaign();
+  }, [uniqueLink, navigate]);
+
+  // Ler parâmetros UTM e A/B testing
   useEffect(() => {
-    if (!uniqueLink || isRehydrating) return; // NÃO salvar durante reidratação
+    const searchParams = new URLSearchParams(location.search);
     
-    if (selectedModel || customerData.name || Object.keys(customizations.front).length > 0) {
-      const dataToSave = {
-        selectedModelId: selectedModel?.id,
-        selectedModelName: selectedModel?.name,
-        customerData,
-        customizations
-      };
-      console.log('💾 Salvando no sessionStorage:', {
-        key: STORAGE_KEY,
-        data: dataToSave
-      });
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
-      console.log('✅ Dados salvos com sucesso!');
-    }
-  }, [selectedModel, customerData, customizations, uniqueLink, isRehydrating]);
+    setUtmParams({
+      utm_source: searchParams.get('utm_source'),
+      utm_medium: searchParams.get('utm_medium'),
+      utm_campaign: searchParams.get('utm_campaign'),
+      utm_term: searchParams.get('utm_term'),
+      utm_content: searchParams.get('utm_content'),
+    });
 
-  // FASE 1: Reidratação rápida (sem models) - restaurar customerData e customizations
-  useEffect(() => {
-    if (!isRehydrating) return;
+    const abTest = searchParams.get('ab_test');
+    const abVariant = searchParams.get('ab_variant');
     
-    const cached = sessionStorage.getItem(STORAGE_KEY);
-    if (!cached) return;
+    if (abTest) setAbTestId(abTest);
+    if (abVariant) setAbVariantId(abVariant);
+  }, [location.search]);
+
+  // Gerar/recuperar session ID
+  useEffect(() => {
+    let sid = localStorage.getItem('session_id');
+    if (!sid) {
+      sid = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      localStorage.setItem('session_id', sid);
+    }
+    setSessionId(sid);
+  }, []);
+
+  // Restaurar progresso salvo
+  useEffect(() => {
+    if (!campaign) return;
 
     try {
-      const data = JSON.parse(cached);
-      console.log('📂 [FASE 1] Restaurando dados básicos:', data);
-      
-      if (data.customerData && Object.keys(data.customerData).length > 0) {
-        setCustomerData(data.customerData);
-        console.log('✅ [FASE 1] CustomerData restaurado');
-      }
-      
-      if (data.customizations && Object.keys(data.customizations).length > 0) {
-        setCustomizations(data.customizations);
-        console.log('✅ [FASE 1] Customizations restauradas');
-      }
-    } catch (e) {
-      console.error("❌ [FASE 1] Erro ao parsear sessionStorage:", e);
-    }
-    // Não finaliza isRehydrating aqui; selectedModel virá na fase 2
-  }, [STORAGE_KEY, isRehydrating]);
-
-  // FASE 2: Reidratar selectedModel após carregar modelos
-  useEffect(() => {
-    // Só tentar reidratar o modelo DEPOIS que os models foram carregados
-    if (models.length > 0 && isRehydrating) {
-      const cached = sessionStorage.getItem(STORAGE_KEY);
-
-      console.log('🔍 [FASE 2] Tentando recuperar modelo:', {
-        key: STORAGE_KEY,
-        hasData: !!cached,
-        modelsCount: models.length
-      });
-
-      if (cached) {
-        try {
-          const data = JSON.parse(cached);
-          console.log('📂 [FASE 2] Restaurando modelo:', data);
-          
-          // Restaurar APENAS selectedModel (dados já foram restaurados na fase 1)
-          if (data.selectedModelId) {
-            const foundModel = models.find(m => m.id === data.selectedModelId);
-            if (foundModel) {
-              setSelectedModel(foundModel);
-              console.log('✅ [FASE 2] Modelo recuperado:', foundModel.name);
-            } else {
-              console.warn('⚠️ [FASE 2] Modelo não encontrado pelo ID:', data.selectedModelId);
-            }
-          } else if (data.selectedModelName) {
-            const foundModel = models.find(m => m.name === data.selectedModelName);
-            if (foundModel) {
-              setSelectedModel(foundModel);
-              console.log('✅ [FASE 2] Modelo recuperado pelo nome:', foundModel.name);
-            } else {
-              console.warn('⚠️ [FASE 2] Modelo não encontrado pelo nome:', data.selectedModelName);
-            }
-          }
-        } catch (e) {
-          console.error("❌ [FASE 2] Erro ao parsear sessionStorage:", e);
+      const saved = sessionStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const data = JSON.parse(saved);
+        if (data.campaignId === campaign.id) {
+          setCurrentStep(data.currentStep || 0);
+          setSelectedModel(data.selectedModel || null);
+          setCustomerData(data.customerData || {
+            name: '',
+            ddd: '',
+            phone: '',
+            quantity: null,
+            customQuantity: null
+          });
+          setLeadId(data.leadId || null);
         }
-      } else {
-        console.warn('⚠️ [FASE 2] Nenhum dado encontrado no sessionStorage para:', STORAGE_KEY);
       }
-      
-      // Marcar reidratação como concluída
-      setIsRehydrating(false);
-      console.log('✅ [FASE 2] Reidratação completa!');
-    } else if (models.length === 0) {
-      console.log('⏳ [FASE 2] Aguardando models carregarem...');
-    }
-  }, [models, isRehydrating]);
-
-  // Reset currentStep if it exceeds enabledSteps length
-  useEffect(() => {
-    if (currentStep >= enabledSteps.length && enabledSteps.length > 0) {
-      setCurrentStep(Math.max(0, enabledSteps.length - 1));
-      console.log('⚠️ CurrentStep resetado para:', enabledSteps.length - 1);
-    }
-  }, [enabledSteps.length, currentStep]);
-
-  // Sincronizar sessionId com localStorage para UploadLogos
-  useEffect(() => {
-    if (sessionId) {
-      localStorage.setItem('session_id', sessionId);
-      console.log('🔗 SessionId sincronizado com localStorage:', sessionId);
-    }
-  }, [sessionId]);
-
-  // DEBUG: Monitorar mudanças no estado
-  useEffect(() => {
-    console.log('🔄 Estado atual:', {
-      currentStep,
-      hasSelectedModel: !!selectedModel,
-      selectedModelName: selectedModel?.name,
-      frontLogoType: customizations.front.logoType,
-      backLogoLarge: customizations.back.logoLarge,
-      backNameText: customizations.back.nameText,
-      isRehydrating
-    });
-  }, [currentStep, selectedModel, customizations, isRehydrating]);
-
-  // Detectar mudanças no query param ?step=X
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const stepParam = params.get('step');
-    
-    if (stepParam) {
-      const stepNumber = parseInt(stepParam);
-      if (!isNaN(stepNumber) && stepNumber >= 0 && stepNumber < steps.length) {
-        setCurrentStep(stepNumber);
-        
-        // Atualizar current_step no banco quando vier de outra página (ex: UploadLogos)
-        if (leadId && stepNumber === 6) {
-          createOrUpdateLead(6);
-        }
-        // Manter o ?step=6 na URL para facilitar debug e deep linking
-        // window.history.replaceState({}, '', `/c/${uniqueLink}`);
-      }
-    }
-  }, [location.search, steps.length, uniqueLink, leadId]);
-
-  useEffect(() => {
-    if (campaign && currentStep === 0) {
-      // Capturar parâmetros UTM da URL
-      const params = new URLSearchParams(window.location.search);
-      const capturedUtms = {
-        utm_source: params.get('utm_source') || '',
-        utm_medium: params.get('utm_medium') || '',
-        utm_campaign: params.get('utm_campaign') || '',
-        utm_term: params.get('utm_term') || '',
-        utm_content: params.get('utm_content') || '',
-      };
-      
-      setUtmParams(capturedUtms);
-      
-      // Rastrear visita COM as UTMs
-      trackEvent("visit", capturedUtms);
+    } catch (error) {
+      console.error('Erro ao restaurar progresso:', error);
     }
   }, [campaign]);
 
-  // Auto-save das customizações e updates de step (steps 1-6)
-
+  // Auto-save progress
   useEffect(() => {
-    const autoSaveCustomizations = async () => {
-      // Só fazer auto-save se já tiver um leadId (lead já foi criado no step 0)
-      if (leadId && currentStep >= 1 && currentStep <= 6) {
-        setIsSaving(true);
-        await createOrUpdateLead(currentStep);
-        setLastSaved(new Date());
-        setIsSaving(false);
-      }
+    if (!campaign) return;
+
+    const dataToSave = {
+      campaignId: campaign.id,
+      currentStep,
+      selectedModel,
+      customerData,
+      leadId,
+      lastSaved: new Date().toISOString()
     };
 
-    autoSaveCustomizations();
-  }, [debouncedCustomizations, leadId, currentStep]);
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+  }, [campaign, currentStep, selectedModel, customerData, leadId]);
 
-  // Auto-save periódico a cada 30 segundos
-  useEffect(() => {
-    if (!leadId || !campaign) return;
+  // Track events
+  const trackEvent = async (eventType: string) => {
+    if (!campaign || !sessionId) return;
 
-    const intervalId = setInterval(async () => {
-      setIsSaving(true);
-      await createOrUpdateLead(currentStep);
-      setLastSaved(new Date());
-      setIsSaving(false);
-    }, 30000); // 30 segundos
-
-    return () => clearInterval(intervalId);
-  }, [leadId, currentStep, campaign]);
-
-  // Heartbeat: atualizar status online a cada 5 segundos
-  useEffect(() => {
-    if (!leadId) return;
-
-    // Marcar como online ao entrar
-    const markOnline = async () => {
-      await supabase
-        .from('leads')
-        .update({ 
-          is_online: true, 
-          last_seen: new Date().toISOString() 
-        })
-        .eq('id', leadId);
-    };
-
-    markOnline();
-
-    // Enviar "ping" a cada 5 segundos
-    const heartbeatInterval = setInterval(async () => {
-      await supabase
-        .from('leads')
-        .update({ 
-          is_online: true, 
-          last_seen: new Date().toISOString() 
-        })
-        .eq('id', leadId);
-    }, 5000);
-
-    return () => clearInterval(heartbeatInterval);
-  }, [leadId]);
-
-  // Marcar como offline quando usuário sai da página
-  useEffect(() => {
-    if (!leadId) return;
-
-    const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-    const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-    const markOffline = () => {
-      // sendBeacon é mais confiável que fetch durante unload
-      const data = new Blob([JSON.stringify({ 
-        is_online: false, 
-        last_seen: new Date().toISOString() 
-      })], { type: 'application/json' });
-      
-      navigator.sendBeacon(
-        `${SUPABASE_URL}/rest/v1/leads?id=eq.${leadId}`,
-        data
-      );
-    };
-
-    const handleVisibilityChange = async () => {
-      if (document.hidden) {
-        // Página ficou em background - usar sendBeacon
-        markOffline();
-      } else {
-        // Página voltou ao foreground
-        await supabase
-          .from('leads')
-          .update({ 
-            is_online: true, 
-            last_seen: new Date().toISOString() 
-          })
-          .eq('id', leadId);
-      }
-    };
-
-    // beforeunload e pagehide para garantir detecção de fechamento
-    window.addEventListener('beforeunload', markOffline);
-    window.addEventListener('pagehide', markOffline);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      window.removeEventListener('beforeunload', markOffline);
-      window.removeEventListener('pagehide', markOffline);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [leadId]);
-
-  // Detectar scroll para mostrar barra de progresso fixa
-  useEffect(() => {
-    const handleScroll = () => {
-      // Mostrar barra fixa após 100px de scroll
-      setShowFixedProgress(window.scrollY > 100);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  const loadCampaign = async () => {
-    console.log('🔍 [Campaign] Iniciando carregamento da campanha:', uniqueLink);
     try {
-      console.log('📡 [Campaign] Buscando dados da campanha no Supabase...');
-      const { data: campaignData, error: campaignError } = await supabase
-        .from("campaigns")
-        .select("id, name, segment_id, workflow_template_id, workflow_config, workflow_templates(workflow_config)")
-        .eq("unique_link", uniqueLink)
-        .single();
-
-      console.log('📦 [Campaign] Dados retornados:', campaignData);
-      console.log('❌ [Campaign] Erro (se houver):', campaignError);
-
-      if (campaignError) {
-        console.error('❌ [Campaign] Erro ao buscar campanha:', campaignError);
-        throw campaignError;
-      }
-      if (!campaignData) {
-        console.warn('⚠️ [Campaign] Campanha não encontrada');
-        toast.error("Campanha não encontrada");
-        return;
-      }
-
-      console.log('✅ [Campaign] Campanha carregada com sucesso');
-      console.log('🔧 [Campaign] Workflow config:', campaignData.workflow_config);
-      console.log('🔧 [Campaign] Template workflow:', campaignData.workflow_templates);
-
-      setCampaign(campaignData as any);
-      setCampaignId(campaignData.id);
-
-      // Buscar modelos do segmento da campanha
-      if (campaignData.segment_id) {
-        console.log('👕 [Campaign] Carregando modelos para segment_id:', campaignData.segment_id);
-        const { data: modelsData, error: modelsError } = await supabase
-          .from("shirt_models")
-          .select("*")
-          .eq("segment_id", campaignData.segment_id);
-
-        if (modelsError) {
-          console.error('❌ [Campaign] Erro ao carregar modelos:', modelsError);
-        } else {
-          console.log('✅ [Campaign] Modelos carregados:', modelsData?.length || 0, 'modelos');
-          if (modelsData) setModels(modelsData);
-        }
-      } else {
-        console.warn('⚠️ [Campaign] Campanha sem segment_id definido');
-      }
-
-      // Carregar scripts globais
-      console.log('📜 [Campaign] Carregando scripts globais...');
-      const { data: globalSettings, error: settingsError } = await supabase
-        .from('global_settings')
-        .select('global_head_scripts, global_body_scripts')
-        .maybeSingle();
-
-      if (settingsError) {
-        console.error('❌ [Campaign] Erro ao carregar scripts globais:', settingsError);
-      } else if (globalSettings) {
-        console.log('✅ [Campaign] Scripts globais carregados');
-        setGlobalHeadScripts(globalSettings.global_head_scripts || '');
-        setGlobalBodyScripts(globalSettings.global_body_scripts || '');
-      } else {
-        console.log('ℹ️ [Campaign] Nenhum script global configurado');
-      }
+      await supabase.from("funnel_events").insert({
+        campaign_id: campaign.id,
+        session_id: sessionId,
+        event_type: eventType,
+        utm_source: utmParams.utm_source,
+        utm_medium: utmParams.utm_medium,
+        utm_campaign: utmParams.utm_campaign,
+        utm_term: utmParams.utm_term,
+        utm_content: utmParams.utm_content,
+      });
     } catch (error) {
-      console.error("💥 [Campaign] Erro crítico ao carregar campanha:", error);
-      toast.error("Erro ao carregar campanha");
-    } finally {
-      console.log('🏁 [Campaign] Carregamento finalizado. Loading:', false);
-      setIsLoading(false);
+      console.error("Erro ao rastrear evento:", error);
     }
   };
 
-  const trackEvent = async (eventType: string, additionalData?: {
-    utm_source?: string;
-    utm_medium?: string;
-    utm_campaign?: string;
-    utm_term?: string;
-    utm_content?: string;
-  }) => {
-    if (!campaign) return;
-    
-    await supabase.from("funnel_events").insert({
-      campaign_id: campaign.id,
-      session_id: sessionId,
-      event_type: eventType,
-      utm_source: additionalData?.utm_source || null,
-      utm_medium: additionalData?.utm_medium || null,
-      utm_campaign: additionalData?.utm_campaign || null,
-      utm_term: additionalData?.utm_term || null,
-      utm_content: additionalData?.utm_content || null,
-    });
+  // Track campaign visit
+  useEffect(() => {
+    if (campaign && sessionId) {
+      trackEvent('campaign_visit');
+    }
+  }, [campaign, sessionId]);
+
+  // Generate lead group ID
+  const generateLeadGroupId = () => {
+    const phone = `${customerData.ddd}${customerData.phone.replace(/\D/g, '')}`;
+    return `${campaign.id}_${phone}`;
   };
 
-  // Gerar identificador único baseado em email+phone
-  const generateLeadGroupId = (email: string, phone: string) => {
-    const cleanPhone = phone.replace(/\D/g, '');
-    return `${email || 'noemail'}_${cleanPhone}`;
-  };
-
-  // Buscar número da tentativa
-  const getAttemptNumber = async (groupId: string): Promise<number> => {
-    const { count } = await supabase
-      .from('leads')
-      .select('*', { count: 'exact', head: true })
-      .eq('lead_group_identifier', groupId);
-    
-    return (count || 0) + 1;
-  };
-
-  const createOrUpdateLead = async (
-    stepNumber: number, 
-    isCompleted = false, 
-    orderId?: string,
-    needsLogo?: boolean
-  ) => {
+  // Get attempt number
+  const getAttemptNumber = async (leadGroupId: string) => {
     try {
-      // Usar parâmetro needsLogo se fornecido, senão buscar do banco
-      let currentNeedsLogo = needsLogo ?? false;
-      
-      if (leadId && needsLogo === undefined) {
-        const { data: existingLead } = await supabase
-          .from('leads')
-          .select('completed, needs_logo')
-          .eq('id', leadId)
-          .maybeSingle();
-        
-        if (existingLead?.completed) {
-          console.log('Lead já concluído - não será atualizado');
-          return;
-        }
-        
-        // Preservar needs_logo do lead existente
-        currentNeedsLogo = existingLead?.needs_logo || false;
-      }
+      const { data, error } = await supabase
+        .from('leads')
+        .select('attempt_number')
+        .eq('lead_group_identifier', leadGroupId)
+        .order('attempt_number', { ascending: false })
+        .limit(1);
 
-      const groupId = generateLeadGroupId(customerData.email, customerData.phone);
-      const attemptNumber = leadId ? undefined : await getAttemptNumber(groupId);
+      if (error) throw error;
+      return data && data.length > 0 ? (data[0].attempt_number || 0) + 1 : 1;
+    } catch (error) {
+      console.error('Erro ao obter número de tentativa:', error);
+      return 1;
+    }
+  };
+
+  // Create or update lead
+  const createOrUpdateLead = async (step: number, completed: boolean = false, orderId: string | null = null) => {
+    if (!campaign || !sessionId) return;
+
+    try {
+      const leadGroupId = generateLeadGroupId();
+      const attemptNumber = await getAttemptNumber(leadGroupId);
 
       const leadData = {
-        campaign_id: campaign?.id,
+        campaign_id: campaign.id,
         session_id: sessionId,
-        name: customerData.name,
-        phone: customerData.phone,
-        email: customerData.email || null,
-        quantity: customerData.quantity,
-        custom_quantity: customerData.quantity === 'custom' ? customerData.customQuantity : null,
-        utm_source: utmParams.utm_source || null,
-        utm_medium: utmParams.utm_medium || null,
-        utm_campaign: utmParams.utm_campaign || null,
-        utm_term: utmParams.utm_term || null,
-        utm_content: utmParams.utm_content || null,
-        current_step: stepNumber,
-        completed: isCompleted,
-        order_id: orderId || null,
-        lead_group_identifier: groupId,
-        attempt_number: attemptNumber,
-        needs_logo: currentNeedsLogo,
-        salesperson_status: currentNeedsLogo ? 'awaiting_logo' : null,
+        name: customerData.name || 'Visitante',
+        phone: `(${customerData.ddd}) ${customerData.phone}`,
+        quantity: customerData.quantity === 'custom' 
+          ? (customerData.customQuantity?.toString() || '0')
+          : (customerData.quantity?.toString() || '0'),
+        current_step: step,
+        completed,
+        order_id: orderId,
         customization_summary: {
-          model: selectedModel?.name,
-          front: customizations.front,
-          back: customizations.back,
-          sleeves: customizations.sleeves,
-        } as any,
+          model: selectedModel?.name || null
+        },
+        lead_group_identifier: leadGroupId,
+        attempt_number: attemptNumber,
+        ab_test_id: abTestId,
+        ab_variant: abVariantId,
+        utm_source: utmParams.utm_source,
+        utm_medium: utmParams.utm_medium,
+        utm_campaign: utmParams.utm_campaign,
+        utm_term: utmParams.utm_term,
+        utm_content: utmParams.utm_content,
+        is_online: true,
+        last_seen: new Date().toISOString()
       };
 
       if (leadId) {
-        // Atualizar apenas se não estiver completo
         const { error } = await supabase
           .from('leads')
           .update(leadData)
           .eq('id', leadId);
-        
+
         if (error) throw error;
       } else {
-        // Criar novo lead
         const { data, error } = await supabase
           .from('leads')
           .insert(leadData)
           .select()
           .single();
-        
+
         if (error) throw error;
-        if (data) setLeadId(data.id);
+        setLeadId(data.id);
       }
     } catch (error) {
       console.error('Erro ao salvar lead:', error);
     }
   };
 
-  const handleNext = async () => {
-    // Bug #1: Validação baseada em step ID ao invés de número hardcoded
-    const stepId = enabledSteps[currentStep]?.id;
+  // Handle phone DDD change
+  const handleDDDChange = (value: string) => {
+    const cleaned = value.replace(/\D/g, '').slice(0, 2);
+    setCustomerData({ ...customerData, ddd: cleaned });
+  };
+
+  // Handle phone number change with mask
+  const handlePhoneChange = (value: string) => {
+    let cleaned = value.replace(/\D/g, '').slice(0, 9);
     
-    // Validação initial_data
-    if (stepId === 'initial_data') {
-      if (!customerData.name.trim()) {
-        toast.error("Por favor, digite seu nome");
-        return;
-      }
-      if (!customerData.phone.trim()) {
-        toast.error("Por favor, digite seu WhatsApp");
-        return;
-      }
-      if (!customerData.quantity) {
-        toast.error("Por favor, selecione a quantidade");
-        return;
-      }
-      if (customerData.quantity === 'custom' && customerData.customQuantity < 10) {
-        toast.error("A quantidade mínima é 10 unidades");
-        return;
-      }
-      
-      // Criar/atualizar lead IMEDIATAMENTE ao clicar "Próximo"
-      setIsSaving(true);
-      await createOrUpdateLead(currentStep);
-      setIsSaving(false);
-      
-      toast.success("Dados salvos com sucesso!");
+    // Apply mask: 00000-0000 or 0000-0000
+    let formatted = cleaned;
+    if (cleaned.length > 5) {
+      formatted = cleaned.slice(0, 5) + '-' + cleaned.slice(5);
     }
+    
+    setCustomerData({ ...customerData, phone: formatted });
+  };
 
-    // Validação e processamento de adicionar_logo
-    if (stepId === 'adicionar_logo') {
-      if (!logoChoice) {
-        toast.error("Por favor, escolha uma opção");
-        return;
-      }
-      
-      if (logoChoice === 'add_logo' && !singleLogo) {
-        toast.error("Por favor, selecione a logo para upload");
-        return;
-      }
-      
-      setIsSaving(true);
-      
-      try {
-        if (logoChoice === 'add_logo' && singleLogo) {
-          // Upload da logo única
-          const logoUrl = await uploadToSupabase(singleLogo, 'logos');
-          
-          // Atualizar customizations com a mesma logo para frente e costas
-          const updatedCustomizations = {
-            ...customizations,
-            front: { ...customizations.front, logoUrl },
-            back: { ...customizations.back, logoUrl }
-          };
-          setCustomizations(updatedCustomizations);
-          
-          toast.success("Logo enviada com sucesso!");
-        } else if (logoChoice === 'no_logo') {
-          toast.success("Seguindo para revisão. Você será contatado!");
-        }
-        
-        await createOrUpdateLead(
-          currentStep, 
-          false, 
-          undefined, 
-          logoChoice === 'no_logo' ? true : false
-        );
-        setIsSaving(false);
-      } catch (error) {
-        console.error('Erro ao processar logo:', error);
-        toast.error("Erro ao processar logo");
-        setIsSaving(false);
-        return;
-      }
-    }
-
-    // Revisão - submeter pedido
-    if (stepId === 'review') {
-      handleSubmitOrder();
+  // Handle next step
+  const handleNext = async () => {
+    // Validations per step
+    if (currentStepId === 'select_model' && !selectedModel) {
+      toast.error('Selecione um modelo antes de continuar');
       return;
     }
 
+    if (currentStepId === 'enter_name') {
+      if (!customerData.name.trim()) {
+        toast.error('Por favor, informe seu nome');
+        return;
+      }
+    }
+
+    if (currentStepId === 'enter_phone') {
+      const ddd = customerData.ddd;
+      const phoneDigits = customerData.phone.replace(/\D/g, '');
+      
+      if (ddd.length !== 2) {
+        toast.error('Informe um DDD válido (2 dígitos)');
+        return;
+      }
+      
+      if (phoneDigits.length < 8) {
+        toast.error('Informe um número de WhatsApp válido');
+        return;
+      }
+    }
+
+    if (currentStepId === 'select_quantity') {
+      if (!customerData.quantity) {
+        toast.error('Selecione uma quantidade');
+        return;
+      }
+
+      if (customerData.quantity === 'custom') {
+        if (!customerData.customQuantity || customerData.customQuantity < 10) {
+          toast.error('A quantidade mínima é 10 unidades');
+          return;
+        }
+      }
+
+      // Last step - submit order
+      await handleSubmitOrder();
+      return;
+    }
+
+    // Advance to next step
     const nextStep = currentStep + 1;
     setCurrentStep(nextStep);
-
-    // Atualizar step imediatamente após avançar
-    if (leadId) {
-      await createOrUpdateLead(nextStep);
-    }
-
-    if (nextStep >= 1 && nextStep < enabledSteps.length) {
-      trackEvent(`step_${nextStep}`);
-    }
+    await trackEvent(`step_${nextStep + 1}`);
+    await createOrUpdateLead(nextStep);
   };
 
-  const handleBack = async () => {
-    const prevStep = currentStep - 1;
-    setCurrentStep(prevStep);
-    
-    // Atualizar step ao voltar também
-    if (leadId) {
-      await createOrUpdateLead(prevStep);
+  // Handle back
+  const handleBack = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
     }
   };
 
-  const uploadToSupabase = async (file: File, folder: string): Promise<string> => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
-    const filePath = `${folder}/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('customer-logos')
-      .upload(filePath, file);
-
-    if (uploadError) throw uploadError;
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('customer-logos')
-      .getPublicUrl(filePath);
-
-    return publicUrl;
-  };
-
-  const handleFrontLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) setUploadedLogos({ ...uploadedLogos, frontLogo: file });
-  };
-
-  const handleBackLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) setUploadedLogos({ ...uploadedLogos, backLogo: file });
-  };
-
-  const handleSponsorLogoUpload = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const newSponsorsLogos = [...uploadedLogos.sponsorsLogos];
-      newSponsorsLogos[index] = file;
-      setUploadedLogos({ ...uploadedLogos, sponsorsLogos: newSponsorsLogos });
-    }
-  };
-
-  const handleRightFlagUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) setUploadedLogos({ ...uploadedLogos, rightFlag: file });
-  };
-
-  const handleRightLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) setUploadedLogos({ ...uploadedLogos, rightLogo: file });
-  };
-
-  const handleLeftFlagUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) setUploadedLogos({ ...uploadedLogos, leftFlag: file });
-  };
-
-  const handleLeftLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) setUploadedLogos({ ...uploadedLogos, leftLogo: file });
-  };
-
+  // Submit order
   const handleSubmitOrder = async () => {
-    // Bug #2: Validação completa ANTES de processar
-    if (!campaign) {
-      toast.error("Campanha não encontrada");
-      return;
-    }
-    
-    if (!selectedModel) {
-      toast.error("Nenhum modelo selecionado");
-      return;
-    }
-    
-    if (!customerData.name || !customerData.phone) {
-      toast.error("Preencha nome e telefone");
-      return;
-    }
-    
-    if (!customerData.quantity) {
-      toast.error("Selecione a quantidade");
-      return;
-    }
-    
-    if (customerData.quantity === 'custom' && (!customerData.customQuantity || customerData.customQuantity < 1)) {
-      toast.error("Informe a quantidade personalizada");
-      return;
-    }
-
-    setIsSaving(true);
-    toast.info("Fazendo upload das imagens...");
-
     try {
-      // Upload all logos first
-      const uploadedUrls = {
-        frontLogoUrl: '',
-        backLogoUrl: '',
-        sponsorsLogosUrls: [] as string[],
-        rightFlagUrl: '',
-        rightLogoUrl: '',
-        leftFlagUrl: '',
-        leftLogoUrl: ''
-      };
+      setIsSaving(true);
 
-      // Upload individual com tratamento de erro
-      if (uploadedLogos.frontLogo) {
-        try {
-          uploadedUrls.frontLogoUrl = await uploadToSupabase(uploadedLogos.frontLogo, 'logos');
-        } catch (error) {
-          console.error("Erro ao fazer upload do logo frontal:", error);
-          toast.error("Erro ao fazer upload do logo frontal");
-          throw error;
-        }
-      }
+      const finalQuantity = customerData.quantity === 'custom' 
+        ? customerData.customQuantity 
+        : customerData.quantity;
 
-      if (uploadedLogos.backLogo) {
-        try {
-          uploadedUrls.backLogoUrl = await uploadToSupabase(uploadedLogos.backLogo, 'logos');
-        } catch (error) {
-          console.error("Erro ao fazer upload do logo das costas:", error);
-          toast.error("Erro ao fazer upload do logo das costas");
-          throw error;
-        }
-      }
-
-      for (const logo of uploadedLogos.sponsorsLogos) {
-        if (logo) {
-          try {
-            const url = await uploadToSupabase(logo, 'logos');
-            uploadedUrls.sponsorsLogosUrls.push(url);
-          } catch (error) {
-            console.error("Erro ao fazer upload de logo de patrocinador:", error);
-            toast.error("Erro ao fazer upload de logo de patrocinador");
-            throw error;
-          }
-        }
-      }
-
-      if (uploadedLogos.rightFlag) {
-        try {
-          uploadedUrls.rightFlagUrl = await uploadToSupabase(uploadedLogos.rightFlag, 'flags');
-        } catch (error) {
-          console.error("Erro ao fazer upload da bandeira direita:", error);
-          toast.error("Erro ao fazer upload da bandeira direita");
-          throw error;
-        }
-      }
-
-      if (uploadedLogos.rightLogo) {
-        try {
-          uploadedUrls.rightLogoUrl = await uploadToSupabase(uploadedLogos.rightLogo, 'logos');
-        } catch (error) {
-          console.error("Erro ao fazer upload do logo direito:", error);
-          toast.error("Erro ao fazer upload do logo direito");
-          throw error;
-        }
-      }
-
-      if (uploadedLogos.leftFlag) {
-        try {
-          uploadedUrls.leftFlagUrl = await uploadToSupabase(uploadedLogos.leftFlag, 'flags');
-        } catch (error) {
-          console.error("Erro ao fazer upload da bandeira esquerda:", error);
-          toast.error("Erro ao fazer upload da bandeira esquerda");
-          throw error;
-        }
-      }
-
-      if (uploadedLogos.leftLogo) {
-        try {
-          uploadedUrls.leftLogoUrl = await uploadToSupabase(uploadedLogos.leftLogo, 'logos');
-        } catch (error) {
-          console.error("Erro ao fazer upload do logo esquerdo:", error);
-          toast.error("Erro ao fazer upload do logo esquerdo");
-          throw error;
-        }
-      }
-
-      // Update customizations with uploaded URLs
-      const finalCustomizations = {
-        ...customizations,
-        front: { ...customizations.front, logoUrl: uploadedUrls.frontLogoUrl },
-        back: { 
-          ...customizations.back, 
-          logoUrl: uploadedUrls.backLogoUrl,
-          sponsorsLogosUrls: uploadedUrls.sponsorsLogosUrls 
-        },
-        sleeves: {
-          right: { 
-            ...customizations.sleeves.right, 
-            logoUrl: uploadedUrls.rightLogoUrl,
-            flagUrl: uploadedUrls.rightFlagUrl 
-          },
-          left: { 
-            ...customizations.sleeves.left, 
-            logoUrl: uploadedUrls.leftLogoUrl,
-            flagUrl: uploadedUrls.leftFlagUrl 
-          }
-        }
-      };
-
-      // Calcular quantidade final com validação
-      const calculateFinalQuantity = (): number => {
-        if (customerData.quantity === 'custom') {
-          const qty = customerData.customQuantity;
-          if (!qty || qty < 1) {
-            throw new Error("Quantidade inválida");
-          }
-          return qty;
-        }
-        
-        if (customerData.quantity === '60+') {
-          return 60;
-        }
-        
-        const parsed = parseInt(customerData.quantity);
-        if (isNaN(parsed) || parsed < 1) {
-          throw new Error("Quantidade inválida");
-        }
-        
-        return parsed;
-      };
-      
-      const finalQuantity = calculateFinalQuantity();
-
-      toast.info("Salvando pedido...");
-
-      // Generate order ID client-side to avoid RLS SELECT issue
-      const orderId = crypto.randomUUID();
-
-      const { error: insertError } = await supabase.from("orders").insert({
-        id: orderId,
+      const orderData = {
         campaign_id: campaign.id,
-        model_id: selectedModel.id,
         session_id: sessionId,
         customer_name: customerData.name,
-        customer_email: customerData.email,
-        customer_phone: customerData.phone,
+        customer_phone: `(${customerData.ddd}) ${customerData.phone}`,
         quantity: finalQuantity,
-        customization_data: finalCustomizations as any,
-      });
-
-      if (insertError) {
-        console.error('❌ [ORDER] Erro ao inserir pedido:', {
-          message: insertError.message,
-          code: insertError.code,
-          details: insertError.details,
-          hint: insertError.hint
-        });
-        throw insertError;
-      }
-
-      // Buscar needs_logo atual antes de finalizar
-      const { data: currentLead } = await supabase
-        .from('leads')
-        .select('needs_logo')
-        .eq('id', leadId)
-        .maybeSingle();
-      
-      // Atualizar lead como completo e vincular ao pedido (usar último step)
-      await createOrUpdateLead(
-        enabledSteps.length - 1, 
-        true, 
-        orderId,
-        currentLead?.needs_logo || false
-      );
-
-      // Registrar evento de conversão no A/B test (não bloquear fluxo principal)
-      if (abTestId && abVariant) {
-        try {
-          await supabase.from('ab_test_events').insert({
-            ab_test_id: abTestId,
-            event_type: 'lead',
-            campaign_id: abVariant,
-            session_id: sessionId
-          });
-        } catch (error) {
-          console.warn('⚠️ Erro ao registrar evento A/B test (não crítico):', error);
+        customization_data: {
+          model: selectedModel.name,
+          model_id: selectedModel.id
         }
-      }
+      };
 
-      await trackEvent("completed");
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert(orderData)
+        .select()
+        .single();
 
-      toast.success("Pedido enviado com sucesso! Redirecionando para nosso Instagram...", {
-        duration: 3000,
-      });
+      if (orderError) throw orderError;
 
-      // Redirecionar para Instagram após 3 segundos
+      // Update lead as completed
+      await createOrUpdateLead(SIMPLIFIED_STEPS.length, true, order.id);
+      await trackEvent('order_completed');
+
+      // Clear session storage
+      sessionStorage.removeItem(STORAGE_KEY);
+
+      toast.success('Pedido enviado com sucesso!');
+
+      // Redirect to confirmation page
       setTimeout(() => {
-        window.location.href = 'https://www.instagram.com/spacesports.oficial/';
-      }, 3000);
-    } catch (error: any) {
-      console.error("Erro ao enviar pedido:", error);
-      
-      let errorMessage = "Erro ao enviar pedido";
-      
-      if (error.message?.includes("quantity") || error.message?.includes("Quantidade")) {
-        errorMessage = "Quantidade inválida";
-      } else if (error.message?.includes("upload")) {
-        errorMessage = "Erro ao fazer upload das imagens";
-      } else if (error.message?.includes("unique constraint")) {
-        errorMessage = "Este pedido já foi enviado";
-      }
-      
-      toast.error(errorMessage);
+        navigate(`/obrigado?order=${order.id}`);
+      }, 1000);
+    } catch (error) {
+      console.error('Erro ao enviar pedido:', error);
+      toast.error('Erro ao enviar pedido. Tente novamente.');
     } finally {
       setIsSaving(false);
     }
   };
 
-  if (isLoading) {
+  // Select model and auto-advance
+  const handleSelectModel = async (model: any) => {
+    setSelectedModel(model);
+    await createOrUpdateLead(0);
+    
+    // Wait a bit for better UX
+    setTimeout(() => {
+      setCurrentStep(1);
+      trackEvent('step_2');
+    }, 300);
+  };
+
+  if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   if (!campaign) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4">
-        <h1 className="text-2xl font-bold mb-4">Campanha não encontrada</h1>
-        <p className="text-muted-foreground">Verifique o link e tente novamente</p>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Campanha não encontrada</h1>
+          <Button onClick={() => navigate('/')}>Voltar ao início</Button>
+        </div>
       </div>
     );
   }
 
-  const progress = ((currentStep + 1) / steps.length) * 100;
-
   return (
-    <>
-      {/* Inject global scripts with error handling */}
-      {(() => {
-        try {
-          return (
-            <CustomScriptManager
-              headScripts={globalHeadScripts}
-              bodyScripts={globalBodyScripts}
-            />
-          );
-        } catch (error) {
-          console.error('❌ Erro ao renderizar scripts:', error);
-          return null;
-        }
-      })()}
-      
-      <div className={`min-h-screen campaign-themed ${campaignTheme ? `btn-style-${campaignTheme.theme_button_style}` : ''} bg-gradient-to-br from-primary/5 via-background to-accent/5 py-8`}>
-      {/* Barra de progresso fixa - Aparece no scroll mobile */}
-      <div 
-        className={`fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b shadow-md transition-transform duration-300 md:hidden ${
-          showFixedProgress ? 'translate-y-0' : '-translate-y-full'
-        }`}
-      >
-        <div className="container max-w-6xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-muted-foreground">
-              Etapa {currentStep + 1} de {steps.length}
-            </span>
-            <span className="text-xs font-semibold text-primary">
-              {Math.round(progress)}%
-            </span>
-          </div>
-          <Progress value={progress} className="h-2" />
-        </div>
-      </div>
+    <div className="min-h-screen bg-background">
+      <CustomScriptManager 
+        headScripts={campaign.custom_head_scripts}
+        bodyScripts={campaign.custom_body_scripts}
+      />
 
-      <div className="container max-w-6xl mx-auto px-4">
-        {/* Header */}
-        <div className="mb-4 md:mb-8">
-          {/* Logo Space Sports - Menor no mobile */}
-          <div className="flex justify-center mb-2 md:mb-6">
-            <img 
-              src="https://cdn.awsli.com.br/400x300/1896/1896367/logo/space-logo-site-wgernz.png" 
-              alt="Space Sports" 
-              className="h-6 md:h-16 w-auto"
-              loading="eager"
-            />
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+        <div className="container mx-auto px-4 py-4">
+          {/* Logo */}
+          <div className="flex justify-center mb-4">
+            <img src={logoImg} alt="Logo" className="h-12" />
           </div>
-          
-          {/* Título da etapa - Responsivo */}
-          <p className="text-center text-sm md:text-base text-muted-foreground mb-2 md:mb-4 px-2">
-            Etapa {currentStep + 1} de {steps.length}
-          </p>
-          
-          {/* Step Indicator - Otimizado para mobile */}
-          <div className="flex justify-center items-center gap-1 md:gap-2 mb-2 md:mb-4 overflow-x-auto px-4">
-            {steps.map((step, index) => (
-              <div key={index} className="flex items-center flex-shrink-0">
-                <div className={`flex flex-col items-center ${index <= currentStep ? 'text-primary' : 'text-muted-foreground'}`}>
-                  {/* Círculos menores no mobile */}
-                  <div className={`w-6 h-6 md:w-8 md:h-8 rounded-full flex items-center justify-center text-xs md:text-sm font-semibold border-2 transition-colors ${
-                    index <= currentStep 
-                      ? 'bg-primary text-primary-foreground border-primary' 
-                      : 'bg-background border-muted'
-                  }`}>
-                    {index < currentStep ? <Check className="h-3 w-3 md:h-4 md:w-4" /> : index + 1}
-                  </div>
+
+          {/* Step indicator text */}
+          <div className="text-center mb-3">
+            <p className="text-sm font-medium text-muted-foreground">
+              Etapa {currentStep + 1} de {SIMPLIFIED_STEPS.length}
+            </p>
+          </div>
+
+          {/* Progress bar */}
+          <div className="mb-4">
+            <Progress value={progress} className="h-2" />
+          </div>
+
+          {/* Step circles */}
+          <div className="flex justify-center items-center gap-2 mb-2">
+            {SIMPLIFIED_STEPS.map((step, index) => (
+              <div key={step.id} className="flex items-center">
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all ${
+                    index < currentStep
+                      ? 'bg-primary text-primary-foreground'
+                      : index === currentStep
+                      ? 'bg-primary text-primary-foreground ring-4 ring-primary/20'
+                      : 'bg-muted text-muted-foreground'
+                  }`}
+                >
+                  {index < currentStep ? (
+                    <Check className="w-4 h-4" />
+                  ) : (
+                    index + 1
+                  )}
                 </div>
-                {/* Linha conectora mais fina no mobile */}
-                {index < steps.length - 1 && (
-                  <div className={`w-3 md:w-8 h-0.5 mx-0.5 md:mx-1 ${index < currentStep ? 'bg-primary' : 'bg-muted'}`} />
+                {index < SIMPLIFIED_STEPS.length - 1 && (
+                  <div
+                    className={`w-12 h-0.5 mx-1 ${
+                      index < currentStep ? 'bg-primary' : 'bg-muted'
+                    }`}
+                  />
                 )}
               </div>
             ))}
           </div>
-          
-          <Progress value={progress} className="h-2" />
-          
-          {/* Indicador de auto-save - Mobile-friendly */}
-          {leadId && (
-            <div className="flex items-center justify-center gap-2 mt-3 md:mt-4">
-              {isSaving ? (
-                <>
-                  <Loader2 className="h-3 w-3 md:h-4 md:w-4 animate-spin text-primary" />
-                  <span className="text-xs md:text-sm text-muted-foreground">Salvando...</span>
-                </>
-              ) : lastSaved ? (
-                <>
-                  <Check className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
-                  <span className="text-xs md:text-sm text-muted-foreground">
-                    Salvo às {format(lastSaved, "HH:mm:ss")}
-                  </span>
-                </>
-              ) : null}
+
+          {/* Step labels */}
+          <div className="flex justify-center gap-2 text-xs text-muted-foreground">
+            <span className="text-center max-w-[80px] truncate">
+              {SIMPLIFIED_STEPS[currentStep]?.label}
+            </span>
+          </div>
+
+          {/* Saving indicator */}
+          {isSaving && (
+            <div className="text-center mt-2">
+              <p className="text-xs text-muted-foreground">Salvando...</p>
             </div>
           )}
         </div>
+      </header>
 
-        {/* Step Content - Bug #1: Renderizar dinamicamente baseado em step ID */}
-        <div className="mb-6">
-          {currentStepId === 'initial_data' && (
-            <Card className="shadow-lg max-w-2xl mx-auto">
-              <CardContent className="p-3 md:p-6">
-                <h2 className="text-xl md:text-2xl font-semibold mb-3 md:mb-6 text-center px-2">
-                  Vamos começar! Preencha seus dados
-                </h2>
-                <div className="space-y-4 md:space-y-6">
-                  <div>
-                    <Label htmlFor="initial-name" className="py-1 md:py-2 block text-base">Digite seu nome*</Label>
-                    <Input
-                      id="initial-name"
-                      placeholder="Seu nome completo"
-                      value={customerData.name}
-                      onChange={(e) =>
-                        setCustomerData({ ...customerData, name: e.target.value })
-                      }
-                      className="min-h-[48px] text-base"
-                      required
-                    />
-                  </div>
+      {/* Main content */}
+      <main className="container mx-auto px-4 py-8">
+        {/* Step 1: Select Model */}
+        {currentStepId === 'select_model' && (
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
+              Dê vida ao seu uniforme
+            </h2>
+            <h3 className="text-xl md:text-2xl text-center mb-12 text-muted-foreground">
+              Escolha o modelo ideal
+            </h3>
 
-                  <div>
-                    <Label htmlFor="initial-whatsapp" className="py-1 md:py-2 block text-base">Digite seu WhatsApp*</Label>
-                    <Input
-                      id="initial-whatsapp"
-                      type="tel"
-                      placeholder="(00) 00000-0000"
-                      value={customerData.phone}
-                      onChange={(e) =>
-                        setCustomerData({ ...customerData, phone: e.target.value })
-                      }
-                      className="min-h-[48px] text-base"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="quantity-select" className="py-1 md:py-2 block text-base">Quantidade*</Label>
-                    <Select
-                      value={customerData.quantity}
-                      onValueChange={(value) => {
-                        setCustomerData({ ...customerData, quantity: value });
-                      }}
-                    >
-                      <SelectTrigger id="quantity-select" className="min-h-[48px] text-base">
-                        <SelectValue placeholder="Selecione a quantidade" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="60+">60 ou mais</SelectItem>
-                        <SelectItem value="50">50 unidades</SelectItem>
-                        <SelectItem value="40">40 unidades</SelectItem>
-                        <SelectItem value="30">30 unidades</SelectItem>
-                        <SelectItem value="20">20 unidades</SelectItem>
-                        <SelectItem value="10">10 unidades</SelectItem>
-                        <SelectItem value="custom">Quantidade personalizada</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {customerData.quantity === 'custom' && (
-                    <div className="mt-4 p-4 bg-muted/30 rounded-lg">
-                      <Label htmlFor="custom-quantity" className="py-1 md:py-2 block text-base">Digite a quantidade (mínimo 10)*</Label>
-                      <Input
-                        id="custom-quantity"
-                        type="number"
-                        min="10"
-                        placeholder="Digite a quantidade desejada"
-                        value={customerData.customQuantity}
-                        onChange={(e) =>
-                          setCustomerData({
-                            ...customerData,
-                            customQuantity: parseInt(e.target.value) || 10,
-                          })
-                        }
-                        className="min-h-[48px] text-base"
-                        required
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+              {UNIFORM_MODELS.map((model) => (
+                <Card
+                  key={model.id}
+                  className={`cursor-pointer hover:shadow-xl transition-all border-2 hover:border-primary ${
+                    selectedModel?.id === model.id ? 'border-primary ring-4 ring-primary/20' : ''
+                  }`}
+                  onClick={() => handleSelectModel(model)}
+                >
+                  <CardContent className="p-4">
+                    <div className="aspect-square mb-4 flex items-center justify-center bg-muted/30 rounded-lg overflow-hidden">
+                      <img
+                        src={model.image}
+                        alt={model.name}
+                        className="w-full h-full object-contain"
                       />
-                      {customerData.customQuantity < 10 && (
-                        <p className="text-sm text-destructive mt-2">
-                          A quantidade mínima é 10 unidades
-                        </p>
-                      )}
                     </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                    <h4 className="text-center font-semibold text-sm">
+                      {model.name}
+                    </h4>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
 
-          {currentStepId === 'select_model' && (
-            <div>
-              <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6 text-center px-2">Escolha seu modelo</h2>
-              <div className="flex flex-col gap-4 max-w-4xl mx-auto">
-                {models.map((model) => (
-                  <Card
-                    key={model.id}
-                    className="overflow-hidden transition-all hover:shadow-lg touch-manipulation"
-                  >
-                    <img
-                      src={model.photo_main}
-                      alt={model.name}
-                      className="w-full h-auto"
-                      loading="lazy"
-                    />
-                    <CardContent className="p-3 bg-muted/30">
-                    <Button 
-                      className="w-full min-h-[48px] text-base font-semibold touch-manipulation" 
-                      size="lg"
-                      onClick={() => {
-                        setSelectedModel(model);
-                        setCurrentStep(2);
-                        trackEvent('step_2');
-                      }}
-                    >
-                      Selecionar Modelo
-                    </Button>
-                    </CardContent>
-                  </Card>
-                ))}
+        {/* Step 2: Enter Name */}
+        {currentStepId === 'enter_name' && (
+          <Card className="max-w-lg mx-auto shadow-lg">
+            <CardContent className="p-8">
+              <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">
+                Me informa o seu nome
+              </h2>
+
+              <Input
+                type="text"
+                placeholder="Digite seu nome completo"
+                value={customerData.name}
+                onChange={(e) => setCustomerData({ ...customerData, name: e.target.value })}
+                className="min-h-[56px] text-lg text-center"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleNext();
+                  }
+                }}
+              />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 3: Enter Phone */}
+        {currentStepId === 'enter_phone' && (
+          <Card className="max-w-lg mx-auto shadow-lg">
+            <CardContent className="p-8">
+              <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">
+                Digite seu WhatsApp abaixo
+              </h2>
+
+              <div className="flex gap-3 mb-4">
+                <Input
+                  type="tel"
+                  placeholder="DDD"
+                  value={customerData.ddd}
+                  onChange={(e) => handleDDDChange(e.target.value)}
+                  maxLength={2}
+                  className="min-h-[56px] text-lg text-center w-24"
+                  autoFocus
+                />
+
+                <Input
+                  type="tel"
+                  placeholder="00000-0000"
+                  value={customerData.phone}
+                  onChange={(e) => handlePhoneChange(e.target.value)}
+                  className="min-h-[56px] text-lg text-center flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleNext();
+                    }
+                  }}
+                />
               </div>
-            </div>
-          )}
 
-          {currentStepId === 'customize_front' && selectedModel && (
-            <FrontEditor
-              model={selectedModel}
-              value={customizations.front}
-              onChange={(data) =>
-                setCustomizations({ ...customizations, front: data })
-              }
-            />
-          )}
+              <p className="text-sm text-muted-foreground text-center">
+                Formato: (DDD) 00000-0000
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
-          {currentStepId === 'customize_back' && selectedModel && (
-            <BackEditor
-              model={selectedModel}
-              value={customizations.back}
-              onChange={(data) =>
-                setCustomizations({ ...customizations, back: data })
-              }
-            />
-          )}
+        {/* Step 4: Select Quantity */}
+        {currentStepId === 'select_quantity' && (
+          <Card className="max-w-3xl mx-auto shadow-lg">
+            <CardContent className="p-8">
+              <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">
+                Quantas camisas você precisa?
+              </h2>
 
-          {currentStepId === 'sleeve_right' && selectedModel && (
-            <SleeveEditor
-              model={selectedModel}
-              side="right"
-              value={customizations.sleeves.right}
-              onChange={(data) =>
-                setCustomizations({
-                  ...customizations,
-                  sleeves: { ...customizations.sleeves, right: data }
-                })
-              }
-            />
-          )}
+              <div className="grid grid-cols-3 md:grid-cols-7 gap-3 md:gap-4 mb-6">
+                {[10, 20, 30, 40, 50, 60].map((qty) => (
+                  <Button
+                    key={qty}
+                    variant={customerData.quantity === qty ? 'default' : 'outline'}
+                    className="h-16 md:h-20 text-xl md:text-2xl font-bold"
+                    onClick={() => setCustomerData({
+                      ...customerData,
+                      quantity: qty,
+                      customQuantity: null
+                    })}
+                  >
+                    {qty}
+                  </Button>
+                ))}
 
-          {currentStepId === 'sleeve_left' && selectedModel && (
-            <SleeveEditor
-              model={selectedModel}
-              side="left"
-              value={customizations.sleeves.left}
-              onChange={(data) =>
-                setCustomizations({
-                  ...customizations,
-                  sleeves: { ...customizations.sleeves, left: data }
-                })
-              }
-            />
-          )}
+                <Button
+                  variant={customerData.quantity === 'custom' ? 'default' : 'outline'}
+                  className="h-16 md:h-20 text-lg md:text-xl font-bold"
+                  onClick={() => setCustomerData({
+                    ...customerData,
+                    quantity: 'custom'
+                  })}
+                >
+                  Outros
+                </Button>
+              </div>
 
-          {currentStepId === 'adicionar_logo' && (
-            <Card className="shadow-lg">
-              <CardContent className="p-6">
-                <h2 className="text-2xl font-semibold mb-6 text-center">Adicionar Logo</h2>
-                
-                {!logoChoice ? (
-                  <div className="space-y-4">
-                    <p className="text-center text-muted-foreground mb-6">
-                      Escolha uma das opções abaixo:
-                    </p>
-                    
-                    <Button
-                      size="lg"
-                      className="w-full min-h-[60px] text-lg"
-                      onClick={() => setLogoChoice('add_logo')}
-                    >
-                      <Upload className="w-5 h-5 mr-2" />
-                      Adicionar Logo
-                    </Button>
-                    
-                    <Button
-                      size="lg"
-                      variant="outline"
-                      className="w-full min-h-[60px] text-lg"
-                      onClick={() => setLogoChoice('no_logo')}
-                    >
-                      Não Tenho Logo
-                    </Button>
-                  </div>
-                ) : logoChoice === 'add_logo' ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold">Upload da Logo</h3>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => {
-                          setLogoChoice(null);
-                          setSingleLogo(null);
-                        }}
-                      >
-                        Voltar
-                      </Button>
-                    </div>
-                    
-                    <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                      <Label htmlFor="single-logo" className="cursor-pointer">
-                        <div className="space-y-2">
-                          <Upload className="w-12 h-12 mx-auto text-muted-foreground" />
-                          <p className="text-sm text-muted-foreground">
-                            Clique para fazer upload da logo
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Esta logo será usada em todas as partes da camisa
-                          </p>
-                        </div>
-                      </Label>
-                      <Input
-                        id="single-logo"
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) setSingleLogo(file);
-                        }}
-                      />
-                    </div>
-                    
-                    {singleLogo && (
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
-                        <CheckCircle2 className="w-5 h-5 text-green-600" />
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-green-900">
-                            Logo selecionada: {singleLogo.name}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
-                    <CheckCircle2 className="w-12 h-12 mx-auto text-blue-600 mb-3" />
-                    <h3 className="font-semibold text-lg mb-2">Sem logo por enquanto</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Você será contatado pelo vendedor para auxiliar com a logo
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+              {/* Custom quantity input */}
+              {customerData.quantity === 'custom' && (
+                <div className="mt-6 p-6 bg-muted/30 rounded-lg">
+                  <Label className="text-lg mb-3 block text-center">
+                    Digite a quantidade desejada
+                  </Label>
+                  <Input
+                    type="number"
+                    min="10"
+                    placeholder="Ex: 75"
+                    value={customerData.customQuantity || ''}
+                    onChange={(e) => setCustomerData({
+                      ...customerData,
+                      customQuantity: parseInt(e.target.value) || null
+                    })}
+                    className="min-h-[56px] text-lg text-center"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleNext();
+                      }
+                    }}
+                  />
+                  <p className="text-sm text-muted-foreground text-center mt-2">
+                    Quantidade mínima: 10 unidades
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
-          {currentStepId === 'review' && (
-            <Card className="shadow-lg">
-              <CardContent className="p-6">
-                <h2 className="text-2xl font-semibold mb-6">Revisão e Envio</h2>
-                
-                {/* Mostrar loading enquanto reidrata */}
-                {isRehydrating ? (
-                  <div className="flex flex-col items-center justify-center py-12 space-y-4">
-                    <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                    <p className="text-muted-foreground">Carregando suas personalizações...</p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="space-y-4 md:space-y-6">
-                  {/* Grid de 4 imagens do modelo */}
-                  {selectedModel ? (
-                    <div>
-                      <h3 className="font-semibold text-lg mb-4">Modelo Selecionado:</h3>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                      <div className="space-y-1">
-                        <img
-                          src={selectedModel.image_front}
-                          alt="Frente"
-                          className="w-full aspect-square object-cover rounded-lg border-2 border-primary/20"
-                        />
-                        <p className="text-xs text-center text-muted-foreground">Frente</p>
-                      </div>
-                      <div className="space-y-1">
-                        <img
-                          src={selectedModel.image_back}
-                          alt="Costas"
-                          className="w-full aspect-square object-cover rounded-lg border-2 border-primary/20"
-                        />
-                        <p className="text-xs text-center text-muted-foreground">Costas</p>
-                      </div>
-                      <div className="space-y-1">
-                        <img
-                          src={selectedModel.image_right}
-                          alt="Manga Direita"
-                          className="w-full aspect-square object-cover rounded-lg border-2 border-primary/20"
-                        />
-                        <p className="text-xs text-center text-muted-foreground">Direita</p>
-                      </div>
-                      <div className="space-y-1">
-                        <img
-                          src={selectedModel.image_left}
-                          alt="Manga Esquerda"
-                          className="w-full aspect-square object-cover rounded-lg border-2 border-primary/20"
-                        />
-                        <p className="text-xs text-center text-muted-foreground">Esquerda</p>
-                      </div>
-                    </div>
-                    <p className="text-center font-semibold text-lg mt-4">
-                      {selectedModel.name}
-                    </p>
-                    {selectedModel.features && selectedModel.features.length > 0 && (
-                      <div className="flex flex-wrap gap-2 justify-center mt-2">
-                        {selectedModel.features.map((feature, idx) => (
-                          <span key={idx} className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
-                            {feature}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    </div>
-                  ) : (
-                    <div className="bg-muted/50 p-4 rounded-lg text-center">
-                      <p className="text-muted-foreground text-sm">
-                        Modelo não carregado. Volte uma etapa e selecione o modelo novamente.
-                      </p>
-                    </div>
-                  )}
-
-                  <div>
-                    <h3 className="font-semibold mb-3">Resumo das Personalizações:</h3>
-                    <div className="space-y-3 text-sm bg-muted/30 p-4 rounded-lg">
-                      <div>
-                        <p className="font-medium text-primary">Frente:</p>
-                        <p className="ml-4">Tipo: {customizations.front.logoType === 'small_left' ? 'Logo pequena esquerda' : customizations.front.logoType === 'large_center' ? 'Logo grande centro' : customizations.front.logoType === 'custom' ? 'Personalizada' : 'Nenhuma'}</p>
-                        {customizations.front.text && <p className="ml-4">Texto: {customizations.front.text}</p>}
-                      </div>
-                      
-                      <div>
-                        <p className="font-medium text-primary">Costas:</p>
-                        {customizations.back.logoLarge && <p className="ml-4">• Logo grande</p>}
-                        {customizations.back.name && <p className="ml-4">• Nome: {customizations.back.nameText}</p>}
-                        {customizations.back.whatsapp && <p className="ml-4">• WhatsApp: {customizations.back.whatsappText}</p>}
-                        {customizations.back.instagram && <p className="ml-4">• Instagram: {customizations.back.instagramText}</p>}
-                        {customizations.back.email && <p className="ml-4">• Email: {customizations.back.emailText}</p>}
-                        {customizations.back.website && <p className="ml-4">• Site: {customizations.back.websiteText}</p>}
-                        {customizations.back.sponsors.length > 0 && (
-                          <p className="ml-4">• Patrocinadores: {customizations.back.sponsors.join(', ')}</p>
-                        )}
-                      </div>
-
-                      <div>
-                        <p className="font-medium text-primary">Mangas:</p>
-                        {(customizations.sleeves.right.flag || customizations.sleeves.right.logoSmall || customizations.sleeves.right.text) && (
-                          <p className="ml-4">• Direita: {[
-                            customizations.sleeves.right.flag && 'Bandeira',
-                            customizations.sleeves.right.logoSmall && 'Logo',
-                            customizations.sleeves.right.text && customizations.sleeves.right.textContent
-                          ].filter(Boolean).join(', ')}</p>
-                        )}
-                        {(customizations.sleeves.left.flag || customizations.sleeves.left.logoSmall || customizations.sleeves.left.text) && (
-                          <p className="ml-4">• Esquerda: {[
-                            customizations.sleeves.left.flag && 'Bandeira',
-                            customizations.sleeves.left.logoSmall && 'Logo',
-                            customizations.sleeves.left.text && customizations.sleeves.left.textContent
-                          ].filter(Boolean).join(', ')}</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {/* Navigation - Hidden on step 1 (model selection) - Mobile-friendly */}
-        {currentStep !== 1 && (
-          <div className="flex flex-col-reverse sm:flex-row justify-between gap-3 sm:gap-4">
+        {/* Navigation buttons */}
+        <div className="max-w-3xl mx-auto mt-8 flex gap-4 justify-between">
+          {currentStep > 0 && (
             <Button
               variant="outline"
               onClick={handleBack}
-              disabled={currentStep === 0}
+              disabled={isSaving}
               size="lg"
-              className="w-full sm:w-auto min-h-[48px] touch-manipulation"
             >
-              <ArrowLeft className="mr-2 h-4 md:h-5 w-4 md:w-5" />
+              <ArrowLeft className="w-4 h-4 mr-2" />
               Voltar
             </Button>
+          )}
 
-            {currentStep < enabledSteps.length - 1 && (
-              <Button 
-                onClick={handleNext} 
-                size="lg"
-                className="w-full sm:w-auto min-h-[48px] touch-manipulation font-semibold"
-              >
-                Próximo
-                <ArrowRight className="ml-2 h-4 md:h-5 w-4 md:w-5" />
-              </Button>
-            )}
-
-            {currentStep === enabledSteps.length - 1 && (
-              <Button 
-                onClick={handleSubmitOrder}
-                disabled={isSaving || !selectedModel}
-                size="lg"
-                className="w-full sm:w-auto min-h-[48px] touch-manipulation font-semibold"
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 md:h-5 w-4 md:w-5 animate-spin" />
-                    Enviando...
-                  </>
-                ) : (
-                  <>
-                    Enviar Pedido
-                    <Check className="ml-2 h-4 md:h-5 w-4 md:w-5" />
-                  </>
-                )}
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
+          <Button
+            onClick={handleNext}
+            disabled={isSaving}
+            size="lg"
+            className="ml-auto"
+          >
+            {currentStepId === 'select_quantity' ? 'Finalizar' : 'Próximo'}
+          </Button>
+        </div>
+      </main>
     </div>
-    </>
   );
-};
-
-export default Campaign;
+}
