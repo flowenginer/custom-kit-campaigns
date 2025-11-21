@@ -17,6 +17,7 @@ interface Segment {
   name: string;
   description: string | null;
   segment_tag: string | null;
+  model_tag: string | null;
   created_at: string;
 }
 
@@ -26,10 +27,17 @@ const Segments = () => {
   const [modelCounts, setModelCounts] = useState<Record<string, number>>({});
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSegment, setEditingSegment] = useState<Segment | null>(null);
-  const [formData, setFormData] = useState({ name: "", description: "", segment_tag: "" });
+  const [formData, setFormData] = useState({ name: "", description: "", segment_tag: "", model_tag: "" });
+  const [segmentTags, setSegmentTags] = useState<string[]>([]);
+  const [modelTags, setModelTags] = useState<string[]>([]);
+  const [isCreatingSegmentTag, setIsCreatingSegmentTag] = useState(false);
+  const [isCreatingModelTag, setIsCreatingModelTag] = useState(false);
+  const [newSegmentTag, setNewSegmentTag] = useState("");
+  const [newModelTag, setNewModelTag] = useState("");
 
   useEffect(() => {
     loadSegments();
+    loadTags();
   }, []);
 
   const loadSegments = async () => {
@@ -59,6 +67,90 @@ const Segments = () => {
     setModelCounts(counts);
   };
 
+  const loadTags = async () => {
+    const { data: segmentTagsData } = await supabase
+      .from("tags")
+      .select("tag_value")
+      .eq("tag_type", "segment_tag")
+      .order("tag_value");
+    
+    if (segmentTagsData) {
+      setSegmentTags(segmentTagsData.map(t => t.tag_value));
+    }
+
+    const { data: modelTagsData } = await supabase
+      .from("tags")
+      .select("tag_value")
+      .eq("tag_type", "model_tag")
+      .order("tag_value");
+    
+    if (modelTagsData) {
+      setModelTags(modelTagsData.map(t => t.tag_value));
+    }
+  };
+
+  const handleCreateSegmentTag = async () => {
+    if (!newSegmentTag.trim()) {
+      toast.error("Digite o nome da tag");
+      return;
+    }
+
+    const formattedTag = newSegmentTag
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '_')
+      .replace(/_+/g, '_');
+
+    const { error } = await supabase
+      .from("tags")
+      .insert({ tag_value: formattedTag, tag_type: "segment_tag" });
+
+    if (error) {
+      if (error.code === '23505') {
+        toast.error("Esta tag já existe!");
+      } else {
+        toast.error("Erro ao criar tag");
+      }
+      return;
+    }
+
+    toast.success("Tag criada com sucesso!");
+    setNewSegmentTag("");
+    setIsCreatingSegmentTag(false);
+    setFormData({ ...formData, segment_tag: formattedTag });
+    loadTags();
+  };
+
+  const handleCreateModelTag = async () => {
+    if (!newModelTag.trim()) {
+      toast.error("Digite o nome da tag");
+      return;
+    }
+
+    const formattedTag = newModelTag
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '_')
+      .replace(/_+/g, '_');
+
+    const { error } = await supabase
+      .from("tags")
+      .insert({ tag_value: formattedTag, tag_type: "model_tag" });
+
+    if (error) {
+      if (error.code === '23505') {
+        toast.error("Esta tag já existe!");
+      } else {
+        toast.error("Erro ao criar tag");
+      }
+      return;
+    }
+
+    toast.success("Tag criada com sucesso!");
+    setNewModelTag("");
+    setIsCreatingModelTag(false);
+    setFormData({ ...formData, model_tag: formattedTag });
+    loadTags();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -81,7 +173,7 @@ const Segments = () => {
       }
 
       setIsDialogOpen(false);
-      setFormData({ name: "", description: "", segment_tag: "" });
+      setFormData({ name: "", description: "", segment_tag: "", model_tag: "" });
       setEditingSegment(null);
       loadSegments();
     } catch (error: any) {
@@ -115,7 +207,12 @@ const Segments = () => {
 
   const openEditDialog = (segment: Segment) => {
     setEditingSegment(segment);
-    setFormData({ name: segment.name, description: segment.description || "", segment_tag: segment.segment_tag || "" });
+    setFormData({ 
+      name: segment.name, 
+      description: segment.description || "", 
+      segment_tag: segment.segment_tag || "",
+      model_tag: segment.model_tag || ""
+    });
     setIsDialogOpen(true);
   };
 
@@ -131,7 +228,14 @@ const Segments = () => {
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => { setEditingSegment(null); setFormData({ name: "", description: "", segment_tag: "" }); }}>
+            <Button onClick={() => { 
+              setEditingSegment(null); 
+              setFormData({ name: "", description: "", segment_tag: "", model_tag: "" });
+              setIsCreatingSegmentTag(false);
+              setIsCreatingModelTag(false);
+              setNewSegmentTag("");
+              setNewModelTag("");
+            }}>
               <Plus className="mr-2 h-4 w-4" />
               Novo Segmento
             </Button>
@@ -157,21 +261,133 @@ const Segments = () => {
 
               <div>
                 <Label htmlFor="segment_tag">Tag do Segmento*</Label>
-                <Input
-                  id="segment_tag"
-                  value={formData.segment_tag}
-                  onChange={(e) => {
-                    const tag = e.target.value
-                      .toLowerCase()
-                      .replace(/[^a-z0-9_]/g, '_')
-                      .replace(/_+/g, '_');
-                    setFormData({ ...formData, segment_tag: tag });
-                  }}
-                  placeholder="Ex: energia_solar, agro, futevoelei"
-                  required
-                />
+                {!isCreatingSegmentTag ? (
+                  <div className="flex gap-2">
+                    <Select
+                      value={formData.segment_tag}
+                      onValueChange={(value) => {
+                        if (value === "__create_new__") {
+                          setIsCreatingSegmentTag(true);
+                        } else {
+                          setFormData({ ...formData, segment_tag: value });
+                        }
+                      }}
+                      required
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Selecione ou crie uma tag" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {segmentTags.map(tag => (
+                          <SelectItem key={tag} value={tag}>
+                            {tag}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="__create_new__" className="text-primary font-semibold">
+                          ➕ Criar nova tag de segmento
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      value={newSegmentTag}
+                      onChange={(e) => setNewSegmentTag(e.target.value)}
+                      placeholder="Digite a nova tag (ex: construcao_civil)"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleCreateSegmentTag();
+                        }
+                      }}
+                    />
+                    <Button type="button" onClick={handleCreateSegmentTag} size="sm">
+                      Criar
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        setIsCreatingSegmentTag(false);
+                        setNewSegmentTag("");
+                      }}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                )}
                 <p className="text-xs text-muted-foreground mt-1">
-                  Somente letras minúsculas, números e underscores
+                  Ex: energia_solar, agro, futevoelei
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="model_tag">Tag do Modelo*</Label>
+                {!isCreatingModelTag ? (
+                  <div className="flex gap-2">
+                    <Select
+                      value={formData.model_tag}
+                      onValueChange={(value) => {
+                        if (value === "__create_new__") {
+                          setIsCreatingModelTag(true);
+                        } else {
+                          setFormData({ ...formData, model_tag: value });
+                        }
+                      }}
+                      required
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Selecione ou crie uma tag" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {modelTags.map(tag => (
+                          <SelectItem key={tag} value={tag}>
+                            {tag === 'ziper' && '🧥 '}
+                            {tag === 'manga_longa' && '👕 '}
+                            {tag === 'manga_curta' && '👔 '}
+                            {tag === 'regata' && '🎽 '}
+                            {tag}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="__create_new__" className="text-primary font-semibold">
+                          ➕ Criar nova tag de modelo
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      value={newModelTag}
+                      onChange={(e) => setNewModelTag(e.target.value)}
+                      placeholder="Digite a nova tag (ex: jaqueta)"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleCreateModelTag();
+                        }
+                      }}
+                    />
+                    <Button type="button" onClick={handleCreateModelTag} size="sm">
+                      Criar
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        setIsCreatingModelTag(false);
+                        setNewModelTag("");
+                      }}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  Ex: ziper, manga_longa, manga_curta, regata
                 </p>
               </div>
 
@@ -199,11 +415,22 @@ const Segments = () => {
               <CardTitle className="flex items-start justify-between">
                 <div className="flex flex-col gap-2">
                   <span className="line-clamp-1">{segment.name}</span>
-                  {segment.segment_tag && (
-                    <Badge variant="outline" className="text-xs w-fit">
-                      🏷️ {segment.segment_tag}
-                    </Badge>
-                  )}
+                  <div className="flex gap-2 flex-wrap">
+                    {segment.segment_tag && (
+                      <Badge variant="outline" className="text-xs w-fit">
+                        📁 {segment.segment_tag}
+                      </Badge>
+                    )}
+                    {segment.model_tag && (
+                      <Badge variant="secondary" className="text-xs w-fit">
+                        {segment.model_tag === 'ziper' && '🧥 '}
+                        {segment.model_tag === 'manga_longa' && '👕 '}
+                        {segment.model_tag === 'manga_curta' && '👔 '}
+                        {segment.model_tag === 'regata' && '🎽 '}
+                        {segment.model_tag}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <Button
