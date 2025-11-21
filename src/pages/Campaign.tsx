@@ -854,70 +854,76 @@ export default function Campaign() {
                       }`}
                     >
                       <CardContent className="p-0">
-                        <div className="grid md:grid-cols-2 gap-0">
+                        <div className="grid md:grid-cols-[35%_65%] gap-0">
                           {/* Left side - Info */}
-                          <div className="p-6 md:p-8 flex flex-col justify-between bg-muted/30">
-                            <div>
-                              <h3 className="text-2xl md:text-3xl font-bold mb-4">
+                          <div className="p-6 md:p-8 flex flex-col justify-center bg-gradient-to-br from-muted/50 to-muted/30">
+                            <div className="mb-6">
+                              <h3 className="text-2xl md:text-3xl font-bold mb-2">
                                 {model.name}
                               </h3>
-                              
-                              {model.sku && (
-                                <p className="text-sm text-muted-foreground mb-4">
-                                  Código: {model.sku}
-                                </p>
-                              )}
-
-                              {model.features && model.features.length > 0 && (
-                                <div className="space-y-2 mb-6">
-                                  <p className="text-sm font-semibold text-muted-foreground">Características:</p>
-                                  <div className="flex flex-wrap gap-2">
-                                    {model.features.map((feature: string, idx: number) => (
-                                      <span 
-                                        key={idx} 
-                                        className="text-xs bg-primary/10 text-primary px-3 py-1 rounded-full"
-                                      >
-                                        {feature}
-                                      </span>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
                             </div>
 
-                            <Button
-                              onClick={() => handleSelectModel(model)}
-                              size="lg"
-                              className="w-full mt-4"
-                            >
-                              {selectedModel?.id === model.id ? (
-                                <>
-                                  <Check className="mr-2 h-5 w-5" />
-                                  Modelo Selecionado
-                                </>
-                              ) : (
-                                'Encomendar agora'
-                              )}
-                            </Button>
+                            {model.features && model.features.length > 0 && (
+                              <div className="space-y-3">
+                                {model.features.map((feature: string, idx: number) => (
+                                  <div key={idx} className="flex items-start gap-3">
+                                    <div className="mt-0.5">
+                                      <Check className="h-5 w-5 text-green-500" />
+                                    </div>
+                                    <span className="text-sm leading-relaxed">
+                                      {feature}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
 
                           {/* Right side - Images */}
-                          <div className="grid grid-cols-2 gap-1 bg-muted">
-                            <div className="aspect-square flex items-center justify-center p-4">
-                              <img
-                                src={model.image_front}
-                                alt={`${model.name} - Frente`}
-                                className="w-full h-full object-contain"
-                              />
-                            </div>
-                            <div className="aspect-square flex items-center justify-center p-4">
-                              <img
-                                src={model.image_back}
-                                alt={`${model.name} - Costas`}
-                                className="w-full h-full object-contain"
-                              />
+                          <div className="relative bg-muted flex items-center justify-center p-8">
+                            {model.sku && (
+                              <div className="absolute top-4 right-4 z-10">
+                                <span className="text-xl md:text-2xl font-bold tracking-wider">
+                                  {model.sku}
+                                </span>
+                              </div>
+                            )}
+
+                            <div className="grid grid-cols-2 gap-4 w-full max-w-2xl">
+                              <div className="aspect-square flex items-center justify-center">
+                                <img
+                                  src={model.image_front}
+                                  alt={`${model.name} - Frente`}
+                                  className="w-full h-full object-contain"
+                                />
+                              </div>
+                              <div className="aspect-square flex items-center justify-center">
+                                <img
+                                  src={model.image_back}
+                                  alt={`${model.name} - Costas`}
+                                  className="w-full h-full object-contain"
+                                />
+                              </div>
                             </div>
                           </div>
+                        </div>
+
+                        {/* Button below */}
+                        <div className="p-4 border-t">
+                          <Button
+                            onClick={() => handleSelectModel(model)}
+                            size="lg"
+                            className="w-full h-14 text-lg"
+                          >
+                            {selectedModel?.id === model.id ? (
+                              <>
+                                <Check className="mr-2 h-5 w-5" />
+                                Modelo Selecionado
+                              </>
+                            ) : (
+                              'Selecionar Modelo'
+                            )}
+                          </Button>
                         </div>
                       </CardContent>
                     </Card>
