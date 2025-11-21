@@ -28,9 +28,10 @@ interface SleeveEditorProps {
   side: 'left' | 'right';
   value: SleeveCustomization;
   onChange: (data: SleeveCustomization) => void;
+  onNext: () => void;
 }
 
-export const SleeveEditor = ({ model, side, value, onChange }: SleeveEditorProps) => {
+export const SleeveEditor = ({ model, side, value, onChange, onNext }: SleeveEditorProps) => {
   const [isZoomOpen, setIsZoomOpen] = useState(false);
   const imageUrl = side === 'left' ? model.image_left : model.image_right;
   const title = side === 'left' ? 'Manga Esquerda' : 'Manga Direita';
@@ -164,6 +165,19 @@ export const SleeveEditor = ({ model, side, value, onChange }: SleeveEditorProps
                 </p>
               </div>
             )}
+          </div>
+          
+          {/* Botão para confirmar e continuar */}
+          <div className="pt-4 border-t">
+            <Button
+              onClick={() => {
+                setTimeout(() => onNext(), 200);
+              }}
+              size="lg"
+              className="w-full h-14 text-lg"
+            >
+              Confirmar e Continuar
+            </Button>
           </div>
         </CardContent>
       </Card>
