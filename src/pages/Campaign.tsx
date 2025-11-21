@@ -1092,8 +1092,8 @@ export default function Campaign() {
             </Button>
           )}
 
-          {/* Mostrar Próximo em TODAS as páginas EXCETO na seleção de modelo */}
-          {currentStepId !== 'choose_model' && (
+          {/* Mostrar Próximo EXCETO nas páginas de seleção (tipo e modelo) */}
+          {currentStepId !== 'select_type' && currentStepId !== 'choose_model' && (
             <Button
               onClick={handleNext}
               disabled={isSaving}
