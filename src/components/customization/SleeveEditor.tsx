@@ -37,7 +37,7 @@ export const SleeveEditor = ({ model, side, value, onChange, onNext }: SleeveEdi
   const title = side === 'left' ? 'Manga Esquerda' : 'Manga Direita';
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6 pb-4">
       <Card className="order-1 md:order-1">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base md:text-lg">Preview - {title}</CardTitle>
@@ -52,7 +52,7 @@ export const SleeveEditor = ({ model, side, value, onChange, onNext }: SleeveEdi
         </CardHeader>
         <CardContent>
           <div 
-            className="relative aspect-square bg-muted rounded-lg overflow-hidden min-h-[300px] md:min-h-auto cursor-pointer flex items-center justify-center"
+            className="relative bg-muted rounded-lg overflow-hidden h-[200px] md:aspect-square md:min-h-auto cursor-pointer flex items-center justify-center"
             onClick={() => setIsZoomOpen(true)}
           >
             <img 
@@ -72,14 +72,14 @@ export const SleeveEditor = ({ model, side, value, onChange, onNext }: SleeveEdi
         alt={`Preview ${title} - Zoom`}
       />
 
-      <Card className="order-2 md:order-2">
+      <Card className="order-2 md:order-2 max-h-[calc(100vh-180px)] md:max-h-none overflow-y-auto">
         <CardHeader>
           <CardTitle className="text-base md:text-lg">Personalizações - {title}</CardTitle>
           <p className="text-sm text-muted-foreground mt-2">
             Escolha abaixo o que você quer que tenha no seu modelo
           </p>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 pb-8 md:pb-6">
           {/* Bandeira */}
           <div className="space-y-3">
             <Label className="text-base">Quer adicionar bandeira?</Label>
@@ -168,7 +168,7 @@ export const SleeveEditor = ({ model, side, value, onChange, onNext }: SleeveEdi
           </div>
           
           {/* Botão para confirmar e continuar */}
-          <div className="pt-4 border-t">
+          <div className="pt-6 pb-2 border-t sticky bottom-0 bg-background md:static">
             <Button
               onClick={() => {
                 setTimeout(() => onNext(), 200);
