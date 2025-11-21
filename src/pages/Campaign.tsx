@@ -421,7 +421,15 @@ export default function Campaign() {
     setCustomerData({ ...customerData, phone: formatted });
   };
 
-  // Handle next step
+  // Avançar para o próximo passo (sem validações)
+  const goToNextStep = async () => {
+    const nextStep = currentStep + 1;
+    setCurrentStep(nextStep);
+    await trackEvent(`step_${nextStep + 1}`);
+    await createOrUpdateLead(nextStep);
+  };
+
+  // Handle next step (com validações)
   const handleNext = async () => {
     // Validations per step
     if (currentStepId === 'choose_model' && !selectedModel) {
@@ -473,11 +481,7 @@ export default function Campaign() {
       return;
     }
 
-    // Advance to next step
-    const nextStep = currentStep + 1;
-    setCurrentStep(nextStep);
-    await trackEvent(`step_${nextStep + 1}`);
-    await createOrUpdateLead(nextStep);
+    await goToNextStep();
   };
   // Handle back
   const handleBack = () => {
@@ -545,9 +549,9 @@ export default function Campaign() {
     setSelectedModel(model);
     await createOrUpdateLead(currentStep);
     
-    // Wait a bit for better UX
+    // Espera um pouco para UX e depois avança SEM revalidar o modelo
     setTimeout(() => {
-      handleNext();
+      goToNextStep();
     }, 300);
   };
 
@@ -806,6 +810,7 @@ export default function Campaign() {
                       className={`overflow-hidden hover:shadow-xl transition-all border-2 ${
                         selectedModel?.id === model.id ? 'border-primary ring-4 ring-primary/20' : 'border-border'
                       }`}
+                      onClick={() => handleSelectModel(model)}
                     >
                       <CardContent className="p-0">
                         {/* Container da foto principal */}
@@ -832,10 +837,6 @@ export default function Campaign() {
                         {/* Botão "Selecionar Modelo" */}
                         <div className="p-4 border-t">
                           <Button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSelectModel(model);
-                            }}
                             size="lg"
                             className="w-full h-14 text-lg"
                           >
