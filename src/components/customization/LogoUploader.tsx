@@ -33,6 +33,7 @@ interface LogoUploaderProps {
   onUploadChoiceChange: (choice: 'agora' | 'depois') => void;
   onLogosUpload: (logos: UploadedLogos) => void;
   currentLogos: UploadedLogos;
+  onNext: () => void;
 }
 
 export const LogoUploader = ({
@@ -41,6 +42,7 @@ export const LogoUploader = ({
   onUploadChoiceChange,
   onLogosUpload,
   currentLogos,
+  onNext,
 }: LogoUploaderProps) => {
   const needsFrontLogo = customizations.front.logoType !== 'none';
   const needsBackLogo = customizations.back.logoLarge;
@@ -85,8 +87,12 @@ export const LogoUploader = ({
           <Button
             size="lg"
             className="h-16 text-lg"
-            variant={uploadChoice === 'agora' ? 'default' : 'outline'}
-            onClick={() => onUploadChoiceChange('agora')}
+            onClick={() => {
+              onUploadChoiceChange('agora');
+              setTimeout(() => {
+                onNext();
+              }, 300);
+            }}
           >
             <Upload className="mr-2 h-5 w-5" />
             Adicionar Logo
@@ -94,10 +100,15 @@ export const LogoUploader = ({
 
           {/* Botão Não Tenho Logo */}
           <Button
-            variant={uploadChoice === 'depois' ? 'default' : 'outline'}
+            variant="outline"
             size="lg"
             className="h-16 text-lg"
-            onClick={() => onUploadChoiceChange('depois')}
+            onClick={() => {
+              onUploadChoiceChange('depois');
+              setTimeout(() => {
+                onNext();
+              }, 300);
+            }}
           >
             <X className="mr-2 h-5 w-5" />
             Não Tenho Logo

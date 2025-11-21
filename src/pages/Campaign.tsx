@@ -246,7 +246,13 @@ export default function Campaign() {
         const data = JSON.parse(saved);
         if (data.campaignId === campaign.id) {
           setCurrentStep(data.currentStep || 0);
-          setSelectedModel(data.selectedModel || null);
+          
+          // Só restaurar selectedModel se já passou da etapa de seleção
+          const chooseModelStepIndex = TOTAL_STEPS.findIndex(s => s.id === 'choose_model');
+          if (data.currentStep > chooseModelStepIndex) {
+            setSelectedModel(data.selectedModel || null);
+          }
+          
           setCustomerData(data.customerData || {
             name: '',
             phone: '',
@@ -824,7 +830,7 @@ export default function Campaign() {
                             <img
                               src={model.photo_main}
                               alt={model.name}
-                              className="w-full max-w-3xl h-auto object-contain"
+                              className="w-full h-auto object-contain"
                             />
                           </div>
                         </div>
@@ -945,6 +951,7 @@ export default function Campaign() {
               onUploadChoiceChange={setUploadChoice}
               onLogosUpload={setUploadedLogos}
               currentLogos={uploadedLogos}
+              onNext={handleNext}
             />
           </div>
         )}
@@ -971,7 +978,7 @@ export default function Campaign() {
                     <img 
                       src={selectedModel?.image_front} 
                       alt="Frente" 
-                      className="w-full rounded-lg border"
+                      className="w-full h-48 object-cover rounded-lg border"
                     />
                     <p className="text-center text-sm font-medium">Frente</p>
                   </div>
@@ -980,7 +987,7 @@ export default function Campaign() {
                     <img 
                       src={selectedModel?.image_back} 
                       alt="Costas" 
-                      className="w-full rounded-lg border"
+                      className="w-full h-48 object-cover rounded-lg border"
                     />
                     <p className="text-center text-sm font-medium">Costas</p>
                   </div>
@@ -989,7 +996,7 @@ export default function Campaign() {
                     <img 
                       src={selectedModel?.image_right} 
                       alt="Direita" 
-                      className="w-full rounded-lg border"
+                      className="w-full h-48 object-cover rounded-lg border"
                     />
                     <p className="text-center text-sm font-medium">Direita</p>
                   </div>
@@ -998,7 +1005,7 @@ export default function Campaign() {
                     <img 
                       src={selectedModel?.image_left} 
                       alt="Esquerda" 
-                      className="w-full rounded-lg border"
+                      className="w-full h-48 object-cover rounded-lg border"
                     />
                     <p className="text-center text-sm font-medium">Esquerda</p>
                   </div>
@@ -1070,21 +1077,23 @@ export default function Campaign() {
           </div>
         )}
 
-        {/* Navigation buttons - NÃO mostrar na seleção de modelo */}
-        {currentStepId !== 'choose_model' && (
-          <div className="max-w-3xl mx-auto mt-8 flex gap-4 justify-between">
-            {currentStep > 0 && (
-              <Button
-                variant="outline"
-                onClick={handleBack}
-                disabled={isSaving}
-                size="lg"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Voltar
-              </Button>
-            )}
+        {/* Navigation buttons */}
+        <div className="max-w-3xl mx-auto mt-8 flex gap-4 justify-between">
+          {/* Mostrar Voltar em TODAS as páginas exceto a primeira */}
+          {currentStep > 0 && (
+            <Button
+              variant="outline"
+              onClick={handleBack}
+              disabled={isSaving}
+              size="lg"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Voltar
+            </Button>
+          )}
 
+          {/* Mostrar Próximo em TODAS as páginas EXCETO na seleção de modelo */}
+          {currentStepId !== 'choose_model' && (
             <Button
               onClick={handleNext}
               disabled={isSaving}
@@ -1093,8 +1102,8 @@ export default function Campaign() {
             >
               {currentStepId === 'review' ? 'Finalizar Pedido' : 'Próximo'}
             </Button>
-          </div>
-        )}
+          )}
+        </div>
       </main>
     </div>
   );
