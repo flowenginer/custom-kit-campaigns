@@ -16,7 +16,7 @@ interface Segment {
   id: string;
   name: string;
   description: string | null;
-  model_tag: string | null;
+  segment_tag: string | null;
   created_at: string;
 }
 
@@ -26,7 +26,7 @@ const Segments = () => {
   const [modelCounts, setModelCounts] = useState<Record<string, number>>({});
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSegment, setEditingSegment] = useState<Segment | null>(null);
-  const [formData, setFormData] = useState({ name: "", description: "", model_tag: "" });
+  const [formData, setFormData] = useState({ name: "", description: "", segment_tag: "" });
 
   useEffect(() => {
     loadSegments();
@@ -81,7 +81,7 @@ const Segments = () => {
       }
 
       setIsDialogOpen(false);
-      setFormData({ name: "", description: "", model_tag: "" });
+      setFormData({ name: "", description: "", segment_tag: "" });
       setEditingSegment(null);
       loadSegments();
     } catch (error: any) {
@@ -115,7 +115,7 @@ const Segments = () => {
 
   const openEditDialog = (segment: Segment) => {
     setEditingSegment(segment);
-    setFormData({ name: segment.name, description: segment.description || "", model_tag: segment.model_tag || "" });
+    setFormData({ name: segment.name, description: segment.description || "", segment_tag: segment.segment_tag || "" });
     setIsDialogOpen(true);
   };
 
@@ -131,7 +131,7 @@ const Segments = () => {
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => { setEditingSegment(null); setFormData({ name: "", description: "", model_tag: "" }); }}>
+            <Button onClick={() => { setEditingSegment(null); setFormData({ name: "", description: "", segment_tag: "" }); }}>
               <Plus className="mr-2 h-4 w-4" />
               Novo Segmento
             </Button>
@@ -150,10 +150,31 @@ const Segments = () => {
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Ex: Futevôlei, Telecom, Futsal"
+                  placeholder="Ex: Energia Solar, Agro, Futevôlei"
                   required
                 />
               </div>
+
+              <div>
+                <Label htmlFor="segment_tag">Tag do Segmento*</Label>
+                <Input
+                  id="segment_tag"
+                  value={formData.segment_tag}
+                  onChange={(e) => {
+                    const tag = e.target.value
+                      .toLowerCase()
+                      .replace(/[^a-z0-9_]/g, '_')
+                      .replace(/_+/g, '_');
+                    setFormData({ ...formData, segment_tag: tag });
+                  }}
+                  placeholder="Ex: energia_solar, agro, futevoelei"
+                  required
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Somente letras minúsculas, números e underscores
+                </p>
+              </div>
+
               <div>
                 <Label htmlFor="description">Descrição</Label>
                 <Textarea
@@ -162,25 +183,6 @@ const Segments = () => {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Descreva este segmento..."
                 />
-              </div>
-              <div>
-                <Label htmlFor="model_tag">Etiqueta de Modelo*</Label>
-                <Select
-                  value={formData.model_tag}
-                  onValueChange={(value) => setFormData({ ...formData, model_tag: value })}
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o tipo de modelo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="manga_longa">👕 Manga Longa</SelectItem>
-                    <SelectItem value="ziper">🧥 Ziper</SelectItem>
-                    <SelectItem value="manga_curta">👔 Manga Curta</SelectItem>
-                    <SelectItem value="regata">🎽 Regata</SelectItem>
-                    <SelectItem value="kit">📦 Kit</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
               <Button type="submit" className="w-full">
                 {editingSegment ? "Atualizar" : "Criar"} Segmento
@@ -195,15 +197,11 @@ const Segments = () => {
           <Card key={segment.id}>
             <CardHeader>
               <CardTitle className="flex items-start justify-between">
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex flex-col gap-2">
                   <span className="line-clamp-1">{segment.name}</span>
-                  {segment.model_tag && (
-                    <Badge variant="secondary" className="text-xs">
-                      {segment.model_tag === 'manga_longa' && '👕 Manga Longa'}
-                      {segment.model_tag === 'ziper' && '🧥 Ziper'}
-                      {segment.model_tag === 'manga_curta' && '👔 Manga Curta'}
-                      {segment.model_tag === 'regata' && '🎽 Regata'}
-                      {segment.model_tag === 'kit' && '📦 Kit'}
+                  {segment.segment_tag && (
+                    <Badge variant="outline" className="text-xs w-fit">
+                      🏷️ {segment.segment_tag}
                     </Badge>
                   )}
                 </div>

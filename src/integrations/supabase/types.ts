@@ -170,6 +170,7 @@ export type Database = {
           id: string
           name: string
           segment_id: string | null
+          segment_tag: string | null
           unique_link: string
           updated_at: string | null
           workflow_config: Json | null
@@ -182,6 +183,7 @@ export type Database = {
           id?: string
           name: string
           segment_id?: string | null
+          segment_tag?: string | null
           unique_link: string
           updated_at?: string | null
           workflow_config?: Json | null
@@ -194,6 +196,7 @@ export type Database = {
           id?: string
           name?: string
           segment_id?: string | null
+          segment_tag?: string | null
           unique_link?: string
           updated_at?: string | null
           workflow_config?: Json | null
@@ -723,6 +726,7 @@ export type Database = {
           id: string
           model_tag: string | null
           name: string
+          segment_tag: string | null
           updated_at: string | null
         }
         Insert: {
@@ -731,6 +735,7 @@ export type Database = {
           id?: string
           model_tag?: string | null
           name: string
+          segment_tag?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -739,6 +744,7 @@ export type Database = {
           id?: string
           model_tag?: string | null
           name?: string
+          segment_tag?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -755,9 +761,11 @@ export type Database = {
           image_front_small_logo: string | null
           image_left: string
           image_right: string
+          model_tag: string | null
           name: string
           photo_main: string
           segment_id: string | null
+          segment_tag: string | null
           sku: string | null
           updated_at: string | null
         }
@@ -772,9 +780,11 @@ export type Database = {
           image_front_small_logo?: string | null
           image_left: string
           image_right: string
+          model_tag?: string | null
           name: string
           photo_main: string
           segment_id?: string | null
+          segment_tag?: string | null
           sku?: string | null
           updated_at?: string | null
         }
@@ -789,9 +799,11 @@ export type Database = {
           image_front_small_logo?: string | null
           image_left?: string
           image_right?: string
+          model_tag?: string | null
           name?: string
           photo_main?: string
           segment_id?: string | null
+          segment_tag?: string | null
           sku?: string | null
           updated_at?: string | null
         }
