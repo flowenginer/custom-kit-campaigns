@@ -168,6 +168,7 @@ export type Database = {
           custom_body_scripts: string | null
           custom_head_scripts: string | null
           id: string
+          model_tag: string | null
           name: string
           segment_id: string | null
           segment_tag: string | null
@@ -181,6 +182,7 @@ export type Database = {
           custom_body_scripts?: string | null
           custom_head_scripts?: string | null
           id?: string
+          model_tag?: string | null
           name: string
           segment_id?: string | null
           segment_tag?: string | null
@@ -194,6 +196,7 @@ export type Database = {
           custom_body_scripts?: string | null
           custom_head_scripts?: string | null
           id?: string
+          model_tag?: string | null
           name?: string
           segment_id?: string | null
           segment_tag?: string | null
