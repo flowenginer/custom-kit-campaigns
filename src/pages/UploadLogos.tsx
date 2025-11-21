@@ -161,7 +161,10 @@ export const UploadLogos = () => {
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl">
       <Card>
-        <CardContent className="space-y-6 pt-6">
+        <CardHeader>
+          <CardTitle>Adicionar Logo</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
           {!uploadChoice ? (
             <div className="space-y-4">
               <p className="text-muted-foreground">
@@ -170,42 +173,53 @@ export const UploadLogos = () => {
               
               <div className="grid gap-4">
                 <Button
-                  onClick={() => setUploadChoice('add_logo')}
-                  variant="outline"
+                  onClick={() => {
+                    console.log('Clicou em Adicionar Logo');
+                    setUploadChoice('add_logo');
+                  }}
+                  variant="default"
                   className="h-auto py-6 flex flex-col items-center gap-2"
                 >
                   <Upload className="h-6 w-6" />
-                  <span className="font-semibold">Adicionar Logo Agora</span>
-                  <span className="text-sm text-muted-foreground">
-                    Faça o upload da sua logo
-                  </span>
+                  <span className="font-semibold">Adicionar Logo</span>
                 </Button>
 
                 <Button
-                  onClick={() => setUploadChoice('no_logo')}
+                  onClick={() => {
+                    console.log('Clicou em Não Tenho Logo');
+                    setUploadChoice('no_logo');
+                  }}
                   variant="outline"
                   className="h-auto py-6 flex flex-col items-center gap-2"
                 >
                   <CheckCircle2 className="h-6 w-6" />
                   <span className="font-semibold">Não Tenho Logo</span>
-                  <span className="text-sm text-muted-foreground">
-                    Nossa equipe entrará em contato
-                  </span>
                 </Button>
+              </div>
+
+              <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg text-sm text-muted-foreground">
+                Você poderá enviar as logos por WhatsApp após finalizar o pedido.
               </div>
             </div>
           ) : uploadChoice === 'add_logo' ? (
             <div className="space-y-4">
-              <div>
-                <Label htmlFor="logo">Logo da Camisa</Label>
-                <p className="text-sm text-muted-foreground mb-2">
+              <div className="space-y-2">
+                <Label htmlFor="logo" className="text-base font-semibold">
+                  Selecione sua logo
+                </Label>
+                <p className="text-sm text-muted-foreground">
                   Esta logo será usada tanto na frente quanto nas costas da camisa
                 </p>
                 <Input
                   id="logo"
                   type="file"
                   accept="image/*"
-                  onChange={(e) => setLogo(e.target.files?.[0] || null)}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    console.log('Arquivo selecionado:', file?.name);
+                    setLogo(file || null);
+                  }}
+                  className="cursor-pointer"
                 />
                 {logo && (
                   <div className="mt-2 flex items-center gap-2 text-sm text-green-600">
@@ -215,7 +229,7 @@ export const UploadLogos = () => {
                 )}
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 pt-4">
                 <Button
                   onClick={() => {
                     setUploadChoice(null);
@@ -230,22 +244,33 @@ export const UploadLogos = () => {
                   disabled={!logo || isSaving}
                   className="flex-1"
                 >
-                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                  Continuar para Revisão
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Enviando...
+                    </>
+                  ) : (
+                    <>
+                      <ArrowRight className="h-4 w-4 mr-2" />
+                      Próximo
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="bg-muted p-4 rounded-lg">
-                <p className="font-medium mb-2">Perfeito!</p>
-                <p className="text-sm text-muted-foreground">
+              <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 p-4 rounded-lg">
+                <p className="font-semibold text-green-900 dark:text-green-100 mb-2">
+                  Perfeito!
+                </p>
+                <p className="text-sm text-green-700 dark:text-green-300">
                   Nossa equipe entrará em contato para te ajudar com a logo. 
                   Você receberá uma mensagem em breve no número fornecido.
                 </p>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 pt-4">
                 <Button
                   onClick={() => setUploadChoice(null)}
                   variant="outline"
@@ -257,8 +282,17 @@ export const UploadLogos = () => {
                   disabled={isSaving}
                   className="flex-1"
                 >
-                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                  Finalizar
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Processando...
+                    </>
+                  ) : (
+                    <>
+                      <ArrowRight className="h-4 w-4 mr-2" />
+                      Próximo
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
