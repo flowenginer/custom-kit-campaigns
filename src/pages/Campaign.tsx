@@ -963,7 +963,7 @@ export default function Campaign() {
             </h2>
             
             <Card>
-              <CardContent className="p-6 space-y-6">
+              <CardContent className="p-4 md:p-6 space-y-6 pb-8 md:pb-6">
                 {/* Modelo Selecionado */}
                 <div>
                   <h3 className="font-semibold text-lg mb-4">Modelo Selecionado:</h3>
@@ -977,7 +977,7 @@ export default function Campaign() {
                     <img 
                       src={selectedModel?.image_front} 
                       alt="Frente" 
-                      className="w-full h-48 object-cover rounded-lg border"
+                      className="w-full h-32 md:h-48 object-cover rounded-lg border"
                     />
                     <p className="text-center text-sm font-medium">Frente</p>
                   </div>
@@ -986,7 +986,7 @@ export default function Campaign() {
                     <img 
                       src={selectedModel?.image_back} 
                       alt="Costas" 
-                      className="w-full h-48 object-cover rounded-lg border"
+                      className="w-full h-32 md:h-48 object-cover rounded-lg border"
                     />
                     <p className="text-center text-sm font-medium">Costas</p>
                   </div>
@@ -995,7 +995,7 @@ export default function Campaign() {
                     <img 
                       src={selectedModel?.image_right} 
                       alt="Direita" 
-                      className="w-full h-48 object-cover rounded-lg border"
+                      className="w-full h-32 md:h-48 object-cover rounded-lg border"
                     />
                     <p className="text-center text-sm font-medium">Direita</p>
                   </div>
@@ -1004,7 +1004,7 @@ export default function Campaign() {
                     <img 
                       src={selectedModel?.image_left} 
                       alt="Esquerda" 
-                      className="w-full h-48 object-cover rounded-lg border"
+                      className="w-full h-32 md:h-48 object-cover rounded-lg border"
                     />
                     <p className="text-center text-sm font-medium">Esquerda</p>
                   </div>
@@ -1077,7 +1077,7 @@ export default function Campaign() {
         )}
 
         {/* Navigation buttons */}
-        <div className="max-w-3xl mx-auto mt-8 flex gap-4 justify-between">
+        <div className="max-w-3xl mx-auto mt-6 mb-8 pb-6 flex gap-4 justify-between">
           {/* Mostrar Voltar em TODAS as páginas exceto a primeira */}
           {currentStep > 0 && (
             <Button
