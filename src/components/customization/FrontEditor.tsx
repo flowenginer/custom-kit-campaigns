@@ -1,6 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ImageZoomModal } from "@/components/ui/image-zoom-modal";
 import { useState } from "react";
 import { Maximize2 } from "lucide-react";
@@ -26,9 +25,10 @@ interface FrontEditorProps {
   model: ShirtModel;
   value: FrontCustomization;
   onChange: (data: FrontCustomization) => void;
+  onNext: () => void;
 }
 
-export const FrontEditor = ({ model, value, onChange }: FrontEditorProps) => {
+export const FrontEditor = ({ model, value, onChange, onNext }: FrontEditorProps) => {
   const [isZoomOpen, setIsZoomOpen] = useState(false);
   
   const getImageUrl = () => {
@@ -90,30 +90,43 @@ export const FrontEditor = ({ model, value, onChange }: FrontEditorProps) => {
         <CardContent className="space-y-6">
           <div className="space-y-4">
             <Label className="text-base">Tipo de Logo</Label>
-            <RadioGroup 
-              value={value.logoType} 
-              onValueChange={(val) => onChange({ ...value, logoType: val as FrontCustomization['logoType'] })}
-              className="space-y-3"
-            >
-              <div className="flex items-center space-x-3 py-2">
-                <RadioGroupItem value="small_left" id="small_left" className="h-5 w-5" />
-                <Label htmlFor="small_left" className="font-normal cursor-pointer text-base flex-1 py-1">
-                  Logo pequena no peito esquerdo
-                </Label>
-              </div>
-              <div className="flex items-center space-x-3 py-2">
-                <RadioGroupItem value="large_center" id="large_center" className="h-5 w-5" />
-                <Label htmlFor="large_center" className="font-normal cursor-pointer text-base flex-1 py-1">
-                  Logo grande no centro
-                </Label>
-              </div>
-              <div className="flex items-center space-x-3 py-2">
-                <RadioGroupItem value="custom" id="custom" className="h-5 w-5" />
-                <Label htmlFor="custom" className="font-normal cursor-pointer text-base flex-1 py-1">
-                  Outras personalizações
-                </Label>
-              </div>
-            </RadioGroup>
+            <p className="text-sm text-muted-foreground">
+              Clique na opção desejada para continuar
+            </p>
+            <div className="space-y-3">
+              <Button
+                variant={value.logoType === 'small_left' ? 'default' : 'outline'}
+                className="w-full h-14 text-base justify-start"
+                onClick={() => {
+                  onChange({ ...value, logoType: 'small_left' });
+                  setTimeout(() => onNext(), 300);
+                }}
+              >
+                Logo pequena no peito esquerdo
+              </Button>
+              
+              <Button
+                variant={value.logoType === 'large_center' ? 'default' : 'outline'}
+                className="w-full h-14 text-base justify-start"
+                onClick={() => {
+                  onChange({ ...value, logoType: 'large_center' });
+                  setTimeout(() => onNext(), 300);
+                }}
+              >
+                Logo grande no centro
+              </Button>
+              
+              <Button
+                variant={value.logoType === 'custom' ? 'default' : 'outline'}
+                className="w-full h-14 text-base justify-start"
+                onClick={() => {
+                  onChange({ ...value, logoType: 'custom' });
+                  setTimeout(() => onNext(), 300);
+                }}
+              >
+                Outras personalizações
+              </Button>
+            </div>
           </div>
 
         </CardContent>

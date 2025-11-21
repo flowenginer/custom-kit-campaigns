@@ -871,6 +871,7 @@ export default function Campaign() {
                 ...customizations,
                 front: { ...customizations.front, ...data }
               })}
+              onNext={goToNextStep}
             />
           </div>
         )}
@@ -888,6 +889,7 @@ export default function Campaign() {
                 ...customizations,
                 back: { ...customizations.back, ...data }
               })}
+              onNext={goToNextStep}
             />
           </div>
         )}
@@ -909,6 +911,7 @@ export default function Campaign() {
                   left: { ...customizations.sleeves.left, ...data }
                 }
               })}
+              onNext={goToNextStep}
             />
           </div>
         )}
@@ -930,6 +933,7 @@ export default function Campaign() {
                   right: { ...customizations.sleeves.right, ...data }
                 }
               })}
+              onNext={goToNextStep}
             />
           </div>
         )}
@@ -1087,8 +1091,13 @@ export default function Campaign() {
             </Button>
           )}
 
-          {/* Mostrar Próximo EXCETO nas páginas de seleção (tipo e modelo) */}
-          {currentStepId !== 'select_type' && currentStepId !== 'choose_model' && (
+          {/* Mostrar Próximo EXCETO nas páginas de seleção e personalização */}
+          {currentStepId !== 'select_type' && 
+           currentStepId !== 'choose_model' && 
+           currentStepId !== 'customize_front' && 
+           currentStepId !== 'customize_back' && 
+           currentStepId !== 'customize_sleeves_left' && 
+           currentStepId !== 'customize_sleeves_right' && (
             <Button
               onClick={handleNext}
               disabled={isSaving}

@@ -45,9 +45,10 @@ interface BackEditorProps {
   model: ShirtModel;
   value: BackCustomization;
   onChange: (data: BackCustomization) => void;
+  onNext: () => void;
 }
 
-export const BackEditor = ({ model, value, onChange }: BackEditorProps) => {
+export const BackEditor = ({ model, value, onChange, onNext }: BackEditorProps) => {
   const [isZoomOpen, setIsZoomOpen] = useState(false);
   
   return (
@@ -318,6 +319,19 @@ export const BackEditor = ({ model, value, onChange }: BackEditorProps) => {
                 />
               </div>
             )}
+          </div>
+          
+          {/* Botão para confirmar e continuar */}
+          <div className="pt-4 border-t">
+            <Button
+              onClick={() => {
+                setTimeout(() => onNext(), 200);
+              }}
+              size="lg"
+              className="w-full h-14 text-lg"
+            >
+              Confirmar e Continuar
+            </Button>
           </div>
         </CardContent>
       </Card>
