@@ -161,10 +161,7 @@ export const UploadLogos = () => {
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl">
       <Card>
-        <CardHeader>
-          <CardTitle>Adicione sua Logo</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 pt-6">
           {!uploadChoice ? (
             <div className="space-y-4">
               <p className="text-muted-foreground">
