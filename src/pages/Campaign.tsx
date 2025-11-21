@@ -10,6 +10,11 @@ import { ArrowLeft, Check } from "lucide-react";
 import { toast } from "sonner";
 import { useCampaignTheme } from "@/hooks/useCampaignTheme";
 import { CustomScriptManager } from "@/components/campaign/CustomScriptManager";
+import { FrontEditor } from "@/components/customization/FrontEditor";
+import { BackEditor } from "@/components/customization/BackEditor";
+import { SleeveEditor } from "@/components/customization/SleeveEditor";
+import { LogoUploader } from "@/components/customization/LogoUploader";
+import { CustomizationSummary } from "@/components/creation/CustomizationSummary";
 
 // Importar imagens dos uniformes
 import mangaCurtaImg from "@/assets/uniforms/manga-curta.png";
@@ -45,11 +50,17 @@ const UNIFORM_MODELS = [
   }
 ];
 
-const SIMPLIFIED_STEPS = [
-  { id: 'select_model', label: 'Escolha o modelo', order: 0, enabled: true },
-  { id: 'enter_name', label: 'Seu nome', order: 1, enabled: true },
-  { id: 'enter_phone', label: 'Seu WhatsApp', order: 2, enabled: true },
-  { id: 'select_quantity', label: 'Quantidade', order: 3, enabled: true }
+const TOTAL_STEPS = [
+  { id: 'select_model', label: 'Modelo', order: 0, enabled: true },
+  { id: 'enter_name', label: 'Nome', order: 1, enabled: true },
+  { id: 'enter_phone', label: 'WhatsApp', order: 2, enabled: true },
+  { id: 'select_quantity', label: 'Quantidade', order: 3, enabled: true },
+  { id: 'customize_front', label: 'Frente', order: 4, enabled: true },
+  { id: 'customize_back', label: 'Costas', order: 5, enabled: true },
+  { id: 'customize_sleeves_left', label: 'Manga Esq.', order: 6, enabled: true },
+  { id: 'customize_sleeves_right', label: 'Manga Dir.', order: 7, enabled: true },
+  { id: 'upload_logos', label: 'Logos', order: 8, enabled: true },
+  { id: 'review', label: 'Revisão', order: 9, enabled: true }
 ];
 
 const STORAGE_KEY = 'campaign_progress';
@@ -70,11 +81,68 @@ export default function Campaign() {
   const [selectedModel, setSelectedModel] = useState<any>(null);
   const [customerData, setCustomerData] = useState({
     name: '',
-    ddd: '',
     phone: '',
     quantity: null as number | 'custom' | null,
     customQuantity: null as number | null
   });
+  
+  // Estados de customização
+  const [customizations, setCustomizations] = useState<any>({
+    front: {
+      logoType: 'none',
+      textColor: '#000000',
+      text: '',
+      logoUrl: ''
+    },
+    back: {
+      logoLarge: false,
+      logoUrl: '',
+      name: false,
+      nameText: '',
+      whatsapp: false,
+      whatsappText: '',
+      instagram: false,
+      instagramText: '',
+      email: false,
+      emailText: '',
+      website: false,
+      websiteText: '',
+      hasSponsors: false,
+      sponsorsLocation: '',
+      sponsors: [],
+      sponsorsLogosUrls: []
+    },
+    sleeves: {
+      left: {
+        flag: false,
+        flagUrl: '',
+        logoSmall: false,
+        logoUrl: '',
+        text: false,
+        textContent: ''
+      },
+      right: {
+        flag: false,
+        flagUrl: '',
+        logoSmall: false,
+        logoUrl: '',
+        text: false,
+        textContent: ''
+      }
+    }
+  });
+  
+  const [uploadedLogos, setUploadedLogos] = useState<any>({
+    frontLogo: null,
+    backLogo: null,
+    sponsorsLogos: [],
+    rightFlag: null,
+    rightLogo: null,
+    leftFlag: null,
+    leftLogo: null
+  });
+  
+  const [uploadChoice, setUploadChoice] = useState<'agora' | 'depois' | null>(null);
   
   // UTM Parameters
   const [utmParams, setUtmParams] = useState({
@@ -92,8 +160,8 @@ export default function Campaign() {
   // Load campaign theme (applies CSS variables automatically)
   useCampaignTheme(campaign?.id);
 
-  const currentStepId = SIMPLIFIED_STEPS[currentStep]?.id;
-  const progress = ((currentStep + 1) / SIMPLIFIED_STEPS.length) * 100;
+  const currentStepId = TOTAL_STEPS[currentStep]?.id;
+  const progress = ((currentStep + 1) / TOTAL_STEPS.length) * 100;
 
   // Carregar campanha
   useEffect(() => {
@@ -172,11 +240,13 @@ export default function Campaign() {
           setSelectedModel(data.selectedModel || null);
           setCustomerData(data.customerData || {
             name: '',
-            ddd: '',
             phone: '',
             quantity: null,
             customQuantity: null
           });
+          setCustomizations(data.customizations || customizations);
+          setUploadedLogos(data.uploadedLogos || uploadedLogos);
+          setUploadChoice(data.uploadChoice || null);
           setLeadId(data.leadId || null);
         }
       }
@@ -194,12 +264,15 @@ export default function Campaign() {
       currentStep,
       selectedModel,
       customerData,
+      customizations,
+      uploadedLogos,
+      uploadChoice,
       leadId,
       lastSaved: new Date().toISOString()
     };
 
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
-  }, [campaign, currentStep, selectedModel, customerData, leadId]);
+  }, [campaign, currentStep, selectedModel, customerData, customizations, uploadedLogos, uploadChoice, leadId]);
 
   // Track events
   const trackEvent = async (eventType: string) => {
@@ -230,7 +303,7 @@ export default function Campaign() {
 
   // Generate lead group ID
   const generateLeadGroupId = () => {
-    const phone = `${customerData.ddd}${customerData.phone.replace(/\D/g, '')}`;
+    const phone = customerData.phone.replace(/\D/g, '');
     return `${campaign.id}_${phone}`;
   };
 
@@ -264,7 +337,7 @@ export default function Campaign() {
         campaign_id: campaign.id,
         session_id: sessionId,
         name: customerData.name || 'Visitante',
-        phone: `(${customerData.ddd}) ${customerData.phone}`,
+        phone: customerData.phone,
         quantity: customerData.quantity === 'custom' 
           ? (customerData.customQuantity?.toString() || '0')
           : (customerData.quantity?.toString() || '0'),
@@ -272,7 +345,10 @@ export default function Campaign() {
         completed,
         order_id: orderId,
         customization_summary: {
-          model: selectedModel?.name || null
+          model: selectedModel?.name || null,
+          front: customizations.front,
+          back: customizations.back,
+          sleeves: customizations.sleeves
         },
         lead_group_identifier: leadGroupId,
         attempt_number: attemptNumber,
@@ -309,20 +385,22 @@ export default function Campaign() {
     }
   };
 
-  // Handle phone DDD change
-  const handleDDDChange = (value: string) => {
-    const cleaned = value.replace(/\D/g, '').slice(0, 2);
-    setCustomerData({ ...customerData, ddd: cleaned });
-  };
-
-  // Handle phone number change with mask
+  // Handle phone change with unified mask
   const handlePhoneChange = (value: string) => {
-    let cleaned = value.replace(/\D/g, '').slice(0, 9);
+    // Remove all non-numeric characters
+    let cleaned = value.replace(/\D/g, '').slice(0, 11); // DDD (2) + number (9)
     
-    // Apply mask: 00000-0000 or 0000-0000
+    // Apply mask: (DD) 00000-0000 or (DD) 0000-0000
     let formatted = cleaned;
-    if (cleaned.length > 5) {
-      formatted = cleaned.slice(0, 5) + '-' + cleaned.slice(5);
+    
+    if (cleaned.length > 0) {
+      formatted = `(${cleaned.slice(0, 2)}`;
+      if (cleaned.length > 2) {
+        formatted += `) ${cleaned.slice(2, 7)}`;
+      }
+      if (cleaned.length > 7) {
+        formatted += `-${cleaned.slice(7, 11)}`;
+      }
     }
     
     setCustomerData({ ...customerData, phone: formatted });
@@ -344,16 +422,10 @@ export default function Campaign() {
     }
 
     if (currentStepId === 'enter_phone') {
-      const ddd = customerData.ddd;
       const phoneDigits = customerData.phone.replace(/\D/g, '');
       
-      if (ddd.length !== 2) {
-        toast.error('Informe um DDD válido (2 dígitos)');
-        return;
-      }
-      
-      if (phoneDigits.length < 8) {
-        toast.error('Informe um número de WhatsApp válido');
+      if (phoneDigits.length < 10 || phoneDigits.length > 11) {
+        toast.error('Informe um número de WhatsApp válido com DDD');
         return;
       }
     }
@@ -370,8 +442,18 @@ export default function Campaign() {
           return;
         }
       }
+    }
+    
+    // Validação etapa upload logos
+    if (currentStepId === 'upload_logos') {
+      if (!uploadChoice) {
+        toast.error('Escolha quando deseja enviar as logos');
+        return;
+      }
+    }
 
-      // Last step - submit order
+    // Última etapa - submit order
+    if (currentStepId === 'review') {
       await handleSubmitOrder();
       return;
     }
@@ -403,11 +485,15 @@ export default function Campaign() {
         campaign_id: campaign.id,
         session_id: sessionId,
         customer_name: customerData.name,
-        customer_phone: `(${customerData.ddd}) ${customerData.phone}`,
+        customer_phone: customerData.phone,
         quantity: finalQuantity,
         customization_data: {
           model: selectedModel.name,
-          model_id: selectedModel.id
+          model_id: selectedModel.id,
+          front: customizations.front,
+          back: customizations.back,
+          sleeves: customizations.sleeves,
+          uploadChoice: uploadChoice
         }
       };
 
@@ -420,7 +506,7 @@ export default function Campaign() {
       if (orderError) throw orderError;
 
       // Update lead as completed
-      await createOrUpdateLead(SIMPLIFIED_STEPS.length, true, order.id);
+      await createOrUpdateLead(TOTAL_STEPS.length, true, order.id);
       await trackEvent('order_completed');
 
       // Clear session storage
@@ -480,16 +566,21 @@ export default function Campaign() {
 
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-        <div className="container mx-auto px-4 py-4">
-          {/* Logo */}
-          <div className="flex justify-center mb-4">
-            <img src={logoImg} alt="Logo" className="h-12" />
+        {/* Faixa vermelha com logo */}
+        <div className="bg-red-600 py-3">
+          <div className="container mx-auto px-4">
+            <div className="flex justify-center">
+              <img src={logoImg} alt="Logo" className="h-12" />
+            </div>
           </div>
-
+        </div>
+        
+        {/* Área branca com indicadores de progresso */}
+        <div className="container mx-auto px-4 py-4">
           {/* Step indicator text */}
           <div className="text-center mb-3">
             <p className="text-sm font-medium text-muted-foreground">
-              Etapa {currentStep + 1} de {SIMPLIFIED_STEPS.length}
+              Etapa {currentStep + 1} de {TOTAL_STEPS.length}
             </p>
           </div>
 
@@ -498,28 +589,28 @@ export default function Campaign() {
             <Progress value={progress} className="h-2" />
           </div>
 
-          {/* Step circles */}
-          <div className="flex justify-center items-center gap-2 mb-2">
-            {SIMPLIFIED_STEPS.map((step, index) => (
+          {/* Step circles - mostrar apenas primeiras 4 etapas nos círculos */}
+          <div className="flex justify-center items-center gap-1 mb-2 flex-wrap">
+            {TOTAL_STEPS.slice(0, 10).map((step, index) => (
               <div key={step.id} className="flex items-center">
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all ${
+                  className={`w-6 h-6 md:w-8 md:h-8 rounded-full flex items-center justify-center text-xs md:text-sm font-semibold transition-all ${
                     index < currentStep
                       ? 'bg-primary text-primary-foreground'
                       : index === currentStep
-                      ? 'bg-primary text-primary-foreground ring-4 ring-primary/20'
+                      ? 'bg-primary text-primary-foreground ring-2 md:ring-4 ring-primary/20'
                       : 'bg-muted text-muted-foreground'
                   }`}
                 >
                   {index < currentStep ? (
-                    <Check className="w-4 h-4" />
+                    <Check className="w-3 h-3 md:w-4 md:h-4" />
                   ) : (
                     index + 1
                   )}
                 </div>
-                {index < SIMPLIFIED_STEPS.length - 1 && (
+                {index < TOTAL_STEPS.length - 1 && (
                   <div
-                    className={`w-12 h-0.5 mx-1 ${
+                    className={`w-4 md:w-8 h-0.5 mx-0.5 md:mx-1 ${
                       index < currentStep ? 'bg-primary' : 'bg-muted'
                     }`}
                   />
@@ -530,8 +621,8 @@ export default function Campaign() {
 
           {/* Step labels */}
           <div className="flex justify-center gap-2 text-xs text-muted-foreground">
-            <span className="text-center max-w-[80px] truncate">
-              {SIMPLIFIED_STEPS[currentStep]?.label}
+            <span className="text-center max-w-[120px] truncate">
+              {TOTAL_STEPS[currentStep]?.label}
             </span>
           </div>
 
@@ -616,33 +707,22 @@ export default function Campaign() {
                 Digite seu WhatsApp abaixo
               </h2>
 
-              <div className="flex gap-3 mb-4">
-                <Input
-                  type="tel"
-                  placeholder="DDD"
-                  value={customerData.ddd}
-                  onChange={(e) => handleDDDChange(e.target.value)}
-                  maxLength={2}
-                  className="min-h-[56px] text-lg text-center w-24"
-                  autoFocus
-                />
+              <Input
+                type="tel"
+                placeholder="(DDD) 00000-0000"
+                value={customerData.phone}
+                onChange={(e) => handlePhoneChange(e.target.value)}
+                className="min-h-[56px] text-lg text-center"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleNext();
+                  }
+                }}
+              />
 
-                <Input
-                  type="tel"
-                  placeholder="00000-0000"
-                  value={customerData.phone}
-                  onChange={(e) => handlePhoneChange(e.target.value)}
-                  className="min-h-[56px] text-lg text-center flex-1"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      handleNext();
-                    }
-                  }}
-                />
-              </div>
-
-              <p className="text-sm text-muted-foreground text-center">
-                Formato: (DDD) 00000-0000
+              <p className="text-sm text-muted-foreground text-center mt-4">
+                Formato: <span className="font-semibold">(DDD)</span> 00000-0000
               </p>
             </CardContent>
           </Card>
@@ -658,18 +738,30 @@ export default function Campaign() {
 
               <div className="grid grid-cols-3 md:grid-cols-7 gap-3 md:gap-4 mb-6">
                 {[10, 20, 30, 40, 50, 60].map((qty) => (
-                  <Button
-                    key={qty}
-                    variant={customerData.quantity === qty ? 'default' : 'outline'}
-                    className="h-16 md:h-20 text-xl md:text-2xl font-bold"
-                    onClick={() => setCustomerData({
-                      ...customerData,
-                      quantity: qty,
-                      customQuantity: null
-                    })}
-                  >
-                    {qty}
-                  </Button>
+                  <div key={qty} className="relative">
+                    {/* Badge "Mais vendido" apenas no 20 */}
+                    {qty === 20 && (
+                      <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
+                        <span className="bg-green-600 text-white text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap">
+                          Mais vendido
+                        </span>
+                      </div>
+                    )}
+                    
+                    <Button
+                      variant={customerData.quantity === qty ? 'default' : 'outline'}
+                      className={`h-16 md:h-20 text-xl md:text-2xl font-bold w-full ${
+                        qty === 20 ? 'ring-2 ring-green-600' : ''
+                      }`}
+                      onClick={() => setCustomerData({
+                        ...customerData,
+                        quantity: qty,
+                        customQuantity: null
+                      })}
+                    >
+                      {qty}
+                    </Button>
+                  </div>
                 ))}
 
                 <Button
@@ -716,6 +808,155 @@ export default function Campaign() {
           </Card>
         )}
 
+        {/* Step 5: Customize Front */}
+        {currentStepId === 'customize_front' && selectedModel && (
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">
+              Personalize a Frente
+            </h2>
+            <FrontEditor
+              model={selectedModel}
+              value={customizations.front}
+              onChange={(data) => setCustomizations({
+                ...customizations,
+                front: { ...customizations.front, ...data }
+              })}
+            />
+          </div>
+        )}
+
+        {/* Step 6: Customize Back */}
+        {currentStepId === 'customize_back' && selectedModel && (
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">
+              Personalize as Costas
+            </h2>
+            <BackEditor
+              model={selectedModel}
+              value={customizations.back}
+              onChange={(data) => setCustomizations({
+                ...customizations,
+                back: { ...customizations.back, ...data }
+              })}
+            />
+          </div>
+        )}
+
+        {/* Step 7: Customize Left Sleeve */}
+        {currentStepId === 'customize_sleeves_left' && selectedModel && (
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">
+              Personalize a Manga Esquerda
+            </h2>
+            <SleeveEditor
+              model={selectedModel}
+              side="left"
+              value={customizations.sleeves.left}
+              onChange={(data) => setCustomizations({
+                ...customizations,
+                sleeves: {
+                  ...customizations.sleeves,
+                  left: { ...customizations.sleeves.left, ...data }
+                }
+              })}
+            />
+          </div>
+        )}
+
+        {/* Step 8: Customize Right Sleeve */}
+        {currentStepId === 'customize_sleeves_right' && selectedModel && (
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">
+              Personalize a Manga Direita
+            </h2>
+            <SleeveEditor
+              model={selectedModel}
+              side="right"
+              value={customizations.sleeves.right}
+              onChange={(data) => setCustomizations({
+                ...customizations,
+                sleeves: {
+                  ...customizations.sleeves,
+                  right: { ...customizations.sleeves.right, ...data }
+                }
+              })}
+            />
+          </div>
+        )}
+
+        {/* Step 9: Upload Logos */}
+        {currentStepId === 'upload_logos' && (
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">
+              Upload de Logos
+            </h2>
+            <LogoUploader
+              customizations={customizations}
+              uploadChoice={uploadChoice}
+              onUploadChoiceChange={setUploadChoice}
+              onLogosUpload={setUploadedLogos}
+              currentLogos={uploadedLogos}
+            />
+          </div>
+        )}
+
+        {/* Step 10: Review */}
+        {currentStepId === 'review' && (
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">
+              Revise seu Pedido
+            </h2>
+            <Card>
+              <CardContent className="p-6 space-y-6">
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="font-semibold text-lg mb-2">Dados do Pedido</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Nome:</p>
+                        <p className="font-medium">{customerData.name}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">WhatsApp:</p>
+                        <p className="font-medium">{customerData.phone}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Modelo:</p>
+                        <p className="font-medium">{selectedModel?.name}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Quantidade:</p>
+                        <p className="font-medium">
+                          {customerData.quantity === 'custom' 
+                            ? customerData.customQuantity 
+                            : customerData.quantity} unidades
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <h3 className="font-semibold text-lg mb-2">Personalizações</h3>
+                    <CustomizationSummary
+                      front={customizations.front}
+                      back={customizations.back}
+                      leftSleeve={customizations.sleeves.left}
+                      rightSleeve={customizations.sleeves.right}
+                      totalAssets={0}
+                    />
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <p className="text-sm text-muted-foreground">
+                      Logos: {uploadChoice === 'agora' ? 'Enviadas agora' : 'Serão enviadas depois'}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {/* Navigation buttons */}
         <div className="max-w-3xl mx-auto mt-8 flex gap-4 justify-between">
           {currentStep > 0 && (
@@ -736,7 +977,7 @@ export default function Campaign() {
             size="lg"
             className="ml-auto"
           >
-            {currentStepId === 'select_quantity' ? 'Finalizar' : 'Próximo'}
+            {currentStepId === 'review' ? 'Finalizar Pedido' : 'Próximo'}
           </Button>
         </div>
       </main>
