@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Users, Target, TrendingUp, Download, Filter } from "lucide-react";
@@ -105,7 +107,7 @@ const TrafficDashboard = () => {
     if (data) setCampaigns(data);
   };
 
-  const loadTrafficData = async () => {
+  const loadTrafficData = useCallback(async () => {
     setIsLoading(true);
     try {
       // Query para visitas com UTMs
@@ -331,7 +333,12 @@ const TrafficDashboard = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedCampaign, startDate, endDate]);
+
+  const { lastUpdated, isRefreshing, refresh } = useAutoRefresh(
+    loadTrafficData,
+    { interval: 60000, enabled: true }
+  );
 
   const generateInsights = (detailedRows: DetailedTrafficRow[], metrics: TrafficMetrics) => {
     const newInsights: TrafficInsight[] = [];
@@ -420,9 +427,17 @@ const TrafficDashboard = () => {
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">📊 Dashboard de Tráfego</h1>
-        <p className="text-muted-foreground">Análise completa de visitantes, leads e conversões com UTMs</p>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">📊 Dashboard de Tráfego</h1>
+          <p className="text-muted-foreground">Análise completa de visitantes, leads e conversões com UTMs</p>
+        </div>
+        
+        <RefreshIndicator 
+          lastUpdated={lastUpdated}
+          isRefreshing={isRefreshing}
+          onRefresh={refresh}
+        />
       </div>
 
       {/* Filters */}
