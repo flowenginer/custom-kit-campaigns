@@ -1072,7 +1072,7 @@ export default function Campaign() {
                       <img 
                         src={selectedModel?.image_front} 
                         alt="Frente" 
-                        className="w-full h-full object-contain"
+                        className="w-full h-full object-cover"
                       />
                     </div>
                     <p className="text-center text-sm font-medium">Frente</p>
@@ -1083,7 +1083,7 @@ export default function Campaign() {
                       <img 
                         src={selectedModel?.image_back} 
                         alt="Costas" 
-                        className="w-full h-full object-contain"
+                        className="w-full h-full object-cover"
                       />
                     </div>
                     <p className="text-center text-sm font-medium">Costas</p>
@@ -1094,7 +1094,7 @@ export default function Campaign() {
                       <img 
                         src={selectedModel?.image_right} 
                         alt="Direita" 
-                        className="w-full h-full object-contain"
+                        className="w-full h-full object-cover"
                       />
                     </div>
                     <p className="text-center text-sm font-medium">Direita</p>
@@ -1105,7 +1105,7 @@ export default function Campaign() {
                       <img 
                         src={selectedModel?.image_left} 
                         alt="Esquerda" 
-                        className="w-full h-full object-contain"
+                        className="w-full h-full object-cover"
                       />
                     </div>
                     <p className="text-center text-sm font-medium">Esquerda</p>
