@@ -62,12 +62,8 @@ interface FunnelData {
   campaignId: string;
   campaignName: string;
   visits: number;
-  step1: number;
-  step2: number;
-  step3: number;
-  step4: number;
-  step5: number;
   completed: number;
+  [key: string]: string | number; // Para suportar step_1, step_2, step_3, etc. dinamicamente
 }
 interface LeadsMetrics {
   total: number;
@@ -227,23 +223,27 @@ const Dashboard = () => {
             .eq("campaign_id", campaign.id)
             .gte("created_at", dateRange.start.toISOString())
             .lte("created_at", dateRange.end.toISOString());
-          const counts = {
-            visits: 0,
-            step1: 0,
-            step2: 0,
-            step3: 0,
-            step4: 0,
-            step5: 0,
-            completed: 0
-          };
-          events?.forEach(event => {
-            if (event.event_type === "visit") counts.visits++;else if (event.event_type === "step_1") counts.step1++;else if (event.event_type === "step_2") counts.step2++;else if (event.event_type === "step_3") counts.step3++;else if (event.event_type === "step_4") counts.step4++;else if (event.event_type === "step_5") counts.step5++;else if (event.event_type === "completed") counts.completed++;
-          });
-          return {
+          
+          // Contar dinamicamente todos os tipos de eventos
+          const counts: any = {
             campaignId: campaign.id,
             campaignName: campaign.name,
-            ...counts
+            visits: 0,
+            completed: 0
           };
+          
+          events?.forEach(event => {
+            if (event.event_type === "visit") {
+              counts.visits++;
+            } else if (event.event_type === "completed") {
+              counts.completed++;
+            } else if (event.event_type.startsWith("step_")) {
+              // Detectar automaticamente step_1, step_2, step_3, etc.
+              counts[event.event_type] = (counts[event.event_type] || 0) + 1;
+            }
+          });
+          
+          return counts as FunnelData;
         });
         const funnelResults = await Promise.all(funnelPromises);
         setFunnelData(funnelResults);
@@ -313,18 +313,57 @@ const Dashboard = () => {
 
   // Preparar dados para o gráfico de funil comparativo
   const getComparativeFunnelData = () => {
-    const stages = ["Visitas", "Etapa 1", "Etapa 2", "Etapa 3", "Etapa 4", "Etapa 5", "Concluído"];
+    // Detectar dinamicamente todas as etapas que existem nos dados
+    const allStepKeys = new Set<string>();
+    funnelData.forEach(campaign => {
+      Object.keys(campaign).forEach(key => {
+        if (key.startsWith("step_")) {
+          allStepKeys.add(key);
+        }
+      });
+    });
+    
+    // Ordenar as etapas numericamente (step_1, step_2, step_3, etc.)
+    const sortedSteps = Array.from(allStepKeys).sort((a, b) => {
+      const numA = parseInt(a.replace("step_", ""));
+      const numB = parseInt(b.replace("step_", ""));
+      return numA - numB;
+    });
+    
+    // Criar array de stages: Visitas + Etapas dinâmicas + Concluído
+    const stages = [
+      "Visitas",
+      ...sortedSteps.map(step => {
+        const stepNumber = step.replace("step_", "");
+        return `Etapa ${stepNumber}`;
+      }),
+      "Concluído"
+    ];
+    
     return stages.map(stage => {
       const dataPoint: any = {
         stage
       };
+      
       selectedCampaigns.forEach(campaignId => {
         const campaign = funnelData.find(c => c.campaignId === campaignId);
         if (campaign) {
-          const stageKey = stage === "Visitas" ? "visits" : stage === "Concluído" ? "completed" : `step${stage.split(" ")[1]}` as keyof FunnelData;
-          dataPoint[campaign.campaignName] = campaign[stageKey as keyof FunnelData];
+          let stageKey: string;
+          
+          if (stage === "Visitas") {
+            stageKey = "visits";
+          } else if (stage === "Concluído") {
+            stageKey = "completed";
+          } else {
+            // Etapa 1 -> step_1, Etapa 2 -> step_2, etc.
+            const stepNumber = stage.replace("Etapa ", "");
+            stageKey = `step_${stepNumber}`;
+          }
+          
+          dataPoint[campaign.campaignName] = campaign[stageKey] || 0;
         }
       });
+      
       return dataPoint;
     });
   };
