@@ -107,6 +107,7 @@ const CustomAxisTick = (props: any) => {
 interface Campaign {
   id: string;
   name: string;
+  workflow_config?: any;
 }
 interface FunnelData {
   campaignId: string;
@@ -322,7 +323,7 @@ const Dashboard = () => {
       // Carregar campanhas
       const {
         data: campaignsData
-      } = await supabase.from("campaigns").select("id, name").order("created_at", {
+      } = await supabase.from("campaigns").select("id, name, workflow_config").order("created_at", {
         ascending: false
       });
       if (campaignsData) {
@@ -426,6 +427,33 @@ const Dashboard = () => {
     }
   };
 
+  // Mapear step numbers para labels baseado no workflow_config das campanhas
+  const getStepLabel = (stepNumber: string): string => {
+    // Se não houver campanhas selecionadas, retornar label genérico
+    if (selectedCampaigns.length === 0) {
+      return `Etapa ${stepNumber}`;
+    }
+    
+    // Pegar a primeira campanha selecionada para referência
+    const firstCampaign = campaigns.find(c => c.id === selectedCampaigns[0]);
+    
+    if (!firstCampaign?.workflow_config) {
+      return `Etapa ${stepNumber}`;
+    }
+    
+    // O workflow_config é um array ordenado
+    // step_1 corresponde ao índice 1 (após "initial_data" no índice 0)
+    const stepIndex = parseInt(stepNumber);
+    const workflowConfig = firstCampaign.workflow_config as any[];
+    const workflowStep = workflowConfig[stepIndex];
+    
+    if (workflowStep?.label) {
+      return workflowStep.label;
+    }
+    
+    return `Etapa ${stepNumber}`;
+  };
+
   // Preparar dados para o gráfico de funil comparativo
   const getComparativeFunnelData = () => {
     // Detectar dinamicamente todas as etapas que existem nos dados
@@ -450,7 +478,7 @@ const Dashboard = () => {
       "Visitas",
       ...sortedSteps.map(step => {
         const stepNumber = step.replace("step_", "");
-        return `Etapa ${stepNumber}`;
+        return getStepLabel(stepNumber);
       }),
       "Concluído"
     ];
@@ -470,9 +498,14 @@ const Dashboard = () => {
           } else if (stage === "Concluído") {
             stageKey = "completed";
           } else {
-            // Etapa 1 -> step_1, Etapa 2 -> step_2, etc.
-            const stepNumber = stage.replace("Etapa ", "");
-            stageKey = `step_${stepNumber}`;
+            // Encontrar o step number correspondente ao label
+            // Iteramos pelos sortedSteps para descobrir qual step tem este label
+            const matchingStep = sortedSteps.find(step => {
+              const stepNum = step.replace("step_", "");
+              return getStepLabel(stepNum) === stage;
+            });
+            
+            stageKey = matchingStep || "step_0";
           }
           
           dataPoint[campaign.campaignName] = campaign[stageKey] || 0;
