@@ -1147,8 +1147,62 @@ const Models = () => {
               )}
             </div>
 
+            {/* UPLOAD MÚLTIPLO INTELIGENTE - PARA EDIÇÃO */}
+            <div className="space-y-3 p-4 border-2 border-dashed border-primary/30 rounded-lg bg-primary/5">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-semibold">
+                  🚀 Upload Rápido (Recomendado)
+                </Label>
+              </div>
+              
+              <p className="text-sm text-muted-foreground">
+                Selecione todas as fotos de uma vez para substituir. O sistema irá distribuí-las automaticamente baseado nos nomes dos arquivos:
+              </p>
+              
+              <div className="bg-background/50 p-3 rounded text-xs space-y-1 font-mono">
+                <div>✓ <strong>CAPA</strong> → Foto Principal</div>
+                <div>✓ <strong>FRENTE</strong> → Imagem Frente</div>
+                <div>✓ <strong>COSTAS</strong> → Imagem Costas</div>
+                <div>✓ <strong>LATERAL DIREITO</strong> → Lado Direito</div>
+                <div>✓ <strong>LATERAL ESQUERDO</strong> → Lado Esquerdo</div>
+                <p className="text-muted-foreground mt-2">
+                  * Números no início são ignorados (ex: "01 FRENTE")
+                </p>
+              </div>
+              
+              <Input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(e) => {
+                  if (e.target.files && e.target.files.length > 0) {
+                    handleMultipleFilesUpload(e.target.files);
+                  }
+                }}
+                disabled={uploading}
+                className="cursor-pointer"
+              />
+              
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <ImageIcon className="h-4 w-4" />
+                <span>Selecione as imagens que deseja atualizar</span>
+              </div>
+            </div>
+
+            {/* SEPARADOR */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  ou upload individual
+                </span>
+              </div>
+            </div>
+
             <div className="space-y-4">
-              <Label>Imagens Atuais (selecione para substituir)</Label>
+              <Label>Imagens Atuais (ou use o upload rápido acima)</Label>
               <p className="text-xs text-muted-foreground">
                 As imagens atuais serão mantidas, a menos que você selecione novos arquivos
               </p>
