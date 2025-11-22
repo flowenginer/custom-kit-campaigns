@@ -360,6 +360,7 @@ export default function Campaign() {
         completed,
         order_id: orderId,
         customization_summary: {
+          uniformType: selectedUniformType,
           model: selectedModel?.name || null,
           front: customizations.front,
           back: customizations.back,
@@ -590,6 +591,7 @@ export default function Campaign() {
         customer_phone: customerData.phone,
         quantity: finalQuantity,
         customization_data: {
+          uniformType: selectedUniformType,
           model: selectedModel.name,
           model_id: selectedModel.id,
           front: finalCustomizations.front,

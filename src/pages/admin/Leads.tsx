@@ -266,6 +266,29 @@ const Leads = () => {
     }
   };
 
+  const getUniformTypeDisplay = (customizationSummary: any) => {
+    if (!customizationSummary || !customizationSummary.uniformType) {
+      return '—';
+    }
+    
+    const typeLabels: Record<string, { label: string; icon: string; color: string }> = {
+      'ziper': { label: 'Zíper', icon: '🧥', color: 'bg-blue-100 text-blue-700' },
+      'manga_longa': { label: 'Manga Longa', icon: '👕', color: 'bg-green-100 text-green-700' },
+      'manga_curta': { label: 'Manga Curta', icon: '👔', color: 'bg-purple-100 text-purple-700' },
+      'regata': { label: 'Regata', icon: '🎽', color: 'bg-orange-100 text-orange-700' }
+    };
+    
+    const type = customizationSummary.uniformType;
+    const config = typeLabels[type] || { label: type, icon: '👕', color: 'bg-gray-100 text-gray-700' };
+    
+    return (
+      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${config.color}`}>
+        <span>{config.icon}</span>
+        <span>{config.label}</span>
+      </span>
+    );
+  };
+
   const handleDeleteLead = async (leadId: string, leadName: string) => {
     if (!confirm(`Tem certeza que deseja deletar o lead "${leadName}"?`)) {
       return;
@@ -528,6 +551,7 @@ const Leads = () => {
               <TableHead>Nome</TableHead>
               <TableHead>WhatsApp</TableHead>
               <TableHead>Tentativa</TableHead>
+              <TableHead>Tipo de Uniforme</TableHead>
               <TableHead>Campanha</TableHead>
               <TableHead>Quantidade</TableHead>
               <TableHead>Etapa Atual</TableHead>
@@ -540,7 +564,7 @@ const Leads = () => {
             <TableBody>
               {filteredLeads.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-12">
+                  <TableCell colSpan={11} className="text-center py-12">
                     <div className="flex flex-col items-center gap-3 text-muted-foreground">
                       <div className="text-5xl">📋</div>
                       {leads.length === 0 ? (
@@ -605,6 +629,9 @@ const Leads = () => {
                           Tentativa #{lead.attempt_number}
                         </Badge>
                       )}
+                    </TableCell>
+                    <TableCell>
+                      {getUniformTypeDisplay(lead.customization_summary)}
                     </TableCell>
                     <TableCell>{lead.campaigns?.name}</TableCell>
                     <TableCell>{getQuantityDisplay(lead)}</TableCell>
@@ -773,6 +800,16 @@ const Leads = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Tipo de Uniforme */}
+              {selectedLead.customization_summary?.uniformType && (
+                <div>
+                  <h3 className="font-semibold text-lg mb-3">Tipo de Uniforme Escolhido</h3>
+                  <div className="bg-muted/30 p-4 rounded-lg">
+                    {getUniformTypeDisplay(selectedLead.customization_summary)}
+                  </div>
+                </div>
+              )}
 
               {/* Resumo da Personalização */}
               {selectedLead.customization_summary && (
