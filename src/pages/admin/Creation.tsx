@@ -5,8 +5,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { KanbanColumn } from "@/components/creation/KanbanColumn";
 import { TaskDetailsDialog } from "@/components/creation/TaskDetailsDialog";
 import { TaskCardSkeleton } from "@/components/creation/TaskCardSkeleton";
+import { ColorThemePanel } from "@/components/creation/ColorThemePanel";
 import { DesignTask } from "@/types/design-task";
-import { useUserRole } from "@/hooks/useUserRole"; // 🆕 Import do hook
+import { useUserRole } from "@/hooks/useUserRole";
 import { toast } from "sonner";
 import { 
   RefreshCw, 
@@ -34,8 +35,11 @@ const Creation = () => {
   const [selectedTask, setSelectedTask] = useState<DesignTask | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTask, setActiveTask] = useState<DesignTask | null>(null);
+  const [columnColors, setColumnColors] = useState<string[]>(() => {
+    const saved = localStorage.getItem('kanban-column-colors');
+    return saved ? JSON.parse(saved) : [];
+  });
   
-  // 🆕 Buscar colunas permitidas para o usuário
   const { allowedKanbanColumns, isSuperAdmin } = useUserRole();
 
   const sensors = useSensors(
@@ -49,6 +53,18 @@ const Creation = () => {
   useEffect(() => {
     loadTasks();
   }, []);
+
+  useEffect(() => {
+    if (columnColors.length > 0) {
+      localStorage.setItem('kanban-column-colors', JSON.stringify(columnColors));
+    } else {
+      localStorage.removeItem('kanban-column-colors');
+    }
+  }, [columnColors]);
+
+  const handleColorsChange = (colors: string[]) => {
+    setColumnColors(colors);
+  };
 
   const loadTasks = async () => {
     setLoading(true);
@@ -277,6 +293,11 @@ const Creation = () => {
 
   return (
     <div className="p-8 space-y-6">
+      <ColorThemePanel 
+        onColorsChange={handleColorsChange}
+        currentColors={columnColors}
+      />
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Gestão de Criação</h1>
@@ -324,7 +345,7 @@ const Creation = () => {
           </div>
         ) : (
           <div className="flex gap-4 overflow-x-auto pb-4">
-            {visibleColumns.map((column) => (
+            {visibleColumns.map((column, index) => (
               <KanbanColumn
                 key={column.status}
                 title={column.title}
@@ -332,6 +353,7 @@ const Creation = () => {
                 icon={column.icon}
                 tasks={column.tasks}
                 onTaskClick={handleTaskClick}
+                backgroundColor={columnColors[index]}
               />
             ))}
           </div>
