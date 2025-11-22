@@ -46,8 +46,8 @@ export function hexToHSL(hex: string): { h: number; s: number; l: number } {
 export function generateColorShades(baseColor: string): string[] {
   const hsl = hexToHSL(baseColor);
   
-  // Progressive lightness: 30% → 40% → 50% → 60% → 70% → 80% → 90%
-  const lightnessLevels = [30, 40, 50, 60, 70, 80, 90];
+  // Progressive lightness: 35% → 45% → 53% → 60% → 67% → 74% → 80%
+  const lightnessLevels = [35, 45, 53, 60, 67, 74, 80];
   
   return lightnessLevels.map(lightness => 
     `hsl(${hsl.h}, ${hsl.s}%, ${lightness}%)`
