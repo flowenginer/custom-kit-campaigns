@@ -473,11 +473,10 @@ const Dashboard = () => {
       return `Etapa ${stepNumber}`;
     }
     
-    // O workflow_config é um array ordenado
-    // step_1 corresponde ao índice 1 (após "initial_data" no índice 0)
-    const stepIndex = parseInt(stepNumber);
+    // Buscar pelo campo 'order' ao invés do índice do array
+    const stepNum = parseInt(stepNumber);
     const workflowConfig = firstCampaign.workflow_config as any[];
-    const workflowStep = workflowConfig[stepIndex];
+    const workflowStep = workflowConfig.find((step: any) => step.order === stepNum);
     
     if (workflowStep?.label) {
       return workflowStep.label;
