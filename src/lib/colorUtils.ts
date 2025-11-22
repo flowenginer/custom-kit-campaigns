@@ -60,7 +60,7 @@ export function generateColorShades(baseColor: string): string[] {
 export const PRESET_PALETTES = {
   verde: {
     name: 'Verde',
-    base: '#059669',
+    base: '#009739',
     preview: '🟢',
   },
   vermelho: {
