@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ExternalLink, Copy, Plus, Trash2, Settings, FlaskConical, Palette } from "lucide-react";
+import { ExternalLink, Copy, Plus, Trash2, Settings, FlaskConical, Palette, Edit } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CreateABTestDialog } from "@/components/abtest/CreateABTestDialog";
@@ -21,6 +21,7 @@ interface Campaign {
   unique_link: string;
   segment_id: string | null;
   segment_tag: string | null;
+  model_tag: string | null;
   workflow_template_id: string;
   segments?: {
     id: string;
@@ -56,10 +57,12 @@ export default function Campaigns() {
   const [modelTags, setModelTags] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [showABTestDialog, setShowABTestDialog] = useState(false);
   const [showChangeWorkflow, setShowChangeWorkflow] = useState(false);
   const [showThemeDialog, setShowThemeDialog] = useState(false);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
+  const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [isCreatingSegmentTag, setIsCreatingSegmentTag] = useState(false);
   const [isCreatingModelTag, setIsCreatingModelTag] = useState(false);
   const [newSegmentTag, setNewSegmentTag] = useState("");
@@ -275,6 +278,42 @@ export default function Campaigns() {
     }
   };
 
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!editingCampaign || !formData.name || !formData.segment_tag || !formData.model_tag || !formData.workflow_template_id) {
+      toast.error("Preencha todos os campos obrigatórios");
+      return;
+    }
+
+    const updateData = {
+      name: formData.name,
+      segment_tag: formData.segment_tag,
+      model_tag: formData.model_tag,
+      workflow_template_id: formData.workflow_template_id,
+    };
+
+    const { error } = await supabase
+      .from("campaigns")
+      .update(updateData)
+      .eq("id", editingCampaign.id);
+
+    if (error) {
+      toast.error("Erro ao editar campanha");
+      console.error(error);
+    } else {
+      toast.success("Campanha editada com sucesso!");
+      setShowEditDialog(false);
+      setEditingCampaign(null);
+      setFormData({ name: "", segment_tag: "", model_tag: "", workflow_template_id: "" });
+      setIsCreatingSegmentTag(false);
+      setIsCreatingModelTag(false);
+      setNewSegmentTag("");
+      setNewModelTag("");
+      loadData();
+    }
+  };
+
   const handleChangeWorkflow = async (workflowId: string) => {
     if (!selectedCampaignId) return;
 
@@ -295,14 +334,15 @@ export default function Campaigns() {
   };
 
   const handleDelete = async (id: string) => {
-    // Verificar se há leads associados
+    // Verificar se há leads ATIVOS associados (excluir soft-deleted)
     const { count } = await supabase
       .from('leads')
       .select('*', { count: 'exact', head: true })
-      .eq('campaign_id', id);
+      .eq('campaign_id', id)
+      .is('deleted_at', null);
     
     if (count && count > 0) {
-      toast.error(`Não é possível deletar. Esta campanha possui ${count} lead(s) associado(s).`);
+      toast.error(`Não é possível deletar. Esta campanha possui ${count} lead(s) ativo(s) associado(s).`);
       return;
     }
 
@@ -622,6 +662,23 @@ export default function Campaigns() {
                       variant="outline"
                       size="sm"
                       onClick={() => {
+                        setEditingCampaign(campaign);
+                        setFormData({
+                          name: campaign.name,
+                          segment_tag: campaign.segment_tag || "",
+                          model_tag: campaign.model_tag || "",
+                          workflow_template_id: campaign.workflow_template_id,
+                        });
+                        setShowEditDialog(true);
+                      }}
+                    >
+                      <Edit className="w-4 h-4" />
+                      Editar
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
                         setSelectedCampaignId(campaign.id);
                         setShowThemeDialog(true);
                       }}
@@ -654,6 +711,107 @@ export default function Campaigns() {
             ))}
           </div>
         )}
+
+        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Campanha</DialogTitle>
+              <DialogDescription>
+                Atualize as informações da campanha
+              </DialogDescription>
+            </DialogHeader>
+
+            <form onSubmit={handleEdit} className="space-y-4">
+              <div>
+                <Label htmlFor="edit-name">Nome da Campanha*</Label>
+                <Input
+                  id="edit-name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Ex: Campanha Verão 2025"
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-segment-tag">Tag do Segmento*</Label>
+                <Select
+                  value={formData.segment_tag}
+                  onValueChange={(value) => setFormData({ ...formData, segment_tag: value })}
+                  required
+                >
+                  <SelectTrigger id="edit-segment-tag">
+                    <SelectValue placeholder="Selecione uma tag de segmento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {segmentTags.map(tag => (
+                      <SelectItem key={tag} value={tag}>
+                        📁 {tag}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="edit-model-tag">Tag do Modelo*</Label>
+                <Select
+                  value={formData.model_tag}
+                  onValueChange={(value) => setFormData({ ...formData, model_tag: value })}
+                  required
+                >
+                  <SelectTrigger id="edit-model-tag">
+                    <SelectValue placeholder="Selecione uma tag de modelo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {modelTags.map(tag => (
+                      <SelectItem key={tag} value={tag}>
+                        {tag === 'ziper' && '🧥 '}
+                        {tag === 'manga_longa' && '👕 '}
+                        {tag === 'manga_curta' && '👔 '}
+                        {tag === 'regata' && '🎽 '}
+                        {tag}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="edit-workflow">Workflow*</Label>
+                <Select
+                  value={formData.workflow_template_id}
+                  onValueChange={(value) => setFormData({ ...formData, workflow_template_id: value })}
+                  required
+                >
+                  <SelectTrigger id="edit-workflow">
+                    <SelectValue placeholder="Selecione um workflow" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {workflows.map((workflow) => (
+                      <SelectItem key={workflow.id} value={workflow.id}>
+                        {workflow.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => {
+                  setShowEditDialog(false);
+                  setEditingCampaign(null);
+                  setFormData({ name: "", segment_tag: "", model_tag: "", workflow_template_id: "" });
+                }}>
+                  Cancelar
+                </Button>
+                <Button type="submit">
+                  Salvar Alterações
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
 
         <Dialog open={showChangeWorkflow} onOpenChange={setShowChangeWorkflow}>
           <DialogContent>
