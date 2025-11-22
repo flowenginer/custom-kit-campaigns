@@ -233,7 +233,7 @@ const Dashboard = () => {
           };
           
           events?.forEach(event => {
-            if (event.event_type === "visit") {
+            if (event.event_type === "visit" || event.event_type === "campaign_visit") {
               counts.visits++;
             } else if (event.event_type === "completed") {
               counts.completed++;
