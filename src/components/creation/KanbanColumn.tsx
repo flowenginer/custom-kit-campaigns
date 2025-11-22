@@ -11,6 +11,7 @@ interface KanbanColumnProps {
   icon: LucideIcon;
   tasks: DesignTask[];
   onTaskClick: (task: DesignTask) => void;
+  backgroundColor?: string;
 }
 
 export const KanbanColumn = ({
@@ -19,6 +20,7 @@ export const KanbanColumn = ({
   icon: Icon,
   tasks,
   onTaskClick,
+  backgroundColor,
 }: KanbanColumnProps) => {
   const { setNodeRef, isOver } = useDroppable({
     id: status,
@@ -29,9 +31,13 @@ export const KanbanColumn = ({
     <div 
       ref={setNodeRef}
       className={cn(
-        "bg-card rounded-lg border p-4 min-h-[600px] min-w-[320px] flex-shrink-0 transition-colors",
-        isOver && "bg-accent/20 border-primary"
+        "rounded-lg border p-4 min-h-[600px] min-w-[320px] flex-shrink-0",
+        isOver && "border-primary"
       )}
+      style={{
+        backgroundColor: backgroundColor || 'hsl(var(--card))',
+        transition: 'background-color 0.3s ease',
+      }}
     >
       <div className="flex items-center justify-between mb-4 sticky top-0 bg-card pb-2 border-b">
         <div className="flex items-center gap-2">
