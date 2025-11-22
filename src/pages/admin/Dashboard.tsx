@@ -54,6 +54,53 @@ const CustomBarLabel = (props: any) => {
     </text>
   );
 };
+
+// Custom axis tick para mostrar etapa e total
+const CustomAxisTick = (props: any) => {
+  const { x, y, payload, data } = props;
+  
+  // Encontrar o datapoint correspondente a esta etapa
+  const dataPoint = data?.find((d: any) => d.stage === payload.value);
+  
+  // Calcular o total somando todos os valores numéricos (excluindo 'stage')
+  let total = 0;
+  if (dataPoint) {
+    Object.keys(dataPoint).forEach(key => {
+      if (key !== 'stage' && typeof dataPoint[key] === 'number') {
+        total += dataPoint[key];
+      }
+    });
+  }
+  
+  return (
+    <g transform={`translate(${x},${y})`}>
+      {/* Nome da etapa */}
+      <text
+        x={0}
+        y={0}
+        dy={16}
+        textAnchor="middle"
+        fill="hsl(var(--muted-foreground))"
+        fontSize="12"
+      >
+        {payload.value}
+      </text>
+      {/* Total */}
+      <text
+        x={0}
+        y={0}
+        dy={32}
+        textAnchor="middle"
+        fill="hsl(var(--foreground))"
+        fontSize="13"
+        fontWeight="600"
+      >
+        {total}
+      </text>
+    </g>
+  );
+};
+
 interface Campaign {
   id: string;
   name: string;
@@ -801,7 +848,7 @@ const Dashboard = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="h-[400px]">
+              <div className="h-[450px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={comparativeFunnelData}>
                     <defs>
@@ -811,9 +858,11 @@ const Dashboard = () => {
                         </linearGradient>)}
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                    <XAxis dataKey="stage" tick={{
-                  fill: 'hsl(var(--muted-foreground))'
-                }} />
+                    <XAxis 
+                      dataKey="stage" 
+                      height={60}
+                      tick={<CustomAxisTick data={comparativeFunnelData} />}
+                    />
                     <YAxis tick={{
                   fill: 'hsl(var(--muted-foreground))'
                 }} />
