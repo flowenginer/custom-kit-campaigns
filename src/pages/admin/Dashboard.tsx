@@ -62,6 +62,27 @@ const CustomBarLabel = (props: any) => {
 const CustomAxisTick = (props: any) => {
   const { x, y, payload, data } = props;
   
+  // Função para quebrar texto em múltiplas linhas
+  const wrapText = (text: string, maxCharsPerLine: number = 12): string[] => {
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+    
+    words.forEach(word => {
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
+      
+      if (testLine.length <= maxCharsPerLine) {
+        currentLine = testLine;
+      } else {
+        if (currentLine) lines.push(currentLine);
+        currentLine = word;
+      }
+    });
+    
+    if (currentLine) lines.push(currentLine);
+    return lines;
+  };
+  
   // Encontrar o datapoint correspondente a esta etapa
   const dataPoint = data?.find((d: any) => d.stage === payload.value);
   
@@ -75,24 +96,35 @@ const CustomAxisTick = (props: any) => {
     });
   }
   
+  // Quebrar o texto do label em linhas
+  const lines = wrapText(payload.value);
+  const totalDy = 16 + (lines.length * 14) + 6;
+  
   return (
     <g transform={`translate(${x},${y})`}>
-      {/* Nome da etapa */}
+      {/* Nome da etapa com quebra de linha */}
       <text
         x={0}
         y={0}
-        dy={16}
         textAnchor="middle"
         fill="hsl(var(--muted-foreground))"
         fontSize="12"
       >
-        {payload.value}
+        {lines.map((line, index) => (
+          <tspan
+            key={index}
+            x={0}
+            dy={index === 0 ? 16 : 14}
+          >
+            {line}
+          </tspan>
+        ))}
       </text>
       {/* Total */}
       <text
         x={0}
         y={0}
-        dy={32}
+        dy={totalDy}
         textAnchor="middle"
         fill="hsl(var(--foreground))"
         fontSize="13"
@@ -969,7 +1001,7 @@ const Dashboard = () => {
                     <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                     <XAxis 
                       dataKey="stage" 
-                      height={60}
+                      height={90}
                       tick={<CustomAxisTick data={comparativeFunnelData} />}
                     />
                     <YAxis tick={{
