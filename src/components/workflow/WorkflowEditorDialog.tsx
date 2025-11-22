@@ -100,14 +100,17 @@ export const WorkflowEditorDialog = ({ workflowId, open, onOpenChange, onSave }:
       setName("");
       setDescription("");
       setSteps([
-        { id: "initial_data", label: "Dados Iniciais", order: 0, enabled: true, is_custom: false },
-        { id: "select_model", label: "Selecionar Modelo", order: 1, enabled: true, is_custom: false },
-        { id: "customize_front", label: "Personalizar Frente", order: 2, enabled: true, is_custom: false },
-        { id: "customize_back", label: "Personalizar Costas", order: 3, enabled: true, is_custom: false },
-        { id: "sleeve_right", label: "Manga Direita", order: 4, enabled: true, is_custom: false },
-        { id: "sleeve_left", label: "Manga Esquerda", order: 5, enabled: true, is_custom: false },
-        { id: "adicionar_logo", label: "Adicionar Logo", order: 6, enabled: true, is_custom: false },
-        { id: "review", label: "Revisão e Envio", order: 7, enabled: true, is_custom: false },
+        { id: "select_type", label: "Tipo de Uniforme", order: 0, enabled: true, is_custom: false },
+        { id: "enter_name", label: "Informar Nome", order: 1, enabled: true, is_custom: false },
+        { id: "enter_phone", label: "Informar WhatsApp", order: 2, enabled: true, is_custom: false },
+        { id: "select_quantity", label: "Selecionar Quantidade", order: 3, enabled: true, is_custom: false },
+        { id: "choose_model", label: "Escolher Modelo", order: 4, enabled: true, is_custom: false },
+        { id: "customize_front", label: "Personalizar Frente", order: 5, enabled: true, is_custom: false },
+        { id: "customize_back", label: "Personalizar Costas", order: 6, enabled: true, is_custom: false },
+        { id: "customize_sleeves_left", label: "Personalizar Manga Esquerda", order: 7, enabled: true, is_custom: false },
+        { id: "customize_sleeves_right", label: "Personalizar Manga Direita", order: 8, enabled: true, is_custom: false },
+        { id: "upload_logos", label: "Carregar Logotipos", order: 9, enabled: true, is_custom: false },
+        { id: "review", label: "Revisão e Envio", order: 10, enabled: true, is_custom: false },
       ]);
     }
   }, [open, workflowId]);
