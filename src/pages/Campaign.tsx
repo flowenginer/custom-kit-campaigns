@@ -1060,38 +1060,46 @@ export default function Campaign() {
                 {/* 4 Vistas do Modelo em Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="space-y-2">
-                    <img 
-                      src={selectedModel?.image_front} 
-                      alt="Frente" 
-                      className="w-full h-32 md:h-48 object-cover rounded-lg border"
-                    />
+                    <div className="w-full aspect-[3/4] bg-muted/30 rounded-lg border overflow-hidden">
+                      <img 
+                        src={selectedModel?.image_front} 
+                        alt="Frente" 
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
                     <p className="text-center text-sm font-medium">Frente</p>
                   </div>
                   
                   <div className="space-y-2">
-                    <img 
-                      src={selectedModel?.image_back} 
-                      alt="Costas" 
-                      className="w-full h-32 md:h-48 object-cover rounded-lg border"
-                    />
+                    <div className="w-full aspect-[3/4] bg-muted/30 rounded-lg border overflow-hidden">
+                      <img 
+                        src={selectedModel?.image_back} 
+                        alt="Costas" 
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
                     <p className="text-center text-sm font-medium">Costas</p>
                   </div>
                   
                   <div className="space-y-2">
-                    <img 
-                      src={selectedModel?.image_right} 
-                      alt="Direita" 
-                      className="w-full h-32 md:h-48 object-cover rounded-lg border"
-                    />
+                    <div className="w-full aspect-[3/4] bg-muted/30 rounded-lg border overflow-hidden">
+                      <img 
+                        src={selectedModel?.image_right} 
+                        alt="Direita" 
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
                     <p className="text-center text-sm font-medium">Direita</p>
                   </div>
                   
                   <div className="space-y-2">
-                    <img 
-                      src={selectedModel?.image_left} 
-                      alt="Esquerda" 
-                      className="w-full h-32 md:h-48 object-cover rounded-lg border"
-                    />
+                    <div className="w-full aspect-[3/4] bg-muted/30 rounded-lg border overflow-hidden">
+                      <img 
+                        src={selectedModel?.image_left} 
+                        alt="Esquerda" 
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
                     <p className="text-center text-sm font-medium">Esquerda</p>
                   </div>
                 </div>
