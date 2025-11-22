@@ -1,5 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { RealtimeChannel } from "@supabase/supabase-js";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
@@ -195,6 +198,7 @@ const Dashboard = () => {
   const [dateFilter, setDateFilter] = useState<DateFilterType>("30days");
   const [customStartDate, setCustomStartDate] = useState<Date | undefined>();
   const [customEndDate, setCustomEndDate] = useState<Date | undefined>();
+  const [realtimeChannel, setRealtimeChannel] = useState<RealtimeChannel | null>(null);
   const getDateRange = () => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -226,11 +230,25 @@ const Dashboard = () => {
     }
   };
 
+  const refreshDashboard = useCallback(async () => {
+    await Promise.all([
+      loadDashboardData(),
+      loadDesignMetrics(),
+      loadDailyVisits()
+    ]);
+  }, [dateFilter, customStartDate, customEndDate, selectedCampaigns]);
+
+  const { lastUpdated, isRefreshing, refresh } = useAutoRefresh(
+    refreshDashboard,
+    { interval: 60000, enabled: true }
+  );
+
   useEffect(() => {
     loadDashboardData();
     loadDesignMetrics();
     loadDailyVisits();
   }, [dateFilter, customStartDate, customEndDate]);
+  
   useEffect(() => {
     if (campaigns.length > 0) {
       const saved = loadSelectedCampaigns();
@@ -247,6 +265,56 @@ const Dashboard = () => {
       }
     }
   }, [campaigns]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('dashboard-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'leads'
+        },
+        (payload) => {
+          console.log('Lead atualizado:', payload);
+          loadDashboardData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders'
+        },
+        (payload) => {
+          console.log('Order atualizado:', payload);
+          loadDashboardData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'design_tasks'
+        },
+        (payload) => {
+          console.log('Task atualizada:', payload);
+          loadDesignMetrics();
+        }
+      )
+      .subscribe();
+
+    setRealtimeChannel(channel);
+
+    return () => {
+      if (realtimeChannel) {
+        supabase.removeChannel(realtimeChannel);
+      }
+    };
+  }, []);
   const loadDashboardData = async () => {
     try {
       const dateRange = getDateRange();
@@ -671,8 +739,15 @@ const Dashboard = () => {
           </p>
         </div>
         
-        {/* Filtro de Data */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <RefreshIndicator 
+            lastUpdated={lastUpdated}
+            isRefreshing={isRefreshing}
+            onRefresh={refresh}
+          />
+          
+          {/* Filtro de Data */}
+          <div className="flex items-center gap-3">
           <Select value={dateFilter} onValueChange={(value: DateFilterType) => setDateFilter(value)}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Período" />
@@ -739,6 +814,7 @@ const Dashboard = () => {
               </Popover>
             </div>
           )}
+          </div>
         </div>
       </div>
 
