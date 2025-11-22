@@ -28,39 +28,43 @@ export const KanbanColumn = ({
   });
 
   return (
-    <div 
-      ref={setNodeRef}
-      className={cn(
-        "rounded-lg border p-4 min-h-[600px] min-w-[320px] flex-shrink-0",
-        isOver && "border-primary"
-      )}
-      style={{
-        backgroundColor: backgroundColor || 'hsl(var(--card))',
-        transition: 'background-color 0.3s ease',
-      }}
-    >
-      <div className="flex items-center justify-between mb-4 sticky top-0 bg-card pb-2 border-b">
+    <div className="min-w-[320px] flex-shrink-0 space-y-2">
+      {/* Cabeçalho fixo acima do container */}
+      <div className="flex items-center justify-between px-4 py-3 bg-muted/50 rounded-lg">
         <div className="flex items-center gap-2">
           <Icon className="h-4 w-4 text-muted-foreground" />
           <h3 className="font-semibold text-sm">{title}</h3>
         </div>
         <Badge variant="secondary">{tasks.length}</Badge>
       </div>
-      
-      <div className="space-y-3">
-        {tasks.map((task) => (
-          <TaskCard 
-            key={task.id}
-            task={task}
-            onClick={() => onTaskClick(task)}
-          />
-        ))}
-        
-        {tasks.length === 0 && (
-          <div className="text-center py-8 text-sm text-muted-foreground">
-            Nenhuma tarefa
-          </div>
+
+      {/* Container colorido com os cards */}
+      <div 
+        ref={setNodeRef}
+        className={cn(
+          "rounded-lg border p-4 min-h-[560px]",
+          isOver && "border-primary ring-2 ring-primary/20"
         )}
+        style={{
+          backgroundColor: backgroundColor || 'hsl(var(--card))',
+          transition: 'background-color 0.3s ease, border-color 0.2s ease',
+        }}
+      >
+        <div className="space-y-3">
+          {tasks.map((task) => (
+            <TaskCard 
+              key={task.id}
+              task={task}
+              onClick={() => onTaskClick(task)}
+            />
+          ))}
+          
+          {tasks.length === 0 && (
+            <div className="text-center py-8 text-sm text-muted-foreground">
+              Nenhuma tarefa
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
