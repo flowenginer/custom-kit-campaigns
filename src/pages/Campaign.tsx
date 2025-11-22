@@ -316,6 +316,14 @@ export default function Campaign() {
     }
   }, [campaign, sessionId]);
 
+  // Scroll to top whenever step changes
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  }, [currentStep]);
+
   // Generate lead group ID
   const generateLeadGroupId = () => {
     const phone = customerData.phone.replace(/\D/g, '');
