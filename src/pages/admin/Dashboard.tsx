@@ -1060,42 +1060,68 @@ const Dashboard = () => {
                 </div>
                 
                 {/* Filtro de Workflow */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium text-muted-foreground">Workflow:</label>
-                    <Select 
-                      value={selectedWorkflowId} 
-                      onValueChange={(value) => {
-                        setSelectedWorkflowId(value);
-                        saveSelectedWorkflow(value);
+                <div className="flex flex-col gap-3">
+                  <label className="text-sm font-medium text-muted-foreground">Workflow:</label>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      variant={selectedWorkflowId === "all" ? "default" : "outline"}
+                      onClick={() => {
+                        setSelectedWorkflowId("all");
+                        saveSelectedWorkflow("all");
                       }}
                     >
-                      <SelectTrigger className="w-[240px]">
-                        <SelectValue placeholder="Todos os Workflows" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">
-                          <div className="flex items-center gap-2">
-                            <span>Todos os Workflows</span>
-                          </div>
-                        </SelectItem>
-                        {workflows.map((workflow) => (
-                          <SelectItem key={workflow.id} value={workflow.id}>
-                            {workflow.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {selectedWorkflowId !== 'all' && (
-                      <Badge variant="secondary" className="ml-2">
-                        Filtro ativo
-                      </Badge>
-                    )}
+                      Todos os Workflows
+                    </Button>
+                    
+                    {workflows.map((workflow) => (
+                      <Button
+                        key={workflow.id}
+                        size="sm"
+                        variant={selectedWorkflowId === workflow.id ? "default" : "outline"}
+                        onClick={() => {
+                          setSelectedWorkflowId(workflow.id);
+                          saveSelectedWorkflow(workflow.id);
+                        }}
+                      >
+                        {workflow.name}
+                      </Button>
+                    ))}
                   </div>
                 </div>
                 
                 {/* Filtro de Campanhas */}
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-muted-foreground">
+                      Campanhas:
+                    </label>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          const allCampaignIds = getFilteredCampaigns().map(c => c.id);
+                          setSelectedCampaigns(allCampaignIds);
+                          saveSelectedCampaigns(allCampaignIds);
+                        }}
+                      >
+                        Selecionar Todas
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedCampaigns([]);
+                          saveSelectedCampaigns([]);
+                        }}
+                      >
+                        Limpar Seleção
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2">
                   {getFilteredCampaigns().map((campaign, idx) => <Badge key={campaign.id} variant={selectedCampaigns.includes(campaign.id) ? "default" : "outline"} className="cursor-pointer transition-all hover:scale-105" style={selectedCampaigns.includes(campaign.id) ? {
                 backgroundColor: CHART_COLORS[idx % CHART_COLORS.length],
                 borderColor: CHART_COLORS[idx % CHART_COLORS.length]
@@ -1109,6 +1135,7 @@ const Dashboard = () => {
               }}>
                       {campaign.name}
                     </Badge>)}
+                  </div>
                 </div>
               </div>
             </CardHeader>
