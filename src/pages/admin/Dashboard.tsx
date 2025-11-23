@@ -93,7 +93,7 @@ const CustomAxisTick = (props: any) => {
         dy={16}
         textAnchor="middle"
         fill="hsl(var(--muted-foreground))"
-        fontSize="12"
+        fontSize="10"
       >
         {shortLabel}
       </text>
@@ -101,10 +101,10 @@ const CustomAxisTick = (props: any) => {
       <text
         x={0}
         y={0}
-        dy={34}
+        dy={32}
         textAnchor="middle"
         fill="hsl(var(--foreground))"
-        fontSize="13"
+        fontSize="11"
         fontWeight="600"
       >
         {total}
@@ -986,7 +986,8 @@ const Dashboard = () => {
                     <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                     <XAxis 
                       dataKey="stage" 
-                      height={90}
+                      height={100}
+                      interval={0}
                       tick={<CustomAxisTick data={comparativeFunnelData} />}
                     />
                     <YAxis tick={{
