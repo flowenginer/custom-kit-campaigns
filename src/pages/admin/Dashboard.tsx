@@ -58,9 +58,15 @@ const CustomBarLabel = (props: any) => {
   );
 };
 
-// Custom axis tick para mostrar etapa e total (rotacionado em 45 graus)
+// Custom axis tick para mostrar etapa e total (apenas última palavra)
 const CustomAxisTick = (props: any) => {
   const { x, y, payload, data } = props;
+  
+  // Função para extrair a última palavra de uma string
+  const getLastWord = (text: string): string => {
+    const words = text.trim().split(' ');
+    return words[words.length - 1];
+  };
   
   // Encontrar o datapoint correspondente a esta etapa
   const dataPoint = data?.find((d: any) => d.stage === payload.value);
@@ -75,30 +81,31 @@ const CustomAxisTick = (props: any) => {
     });
   }
   
+  // Extrair apenas a última palavra do label
+  const shortLabel = getLastWord(payload.value);
+  
   return (
     <g transform={`translate(${x},${y})`}>
-      {/* Nome da etapa inclinado em 45 graus */}
+      {/* Nome da etapa (apenas última palavra) */}
       <text
         x={0}
         y={0}
         dy={16}
-        textAnchor="end"
+        textAnchor="middle"
         fill="hsl(var(--muted-foreground))"
         fontSize="12"
-        transform="rotate(-45)"
       >
-        {payload.value}
+        {shortLabel}
       </text>
       {/* Total da etapa */}
       <text
         x={0}
         y={0}
-        dy={32}
-        textAnchor="end"
+        dy={34}
+        textAnchor="middle"
         fill="hsl(var(--foreground))"
         fontSize="13"
         fontWeight="600"
-        transform="rotate(-45)"
       >
         {total}
       </text>
@@ -979,7 +986,7 @@ const Dashboard = () => {
                     <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                     <XAxis 
                       dataKey="stage" 
-                      height={120}
+                      height={90}
                       tick={<CustomAxisTick data={comparativeFunnelData} />}
                     />
                     <YAxis tick={{
