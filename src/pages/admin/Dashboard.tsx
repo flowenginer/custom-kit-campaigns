@@ -202,7 +202,7 @@ interface DailyVisitsData {
   [campaignName: string]: string | number;
 }
 
-type DateFilterType = "today" | "7days" | "15days" | "30days" | "custom";
+type DateFilterType = "today" | "7days" | "15days" | "30days" | "month" | "lastMonth" | "custom";
 
 const CHART_COLORS = ["hsl(var(--chart-purple))", "hsl(var(--chart-green))", "hsl(var(--chart-orange))", "hsl(var(--chart-blue))", "hsl(var(--chart-pink))", "hsl(var(--chart-teal))", "hsl(var(--chart-indigo))", "hsl(var(--chart-cyan))", "hsl(var(--chart-amber))", "hsl(var(--chart-red))"];
 const Dashboard = () => {
@@ -251,11 +251,18 @@ const Dashboard = () => {
         const fifteenDaysAgo = new Date(today);
         fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
         return { start: fifteenDaysAgo, end: now };
-      case "30days":
-        const thirtyDaysAgo = new Date(today);
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        return { start: thirtyDaysAgo, end: now };
-      case "custom":
+    case "30days":
+      const thirtyDaysAgo = new Date(today);
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      return { start: thirtyDaysAgo, end: now };
+    case "month":
+      const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      return { start: startOfCurrentMonth, end: now };
+    case "lastMonth":
+      const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+      return { start: startOfLastMonth, end: endOfLastMonth };
+    case "custom":
         if (customStartDate && customEndDate) {
           return { start: customStartDate, end: customEndDate };
         }
@@ -896,6 +903,22 @@ const Dashboard = () => {
                 onClick={() => setDateFilter("30days")}
               >
                 30 dias
+              </Button>
+              
+              <Button
+                size="sm"
+                variant={dateFilter === "month" ? "default" : "outline"}
+                onClick={() => setDateFilter("month")}
+              >
+                Este mês
+              </Button>
+              
+              <Button
+                size="sm"
+                variant={dateFilter === "lastMonth" ? "default" : "outline"}
+                onClick={() => setDateFilter("lastMonth")}
+              >
+                Mês passado
               </Button>
               
               <Button
