@@ -16,8 +16,9 @@ import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
-// LocalStorage helpers for campaign selection persistence
+// LocalStorage helpers for campaign and workflow selection persistence
 const STORAGE_KEY = 'dashboard_selected_campaigns';
+const WORKFLOW_STORAGE_KEY = 'dashboard_selected_workflow';
 
 const loadSelectedCampaigns = (): string[] => {
   try {
@@ -33,6 +34,23 @@ const saveSelectedCampaigns = (campaigns: string[]) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(campaigns));
   } catch (error) {
     console.error('Erro ao salvar seleção:', error);
+  }
+};
+
+const loadSelectedWorkflow = (): string => {
+  try {
+    const saved = localStorage.getItem(WORKFLOW_STORAGE_KEY);
+    return saved || 'all';
+  } catch {
+    return 'all';
+  }
+};
+
+const saveSelectedWorkflow = (workflowId: string) => {
+  try {
+    localStorage.setItem(WORKFLOW_STORAGE_KEY, workflowId);
+  } catch (error) {
+    console.error('Erro ao salvar workflow:', error);
   }
 };
 
@@ -117,6 +135,13 @@ interface Campaign {
   id: string;
   name: string;
   workflow_config?: any;
+  workflow_template_id?: string;
+}
+
+interface WorkflowTemplate {
+  id: string;
+  name: string;
+  description: string | null;
 }
 interface FunnelData {
   campaignId: string;
@@ -181,6 +206,8 @@ type DateFilterType = "today" | "7days" | "15days" | "30days" | "custom";
 
 const CHART_COLORS = ["hsl(var(--chart-purple))", "hsl(var(--chart-green))", "hsl(var(--chart-orange))", "hsl(var(--chart-blue))", "hsl(var(--chart-pink))", "hsl(var(--chart-teal))", "hsl(var(--chart-indigo))", "hsl(var(--chart-cyan))", "hsl(var(--chart-amber))", "hsl(var(--chart-red))"];
 const Dashboard = () => {
+  const [workflows, setWorkflows] = useState<WorkflowTemplate[]>([]);
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>(loadSelectedWorkflow());
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [funnelData, setFunnelData] = useState<FunnelData[]>([]);
   const [selectedCampaigns, setSelectedCampaigns] = useState<string[]>(loadSelectedCampaigns());
@@ -246,7 +273,7 @@ const Dashboard = () => {
       loadDesignMetrics(),
       loadDailyVisits()
     ]);
-  }, [dateFilter, customStartDate, customEndDate, selectedCampaigns]);
+  }, [dateFilter, customStartDate, customEndDate, selectedCampaigns, selectedWorkflowId]);
 
   const { lastUpdated, isRefreshing, refresh } = useAutoRefresh(
     refreshDashboard,
@@ -254,27 +281,38 @@ const Dashboard = () => {
   );
 
   useEffect(() => {
+    loadWorkflows();
+  }, []);
+
+  useEffect(() => {
     loadDashboardData();
     loadDesignMetrics();
     loadDailyVisits();
-  }, [dateFilter, customStartDate, customEndDate]);
+  }, [dateFilter, customStartDate, customEndDate, selectedWorkflowId]);
   
   useEffect(() => {
     if (campaigns.length > 0) {
       const saved = loadSelectedCampaigns();
       
-      // If no saved selection OR saved campaigns no longer exist
-      if (saved.length === 0 || !saved.every(id => campaigns.find(c => c.id === id))) {
-        // Select ALL campaigns by default
-        const allCampaignIds = campaigns.map(c => c.id);
+      // Filter campaigns based on selected workflow
+      const filteredCampaigns = getFilteredCampaigns();
+      
+      // If no saved selection OR saved campaigns no longer exist in filtered list
+      if (saved.length === 0 || !saved.every(id => filteredCampaigns.find(c => c.id === id))) {
+        // Select ALL filtered campaigns by default
+        const allCampaignIds = filteredCampaigns.map(c => c.id);
         setSelectedCampaigns(allCampaignIds);
         saveSelectedCampaigns(allCampaignIds);
       } else {
-        // Use saved selection
-        setSelectedCampaigns(saved);
+        // Use saved selection but filter by workflow
+        const validSelection = saved.filter(id => filteredCampaigns.find(c => c.id === id));
+        setSelectedCampaigns(validSelection);
+        if (validSelection.length !== saved.length) {
+          saveSelectedCampaigns(validSelection);
+        }
       }
     }
-  }, [campaigns]);
+  }, [campaigns, selectedWorkflowId]);
 
   useEffect(() => {
     const channel = supabase
@@ -325,16 +363,44 @@ const Dashboard = () => {
       }
     };
   }, []);
+  const loadWorkflows = async () => {
+    try {
+      const { data: workflowsData } = await supabase
+        .from("workflow_templates")
+        .select("id, name, description")
+        .order("name", { ascending: true });
+      
+      if (workflowsData) {
+        setWorkflows(workflowsData);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar workflows:", error);
+    }
+  };
+
+  const getFilteredCampaigns = (): Campaign[] => {
+    if (selectedWorkflowId === 'all') {
+      return campaigns;
+    }
+    return campaigns.filter(c => c.workflow_template_id === selectedWorkflowId);
+  };
+
   const loadDashboardData = async () => {
     try {
       const dateRange = getDateRange();
       
       // Carregar campanhas
-      const {
-        data: campaignsData
-      } = await supabase.from("campaigns").select("id, name, workflow_config").order("created_at", {
-        ascending: false
-      });
+      let campaignQuery = supabase
+        .from("campaigns")
+        .select("id, name, workflow_config, workflow_template_id")
+        .order("created_at", { ascending: false });
+      
+      // Filtrar por workflow se não for "all"
+      if (selectedWorkflowId !== 'all') {
+        campaignQuery = campaignQuery.eq("workflow_template_id", selectedWorkflowId);
+      }
+      
+      const { data: campaignsData } = await campaignQuery;
       if (campaignsData) {
         setCampaigns(campaignsData);
 
@@ -949,15 +1015,54 @@ const Dashboard = () => {
           {/* Seção 2: Gráfico de Funil Interativo com Filtro de Campanhas */}
           <Card className="shadow-xl">
             <CardHeader>
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div>
-                  <CardTitle className="text-2xl">Funil Comparativo de Campanhas</CardTitle>
-                  <CardDescription>
-                    Selecione campanhas para comparar o desempenho em cada etapa
-                  </CardDescription>
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  <div>
+                    <CardTitle className="text-2xl">Funil Comparativo de Campanhas</CardTitle>
+                    <CardDescription>
+                      Filtre por workflow e selecione campanhas para comparar
+                    </CardDescription>
+                  </div>
                 </div>
+                
+                {/* Filtro de Workflow */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-medium text-muted-foreground">Workflow:</label>
+                    <Select 
+                      value={selectedWorkflowId} 
+                      onValueChange={(value) => {
+                        setSelectedWorkflowId(value);
+                        saveSelectedWorkflow(value);
+                      }}
+                    >
+                      <SelectTrigger className="w-[240px]">
+                        <SelectValue placeholder="Todos os Workflows" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">
+                          <div className="flex items-center gap-2">
+                            <span>Todos os Workflows</span>
+                          </div>
+                        </SelectItem>
+                        {workflows.map((workflow) => (
+                          <SelectItem key={workflow.id} value={workflow.id}>
+                            {workflow.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {selectedWorkflowId !== 'all' && (
+                      <Badge variant="secondary" className="ml-2">
+                        Filtro ativo
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Filtro de Campanhas */}
                 <div className="flex flex-wrap gap-2">
-                  {campaigns.map((campaign, idx) => <Badge key={campaign.id} variant={selectedCampaigns.includes(campaign.id) ? "default" : "outline"} className="cursor-pointer transition-all hover:scale-105" style={selectedCampaigns.includes(campaign.id) ? {
+                  {getFilteredCampaigns().map((campaign, idx) => <Badge key={campaign.id} variant={selectedCampaigns.includes(campaign.id) ? "default" : "outline"} className="cursor-pointer transition-all hover:scale-105" style={selectedCampaigns.includes(campaign.id) ? {
                 backgroundColor: CHART_COLORS[idx % CHART_COLORS.length],
                 borderColor: CHART_COLORS[idx % CHART_COLORS.length]
               } : {}} onClick={() => {
