@@ -932,7 +932,7 @@ export default function Campaign() {
                         <div className="p-4 border-t">
                           <Button
                             size="lg"
-                            className="w-full h-14 text-lg"
+                            className="w-full h-14 text-sm md:text-lg"
                           >
                             {selectedModel?.id === model.id ? (
                               <>
