@@ -901,7 +901,7 @@ export default function Campaign() {
                   .map((model) => (
                     <Card
                       key={model.id}
-                      className={`overflow-hidden hover:shadow-xl transition-all border-2 ${
+                      className={`hover:shadow-xl transition-all border-2 ${
                         selectedModel?.id === model.id ? 'border-primary ring-4 ring-primary/20' : 'border-border'
                       }`}
                       onClick={() => handleSelectModel(model)}
@@ -932,7 +932,7 @@ export default function Campaign() {
                         <div className="p-4 border-t">
                           <Button
                             size="lg"
-                            className="w-full h-auto min-h-[56px] py-3 text-sm md:text-lg md:h-14 md:py-0 whitespace-normal md:whitespace-nowrap"
+                            className="w-full h-auto min-h-[56px] py-3 text-sm md:text-lg md:h-14 md:py-0 !whitespace-normal md:!whitespace-nowrap"
                           >
                             {selectedModel?.id === model.id ? (
                               <>
