@@ -504,15 +504,24 @@ const Dashboard = () => {
       return numA - numB;
     });
     
+    console.log('🔍 DEBUG - Sorted Steps detectados:', sortedSteps);
+    
     // Criar array de stages: Visitas + Etapas dinâmicas + Concluído
+    const stagesWithLabels = sortedSteps.map(step => {
+      const stepNumber = step.replace("step_", "");
+      const label = getStepLabel(stepNumber);
+      console.log(`🏷️ DEBUG - ${step} (order ${stepNumber}) -> Label: "${label}"`);
+      return label;
+    });
+    
     const stages = [
       "Visitas",
-      ...sortedSteps.map(step => {
-        const stepNumber = step.replace("step_", "");
-        return getStepLabel(stepNumber);
-      }),
+      ...stagesWithLabels,
       "Concluído"
     ];
+    
+    console.log('📊 DEBUG - Stages finais para o gráfico:', stages);
+    console.log('✅ DEBUG - Total de etapas:', stages.length, '| Únicas:', new Set(stages).size);
     
     return stages.map(stage => {
       const dataPoint: any = {
