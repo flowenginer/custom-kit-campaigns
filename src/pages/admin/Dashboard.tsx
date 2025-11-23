@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Fragment } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
@@ -6,7 +6,7 @@ import { RealtimeChannel } from "@supabase/supabase-js";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
-import { Loader2, TrendingUp, Users, Target, Activity, Calendar as CalendarIcon } from "lucide-react";
+import { Loader2, TrendingUp, TrendingDown, Users, Target, Activity, Calendar as CalendarIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UtmBreakdownDialog } from "@/components/dashboard/UtmBreakdownDialog";
@@ -203,8 +203,10 @@ interface DailyVisitsData {
 }
 
 type DateFilterType = "today" | "7days" | "15days" | "30days" | "month" | "lastMonth" | "custom";
+type ComparisonMode = "single" | "comparison";
 
 const CHART_COLORS = ["hsl(var(--chart-purple))", "hsl(var(--chart-green))", "hsl(var(--chart-orange))", "hsl(var(--chart-blue))", "hsl(var(--chart-pink))", "hsl(var(--chart-teal))", "hsl(var(--chart-indigo))", "hsl(var(--chart-cyan))", "hsl(var(--chart-amber))", "hsl(var(--chart-red))"];
+
 const Dashboard = () => {
   const [workflows, setWorkflows] = useState<WorkflowTemplate[]>([]);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>(loadSelectedWorkflow());
@@ -236,11 +238,34 @@ const Dashboard = () => {
   const [customStartDate, setCustomStartDate] = useState<Date | undefined>();
   const [customEndDate, setCustomEndDate] = useState<Date | undefined>();
   const [realtimeChannel, setRealtimeChannel] = useState<RealtimeChannel | null>(null);
-  const getDateRange = () => {
+  
+  // Estados para modo de comparação
+  const [comparisonMode, setComparisonMode] = useState<ComparisonMode>("single");
+  const [period1, setPeriod1] = useState<DateFilterType>("month");
+  const [period2, setPeriod2] = useState<DateFilterType>("lastMonth");
+  const [customStartDateP1, setCustomStartDateP1] = useState<Date | undefined>();
+  const [customEndDateP1, setCustomEndDateP1] = useState<Date | undefined>();
+  const [customStartDateP2, setCustomStartDateP2] = useState<Date | undefined>();
+  const [customEndDateP2, setCustomEndDateP2] = useState<Date | undefined>();
+  
+  // Dados dos dois períodos para comparação
+  const [leadsMetricsP1, setLeadsMetricsP1] = useState<LeadsMetrics>({ total: 0, converted: 0, conversionRate: 0, bySource: [] });
+  const [leadsMetricsP2, setLeadsMetricsP2] = useState<LeadsMetrics>({ total: 0, converted: 0, conversionRate: 0, bySource: [] });
+  const [funnelDataP1, setFunnelDataP1] = useState<FunnelData[]>([]);
+  const [funnelDataP2, setFunnelDataP2] = useState<FunnelData[]>([]);
+  const [dailyVisitsDataP1, setDailyVisitsDataP1] = useState<DailyVisitsData[]>([]);
+  const [dailyVisitsDataP2, setDailyVisitsDataP2] = useState<DailyVisitsData[]>([]);
+  const [campaignComparisonDataP1, setCampaignComparisonDataP1] = useState<CampaignComparisonData[]>([]);
+  const [campaignComparisonDataP2, setCampaignComparisonDataP2] = useState<CampaignComparisonData[]>([]);
+  const [topUtmSourcesP1, setTopUtmSourcesP1] = useState<any[]>([]);
+  const [topUtmSourcesP2, setTopUtmSourcesP2] = useState<any[]>([]);
+  const [designMetricsP1, setDesignMetricsP1] = useState<DesignMetrics>({ tasksByStatus: [], avgTimeByStage: [], designerPerformance: [] });
+  const [designMetricsP2, setDesignMetricsP2] = useState<DesignMetrics>({ tasksByStatus: [], avgTimeByStage: [], designerPerformance: [] });
+  const getDateRangeForPeriod = (period: DateFilterType, customStart?: Date, customEnd?: Date) => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
-    switch (dateFilter) {
+    switch (period) {
       case "today":
         return { start: today, end: now };
       case "7days":
@@ -251,22 +276,24 @@ const Dashboard = () => {
         const fifteenDaysAgo = new Date(today);
         fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
         return { start: fifteenDaysAgo, end: now };
-    case "30days":
-      const thirtyDaysAgo = new Date(today);
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      return { start: thirtyDaysAgo, end: now };
-    case "month":
-      const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      return { start: startOfCurrentMonth, end: now };
-    case "lastMonth":
-      const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
-      return { start: startOfLastMonth, end: endOfLastMonth };
-    case "custom":
-        if (customStartDate && customEndDate) {
-          return { start: customStartDate, end: customEndDate };
-        }
+      case "30days":
+        const thirtyDaysAgo = new Date(today);
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         return { start: thirtyDaysAgo, end: now };
+      case "month":
+        const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        return { start: startOfCurrentMonth, end: now };
+      case "lastMonth":
+        const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+        return { start: startOfLastMonth, end: endOfLastMonth };
+      case "custom":
+        if (customStart && customEnd) {
+          return { start: customStart, end: customEnd };
+        }
+        const fallbackThirtyDaysAgo = new Date(today);
+        fallbackThirtyDaysAgo.setDate(fallbackThirtyDaysAgo.getDate() - 30);
+        return { start: fallbackThirtyDaysAgo, end: now };
       default:
         const defaultThirtyDaysAgo = new Date(today);
         defaultThirtyDaysAgo.setDate(defaultThirtyDaysAgo.getDate() - 30);
@@ -274,13 +301,41 @@ const Dashboard = () => {
     }
   };
 
+  const getDateRange = () => {
+    return getDateRangeForPeriod(dateFilter, customStartDate, customEndDate);
+  };
+
+  const getPeriodLabel = (period: DateFilterType): string => {
+    const labels: Record<DateFilterType, string> = {
+      today: "Hoje",
+      "7days": "Últimos 7 dias",
+      "15days": "Últimos 15 dias",
+      "30days": "Últimos 30 dias",
+      month: "Este mês",
+      lastMonth: "Mês passado",
+      custom: "Período personalizado"
+    };
+    return labels[period] || "Período";
+  };
+
+  const calculateVariation = (period1Value: number, period2Value: number): number => {
+    if (period2Value === 0) return period1Value > 0 ? 100 : 0;
+    return ((period1Value - period2Value) / period2Value) * 100;
+  };
+
   const refreshDashboard = useCallback(async () => {
-    await Promise.all([
-      loadDashboardData(),
-      loadDesignMetrics(),
-      loadDailyVisits()
-    ]);
-  }, [dateFilter, customStartDate, customEndDate, selectedCampaigns, selectedWorkflowId]);
+    if (comparisonMode === "comparison") {
+      await Promise.all([
+        loadComparisonData(),
+      ]);
+    } else {
+      await Promise.all([
+        loadDashboardData(),
+        loadDesignMetrics(),
+        loadDailyVisits()
+      ]);
+    }
+  }, [comparisonMode, dateFilter, customStartDate, customEndDate, period1, period2, customStartDateP1, customEndDateP1, customStartDateP2, customEndDateP2, selectedCampaigns, selectedWorkflowId]);
 
   const { lastUpdated, isRefreshing, refresh } = useAutoRefresh(
     refreshDashboard,
@@ -292,10 +347,14 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
-    loadDashboardData();
-    loadDesignMetrics();
-    loadDailyVisits();
-  }, [dateFilter, customStartDate, customEndDate, selectedWorkflowId]);
+    if (comparisonMode === "comparison") {
+      loadComparisonData();
+    } else {
+      loadDashboardData();
+      loadDesignMetrics();
+      loadDailyVisits();
+    }
+  }, [comparisonMode, dateFilter, customStartDate, customEndDate, period1, period2, customStartDateP1, customEndDateP1, customStartDateP2, customEndDateP2, selectedWorkflowId]);
   
   useEffect(() => {
     if (campaigns.length > 0) {
@@ -390,6 +449,259 @@ const Dashboard = () => {
       return campaigns;
     }
     return campaigns.filter(c => c.workflow_template_id === selectedWorkflowId);
+  };
+
+  const loadComparisonData = async () => {
+    setIsLoading(true);
+    try {
+      const range1 = getDateRangeForPeriod(period1, customStartDateP1, customEndDateP1);
+      const range2 = getDateRangeForPeriod(period2, customStartDateP2, customEndDateP2);
+      
+      await Promise.all([
+        loadDataForPeriod(range1, setLeadsMetricsP1, setFunnelDataP1, setDailyVisitsDataP1, setTopUtmSourcesP1, setDesignMetricsP1),
+        loadDataForPeriod(range2, setLeadsMetricsP2, setFunnelDataP2, setDailyVisitsDataP2, setTopUtmSourcesP2, setDesignMetricsP2)
+      ]);
+    } catch (error) {
+      console.error("Erro ao carregar dados de comparação:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadDataForPeriod = async (
+    dateRange: { start: Date; end: Date },
+    setMetrics: (m: LeadsMetrics) => void,
+    setFunnel: (f: FunnelData[]) => void,
+    setVisits: (v: DailyVisitsData[]) => void,
+    setTopUtm: (u: any[]) => void,
+    setDesign: (d: DesignMetrics) => void
+  ) => {
+    try {
+      // Carregar campanhas
+      let campaignQuery = supabase
+        .from("campaigns")
+        .select("id, name, workflow_config, workflow_template_id")
+        .order("created_at", { ascending: false });
+      
+      if (selectedWorkflowId !== 'all') {
+        campaignQuery = campaignQuery.eq("workflow_template_id", selectedWorkflowId);
+      }
+      
+      const { data: campaignsData } = await campaignQuery;
+      if (campaignsData) {
+        if (campaigns.length === 0) {
+          setCampaigns(campaignsData);
+        }
+
+        // Carregar dados de funil
+        const funnelPromises = campaignsData.map(async campaign => {
+          const { data: events } = await supabase
+            .from("funnel_events")
+            .select("event_type")
+            .eq("campaign_id", campaign.id)
+            .gte("created_at", dateRange.start.toISOString())
+            .lte("created_at", dateRange.end.toISOString());
+          
+          const counts: any = {
+            campaignId: campaign.id,
+            campaignName: campaign.name,
+            visits: 0,
+            completed: 0
+          };
+          
+          events?.forEach(event => {
+            if (event.event_type === "visit" || event.event_type === "campaign_visit") {
+              counts.visits++;
+            } else if (event.event_type === "completed") {
+              counts.completed++;
+            } else if (event.event_type.startsWith("step_")) {
+              counts[event.event_type] = (counts[event.event_type] || 0) + 1;
+            }
+          });
+          
+          return counts as FunnelData;
+        });
+        const funnelResults = await Promise.all(funnelPromises);
+        setFunnel(funnelResults);
+
+        // Carregar métricas de leads
+        const { data: leadsData } = await supabase
+          .from("leads")
+          .select("completed, utm_source, utm_medium, utm_campaign, utm_term, utm_content, campaign_id")
+          .is("deleted_at", null)
+          .gte("created_at", dateRange.start.toISOString())
+          .lte("created_at", dateRange.end.toISOString());
+
+        if (leadsData) {
+          const total = leadsData.length;
+          const converted = leadsData.filter(l => l.completed).length;
+          const conversionRate = total > 0 ? converted / total * 100 : 0;
+
+          const sourceGroups = leadsData.reduce((acc: any, lead) => {
+            const source = lead.utm_source || 'Direto';
+            acc[source] = (acc[source] || 0) + 1;
+            return acc;
+          }, {});
+          
+          const bySource = Object.entries(sourceGroups).map(([source, count]) => ({
+            source,
+            count: count as number
+          })).sort((a, b) => b.count - a.count);
+          
+          setMetrics({ total, converted, conversionRate, bySource });
+
+          // Top UTM sources
+          const utmGroups = leadsData.reduce((acc: any, lead) => {
+            const source = lead.utm_source || 'Direto';
+            if (!acc[source]) {
+              acc[source] = { source, leads: 0 };
+            }
+            acc[source].leads++;
+            return acc;
+          }, {});
+          
+          const topSources = Object.values(utmGroups)
+            .sort((a: any, b: any) => b.leads - a.leads)
+            .slice(0, 10);
+          setTopUtm(topSources);
+        }
+
+        // Carregar visitas diárias
+        const { data: visitsData } = await supabase
+          .from("funnel_events")
+          .select(`created_at, campaign_id, campaigns (id, name)`)
+          .eq("event_type", "campaign_visit")
+          .gte("created_at", dateRange.start.toISOString())
+          .lte("created_at", dateRange.end.toISOString())
+          .order("created_at", { ascending: true });
+
+        if (visitsData) {
+          const visitsByDateAndCampaign: { [date: string]: { [campaignName: string]: number } } = {};
+          
+          visitsData.forEach((visit: any) => {
+            const date = new Date(visit.created_at);
+            const dateKey = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+            const campaignName = visit.campaigns?.name || 'Sem Campanha';
+            
+            if (!visitsByDateAndCampaign[dateKey]) {
+              visitsByDateAndCampaign[dateKey] = {};
+            }
+            if (!visitsByDateAndCampaign[dateKey][campaignName]) {
+              visitsByDateAndCampaign[dateKey][campaignName] = 0;
+            }
+            visitsByDateAndCampaign[dateKey][campaignName]++;
+          });
+
+          const formattedData: DailyVisitsData[] = Object.entries(visitsByDateAndCampaign).map(([date, campaigns]) => ({
+            date,
+            ...campaigns
+          }));
+          setVisits(formattedData);
+        }
+
+        // Carregar métricas de design
+        const { data: tasksData } = await supabase
+          .from("design_tasks")
+          .select("status, assigned_to, created_at, completed_at")
+          .is("deleted_at", null)
+          .gte("created_at", dateRange.start.toISOString())
+          .lte("created_at", dateRange.end.toISOString());
+
+        const statusLabels: Record<string, { label: string; color: string }> = {
+          pending: { label: "Aguardando", color: "hsl(var(--chart-blue))" },
+          in_progress: { label: "Em Progresso", color: "hsl(var(--chart-orange))" },
+          awaiting_approval: { label: "Aguardando Aprovação", color: "hsl(var(--chart-purple))" },
+          approved: { label: "Aprovado", color: "hsl(var(--chart-green))" },
+          changes_requested: { label: "Revisão Necessária", color: "hsl(var(--chart-red))" },
+          completed: { label: "Concluído", color: "hsl(var(--chart-teal))" }
+        };
+
+        const tasksByStatus = Object.entries(
+          tasksData?.reduce((acc, task) => {
+            acc[task.status] = (acc[task.status] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>) || {}
+        ).map(([status, count]) => ({
+          status,
+          count,
+          ...statusLabels[status as keyof typeof statusLabels]
+        }));
+
+        const { data: historyData } = await supabase
+          .from("design_task_history")
+          .select("task_id, old_status, new_status, created_at")
+          .eq("action", "status_changed")
+          .order("created_at", { ascending: true });
+
+        const timeByStage: Record<string, number[]> = {};
+        
+        historyData?.forEach((item, idx, arr) => {
+          if (idx === 0) return;
+          const prev = arr[idx - 1];
+          if (prev.task_id === item.task_id && prev.new_status && item.new_status) {
+            const key = `${prev.new_status} → ${item.new_status}`;
+            const hours = (new Date(item.created_at).getTime() - new Date(prev.created_at).getTime()) / (1000 * 60 * 60);
+            if (!timeByStage[key]) timeByStage[key] = [];
+            timeByStage[key].push(hours);
+          }
+        });
+
+        const avgTimeByStage = Object.entries(timeByStage).map(([stage, times]) => ({
+          stage,
+          avgHours: times.reduce((a, b) => a + b, 0) / times.length
+        })).sort((a, b) => b.avgHours - a.avgHours).slice(0, 10);
+
+        const designerGroups = tasksData?.reduce((acc, task) => {
+          const id = task.assigned_to;
+          if (!id) return acc;
+          
+          if (!acc[id]) {
+            acc[id] = {
+              designer_id: id,
+              designer_name: `Designer ${id.substring(0, 8)}`,
+              total_tasks: 0,
+              completed_tasks: 0,
+              approved_tasks: 0,
+              completion_times: []
+            };
+          }
+          
+          acc[id].total_tasks++;
+          if (task.status === 'completed') {
+            acc[id].completed_tasks++;
+            if (task.completed_at && task.created_at) {
+              const hours = (new Date(task.completed_at).getTime() - new Date(task.created_at).getTime()) / (1000 * 60 * 60);
+              acc[id].completion_times.push(hours);
+            }
+          }
+          if (task.status === 'approved') acc[id].approved_tasks++;
+          
+          return acc;
+        }, {} as Record<string, any>) || {};
+
+        const designerPerformance = Object.values(designerGroups).map((designer: any) => {
+          const avg_completion_time = designer.completion_times.length > 0
+            ? designer.completion_times.reduce((a: number, b: number) => a + b, 0) / designer.completion_times.length
+            : 0;
+          
+          const completion_rate = designer.total_tasks > 0 ? designer.completed_tasks / designer.total_tasks : 0;
+          const approval_rate = designer.total_tasks > 0 ? designer.approved_tasks / designer.total_tasks : 0;
+          const time_efficiency = avg_completion_time > 0 ? Math.max(0, 100 - avg_completion_time) / 100 : 0;
+          
+          const efficiency_score = (completion_rate * 40 + approval_rate * 40 + time_efficiency * 20) * 100;
+          
+          return {
+            ...designer,
+            avg_completion_time,
+            efficiency_score: Math.round(efficiency_score)
+          };
+        }).sort((a: any, b: any) => b.efficiency_score - a.efficiency_score);
+
+        setDesign({ tasksByStatus, avgTimeByStage, designerPerformance });
+      }
+    } catch (error) {
+      console.error("Erro ao carregar dados do período:", error);
+    }
   };
 
   const loadDashboardData = async () => {
@@ -537,9 +849,10 @@ const Dashboard = () => {
 
   // Preparar dados para o gráfico de funil comparativo
   const getComparativeFunnelData = () => {
-    // Detectar dinamicamente todas as etapas que existem nos dados
+    const dataSource = comparisonMode === "comparison" ? [...funnelDataP1, ...funnelDataP2] : funnelData;
     const allStepKeys = new Set<string>();
-    funnelData.forEach(campaign => {
+    
+    dataSource.forEach(campaign => {
       Object.keys(campaign).forEach(key => {
         if (key.startsWith("step_")) {
           allStepKeys.add(key);
@@ -547,58 +860,58 @@ const Dashboard = () => {
       });
     });
     
-    // Ordenar as etapas numericamente (step_1, step_2, step_3, etc.)
     const sortedSteps = Array.from(allStepKeys).sort((a, b) => {
       const numA = parseInt(a.replace("step_", ""));
       const numB = parseInt(b.replace("step_", ""));
       return numA - numB;
     });
     
-    console.log('🔍 DEBUG - Sorted Steps detectados:', sortedSteps);
-    
-    // Criar array de stages: Visitas + Etapas dinâmicas + Concluído
     const stagesWithLabels = sortedSteps.map(step => {
       const stepNumber = step.replace("step_", "");
-      const label = getStepLabel(stepNumber);
-      console.log(`🏷️ DEBUG - ${step} (order ${stepNumber}) -> Label: "${label}"`);
-      return label;
+      return getStepLabel(stepNumber);
     });
     
-    const stages = [
-      "Visitas",
-      ...stagesWithLabels,
-      "Concluído"
-    ];
-    
-    console.log('📊 DEBUG - Stages finais para o gráfico:', stages);
-    console.log('✅ DEBUG - Total de etapas:', stages.length, '| Únicas:', new Set(stages).size);
+    const stages = ["Visitas", ...stagesWithLabels, "Concluído"];
     
     return stages.map(stage => {
-      const dataPoint: any = {
-        stage
-      };
+      const dataPoint: any = { stage };
       
       selectedCampaigns.forEach(campaignId => {
-        const campaign = funnelData.find(c => c.campaignId === campaignId);
-        if (campaign) {
-          let stageKey: string;
+        if (comparisonMode === "comparison") {
+          const campaignP1 = funnelDataP1.find(c => c.campaignId === campaignId);
+          const campaignP2 = funnelDataP2.find(c => c.campaignId === campaignId);
+          const campaignName = campaigns.find(c => c.id === campaignId)?.name;
           
-          if (stage === "Visitas") {
-            stageKey = "visits";
-          } else if (stage === "Concluído") {
-            stageKey = "completed";
-          } else {
-            // Encontrar o step number correspondente ao label
-            // Iteramos pelos sortedSteps para descobrir qual step tem este label
-            const matchingStep = sortedSteps.find(step => {
-              const stepNum = step.replace("step_", "");
-              return getStepLabel(stepNum) === stage;
-            });
+          if (campaignName) {
+            let stageKey: string;
+            if (stage === "Visitas") stageKey = "visits";
+            else if (stage === "Concluído") stageKey = "completed";
+            else {
+              const matchingStep = sortedSteps.find(step => {
+                const stepNum = step.replace("step_", "");
+                return getStepLabel(stepNum) === stage;
+              });
+              stageKey = matchingStep || "step_0";
+            }
             
-            stageKey = matchingStep || "step_0";
+            dataPoint[`${campaignName}_P1`] = campaignP1?.[stageKey] || 0;
+            dataPoint[`${campaignName}_P2`] = campaignP2?.[stageKey] || 0;
           }
-          
-          dataPoint[campaign.campaignName] = campaign[stageKey] || 0;
+        } else {
+          const campaign = funnelData.find(c => c.campaignId === campaignId);
+          if (campaign) {
+            let stageKey: string;
+            if (stage === "Visitas") stageKey = "visits";
+            else if (stage === "Concluído") stageKey = "completed";
+            else {
+              const matchingStep = sortedSteps.find(step => {
+                const stepNum = step.replace("step_", "");
+                return getStepLabel(stepNum) === stage;
+              });
+              stageKey = matchingStep || "step_0";
+            }
+            dataPoint[campaign.campaignName] = campaign[stageKey] || 0;
+          }
         }
       });
       
@@ -855,11 +1168,18 @@ const Dashboard = () => {
   const filteredUtmData = getFilteredUtmData();
   return <div className="p-8 space-y-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-chart-purple bg-clip-text text-transparent">Dashboard</h1>
-          <p className="text-muted-foreground mt-1">
-            Visualize a performance de suas campanhas em tempo real
-          </p>
+        <div className="flex items-center gap-3">
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-chart-purple bg-clip-text text-transparent">Dashboard</h1>
+            <p className="text-muted-foreground mt-1">
+              Visualize a performance de suas campanhas em tempo real
+            </p>
+          </div>
+          {comparisonMode === "comparison" && (
+            <Badge variant="secondary" className="ml-2">
+              Modo Comparação
+            </Badge>
+          )}
         </div>
         
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
@@ -868,7 +1188,163 @@ const Dashboard = () => {
             isRefreshing={isRefreshing}
             onRefresh={refresh}
           />
-          
+        </div>
+      </div>
+
+      {/* Toggle de Modo de Visualização */}
+      <Card className="shadow-lg">
+        <CardContent className="pt-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h3 className="font-semibold text-lg">Modo de Visualização</h3>
+              <p className="text-sm text-muted-foreground">
+                Escolha entre ver dados de um período ou comparar dois períodos
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant={comparisonMode === "single" ? "default" : "outline"}
+                onClick={() => setComparisonMode("single")}
+              >
+                Período Único
+              </Button>
+              <Button
+                variant={comparisonMode === "comparison" ? "default" : "outline"}
+                onClick={() => setComparisonMode("comparison")}
+              >
+                Comparar Períodos
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Seletores de Períodos */}
+      {comparisonMode === "comparison" ? (
+        <>
+          {/* Legenda Visual Global */}
+          <Card className="bg-muted/50 border-primary/20">
+            <CardContent className="pt-4">
+              <div className="flex items-center justify-center gap-6 text-sm flex-wrap">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded bg-primary" />
+                  <span className="font-medium">
+                    {getPeriodLabel(period1)} (Principal)
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded bg-chart-orange opacity-60" />
+                  <span className="font-medium text-muted-foreground">
+                    {getPeriodLabel(period2)} (Comparação)
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Seletores Duplos */}
+          <Card className="border-primary/50 shadow-lg">
+            <CardContent className="pt-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Período 1 */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded-full bg-primary" />
+                    <h4 className="font-semibold">Período 1 (Principal)</h4>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant={period1 === "today" ? "default" : "outline"} onClick={() => setPeriod1("today")}>Hoje</Button>
+                    <Button size="sm" variant={period1 === "7days" ? "default" : "outline"} onClick={() => setPeriod1("7days")}>7 dias</Button>
+                    <Button size="sm" variant={period1 === "15days" ? "default" : "outline"} onClick={() => setPeriod1("15days")}>15 dias</Button>
+                    <Button size="sm" variant={period1 === "30days" ? "default" : "outline"} onClick={() => setPeriod1("30days")}>30 dias</Button>
+                    <Button size="sm" variant={period1 === "month" ? "default" : "outline"} onClick={() => setPeriod1("month")}>Este mês</Button>
+                    <Button size="sm" variant={period1 === "lastMonth" ? "default" : "outline"} onClick={() => setPeriod1("lastMonth")}>Mês passado</Button>
+                    <Button size="sm" variant={period1 === "custom" ? "default" : "outline"} onClick={() => setPeriod1("custom")}>
+                      <CalendarIcon className="mr-1 h-4 w-4" />
+                      Personalizado
+                    </Button>
+                  </div>
+                  {period1 === "custom" && (
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="sm" className={cn("justify-start text-left font-normal", !customStartDateP1 && "text-muted-foreground")}>
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {customStartDateP1 ? format(customStartDateP1, "dd/MM/yyyy") : "Data início"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar mode="single" selected={customStartDateP1} onSelect={setCustomStartDateP1} initialFocus />
+                        </PopoverContent>
+                      </Popover>
+                      <span className="text-muted-foreground">até</span>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="sm" className={cn("justify-start text-left font-normal", !customEndDateP1 && "text-muted-foreground")}>
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {customEndDateP1 ? format(customEndDateP1, "dd/MM/yyyy") : "Data fim"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar mode="single" selected={customEndDateP1} onSelect={setCustomEndDateP1} initialFocus />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  )}
+                </div>
+
+                {/* Período 2 */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded-full bg-chart-orange opacity-70" />
+                    <h4 className="font-semibold text-muted-foreground">Período 2 (Comparação)</h4>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant={period2 === "today" ? "default" : "outline"} onClick={() => setPeriod2("today")}>Hoje</Button>
+                    <Button size="sm" variant={period2 === "7days" ? "default" : "outline"} onClick={() => setPeriod2("7days")}>7 dias</Button>
+                    <Button size="sm" variant={period2 === "15days" ? "default" : "outline"} onClick={() => setPeriod2("15days")}>15 dias</Button>
+                    <Button size="sm" variant={period2 === "30days" ? "default" : "outline"} onClick={() => setPeriod2("30days")}>30 dias</Button>
+                    <Button size="sm" variant={period2 === "month" ? "default" : "outline"} onClick={() => setPeriod2("month")}>Este mês</Button>
+                    <Button size="sm" variant={period2 === "lastMonth" ? "default" : "outline"} onClick={() => setPeriod2("lastMonth")}>Mês passado</Button>
+                    <Button size="sm" variant={period2 === "custom" ? "default" : "outline"} onClick={() => setPeriod2("custom")}>
+                      <CalendarIcon className="mr-1 h-4 w-4" />
+                      Personalizado
+                    </Button>
+                  </div>
+                  {period2 === "custom" && (
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="sm" className={cn("justify-start text-left font-normal", !customStartDateP2 && "text-muted-foreground")}>
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {customStartDateP2 ? format(customStartDateP2, "dd/MM/yyyy") : "Data início"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar mode="single" selected={customStartDateP2} onSelect={setCustomStartDateP2} initialFocus />
+                        </PopoverContent>
+                      </Popover>
+                      <span className="text-muted-foreground">até</span>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="sm" className={cn("justify-start text-left font-normal", !customEndDateP2 && "text-muted-foreground")}>
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {customEndDateP2 ? format(customEndDateP2, "dd/MM/yyyy") : "Data fim"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar mode="single" selected={customEndDateP2} onSelect={setCustomEndDateP2} initialFocus />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      ) : (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
           {/* Filtro de Data */}
           <div className="flex flex-col gap-3">
             {/* Botões de período rápido */}
@@ -931,65 +1407,65 @@ const Dashboard = () => {
               </Button>
             </div>
 
-            {/* Calendários customizados */}
-            {dateFilter === "custom" && (
-              <div className="flex flex-wrap gap-2">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className={cn(
-                        "justify-start text-left font-normal",
-                        !customStartDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {customStartDate ? format(customStartDate, "dd/MM/yyyy") : "Data início"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={customStartDate}
-                      onSelect={setCustomStartDate}
-                      initialFocus
-                      className="pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-                
-                <span className="text-muted-foreground">até</span>
-                
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className={cn(
-                        "justify-start text-left font-normal",
-                        !customEndDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {customEndDate ? format(customEndDate, "dd/MM/yyyy") : "Data fim"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={customEndDate}
-                      onSelect={setCustomEndDate}
-                      initialFocus
-                      className="pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            )}
+              {/* Calendários customizados */}
+              {dateFilter === "custom" && (
+                <div className="flex flex-wrap gap-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={cn(
+                          "justify-start text-left font-normal",
+                          !customStartDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {customStartDate ? format(customStartDate, "dd/MM/yyyy") : "Data início"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={customStartDate}
+                        onSelect={setCustomStartDate}
+                        initialFocus
+                        className="pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  
+                  <span className="text-muted-foreground">até</span>
+                  
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={cn(
+                          "justify-start text-left font-normal",
+                          !customEndDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {customEndDate ? format(customEndDate, "dd/MM/yyyy") : "Data fim"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={customEndDate}
+                        onSelect={setCustomEndDate}
+                        initialFocus
+                        className="pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </div>
+        )}
 
       {/* Seção 1: Métricas Cards com Visual Moderno */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -1003,8 +1479,41 @@ const Dashboard = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-primary">{leadsMetrics.total}</div>
-            <p className="text-xs text-muted-foreground mt-1">Todos os períodos</p>
+            <div className="text-3xl font-bold text-primary">
+              {comparisonMode === "single" ? leadsMetrics.total : leadsMetricsP1.total}
+            </div>
+            
+            {comparisonMode === "comparison" && (
+              <div className="mt-2 space-y-1">
+                {(() => {
+                  const variation = calculateVariation(leadsMetricsP1.total, leadsMetricsP2.total);
+                  return (
+                    <>
+                      <div className="flex items-center gap-2">
+                        {variation >= 0 ? (
+                          <TrendingUp className="h-4 w-4 text-chart-green" />
+                        ) : (
+                          <TrendingDown className="h-4 w-4 text-destructive" />
+                        )}
+                        <span className={cn(
+                          "text-sm font-semibold",
+                          variation >= 0 ? "text-chart-green" : "text-destructive"
+                        )}>
+                          {variation >= 0 ? "+" : ""}{variation.toFixed(1)}%
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        vs {leadsMetricsP2.total} ({getPeriodLabel(period2)})
+                      </p>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+            
+            <p className="text-xs text-muted-foreground mt-1">
+              {comparisonMode === "single" ? "Todos os períodos" : getPeriodLabel(period1)}
+            </p>
           </CardContent>
         </Card>
         
@@ -1018,8 +1527,41 @@ const Dashboard = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-chart-green">{leadsMetrics.converted}</div>
-            <p className="text-xs text-muted-foreground mt-1">Concluíram o funil</p>
+            <div className="text-3xl font-bold text-chart-green">
+              {comparisonMode === "single" ? leadsMetrics.converted : leadsMetricsP1.converted}
+            </div>
+            
+            {comparisonMode === "comparison" && (
+              <div className="mt-2 space-y-1">
+                {(() => {
+                  const variation = calculateVariation(leadsMetricsP1.converted, leadsMetricsP2.converted);
+                  return (
+                    <>
+                      <div className="flex items-center gap-2">
+                        {variation >= 0 ? (
+                          <TrendingUp className="h-4 w-4 text-chart-green" />
+                        ) : (
+                          <TrendingDown className="h-4 w-4 text-destructive" />
+                        )}
+                        <span className={cn(
+                          "text-sm font-semibold",
+                          variation >= 0 ? "text-chart-green" : "text-destructive"
+                        )}>
+                          {variation >= 0 ? "+" : ""}{variation.toFixed(1)}%
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        vs {leadsMetricsP2.converted} ({getPeriodLabel(period2)})
+                      </p>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+            
+            <p className="text-xs text-muted-foreground mt-1">
+              {comparisonMode === "single" ? "Concluíram o funil" : getPeriodLabel(period1)}
+            </p>
           </CardContent>
         </Card>
         
@@ -1033,8 +1575,41 @@ const Dashboard = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-chart-orange">{leadsMetrics.conversionRate.toFixed(1)}%</div>
-            <p className="text-xs text-muted-foreground mt-1">Taxa média geral</p>
+            <div className="text-3xl font-bold text-chart-orange">
+              {comparisonMode === "single" ? leadsMetrics.conversionRate.toFixed(1) : leadsMetricsP1.conversionRate.toFixed(1)}%
+            </div>
+            
+            {comparisonMode === "comparison" && (
+              <div className="mt-2 space-y-1">
+                {(() => {
+                  const variation = leadsMetricsP1.conversionRate - leadsMetricsP2.conversionRate;
+                  return (
+                    <>
+                      <div className="flex items-center gap-2">
+                        {variation >= 0 ? (
+                          <TrendingUp className="h-4 w-4 text-chart-green" />
+                        ) : (
+                          <TrendingDown className="h-4 w-4 text-destructive" />
+                        )}
+                        <span className={cn(
+                          "text-sm font-semibold",
+                          variation >= 0 ? "text-chart-green" : "text-destructive"
+                        )}>
+                          {variation >= 0 ? "+" : ""}{variation.toFixed(1)}pp
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        vs {leadsMetricsP2.conversionRate.toFixed(1)}% ({getPeriodLabel(period2)})
+                      </p>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+            
+            <p className="text-xs text-muted-foreground mt-1">
+              {comparisonMode === "single" ? "Taxa média geral" : getPeriodLabel(period1)}
+            </p>
           </CardContent>
         </Card>
         
@@ -1049,20 +1624,22 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-1">
-              {leadsMetrics.bySource.slice(0, 2).map((item, idx) => <div key={item.source} className="flex justify-between text-sm">
-                  <span className="truncate mr-2 font-medium" style={{
-                color: CHART_COLORS[idx]
-              }}>
-                    {item.source}
-                  </span>
-                  <Badge variant="secondary" className="font-semibold">{item.count}</Badge>
-                </div>)}
+              {(comparisonMode === "single" ? leadsMetrics.bySource : leadsMetricsP1.bySource)
+                .slice(0, 2)
+                .map((item, idx) => (
+                  <div key={item.source} className="flex justify-between text-sm">
+                    <span className="truncate mr-2 font-medium" style={{ color: CHART_COLORS[idx] }}>
+                      {item.source}
+                    </span>
+                    <Badge variant="secondary" className="font-semibold">{item.count}</Badge>
+                  </div>
+                ))}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {funnelData.length === 0 ? <Card>
+      {funnelData.length === 0 && funnelDataP1.length === 0 ? <Card>
           <CardContent className="pt-6">
             <p className="text-center text-muted-foreground">
               Nenhuma campanha com dados ainda. Crie uma campanha para começar!
@@ -1165,7 +1742,7 @@ const Dashboard = () => {
             <CardContent>
               <div className="h-[450px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={comparativeFunnelData}>
+                  <BarChart data={comparisonMode === "comparison" ? getComparativeFunnelData() : comparativeFunnelData}>
                     <defs>
                       {selectedCampaigns.map((_, idx) => <linearGradient key={`gradient-${idx}`} id={`barGradient-${idx}`} x1="0" y1="0" x2="0" y2="1">
                           <stop offset="0%" stopColor={CHART_COLORS[idx % CHART_COLORS.length]} stopOpacity={0.9} />
@@ -1177,11 +1754,9 @@ const Dashboard = () => {
                       dataKey="stage" 
                       height={100}
                       interval={0}
-                      tick={<CustomAxisTick data={comparativeFunnelData} />}
+                      tick={<CustomAxisTick data={comparisonMode === "comparison" ? getComparativeFunnelData() : comparativeFunnelData} />}
                     />
-                    <YAxis tick={{
-                  fill: 'hsl(var(--muted-foreground))'
-                }} />
+                    <YAxis tick={{ fill: 'hsl(var(--muted-foreground))' }} />
                     <Tooltip contentStyle={{
                   backgroundColor: 'hsl(var(--card))',
                   border: '1px solid hsl(var(--border))',
@@ -1189,30 +1764,53 @@ const Dashboard = () => {
                   boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
                 }} />
                     <Legend />
-                    {selectedCampaigns.map((campaignId, idx) => {
-                  const campaign = campaigns.find(c => c.id === campaignId);
-                  return campaign ? <Bar 
-                    key={campaignId} 
-                    dataKey={campaign.name} 
-                    fill={`url(#barGradient-${idx})`} 
-                    radius={[8, 8, 0, 0]}
-                    label={<CustomBarLabel />}
-                    style={{
-                      filter: 'drop-shadow(0px 4px 6px rgba(0, 0, 0, 0.15))'
-                    }}
-                    onClick={(data) => {
-                      // Abrir dialog de UTMs apenas quando clicar em "Visitas"
-                      if (data && data.stage === "Visitas") {
-                        setSelectedUtmCampaign({
-                          id: campaignId,
-                          name: campaign.name,
-                        });
-                        setUtmDialogOpen(true);
-                      }
-                    }}
-                    className="cursor-pointer hover:opacity-80 transition-opacity"
-                  /> : null;
-                })}
+                    {comparisonMode === "comparison" ? (
+                      <>
+                        {selectedCampaigns.map((campaignId, idx) => {
+                          const campaign = campaigns.find(c => c.id === campaignId);
+                          return campaign ? (
+                            <Fragment key={campaignId}>
+                              <Bar 
+                                dataKey={`${campaign.name}_P1`}
+                                fill={CHART_COLORS[idx % CHART_COLORS.length]}
+                                name={`${campaign.name} (${getPeriodLabel(period1)})`}
+                                radius={[8, 8, 0, 0]}
+                              />
+                              <Bar 
+                                dataKey={`${campaign.name}_P2`}
+                                fill={CHART_COLORS[idx % CHART_COLORS.length]}
+                                fillOpacity={0.4}
+                                name={`${campaign.name} (${getPeriodLabel(period2)})`}
+                                radius={[8, 8, 0, 0]}
+                              />
+                            </Fragment>
+                          ) : null;
+                        })}
+                      </>
+                    ) : (
+                      <>
+                        {selectedCampaigns.map((campaignId, idx) => {
+                          const campaign = campaigns.find(c => c.id === campaignId);
+                          return campaign ? (
+                            <Bar 
+                              key={campaignId} 
+                              dataKey={campaign.name} 
+                              fill={`url(#barGradient-${idx})`} 
+                              radius={[8, 8, 0, 0]}
+                              label={<CustomBarLabel />}
+                              style={{ filter: 'drop-shadow(0px 4px 6px rgba(0, 0, 0, 0.15))' }}
+                              onClick={(data) => {
+                                if (data && data.stage === "Visitas") {
+                                  setSelectedUtmCampaign({ id: campaignId, name: campaign.name });
+                                  setUtmDialogOpen(true);
+                                }
+                              }}
+                              className="cursor-pointer hover:opacity-80 transition-opacity"
+                            />
+                          ) : null;
+                        })}
+                      </>
+                    )}
                   </BarChart>
                 </ResponsiveContainer>
               </div>
