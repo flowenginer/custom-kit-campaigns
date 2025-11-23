@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -29,11 +30,13 @@ export const ApplyWorkflowDialog = ({ workflow, open, onOpenChange, onApply }: A
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
+  const [applyToAll, setApplyToAll] = useState(false);
 
   useEffect(() => {
     if (open) {
       loadCampaigns();
       setSelectedCampaignId("");
+      setApplyToAll(false);
     }
   }, [open]);
 
@@ -54,23 +57,41 @@ export const ApplyWorkflowDialog = ({ workflow, open, onOpenChange, onApply }: A
   };
 
   const handleApply = async () => {
-    if (!selectedCampaignId || !workflow) return;
+    if (!workflow) return;
+    if (!applyToAll && !selectedCampaignId) return;
 
     setApplying(true);
-    const { error } = await supabase
-      .from("campaigns")
-      .update({ workflow_template_id: workflow.id })
-      .eq("id", selectedCampaignId);
 
-    if (error) {
-      toast.error("Erro ao aplicar workflow");
-      console.error(error);
-    } else {
-      toast.success("Workflow aplicado com sucesso!");
+    try {
+      if (applyToAll) {
+        const campaignIds = campaigns.map(c => c.id);
+        const { error } = await supabase
+          .from("campaigns")
+          .update({ workflow_template_id: workflow.id })
+          .in("id", campaignIds);
+
+        if (error) throw error;
+        toast.success(`Workflow aplicado a ${campaigns.length} campanha(s)!`);
+      } else {
+        const { error } = await supabase
+          .from("campaigns")
+          .update({ workflow_template_id: workflow.id })
+          .eq("id", selectedCampaignId);
+
+        if (error) throw error;
+        
+        const campaign = campaigns.find(c => c.id === selectedCampaignId);
+        toast.success(`Workflow aplicado a "${campaign?.name}"!`);
+      }
+
       onApply();
       onOpenChange(false);
+    } catch (error) {
+      toast.error("Erro ao aplicar workflow");
+      console.error(error);
+    } finally {
+      setApplying(false);
     }
-    setApplying(false);
   };
 
   if (!workflow) return null;
@@ -95,22 +116,39 @@ export const ApplyWorkflowDialog = ({ workflow, open, onOpenChange, onApply }: A
           ) : campaigns.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">Nenhuma campanha disponível</p>
           ) : (
-            <div>
-              <Label htmlFor="campaign">Selecionar Campanha*</Label>
-              <Select value={selectedCampaignId} onValueChange={setSelectedCampaignId}>
-                <SelectTrigger id="campaign">
-                  <SelectValue placeholder="Escolha uma campanha" />
-                </SelectTrigger>
-                <SelectContent>
-                  {campaigns.map((campaign) => (
-                    <SelectItem key={campaign.id} value={campaign.id}>
-                      {campaign.name}
-                      {campaign.segments && ` (${campaign.segments.name})`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <>
+              <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
+                <div className="flex-1">
+                  <Label className="text-sm font-semibold">Aplicar a todas as campanhas</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Aplicar este workflow em {campaigns.length} campanha(s) de uma vez
+                  </p>
+                </div>
+                <Switch
+                  checked={applyToAll}
+                  onCheckedChange={setApplyToAll}
+                />
+              </div>
+
+              {!applyToAll && (
+                <div>
+                  <Label htmlFor="campaign">Selecionar Campanha*</Label>
+                  <Select value={selectedCampaignId} onValueChange={setSelectedCampaignId}>
+                    <SelectTrigger id="campaign">
+                      <SelectValue placeholder="Escolha uma campanha" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {campaigns.map((campaign) => (
+                        <SelectItem key={campaign.id} value={campaign.id}>
+                          {campaign.name}
+                          {campaign.segments && ` (${campaign.segments.name})`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -118,8 +156,11 @@ export const ApplyWorkflowDialog = ({ workflow, open, onOpenChange, onApply }: A
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={applying}>
             Cancelar
           </Button>
-          <Button onClick={handleApply} disabled={!selectedCampaignId || applying}>
-            {applying ? "Aplicando..." : "Aplicar Workflow"}
+          <Button 
+            onClick={handleApply} 
+            disabled={(!applyToAll && !selectedCampaignId) || applying || campaigns.length === 0}
+          >
+            {applying ? "Aplicando..." : applyToAll ? "Aplicar a Todas" : "Aplicar Workflow"}
           </Button>
         </DialogFooter>
       </DialogContent>
