@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CalendarIcon } from "lucide-react";
 import { format, subDays, startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -41,26 +40,65 @@ export const DateRangeFilter = ({ startDate, endDate, onDateChange }: DateRangeF
   };
 
   return (
-    <div className="flex flex-wrap gap-4 items-center">
-      <Select value={preset} onValueChange={handlePresetChange}>
-        <SelectTrigger className="w-[180px]">
-          <SelectValue placeholder="Selecione período" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="today">Hoje</SelectItem>
-          <SelectItem value="7d">Últimos 7 dias</SelectItem>
-          <SelectItem value="30d">Últimos 30 dias</SelectItem>
-          <SelectItem value="month">Este mês</SelectItem>
-          <SelectItem value="lastMonth">Mês passado</SelectItem>
-          <SelectItem value="custom">Personalizado</SelectItem>
-        </SelectContent>
-      </Select>
+    <div className="flex flex-col gap-3">
+      {/* Botões de período rápido */}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          size="sm"
+          variant={preset === "today" ? "default" : "outline"}
+          onClick={() => handlePresetChange("today")}
+        >
+          Hoje
+        </Button>
+        
+        <Button
+          size="sm"
+          variant={preset === "7d" ? "default" : "outline"}
+          onClick={() => handlePresetChange("7d")}
+        >
+          7 dias
+        </Button>
+        
+        <Button
+          size="sm"
+          variant={preset === "30d" ? "default" : "outline"}
+          onClick={() => handlePresetChange("30d")}
+        >
+          30 dias
+        </Button>
+        
+        <Button
+          size="sm"
+          variant={preset === "month" ? "default" : "outline"}
+          onClick={() => handlePresetChange("month")}
+        >
+          Este mês
+        </Button>
+        
+        <Button
+          size="sm"
+          variant={preset === "lastMonth" ? "default" : "outline"}
+          onClick={() => handlePresetChange("lastMonth")}
+        >
+          Mês passado
+        </Button>
+        
+        <Button
+          size="sm"
+          variant={preset === "custom" ? "default" : "outline"}
+          onClick={() => handlePresetChange("custom")}
+        >
+          <CalendarIcon className="mr-1 h-4 w-4" />
+          Personalizado
+        </Button>
+      </div>
 
+      {/* Calendários customizados */}
       {preset === "custom" && (
-        <>
+        <div className="flex flex-wrap gap-2">
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="w-[180px] justify-start">
+              <Button variant="outline" size="sm" className="justify-start">
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {format(startDate, "dd/MM/yyyy", { locale: ptBR })}
               </Button>
@@ -77,7 +115,7 @@ export const DateRangeFilter = ({ startDate, endDate, onDateChange }: DateRangeF
 
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="w-[180px] justify-start">
+              <Button variant="outline" size="sm" className="justify-start">
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {format(endDate, "dd/MM/yyyy", { locale: ptBR })}
               </Button>
@@ -91,7 +129,7 @@ export const DateRangeFilter = ({ startDate, endDate, onDateChange }: DateRangeF
               />
             </PopoverContent>
           </Popover>
-        </>
+        </div>
       )}
     </div>
   );
