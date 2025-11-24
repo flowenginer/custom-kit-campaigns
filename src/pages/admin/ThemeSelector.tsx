@@ -13,9 +13,9 @@ export default function ThemeSelector() {
     return (
       <div className="p-6 space-y-6">
         <Skeleton className="h-24 w-full" />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           {[...Array(10)].map((_, i) => (
-            <Skeleton key={i} className="h-48 w-full" />
+            <Skeleton key={i} className="h-36 w-full" />
           ))}
         </div>
       </div>
@@ -31,7 +31,7 @@ export default function ThemeSelector() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {GLOBAL_THEMES.map((theme) => (
           <ThemeCard
             key={theme.id}
