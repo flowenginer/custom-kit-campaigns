@@ -12,6 +12,7 @@ import { Plus, Trash2, Upload, ImageIcon, X, Pencil, LayoutGrid, LayoutList, Gri
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface Segment {
   id: string;
@@ -115,6 +116,10 @@ const Models = () => {
   const [bulkUploading, setBulkUploading] = useState(false);
   const [bulkProgress, setBulkProgress] = useState(0);
   const [bulkCurrentModel, setBulkCurrentModel] = useState("");
+
+  // Estados para seleção múltipla
+  const [selectedModels, setSelectedModels] = useState<string[]>([]);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     loadModels();
@@ -504,6 +509,129 @@ const Models = () => {
     }
   };
 
+  // Alternar seleção de um modelo individual
+  const toggleModelSelection = (modelId: string) => {
+    setSelectedModels(prev => 
+      prev.includes(modelId)
+        ? prev.filter(id => id !== modelId)
+        : [...prev, modelId]
+    );
+  };
+
+  // Selecionar/Desselecionar todos os modelos filtrados
+  const toggleSelectAll = () => {
+    if (selectedModels.length === filteredModels.length) {
+      setSelectedModels([]);
+    } else {
+      setSelectedModels(filteredModels.map(m => m.id));
+    }
+  };
+
+  // Limpar seleção
+  const clearSelection = () => {
+    setSelectedModels([]);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedModels.length === 0) {
+      toast.error("Nenhum modelo selecionado");
+      return;
+    }
+
+    // Verificar se há pedidos associados a QUALQUER um dos modelos
+    let totalOrders = 0;
+    for (const modelId of selectedModels) {
+      const { count } = await supabase
+        .from('orders')
+        .select('*', { count: 'exact', head: true })
+        .eq('model_id', modelId);
+      
+      if (count) totalOrders += count;
+    }
+
+    // Montar mensagem de confirmação
+    let confirmMessage = `Tem certeza que deseja excluir ${selectedModels.length} modelo(s)?`;
+    
+    if (totalOrders > 0) {
+      confirmMessage = `⚠️ ATENÇÃO: Os modelos selecionados possuem ${totalOrders} pedido(s) associado(s).\n\n` +
+                       `Tem certeza que deseja excluir ${selectedModels.length} modelo(s) mesmo assim?\n\n` +
+                       `Esta ação NÃO pode ser desfeita!`;
+    }
+
+    if (!confirm(confirmMessage)) {
+      setIsDeleteDialogOpen(false);
+      return;
+    }
+
+    // Iniciar exclusão
+    setUploading(true);
+    setUploadProgress(0);
+    
+    let successCount = 0;
+    let errorCount = 0;
+    const total = selectedModels.length;
+
+    try {
+      for (let i = 0; i < selectedModels.length; i++) {
+        const modelId = selectedModels[i];
+        const model = models.find(m => m.id === modelId);
+        
+        if (!model) {
+          errorCount++;
+          continue;
+        }
+
+        try {
+          // Excluir imagens do storage
+          const imageFields = ["photo_main", "image_front", "image_back", "image_right", "image_left"];
+          const filesToDelete = imageFields.map(field => 
+            `${model.segment_id}/${modelId}/${field}.jpg`
+          );
+          
+          await supabase.storage
+            .from("shirt-models-images")
+            .remove(filesToDelete);
+
+          // Excluir modelo do banco
+          const { error } = await supabase
+            .from("shirt_models")
+            .delete()
+            .eq("id", modelId);
+          
+          if (error) throw error;
+          
+          successCount++;
+        } catch (error) {
+          console.error(`Erro ao excluir modelo ${modelId}:`, error);
+          errorCount++;
+        }
+
+        // Atualizar progresso
+        setUploadProgress(((i + 1) / total) * 100);
+      }
+
+      // Feedback final
+      if (successCount > 0) {
+        toast.success(`✅ ${successCount} modelo(s) excluído(s) com sucesso!`);
+        loadModels();
+      }
+      
+      if (errorCount > 0) {
+        toast.error(`❌ ${errorCount} modelo(s) falharam na exclusão`);
+      }
+
+      // Limpar seleção e fechar dialog
+      clearSelection();
+      setIsDeleteDialogOpen(false);
+      
+    } catch (error: any) {
+      toast.error("Erro ao excluir modelos: " + error.message);
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
   const uploadImage = async (modelId: string, field: string, file: File) => {
     const fileExt = file.name.split('.').pop();
     const filePath = `${formData.segment_id}/${modelId}/${field}.${fileExt}`;
@@ -819,6 +947,12 @@ const Models = () => {
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-[50px]">
+              <Checkbox
+                checked={selectedModels.length === filteredModels.length && filteredModels.length > 0}
+                onCheckedChange={toggleSelectAll}
+              />
+            </TableHead>
             <TableHead className="w-[80px]">Imagem</TableHead>
             <TableHead>Nome</TableHead>
             <TableHead>Segmento</TableHead>
@@ -828,7 +962,16 @@ const Models = () => {
         </TableHeader>
         <TableBody>
           {filteredModels.map((model) => (
-            <TableRow key={model.id}>
+            <TableRow 
+              key={model.id}
+              className={selectedModels.includes(model.id) ? "bg-blue-50" : ""}
+            >
+              <TableCell>
+                <Checkbox
+                  checked={selectedModels.includes(model.id)}
+                  onCheckedChange={() => toggleModelSelection(model.id)}
+                />
+              </TableCell>
               <TableCell>
                 <div className="w-16 h-16 rounded overflow-hidden">
                   <img
@@ -882,8 +1025,20 @@ const Models = () => {
   const renderSmallView = () => (
     <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
       {filteredModels.map((model) => (
-        <Card key={model.id} className="overflow-hidden hover:shadow-md transition-shadow">
+        <Card 
+          key={model.id} 
+          className={`overflow-hidden hover:shadow-md transition-shadow ${
+            selectedModels.includes(model.id) ? 'ring-2 ring-blue-500' : ''
+          }`}
+        >
           <div className="aspect-square bg-muted relative group">
+            <div className="absolute top-2 left-2 z-10">
+              <Checkbox
+                checked={selectedModels.includes(model.id)}
+                onCheckedChange={() => toggleModelSelection(model.id)}
+                className="bg-white shadow-md"
+              />
+            </div>
             <img
               src={model.photo_main}
               alt={model.name}
@@ -925,8 +1080,20 @@ const Models = () => {
   const renderMediumView = () => (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       {filteredModels.map((model) => (
-        <Card key={model.id} className="overflow-hidden">
+        <Card 
+          key={model.id} 
+          className={`overflow-hidden ${
+            selectedModels.includes(model.id) ? 'ring-2 ring-blue-500' : ''
+          }`}
+        >
           <div className="aspect-square bg-muted relative">
+            <div className="absolute top-2 left-2 z-10">
+              <Checkbox
+                checked={selectedModels.includes(model.id)}
+                onCheckedChange={() => toggleModelSelection(model.id)}
+                className="bg-white shadow-md"
+              />
+            </div>
             <img
               src={model.photo_main}
               alt={model.name}
@@ -982,8 +1149,20 @@ const Models = () => {
   const renderLargeView = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {filteredModels.map((model) => (
-        <Card key={model.id} className="overflow-hidden">
+        <Card 
+          key={model.id} 
+          className={`overflow-hidden ${
+            selectedModels.includes(model.id) ? 'ring-2 ring-blue-500' : ''
+          }`}
+        >
           <div className="aspect-video bg-muted relative">
+            <div className="absolute top-2 left-2 z-10">
+              <Checkbox
+                checked={selectedModels.includes(model.id)}
+                onCheckedChange={() => toggleModelSelection(model.id)}
+                className="bg-white shadow-md"
+              />
+            </div>
             <img
               src={model.photo_main}
               alt={model.name}
@@ -1128,44 +1307,97 @@ const Models = () => {
         </div>
       </div>
 
-      {/* Filtros */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <Input
-          placeholder="Buscar por nome..."
-          value={searchName}
-          onChange={(e) => setSearchName(e.target.value)}
-          className="sm:w-64"
-        />
-        <Select value={filterSegmentTag} onValueChange={setFilterSegmentTag}>
-          <SelectTrigger className="sm:w-48">
-            <SelectValue placeholder="Filtrar por segmento" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os Segmentos</SelectItem>
-            {availableSegmentTags.map((tag) => (
-              <SelectItem key={tag} value={tag}>
-                📁 {tag}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={filterModelTag} onValueChange={setFilterModelTag}>
-          <SelectTrigger className="sm:w-48">
-            <SelectValue placeholder="Filtrar por tipo" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os Tipos</SelectItem>
-            <SelectItem value="manga_longa">👕 Manga Longa</SelectItem>
-            <SelectItem value="ziper">🧥 Zíper</SelectItem>
-            <SelectItem value="manga_curta">👔 Manga Curta</SelectItem>
-            <SelectItem value="regata">🎽 Regata</SelectItem>
-          </SelectContent>
-        </Select>
-        {segmentFilter && (
-          <Button variant="outline" onClick={() => navigate('/admin/models')}>
-            Limpar Filtro de Segmento
+      {/* Barra de Seleção Múltipla */}
+      {selectedModels.length > 0 && (
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="py-3">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <Badge variant="default" className="text-sm px-3 py-1">
+                  {selectedModels.length} selecionado(s)
+                </Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearSelection}
+                >
+                  Limpar Seleção
+                </Button>
+              </div>
+              
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setIsDeleteDialogOpen(true)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Excluir Selecionados
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Controles de Seleção e Filtros */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <Button
+            variant={selectedModels.length === filteredModels.length && filteredModels.length > 0 ? "default" : "outline"}
+            size="sm"
+            onClick={toggleSelectAll}
+            disabled={filteredModels.length === 0}
+          >
+            {selectedModels.length === filteredModels.length && filteredModels.length > 0
+              ? "✓ Desselecionar Todos"
+              : "☐ Selecionar Todos"
+            }
           </Button>
-        )}
+          
+          {selectedModels.length > 0 && (
+            <span className="text-sm text-muted-foreground">
+              ({selectedModels.length} de {filteredModels.length})
+            </span>
+          )}
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Input
+            placeholder="Buscar por nome..."
+            value={searchName}
+            onChange={(e) => setSearchName(e.target.value)}
+            className="sm:w-64"
+          />
+          <Select value={filterSegmentTag} onValueChange={setFilterSegmentTag}>
+            <SelectTrigger className="sm:w-48">
+              <SelectValue placeholder="Filtrar por segmento" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os Segmentos</SelectItem>
+              {availableSegmentTags.map((tag) => (
+                <SelectItem key={tag} value={tag}>
+                  📁 {tag}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={filterModelTag} onValueChange={setFilterModelTag}>
+            <SelectTrigger className="sm:w-48">
+              <SelectValue placeholder="Filtrar por tipo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os Tipos</SelectItem>
+              <SelectItem value="manga_longa">👕 Manga Longa</SelectItem>
+              <SelectItem value="ziper">🧥 Zíper</SelectItem>
+              <SelectItem value="manga_curta">👔 Manga Curta</SelectItem>
+              <SelectItem value="regata">🎽 Regata</SelectItem>
+            </SelectContent>
+          </Select>
+          {segmentFilter && (
+            <Button variant="outline" onClick={() => navigate('/admin/models')}>
+              Limpar Filtro de Segmento
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Mostrar qual segmento está filtrado */}
@@ -1835,6 +2067,64 @@ const Models = () => {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de Confirmação de Exclusão em Massa */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>🗑️ Confirmar Exclusão em Massa</DialogTitle>
+            <DialogDescription>
+              Você está prestes a excluir <strong>{selectedModels.length} modelo(s)</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {uploading ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Excluindo modelos...</Label>
+                <span className="text-sm font-medium">{Math.round(uploadProgress)}%</span>
+              </div>
+              <Progress value={uploadProgress} />
+              <p className="text-sm text-muted-foreground text-center">
+                Por favor, aguarde...
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <Card className="bg-red-50 border-red-200">
+                <CardContent className="pt-4">
+                  <p className="text-sm font-medium text-red-900">
+                    ⚠️ Esta ação não pode ser desfeita!
+                  </p>
+                  <p className="text-xs text-red-700 mt-1">
+                    Os modelos e suas imagens serão permanentemente removidos.
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsDeleteDialogOpen(false)}
+                  className="flex-1"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={handleBulkDelete}
+                  className="flex-1"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Excluir {selectedModels.length} Modelo(s)
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
