@@ -202,7 +202,7 @@ interface DailyVisitsData {
   [campaignName: string]: string | number;
 }
 
-type DateFilterType = "today" | "7days" | "15days" | "30days" | "month" | "lastMonth" | "custom";
+type DateFilterType = "today" | "yesterday" | "7days" | "15days" | "30days" | "month" | "lastMonth" | "custom";
 type ComparisonMode = "single" | "comparison";
 
 const CHART_COLORS = ["hsl(var(--chart-purple))", "hsl(var(--chart-green))", "hsl(var(--chart-orange))", "hsl(var(--chart-blue))", "hsl(var(--chart-pink))", "hsl(var(--chart-teal))", "hsl(var(--chart-indigo))", "hsl(var(--chart-cyan))", "hsl(var(--chart-amber))", "hsl(var(--chart-red))"];
@@ -268,6 +268,12 @@ const Dashboard = () => {
     switch (period) {
       case "today":
         return { start: today, end: now };
+      case "yesterday":
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const endOfYesterday = new Date(yesterday);
+        endOfYesterday.setHours(23, 59, 59, 999);
+        return { start: yesterday, end: endOfYesterday };
       case "7days":
         const sevenDaysAgo = new Date(today);
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -308,6 +314,7 @@ const Dashboard = () => {
   const getPeriodLabel = (period: DateFilterType): string => {
     const labels: Record<DateFilterType, string> = {
       today: "Hoje",
+      yesterday: "Ontem",
       "7days": "Últimos 7 dias",
       "15days": "Últimos 15 dias",
       "30days": "Últimos 30 dias",
@@ -1395,6 +1402,7 @@ const Dashboard = () => {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" variant={period1 === "today" ? "default" : "outline"} onClick={() => setPeriod1("today")}>Hoje</Button>
+                    <Button size="sm" variant={period1 === "yesterday" ? "default" : "outline"} onClick={() => setPeriod1("yesterday")}>Ontem</Button>
                     <Button size="sm" variant={period1 === "7days" ? "default" : "outline"} onClick={() => setPeriod1("7days")}>7 dias</Button>
                     <Button size="sm" variant={period1 === "15days" ? "default" : "outline"} onClick={() => setPeriod1("15days")}>15 dias</Button>
                     <Button size="sm" variant={period1 === "30days" ? "default" : "outline"} onClick={() => setPeriod1("30days")}>30 dias</Button>
@@ -1442,6 +1450,7 @@ const Dashboard = () => {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" variant={period2 === "today" ? "default" : "outline"} onClick={() => setPeriod2("today")}>Hoje</Button>
+                    <Button size="sm" variant={period2 === "yesterday" ? "default" : "outline"} onClick={() => setPeriod2("yesterday")}>Ontem</Button>
                     <Button size="sm" variant={period2 === "7days" ? "default" : "outline"} onClick={() => setPeriod2("7days")}>7 dias</Button>
                     <Button size="sm" variant={period2 === "15days" ? "default" : "outline"} onClick={() => setPeriod2("15days")}>15 dias</Button>
                     <Button size="sm" variant={period2 === "30days" ? "default" : "outline"} onClick={() => setPeriod2("30days")}>30 dias</Button>
@@ -1496,6 +1505,14 @@ const Dashboard = () => {
                 onClick={() => setDateFilter("today")}
               >
                 Hoje
+              </Button>
+              
+              <Button
+                size="sm"
+                variant={dateFilter === "yesterday" ? "default" : "outline"}
+                onClick={() => setDateFilter("yesterday")}
+              >
+                Ontem
               </Button>
               
               <Button
