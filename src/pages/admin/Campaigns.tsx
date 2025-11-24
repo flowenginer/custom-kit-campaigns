@@ -380,7 +380,7 @@ export default function Campaigns() {
           <Skeleton className="h-10 w-40" />
         </div>
         
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <Card key={i}>
               <CardHeader>
@@ -614,13 +614,13 @@ export default function Campaigns() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {campaigns.map((campaign) => (
               <Card key={campaign.id}>
-                <CardHeader>
+                <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1">
-                      <CardTitle className="flex items-center gap-2">
+                      <CardTitle className="flex items-center gap-2 text-lg">
                         {campaign.name}
                         {getCampaignTestInfo(campaign.id) && (
                           <Badge variant="secondary" className="gap-1">
@@ -629,38 +629,41 @@ export default function Campaigns() {
                           </Badge>
                         )}
                       </CardTitle>
-                      <CardDescription>
+                      <CardDescription className="text-xs line-clamp-2">
                         {campaign.segments?.name || "Sem segmento"} • {campaign.model_count || 0} modelos
                         {campaign.workflow_templates && ` • Workflow: ${campaign.workflow_templates.name}`}
                       </CardDescription>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-                    <code className="text-sm flex-1 truncate">
+                <CardContent className="space-y-3 pt-0">
+                  <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
+                    <code className="text-xs flex-1 truncate">
                       {window.location.origin}/c/{campaign.unique_link}
                     </code>
                     <Button
                       variant="ghost"
-                      size="icon"
+                      size="sm"
+                      className="h-8 w-8 p-0"
                       onClick={() => copyLink(campaign.unique_link)}
                     >
-                      <Copy className="w-4 h-4" />
+                      <Copy className="w-3.5 h-3.5" />
                     </Button>
                     <Button
                       variant="ghost"
-                      size="icon"
+                      size="sm"
+                      className="h-8 w-8 p-0"
                       onClick={() => window.open(`/c/${campaign.unique_link}`, "_blank")}
                     >
-                      <ExternalLink className="w-4 h-4" />
+                      <ExternalLink className="w-3.5 h-3.5" />
                     </Button>
                   </div>
 
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     <Button
                       variant="outline"
                       size="sm"
+                      className="text-xs"
                       onClick={() => {
                         setEditingCampaign(campaign);
                         setFormData({
@@ -672,37 +675,40 @@ export default function Campaigns() {
                         setShowEditDialog(true);
                       }}
                     >
-                      <Edit className="w-4 h-4" />
+                      <Edit className="w-3.5 h-3.5" />
                       Editar
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
+                      className="text-xs"
                       onClick={() => {
                         setSelectedCampaignId(campaign.id);
                         setShowThemeDialog(true);
                       }}
                     >
-                      <Palette className="w-4 h-4" />
+                      <Palette className="w-3.5 h-3.5" />
                       Tema
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
+                      className="text-xs"
                       onClick={() => {
                         setSelectedCampaignId(campaign.id);
                         setShowChangeWorkflow(true);
                       }}
                     >
-                      <Settings className="w-4 h-4" />
+                      <Settings className="w-3.5 h-3.5" />
                       Workflow
                     </Button>
                     <Button
                       variant="destructive"
                       size="sm"
+                      className="text-xs"
                       onClick={() => handleDelete(campaign.id)}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                       Deletar
                     </Button>
                   </div>
