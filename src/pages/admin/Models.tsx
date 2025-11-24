@@ -828,7 +828,7 @@ const Models = () => {
 
   return (
     <div className="p-8 space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold">Modelos de Camisa</h1>
           <p className="text-muted-foreground mt-1">
@@ -836,13 +836,54 @@ const Models = () => {
           </p>
         </div>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Modelo
+        {/* Modo de Visualização - Integrado */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <div className="flex gap-1 bg-muted/30 p-1.5 rounded-lg border">
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setAndSaveViewMode('list')}
+              className="h-8"
+            >
+              <LayoutList className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Lista</span>
             </Button>
-          </DialogTrigger>
+            <Button
+              variant={viewMode === 'small' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setAndSaveViewMode('small')}
+              className="h-8"
+            >
+              <Grid3x3 className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Pequeno</span>
+            </Button>
+            <Button
+              variant={viewMode === 'medium' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setAndSaveViewMode('medium')}
+              className="h-8"
+            >
+              <Grid2x2 className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Médio</span>
+            </Button>
+            <Button
+              variant={viewMode === 'large' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setAndSaveViewMode('large')}
+              className="h-8"
+            >
+              <LayoutGrid className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Grande</span>
+            </Button>
+          </div>
+
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Novo Modelo
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Novo Modelo de Camisa</DialogTitle>
@@ -1121,6 +1162,7 @@ const Models = () => {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Seção de Filtros */}
@@ -1220,50 +1262,6 @@ const Models = () => {
         </CardContent>
       </Card>
 
-      {/* Controle de Visualização */}
-      <Card>
-        <CardContent className="py-4">
-          <div className="flex items-center justify-between">
-            <Label className="text-sm font-medium">
-              Modo de Visualização
-            </Label>
-            <div className="flex gap-1">
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setAndSaveViewMode('list')}
-              >
-                <LayoutList className="h-4 w-4 mr-1" />
-                Lista
-              </Button>
-              <Button
-                variant={viewMode === 'small' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setAndSaveViewMode('small')}
-              >
-                <Grid3x3 className="h-4 w-4 mr-1" />
-                Pequeno
-              </Button>
-              <Button
-                variant={viewMode === 'medium' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setAndSaveViewMode('medium')}
-              >
-                <Grid2x2 className="h-4 w-4 mr-1" />
-                Médio
-              </Button>
-              <Button
-                variant={viewMode === 'large' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setAndSaveViewMode('large')}
-              >
-                <LayoutGrid className="h-4 w-4 mr-1" />
-                Grande
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {segmentFilter && filteredSegment && (
         <Card className="bg-primary/5 border-primary/20">
