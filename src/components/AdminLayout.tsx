@@ -107,7 +107,7 @@ const AdminLayout = () => {
           <SidebarContent className="py-4">
             <SidebarGroup>
               <SidebarGroupContent>
-                <SidebarMenu>
+                <SidebarMenu className="space-y-1">
                   {showDesignerLinks && (
                     <>
                       <SidebarMenuItem>
@@ -123,7 +123,7 @@ const AdminLayout = () => {
                         >
                           <NavLink to="/admin/dashboard">
                             <LayoutDashboard className="h-5 w-5" />
-                            <span className="text-xl font-medium">Dashboard</span>
+                            <span className="text-base">Dashboard</span>
                           </NavLink>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -141,7 +141,7 @@ const AdminLayout = () => {
                         >
                           <NavLink to="/admin/advanced-dashboard">
                             <LayoutDashboard className="h-5 w-5" />
-                            <span className="text-xl font-medium">Data Cross</span>
+                            <span className="text-base">Data Cross</span>
                           </NavLink>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -164,7 +164,7 @@ const AdminLayout = () => {
                         >
                           <NavLink to="/admin/segments" onClick={() => setIsNavigating(true)}>
                             <Tag className="h-5 w-5" />
-                            <span className="text-xl font-medium">Segmentos</span>
+                            <span className="text-base">Segmentos</span>
                           </NavLink>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -183,7 +183,7 @@ const AdminLayout = () => {
                         >
                           <NavLink to="/admin/models" onClick={() => setIsNavigating(true)}>
                             <Tag className="h-5 w-5" />
-                            <span className="text-xl font-medium">Modelos</span>
+                            <span className="text-base">Modelos</span>
                           </NavLink>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -202,7 +202,7 @@ const AdminLayout = () => {
                         >
                           <NavLink to="/admin/campaigns" onClick={() => setIsNavigating(true)}>
                             <Megaphone className="h-5 w-5" />
-                            <span className="text-xl font-medium">Campanhas</span>
+                            <span className="text-base">Campanhas</span>
                           </NavLink>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -221,7 +221,7 @@ const AdminLayout = () => {
                         >
                           <NavLink to="/admin/leads" onClick={() => setIsNavigating(true)}>
                             <Users className="h-5 w-5" />
-                            <span className="text-xl font-medium">Leads</span>
+                            <span className="text-base">Leads</span>
                           </NavLink>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -240,7 +240,7 @@ const AdminLayout = () => {
                         >
                           <NavLink to="/admin/workflows" onClick={() => setIsNavigating(true)}>
                             <Workflow className="h-5 w-5" />
-                            <span className="text-xl font-medium">Workflows</span>
+                            <span className="text-base">Workflows</span>
                           </NavLink>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -259,7 +259,7 @@ const AdminLayout = () => {
                         >
                           <NavLink to="/admin/ab-tests" onClick={() => setIsNavigating(true)}>
                             <FlaskConical className="h-5 w-5" />
-                            <span className="text-xl font-medium">Testes A/B</span>
+                            <span className="text-base">Testes A/B</span>
                           </NavLink>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -281,7 +281,7 @@ const AdminLayout = () => {
                       >
                         <NavLink to="/admin/creation" onClick={() => setIsNavigating(true)}>
                           <Palette className="h-5 w-5" />
-                          <span className="text-xl font-medium">Criação</span>
+                          <span className="text-base">Criação</span>
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -302,7 +302,7 @@ const AdminLayout = () => {
                       >
                         <NavLink to="/admin/orders" onClick={() => setIsNavigating(true)}>
                           <ShoppingBag className="h-5 w-5" />
-                          <span className="text-xl font-medium">Pedidos</span>
+                          <span className="text-base">Pedidos</span>
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -323,7 +323,7 @@ const AdminLayout = () => {
                       >
                         <NavLink to="/admin/api" onClick={() => setIsNavigating(true)}>
                           <Code className="h-5 w-5" />
-                          <span className="text-xl font-medium">API</span>
+                          <span className="text-base">API</span>
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -344,7 +344,7 @@ const AdminLayout = () => {
                       >
                         <NavLink to="/admin/settings" onClick={() => setIsNavigating(true)}>
                           <Settings className="h-5 w-5" />
-                          <span className="text-xl font-medium">Configurações</span>
+                          <span className="text-base">Configurações</span>
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -362,7 +362,7 @@ const AdminLayout = () => {
                 className="hover:bg-accent hover:text-accent-foreground"
               >
                 <LogOut className="h-5 w-5" />
-                <span className="text-xl font-medium">Sair</span>
+                <span className="text-base">Sair</span>
               </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
