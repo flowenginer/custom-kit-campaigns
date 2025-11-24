@@ -1346,19 +1346,31 @@ const Dashboard = () => {
           {/* Legenda Visual Global */}
           <Card className="bg-muted/50 border-primary/20">
             <CardContent className="pt-4">
-              <div className="flex items-center justify-center gap-6 text-sm flex-wrap">
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded bg-primary" />
-                  <span className="font-medium">
-                    {getPeriodLabel(period1)} (Principal)
-                  </span>
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-center justify-center gap-6 text-sm flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded bg-primary" />
+                    <span className="font-medium">
+                      {getPeriodLabel(period1)} (Principal)
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded bg-chart-orange opacity-60" />
+                    <span className="font-medium text-muted-foreground">
+                      {getPeriodLabel(period2)} (Comparação)
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded bg-chart-orange opacity-60" />
-                  <span className="font-medium text-muted-foreground">
-                    {getPeriodLabel(period2)} (Comparação)
-                  </span>
-                </div>
+                
+                {/* Botão de retorno */}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setComparisonMode("single")}
+                  className="flex items-center gap-2 flex-shrink-0"
+                >
+                  ← Voltar para Período Único
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -1780,107 +1792,129 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      {funnelData.length === 0 && funnelDataP1.length === 0 ? <Card>
-          <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">
-              Nenhuma campanha com dados ainda. Crie uma campanha para começar!
-            </p>
-          </CardContent>
-        </Card> : <>
-          {/* Seção 2: Gráfico de Funil Interativo com Filtro de Campanhas */}
-          <Card className="shadow-xl">
-            <CardHeader>
-              <div className="flex flex-col gap-4">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                  <div>
-                    <CardTitle className="text-2xl">Funil Comparativo de Campanhas</CardTitle>
-                    <CardDescription>
-                      Filtre por workflow e selecione campanhas para comparar
-                    </CardDescription>
-                  </div>
-                </div>
+      {/* Seção 2: Gráfico de Funil Interativo com Filtro de Campanhas - SEMPRE VISÍVEL */}
+      <Card className="shadow-xl">
+        <CardHeader>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <CardTitle className="text-2xl">Funil Comparativo de Campanhas</CardTitle>
+                <CardDescription>
+                  Filtre por workflow e selecione campanhas para comparar
+                </CardDescription>
+              </div>
+            </div>
+            
+            {/* Filtro de Workflow - SEMPRE VISÍVEL */}
+            <div className="flex flex-col gap-3">
+              <label className="text-sm font-medium text-muted-foreground">Workflow:</label>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant={selectedWorkflowId === "all" ? "default" : "outline"}
+                  onClick={() => {
+                    setSelectedWorkflowId("all");
+                    saveSelectedWorkflow("all");
+                  }}
+                >
+                  Todos os Workflows
+                </Button>
                 
-                {/* Filtro de Workflow */}
-                <div className="flex flex-col gap-3">
-                  <label className="text-sm font-medium text-muted-foreground">Workflow:</label>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      size="sm"
-                      variant={selectedWorkflowId === "all" ? "default" : "outline"}
-                      onClick={() => {
-                        setSelectedWorkflowId("all");
-                        saveSelectedWorkflow("all");
-                      }}
-                    >
-                      Todos os Workflows
-                    </Button>
-                    
-                    {workflows.map((workflow) => (
-                      <Button
-                        key={workflow.id}
-                        size="sm"
-                        variant={selectedWorkflowId === workflow.id ? "default" : "outline"}
-                        onClick={() => {
-                          setSelectedWorkflowId(workflow.id);
-                          saveSelectedWorkflow(workflow.id);
-                        }}
-                      >
-                        {workflow.name}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-                
-                {/* Filtro de Campanhas */}
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-muted-foreground">
-                      Campanhas:
-                    </label>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          const allCampaignIds = getFilteredCampaigns().map(c => c.id);
-                          setSelectedCampaigns(allCampaignIds);
-                          saveSelectedCampaigns(allCampaignIds);
-                        }}
-                      >
-                        Selecionar Todas
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setSelectedCampaigns([]);
-                          saveSelectedCampaigns([]);
-                        }}
-                      >
-                        Limpar Seleção
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-wrap gap-2">
-                  {getFilteredCampaigns().map((campaign, idx) => <Badge key={campaign.id} variant={selectedCampaigns.includes(campaign.id) ? "default" : "outline"} className="cursor-pointer transition-all hover:scale-105" style={selectedCampaigns.includes(campaign.id) ? {
-                backgroundColor: CHART_COLORS[idx % CHART_COLORS.length],
-                borderColor: CHART_COLORS[idx % CHART_COLORS.length]
-              } : {}} onClick={() => {
-                const newSelection = selectedCampaigns.includes(campaign.id) 
-                  ? selectedCampaigns.filter(id => id !== campaign.id) 
-                  : [...selectedCampaigns, campaign.id];
-                
-                setSelectedCampaigns(newSelection);
-                saveSelectedCampaigns(newSelection);
-              }}>
-                      {campaign.name}
-                    </Badge>)}
-                  </div>
+                {workflows.map((workflow) => (
+                  <Button
+                    key={workflow.id}
+                    size="sm"
+                    variant={selectedWorkflowId === workflow.id ? "default" : "outline"}
+                    onClick={() => {
+                      setSelectedWorkflowId(workflow.id);
+                      saveSelectedWorkflow(workflow.id);
+                    }}
+                  >
+                    {workflow.name}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            
+            {/* Filtro de Campanhas - SEMPRE VISÍVEL */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-muted-foreground">
+                  Campanhas:
+                </label>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const allCampaignIds = getFilteredCampaigns().map(c => c.id);
+                      setSelectedCampaigns(allCampaignIds);
+                      saveSelectedCampaigns(allCampaignIds);
+                    }}
+                  >
+                    Selecionar Todas
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedCampaigns([]);
+                      saveSelectedCampaigns([]);
+                    }}
+                  >
+                    Limpar Seleção
+                  </Button>
                 </div>
               </div>
-            </CardHeader>
-            <CardContent>
+              
+              <div className="flex flex-wrap gap-2">
+                {getFilteredCampaigns().length === 0 ? (
+                  <p className="text-sm text-muted-foreground italic">
+                    Nenhuma campanha encontrada para este workflow.
+                  </p>
+                ) : (
+                  getFilteredCampaigns().map((campaign, idx) => (
+                    <Badge 
+                      key={campaign.id} 
+                      variant={selectedCampaigns.includes(campaign.id) ? "default" : "outline"} 
+                      className="cursor-pointer transition-all hover:scale-105" 
+                      style={selectedCampaigns.includes(campaign.id) ? {
+                        backgroundColor: CHART_COLORS[idx % CHART_COLORS.length],
+                        borderColor: CHART_COLORS[idx % CHART_COLORS.length]
+                      } : {}} 
+                      onClick={() => {
+                        const newSelection = selectedCampaigns.includes(campaign.id) 
+                          ? selectedCampaigns.filter(id => id !== campaign.id) 
+                          : [...selectedCampaigns, campaign.id];
+                        
+                        setSelectedCampaigns(newSelection);
+                        saveSelectedCampaigns(newSelection);
+                      }}
+                    >
+                      {campaign.name}
+                    </Badge>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        
+        <CardContent>
+          {funnelData.length === 0 && funnelDataP1.length === 0 ? (
+            // MENSAGEM DENTRO DO CARD, NÃO ESCONDENDO OS FILTROS
+            <div className="h-[300px] flex items-center justify-center border-2 border-dashed border-muted rounded-lg">
+              <div className="text-center p-6 space-y-2">
+                <p className="text-lg font-medium text-muted-foreground">
+                  📊 Nenhum dado disponível
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Selecione outro workflow ou crie campanhas com dados para visualizar o funil.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <>
               {comparisonMode === "comparison" ? (
                 <div className="grid md:grid-cols-2 gap-6">
                   {/* Período 1 */}
@@ -2032,8 +2066,12 @@ const Dashboard = () => {
                   </ResponsiveContainer>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {funnelData.length === 0 && funnelDataP1.length === 0 ? null : <>
 
           {/* Seção 3: Gráfico de Pizza - Comparativo de Campanhas Ativas */}
           <Card className="shadow-xl">
