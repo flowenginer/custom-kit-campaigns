@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import AdminLayout from "./components/AdminLayout";
+import { GlobalThemeProvider } from "./components/theme/GlobalThemeProvider";
 import Dashboard from "./pages/admin/Dashboard";
 import AdvancedDashboard from "./pages/admin/AdvancedDashboard";
 import Segments from "./pages/admin/Segments";
@@ -25,6 +26,7 @@ import ABTestRedirect from "./pages/ABTestRedirect";
 import { UploadLogos } from "./pages/UploadLogos";
 import NotFound from "./pages/NotFound";
 import TrafficDashboard from "./pages/admin/TrafficDashboard";
+import ThemeSelector from "./pages/admin/ThemeSelector";
 
 // Componente para rastrear mudanças de rota em SPAs
 const AnalyticsTracker = () => {
@@ -62,7 +64,7 @@ const App = () => (
           <Route path="/t/:testLink" element={<ABTestRedirect />} />
           <Route path="/c/:uniqueLink" element={<Campaign />} />
           <Route path="/c/:uniqueLink/upload-logos" element={<UploadLogos />} />
-          <Route path="/admin" element={<AdminLayout />}>
+          <Route path="/admin" element={<GlobalThemeProvider><AdminLayout /></GlobalThemeProvider>}>
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="traffic" element={<TrafficDashboard />} />
             <Route path="advanced-dashboard" element={<AdvancedDashboard />} />
@@ -77,6 +79,7 @@ const App = () => (
             <Route path="orders" element={<Orders />} /> {/* 🆕 Rota de Pedidos */}
             <Route path="api" element={<Api />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="temas" element={<ThemeSelector />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
