@@ -2,7 +2,7 @@ import { useNavigate, Outlet, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "./ui/button";
-import { LogOut, LayoutDashboard, Tag, Megaphone, Users, Workflow, FlaskConical, Palette, Code, Settings, ShoppingBag } from "lucide-react";
+import { LogOut, LayoutDashboard, Tag, Megaphone, Users, Workflow, FlaskConical, Palette, Code, Settings, ShoppingBag, PaintBucket } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { Session } from "@supabase/supabase-js";
 import { NotificationsDropdown } from "./NotificationsDropdown";
@@ -345,6 +345,27 @@ const AdminLayout = () => {
                         <NavLink to="/admin/settings" onClick={() => setIsNavigating(true)}>
                           <Settings className="h-5 w-5" />
                           <span className="text-base">Configurações</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+
+                  {showAll && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton 
+                        asChild 
+                        isActive={location.pathname === "/admin/temas"}
+                        disabled={isNavigating}
+                        className={cn(
+                          "transition-colors",
+                          location.pathname === "/admin/temas" 
+                            ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                            : "hover:bg-accent/10 hover:text-primary"
+                        )}
+                      >
+                        <NavLink to="/admin/temas" onClick={() => setIsNavigating(true)}>
+                          <PaintBucket className="h-5 w-5" />
+                          <span className="text-base">Temas</span>
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
