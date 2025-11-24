@@ -23,6 +23,7 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const SidebarLogo = () => {
   const { open } = useSidebar();
@@ -102,8 +103,25 @@ const AdminLayout = () => {
             
             {/* Controles: Trigger e Notificações */}
             <div className="flex items-center gap-2 pt-2">
-              <SidebarTrigger className="h-9 w-9 flex-shrink-0" />
-              <NotificationsDropdown />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <SidebarTrigger className="h-9 w-9 flex-shrink-0" />
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <p>Recolher menu lateral</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <NotificationsDropdown />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <p>Notificações</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
           </SidebarHeader>
 
