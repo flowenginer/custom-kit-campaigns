@@ -1057,6 +1057,38 @@ const Dashboard = () => {
     return Object.values(sourceGroups).sort((a: any, b: any) => b.leads - a.leads).slice(0, 10);
   };
 
+  // Filtrar dados de UTM do Período 1
+  const getFilteredUtmDataP1 = () => {
+    if (!topUtmSourcesP1 || topUtmSourcesP1.length === 0) return [];
+    return topUtmSourcesP1.map(source => ({
+      source: source.source,
+      medium: '-',
+      total: source.leads
+    }));
+  };
+
+  // Filtrar dados de UTM do Período 2
+  const getFilteredUtmDataP2 = () => {
+    if (!topUtmSourcesP2 || topUtmSourcesP2.length === 0) return [];
+    return topUtmSourcesP2.map(source => ({
+      source: source.source,
+      medium: '-',
+      total: source.leads
+    }));
+  };
+
+  // Obter top sources do Período 1
+  const getTopUtmSourcesP1 = () => {
+    if (!topUtmSourcesP1 || topUtmSourcesP1.length === 0) return [];
+    return topUtmSourcesP1.slice(0, 10);
+  };
+
+  // Obter top sources do Período 2
+  const getTopUtmSourcesP2 = () => {
+    if (!topUtmSourcesP2 || topUtmSourcesP2.length === 0) return [];
+    return topUtmSourcesP2.slice(0, 10);
+  };
+
   // Carregar métricas de criação
   const loadDesignMetrics = async () => {
     try {
@@ -1271,6 +1303,10 @@ const Dashboard = () => {
   const filteredUtmData = getFilteredUtmData();
   const processedFunnelP1 = getProcessedFunnelDataP1();
   const processedFunnelP2 = getProcessedFunnelDataP2();
+  const filteredUtmDataP1 = getFilteredUtmDataP1();
+  const filteredUtmDataP2 = getFilteredUtmDataP2();
+  const topUtmSourcesP1Data = getTopUtmSourcesP1();
+  const topUtmSourcesP2Data = getTopUtmSourcesP2();
   return <div className="p-8 space-y-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -2349,20 +2385,26 @@ const Dashboard = () => {
                     <h4 className="font-semibold">Top 10 Fontes - {getPeriodLabel(period1)}</h4>
                   </div>
                   <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={topUtmSources.slice(0, 10)} layout="vertical">
-                        <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                        <XAxis type="number" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
-                        <YAxis dataKey="source" type="category" width={100} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
-                        <Tooltip contentStyle={{
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px',
-                          boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-                        }} />
-                        <Bar dataKey="leads" fill="hsl(var(--chart-teal))" radius={[0, 8, 8, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    {topUtmSourcesP1Data.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={topUtmSourcesP1Data} layout="vertical">
+                          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                          <XAxis type="number" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                          <YAxis dataKey="source" type="category" width={100} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                          <Tooltip contentStyle={{
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                          }} />
+                          <Bar dataKey="leads" fill="hsl(var(--chart-teal))" radius={[0, 8, 8, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-muted-foreground">
+                        Nenhum dado de UTM disponível para este período
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -2373,20 +2415,26 @@ const Dashboard = () => {
                     <h4 className="font-semibold text-muted-foreground">Top 10 Fontes - {getPeriodLabel(period2)}</h4>
                   </div>
                   <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={topUtmSources.slice(0, 10)} layout="vertical">
-                        <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                        <XAxis type="number" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
-                        <YAxis dataKey="source" type="category" width={100} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
-                        <Tooltip contentStyle={{
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px',
-                          boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-                        }} />
-                        <Bar dataKey="leads" fill="hsl(var(--chart-orange))" fillOpacity={0.6} radius={[0, 8, 8, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    {topUtmSourcesP2Data.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={topUtmSourcesP2Data} layout="vertical">
+                          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                          <XAxis type="number" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                          <YAxis dataKey="source" type="category" width={100} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                          <Tooltip contentStyle={{
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                          }} />
+                          <Bar dataKey="leads" fill="hsl(var(--chart-orange))" fillOpacity={0.6} radius={[0, 8, 8, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-muted-foreground">
+                        Nenhum dado de UTM disponível para este período
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2410,11 +2458,21 @@ const Dashboard = () => {
                           </tr>
                         </thead>
                         <tbody className="divide-y">
-                          {filteredUtmData.slice(0, 10).map((item, idx) => <tr key={idx} className="hover:bg-muted/50 transition-colors">
-                              <td className="px-4 py-3 text-sm font-medium">{item.source}</td>
-                              <td className="px-4 py-3 text-sm text-muted-foreground">{item.medium}</td>
-                              <td className="px-4 py-3 text-sm text-right font-semibold">{item.total}</td>
-                            </tr>)}
+                          {filteredUtmDataP1.length > 0 ? (
+                            filteredUtmDataP1.slice(0, 10).map((item, idx) => (
+                              <tr key={idx} className="hover:bg-muted/50 transition-colors">
+                                <td className="px-4 py-3 text-sm font-medium">{item.source}</td>
+                                <td className="px-4 py-3 text-sm text-muted-foreground">{item.medium}</td>
+                                <td className="px-4 py-3 text-sm text-right font-semibold">{item.total}</td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan={3} className="px-4 py-8 text-center text-muted-foreground">
+                                Nenhum dado disponível para este período
+                              </td>
+                            </tr>
+                          )}
                         </tbody>
                       </table>
                     </div>
@@ -2438,11 +2496,21 @@ const Dashboard = () => {
                           </tr>
                         </thead>
                         <tbody className="divide-y">
-                          {filteredUtmData.slice(0, 10).map((item, idx) => <tr key={idx} className="hover:bg-muted/50 transition-colors">
-                              <td className="px-4 py-3 text-sm font-medium">{item.source}</td>
-                              <td className="px-4 py-3 text-sm text-muted-foreground">{item.medium}</td>
-                              <td className="px-4 py-3 text-sm text-right font-semibold">{item.total}</td>
-                            </tr>)}
+                          {filteredUtmDataP2.length > 0 ? (
+                            filteredUtmDataP2.slice(0, 10).map((item, idx) => (
+                              <tr key={idx} className="hover:bg-muted/50 transition-colors">
+                                <td className="px-4 py-3 text-sm font-medium">{item.source}</td>
+                                <td className="px-4 py-3 text-sm text-muted-foreground">{item.medium}</td>
+                                <td className="px-4 py-3 text-sm text-right font-semibold">{item.total}</td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan={3} className="px-4 py-8 text-center text-muted-foreground">
+                                Nenhum dado disponível para este período
+                              </td>
+                            </tr>
+                          )}
                         </tbody>
                       </table>
                     </div>
