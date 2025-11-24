@@ -919,6 +919,107 @@ const Dashboard = () => {
     });
   };
 
+  // Processar dados do Período 1 para o formato do gráfico
+  const getProcessedFunnelDataP1 = (): any[] => {
+    if (!funnelDataP1 || funnelDataP1.length === 0) return [];
+    
+    // Detectar todos os steps disponíveis
+    const allStepKeys = new Set<string>();
+    funnelDataP1.forEach(campaign => {
+      Object.keys(campaign).forEach(key => {
+        if (key.startsWith("step_")) {
+          allStepKeys.add(key);
+        }
+      });
+    });
+    
+    const sortedSteps = Array.from(allStepKeys).sort((a, b) => {
+      const numA = parseInt(a.replace("step_", ""));
+      const numB = parseInt(b.replace("step_", ""));
+      return numA - numB;
+    });
+    
+    const stagesWithLabels = sortedSteps.map(step => {
+      const stepNumber = step.replace("step_", "");
+      return getStepLabel(stepNumber);
+    });
+    
+    const stages = ["Visitas", ...stagesWithLabels, "Concluído"];
+    
+    return stages.map(stage => {
+      const dataPoint: any = { stage };
+      
+      selectedCampaigns.forEach(campaignId => {
+        const campaign = funnelDataP1.find(c => c.campaignId === campaignId);
+        if (campaign) {
+          let stageKey: string;
+          if (stage === "Visitas") stageKey = "visits";
+          else if (stage === "Concluído") stageKey = "completed";
+          else {
+            const matchingStep = sortedSteps.find(step => {
+              const stepNum = step.replace("step_", "");
+              return getStepLabel(stepNum) === stage;
+            });
+            stageKey = matchingStep || "step_0";
+          }
+          dataPoint[campaign.campaignName] = campaign[stageKey] || 0;
+        }
+      });
+      
+      return dataPoint;
+    });
+  };
+
+  // Processar dados do Período 2 para o formato do gráfico
+  const getProcessedFunnelDataP2 = (): any[] => {
+    if (!funnelDataP2 || funnelDataP2.length === 0) return [];
+    
+    const allStepKeys = new Set<string>();
+    funnelDataP2.forEach(campaign => {
+      Object.keys(campaign).forEach(key => {
+        if (key.startsWith("step_")) {
+          allStepKeys.add(key);
+        }
+      });
+    });
+    
+    const sortedSteps = Array.from(allStepKeys).sort((a, b) => {
+      const numA = parseInt(a.replace("step_", ""));
+      const numB = parseInt(b.replace("step_", ""));
+      return numA - numB;
+    });
+    
+    const stagesWithLabels = sortedSteps.map(step => {
+      const stepNumber = step.replace("step_", "");
+      return getStepLabel(stepNumber);
+    });
+    
+    const stages = ["Visitas", ...stagesWithLabels, "Concluído"];
+    
+    return stages.map(stage => {
+      const dataPoint: any = { stage };
+      
+      selectedCampaigns.forEach(campaignId => {
+        const campaign = funnelDataP2.find(c => c.campaignId === campaignId);
+        if (campaign) {
+          let stageKey: string;
+          if (stage === "Visitas") stageKey = "visits";
+          else if (stage === "Concluído") stageKey = "completed";
+          else {
+            const matchingStep = sortedSteps.find(step => {
+              const stepNum = step.replace("step_", "");
+              return getStepLabel(stepNum) === stage;
+            });
+            stageKey = matchingStep || "step_0";
+          }
+          dataPoint[campaign.campaignName] = campaign[stageKey] || 0;
+        }
+      });
+      
+      return dataPoint;
+    });
+  };
+
   // Preparar dados para o gráfico de pizza comparativo
   const getCampaignComparisonData = (): CampaignComparisonData[] => {
     const totalCompleted = funnelData.reduce((sum, c) => sum + c.completed, 0);
@@ -1166,6 +1267,8 @@ const Dashboard = () => {
   const campaignComparisonData = getCampaignComparisonData();
   const topUtmSources = getTopUtmSources();
   const filteredUtmData = getFilteredUtmData();
+  const processedFunnelP1 = getProcessedFunnelDataP1();
+  const processedFunnelP2 = getProcessedFunnelDataP2();
   return <div className="p-8 space-y-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -1752,13 +1855,21 @@ const Dashboard = () => {
                     </div>
                     <div className="h-[400px]">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={funnelDataP1}>
+                        <BarChart data={processedFunnelP1}>
+                          <defs>
+                            {selectedCampaigns.map((_, idx) => (
+                              <linearGradient key={`gradient-p1-${idx}`} id={`barGradient-p1-${idx}`} x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor={CHART_COLORS[idx % CHART_COLORS.length]} stopOpacity={0.9} />
+                                <stop offset="100%" stopColor={CHART_COLORS[idx % CHART_COLORS.length]} stopOpacity={0.6} />
+                              </linearGradient>
+                            ))}
+                          </defs>
                           <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                           <XAxis 
                             dataKey="stage" 
                             height={100}
                             interval={0}
-                            tick={<CustomAxisTick data={funnelDataP1} />}
+                            tick={<CustomAxisTick data={processedFunnelP1} />}
                           />
                           <YAxis tick={{ fill: 'hsl(var(--muted-foreground))' }} />
                           <Tooltip contentStyle={{
@@ -1774,7 +1885,7 @@ const Dashboard = () => {
                               <Bar 
                                 key={campaignId} 
                                 dataKey={campaign.name} 
-                                fill={`url(#barGradient-${idx})`} 
+                                fill={`url(#barGradient-p1-${idx})`} 
                                 radius={[8, 8, 0, 0]}
                               />
                             ) : null;
@@ -1794,13 +1905,21 @@ const Dashboard = () => {
                     </div>
                     <div className="h-[400px]">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={funnelDataP2}>
+                        <BarChart data={processedFunnelP2}>
+                          <defs>
+                            {selectedCampaigns.map((_, idx) => (
+                              <linearGradient key={`gradient-p2-${idx}`} id={`barGradient-p2-${idx}`} x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor={CHART_COLORS[idx % CHART_COLORS.length]} stopOpacity={0.9} />
+                                <stop offset="100%" stopColor={CHART_COLORS[idx % CHART_COLORS.length]} stopOpacity={0.6} />
+                              </linearGradient>
+                            ))}
+                          </defs>
                           <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                           <XAxis 
                             dataKey="stage" 
                             height={100}
                             interval={0}
-                            tick={<CustomAxisTick data={funnelDataP2} />}
+                            tick={<CustomAxisTick data={processedFunnelP2} />}
                           />
                           <YAxis tick={{ fill: 'hsl(var(--muted-foreground))' }} />
                           <Tooltip contentStyle={{
@@ -1816,7 +1935,7 @@ const Dashboard = () => {
                               <Bar 
                                 key={campaignId} 
                                 dataKey={campaign.name} 
-                                fill={`url(#barGradient-${idx})`} 
+                                fill={`url(#barGradient-p2-${idx})`}
                                 radius={[8, 8, 0, 0]}
                               />
                             ) : null;
