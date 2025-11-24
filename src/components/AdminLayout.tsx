@@ -32,8 +32,8 @@ const SidebarLogo = () => {
       <img src={logoSS} alt="Space Sports Logo" className="h-10 w-10 object-contain flex-shrink-0" />
       {open && (
         <div>
-          <h1 className="font-bold text-lg">Space Sports</h1>
-          <p className="text-xs text-muted-foreground">Painel de Controle</p>
+            <h1 className="font-bold text-xl">Space Sports</h1>
+            <p className="text-sm text-muted-foreground">Painel de Controle</p>
         </div>
       )}
     </div>
@@ -112,10 +112,10 @@ const AdminLayout = () => {
                     <>
                       <SidebarMenuItem>
                         <SidebarMenuButton asChild isActive={location.pathname === "/admin/dashboard"}>
-                          <NavLink to="/admin/dashboard">
-                            <LayoutDashboard className="h-5 w-5" />
-                            <span>Dashboard</span>
-                          </NavLink>
+                  <NavLink to="/admin/dashboard">
+                    <LayoutDashboard className="h-5 w-5" />
+                    <span className="text-base font-medium">Dashboard</span>
+                  </NavLink>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
 
@@ -123,7 +123,7 @@ const AdminLayout = () => {
                         <SidebarMenuButton asChild isActive={location.pathname === "/admin/advanced-dashboard"}>
                           <NavLink to="/admin/advanced-dashboard">
                             <LayoutDashboard className="h-5 w-5" />
-                            <span>Data Cross</span>
+                            <span className="text-base font-medium">Data Cross</span>
                           </NavLink>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -140,7 +140,7 @@ const AdminLayout = () => {
                         >
                           <NavLink to="/admin/segments" onClick={() => setIsNavigating(true)}>
                             <Tag className="h-5 w-5" />
-                            <span>Segmentos</span>
+                            <span className="text-base font-medium">Segmentos</span>
                           </NavLink>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -153,7 +153,7 @@ const AdminLayout = () => {
                         >
                           <NavLink to="/admin/models" onClick={() => setIsNavigating(true)}>
                             <Tag className="h-5 w-5" />
-                            <span>Modelos</span>
+                            <span className="text-base font-medium">Modelos</span>
                           </NavLink>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -166,7 +166,7 @@ const AdminLayout = () => {
                         >
                           <NavLink to="/admin/campaigns" onClick={() => setIsNavigating(true)}>
                             <Megaphone className="h-5 w-5" />
-                            <span>Campanhas</span>
+                            <span className="text-base font-medium">Campanhas</span>
                           </NavLink>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -179,7 +179,7 @@ const AdminLayout = () => {
                         >
                           <NavLink to="/admin/leads" onClick={() => setIsNavigating(true)}>
                             <Users className="h-5 w-5" />
-                            <span>Leads</span>
+                            <span className="text-base font-medium">Leads</span>
                           </NavLink>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -192,7 +192,7 @@ const AdminLayout = () => {
                         >
                           <NavLink to="/admin/workflows" onClick={() => setIsNavigating(true)}>
                             <Workflow className="h-5 w-5" />
-                            <span>Workflows</span>
+                            <span className="text-base font-medium">Workflows</span>
                           </NavLink>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -205,7 +205,7 @@ const AdminLayout = () => {
                         >
                           <NavLink to="/admin/ab-tests" onClick={() => setIsNavigating(true)}>
                             <FlaskConical className="h-5 w-5" />
-                            <span>Testes A/B</span>
+                            <span className="text-base font-medium">Testes A/B</span>
                           </NavLink>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -221,7 +221,7 @@ const AdminLayout = () => {
                       >
                         <NavLink to="/admin/creation" onClick={() => setIsNavigating(true)}>
                           <Palette className="h-5 w-5" />
-                          <span>Criação</span>
+                          <span className="text-base font-medium">Criação</span>
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -236,7 +236,7 @@ const AdminLayout = () => {
                       >
                         <NavLink to="/admin/orders" onClick={() => setIsNavigating(true)}>
                           <ShoppingBag className="h-5 w-5" />
-                          <span>Pedidos</span>
+                          <span className="text-base font-medium">Pedidos</span>
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -251,7 +251,7 @@ const AdminLayout = () => {
                       >
                         <NavLink to="/admin/api" onClick={() => setIsNavigating(true)}>
                           <Code className="h-5 w-5" />
-                          <span>API</span>
+                          <span className="text-base font-medium">API</span>
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -266,7 +266,7 @@ const AdminLayout = () => {
                       >
                         <NavLink to="/admin/settings" onClick={() => setIsNavigating(true)}>
                           <Settings className="h-5 w-5" />
-                          <span>Configurações</span>
+                          <span className="text-base font-medium">Configurações</span>
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -279,10 +279,10 @@ const AdminLayout = () => {
           <SidebarFooter className="border-t p-4">
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={handleSignOut}>
-                  <LogOut className="h-4 w-4" />
-                  <span>Sair</span>
-                </SidebarMenuButton>
+              <SidebarMenuButton onClick={handleSignOut}>
+                <LogOut className="h-5 w-5" />
+                <span className="text-base font-medium">Sair</span>
+              </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarFooter>
