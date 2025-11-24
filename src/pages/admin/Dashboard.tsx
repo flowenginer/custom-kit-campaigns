@@ -1740,80 +1740,141 @@ const Dashboard = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="h-[450px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={comparisonMode === "comparison" ? getComparativeFunnelData() : comparativeFunnelData}>
-                    <defs>
-                      {selectedCampaigns.map((_, idx) => <linearGradient key={`gradient-${idx}`} id={`barGradient-${idx}`} x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor={CHART_COLORS[idx % CHART_COLORS.length]} stopOpacity={0.9} />
-                          <stop offset="100%" stopColor={CHART_COLORS[idx % CHART_COLORS.length]} stopOpacity={0.6} />
-                        </linearGradient>)}
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                    <XAxis 
-                      dataKey="stage" 
-                      height={100}
-                      interval={0}
-                      tick={<CustomAxisTick data={comparisonMode === "comparison" ? getComparativeFunnelData() : comparativeFunnelData} />}
-                    />
-                    <YAxis tick={{ fill: 'hsl(var(--muted-foreground))' }} />
-                    <Tooltip contentStyle={{
-                  backgroundColor: 'hsl(var(--card))',
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-                }} />
-                    <Legend />
-                    {comparisonMode === "comparison" ? (
-                      <>
-                        {selectedCampaigns.map((campaignId, idx) => {
-                          const campaign = campaigns.find(c => c.id === campaignId);
-                          return campaign ? (
-                            <Fragment key={campaignId}>
+              {comparisonMode === "comparison" ? (
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Período 1 */}
+                  <div className="border rounded-lg p-4 bg-primary/5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-3 h-3 rounded-full bg-primary" />
+                      <h4 className="font-semibold text-lg">
+                        {getPeriodLabel(period1)}
+                      </h4>
+                    </div>
+                    <div className="h-[400px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={funnelDataP1}>
+                          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                          <XAxis 
+                            dataKey="stage" 
+                            height={100}
+                            interval={0}
+                            tick={<CustomAxisTick data={funnelDataP1} />}
+                          />
+                          <YAxis tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                          <Tooltip contentStyle={{
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                          }} />
+                          <Legend />
+                          {selectedCampaigns.map((campaignId, idx) => {
+                            const campaign = campaigns.find(c => c.id === campaignId);
+                            return campaign ? (
                               <Bar 
-                                dataKey={`${campaign.name}_P1`}
-                                fill={CHART_COLORS[idx % CHART_COLORS.length]}
-                                name={`${campaign.name} (${getPeriodLabel(period1)})`}
+                                key={campaignId} 
+                                dataKey={campaign.name} 
+                                fill={`url(#barGradient-${idx})`} 
                                 radius={[8, 8, 0, 0]}
                               />
+                            ) : null;
+                          })}
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* Período 2 */}
+                  <div className="border rounded-lg p-4 bg-chart-orange/5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-3 h-3 rounded-full bg-chart-orange opacity-70" />
+                      <h4 className="font-semibold text-lg text-muted-foreground">
+                        {getPeriodLabel(period2)}
+                      </h4>
+                    </div>
+                    <div className="h-[400px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={funnelDataP2}>
+                          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                          <XAxis 
+                            dataKey="stage" 
+                            height={100}
+                            interval={0}
+                            tick={<CustomAxisTick data={funnelDataP2} />}
+                          />
+                          <YAxis tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                          <Tooltip contentStyle={{
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                          }} />
+                          <Legend />
+                          {selectedCampaigns.map((campaignId, idx) => {
+                            const campaign = campaigns.find(c => c.id === campaignId);
+                            return campaign ? (
                               <Bar 
-                                dataKey={`${campaign.name}_P2`}
-                                fill={CHART_COLORS[idx % CHART_COLORS.length]}
-                                fillOpacity={0.4}
-                                name={`${campaign.name} (${getPeriodLabel(period2)})`}
+                                key={campaignId} 
+                                dataKey={campaign.name} 
+                                fill={`url(#barGradient-${idx})`} 
                                 radius={[8, 8, 0, 0]}
                               />
-                            </Fragment>
-                          ) : null;
-                        })}
-                      </>
-                    ) : (
-                      <>
-                        {selectedCampaigns.map((campaignId, idx) => {
-                          const campaign = campaigns.find(c => c.id === campaignId);
-                          return campaign ? (
-                            <Bar 
-                              key={campaignId} 
-                              dataKey={campaign.name} 
-                              fill={`url(#barGradient-${idx})`} 
-                              radius={[8, 8, 0, 0]}
-                              label={<CustomBarLabel />}
-                              style={{ filter: 'drop-shadow(0px 4px 6px rgba(0, 0, 0, 0.15))' }}
-                              onClick={(data) => {
-                                if (data && data.stage === "Visitas") {
-                                  setSelectedUtmCampaign({ id: campaignId, name: campaign.name });
-                                  setUtmDialogOpen(true);
-                                }
-                              }}
-                              className="cursor-pointer hover:opacity-80 transition-opacity"
-                            />
-                          ) : null;
-                        })}
-                      </>
-                    )}
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+                            ) : null;
+                          })}
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="h-[450px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={comparativeFunnelData}>
+                      <defs>
+                        {selectedCampaigns.map((_, idx) => <linearGradient key={`gradient-${idx}`} id={`barGradient-${idx}`} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor={CHART_COLORS[idx % CHART_COLORS.length]} stopOpacity={0.9} />
+                            <stop offset="100%" stopColor={CHART_COLORS[idx % CHART_COLORS.length]} stopOpacity={0.6} />
+                          </linearGradient>)}
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                      <XAxis 
+                        dataKey="stage" 
+                        height={100}
+                        interval={0}
+                        tick={<CustomAxisTick data={comparativeFunnelData} />}
+                      />
+                      <YAxis tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                      <Tooltip contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                      }} />
+                      <Legend />
+                      {selectedCampaigns.map((campaignId, idx) => {
+                        const campaign = campaigns.find(c => c.id === campaignId);
+                        return campaign ? (
+                          <Bar 
+                            key={campaignId} 
+                            dataKey={campaign.name} 
+                            fill={`url(#barGradient-${idx})`} 
+                            radius={[8, 8, 0, 0]}
+                            label={<CustomBarLabel />}
+                            style={{ filter: 'drop-shadow(0px 4px 6px rgba(0, 0, 0, 0.15))' }}
+                            onClick={(data) => {
+                              if (data && data.stage === "Visitas") {
+                                setSelectedUtmCampaign({ id: campaignId, name: campaign.name });
+                                setUtmDialogOpen(true);
+                              }
+                            }}
+                            className="cursor-pointer hover:opacity-80 transition-opacity"
+                          />
+                        ) : null;
+                      })}
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -1826,52 +1887,134 @@ const Dashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid md:grid-cols-2 gap-8">
-                <div className="h-[400px] flex items-center justify-center">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <defs>
-                        {campaignComparisonData.map((_, idx) => <linearGradient key={`pieGradient-${idx}`} id={`pieGradient-${idx}`} x1="0" y1="0" x2="1" y2="1">
-                            <stop offset="0%" stopColor={CHART_COLORS[idx % CHART_COLORS.length]} stopOpacity={1} />
-                            <stop offset="100%" stopColor={CHART_COLORS[idx % CHART_COLORS.length]} stopOpacity={0.7} />
-                          </linearGradient>)}
-                      </defs>
-                      <Pie data={campaignComparisonData} cx="50%" cy="50%" labelLine={false} label={({
-                    name,
-                    percentage
-                  }) => `${name}: ${percentage.toFixed(1)}%`} outerRadius={140} innerRadius={70} fill="#8884d8" dataKey="value" paddingAngle={3} animationDuration={800} style={{
-                    filter: 'drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.2))'
-                  }}>
-                        {campaignComparisonData.map((_, index) => <Cell key={`cell-${index}`} fill={`url(#pieGradient-${index})`} />)}
-                      </Pie>
-                      <Tooltip contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-                  }} />
-                    </PieChart>
-                  </ResponsiveContainer>
+              {comparisonMode === "comparison" ? (
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Período 1 */}
+                  <div className="border rounded-lg p-4 bg-primary/5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-3 h-3 rounded-full bg-primary" />
+                      <h4 className="font-semibold text-lg">
+                        {getPeriodLabel(period1)}
+                      </h4>
+                    </div>
+                    <div className="h-[350px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <defs>
+                            {campaignComparisonDataP1.map((_, idx) => <linearGradient key={`pieGradient-${idx}`} id={`pieGradient-${idx}`} x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stopColor={CHART_COLORS[idx % CHART_COLORS.length]} stopOpacity={1} />
+                                <stop offset="100%" stopColor={CHART_COLORS[idx % CHART_COLORS.length]} stopOpacity={0.7} />
+                              </linearGradient>)}
+                          </defs>
+                          <Pie 
+                            data={campaignComparisonDataP1} 
+                            cx="50%" 
+                            cy="50%" 
+                            labelLine={false} 
+                            label={({name, percentage}) => `${name}: ${percentage.toFixed(1)}%`} 
+                            outerRadius={100} 
+                            innerRadius={50} 
+                            fill="#8884d8" 
+                            dataKey="value"
+                            paddingAngle={3}
+                          >
+                            {campaignComparisonDataP1.map((_, index) => <Cell key={`cell-${index}`} fill={`url(#pieGradient-${index})`} />)}
+                          </Pie>
+                          <Tooltip contentStyle={{
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                          }} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* Período 2 */}
+                  <div className="border rounded-lg p-4 bg-chart-orange/5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-3 h-3 rounded-full bg-chart-orange opacity-70" />
+                      <h4 className="font-semibold text-lg text-muted-foreground">
+                        {getPeriodLabel(period2)}
+                      </h4>
+                    </div>
+                    <div className="h-[350px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie 
+                            data={campaignComparisonDataP2} 
+                            cx="50%" 
+                            cy="50%" 
+                            labelLine={false} 
+                            label={({name, percentage}) => `${name}: ${percentage.toFixed(1)}%`} 
+                            outerRadius={100} 
+                            innerRadius={50} 
+                            fill="#8884d8" 
+                            dataKey="value"
+                            paddingAngle={3}
+                          >
+                            {campaignComparisonDataP2.map((_, index) => <Cell key={`cell-${index}`} fill={`url(#pieGradient-${index})`} />)}
+                          </Pie>
+                          <Tooltip contentStyle={{
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                          }} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex flex-col justify-center space-y-3">
-                  <h3 className="font-semibold text-lg mb-2">Ranking de Campanhas</h3>
-                  {campaignComparisonData.map((item, idx) => <div key={item.name} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                      <div className="w-4 h-4 rounded-full" style={{
-                  backgroundColor: CHART_COLORS[idx % CHART_COLORS.length]
-                }} />
-                      <div className="flex-1">
-                        <p className="font-medium">{item.name}</p>
-                        <p className="text-sm text-muted-foreground">{item.value} leads completos</p>
-                      </div>
-                      <Badge variant="secondary" style={{
-                  backgroundColor: `${CHART_COLORS[idx % CHART_COLORS.length]}20`,
-                  color: CHART_COLORS[idx % CHART_COLORS.length]
-                }}>
-                        {item.percentage.toFixed(1)}%
-                      </Badge>
-                    </div>)}
+              ) : (
+                <div className="grid md:grid-cols-2 gap-8">
+                  <div className="h-[400px] flex items-center justify-center">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <defs>
+                          {campaignComparisonData.map((_, idx) => <linearGradient key={`pieGradient-${idx}`} id={`pieGradient-${idx}`} x1="0" y1="0" x2="1" y2="1">
+                              <stop offset="0%" stopColor={CHART_COLORS[idx % CHART_COLORS.length]} stopOpacity={1} />
+                              <stop offset="100%" stopColor={CHART_COLORS[idx % CHART_COLORS.length]} stopOpacity={0.7} />
+                            </linearGradient>)}
+                        </defs>
+                        <Pie data={campaignComparisonData} cx="50%" cy="50%" labelLine={false} label={({
+                          name,
+                          percentage
+                        }) => `${name}: ${percentage.toFixed(1)}%`} outerRadius={140} innerRadius={70} fill="#8884d8" dataKey="value" paddingAngle={3} animationDuration={800} style={{
+                          filter: 'drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.2))'
+                        }}>
+                          {campaignComparisonData.map((_, index) => <Cell key={`cell-${index}`} fill={`url(#pieGradient-${index})`} />)}
+                        </Pie>
+                        <Tooltip contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                        }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="flex flex-col justify-center space-y-3">
+                    <h3 className="font-semibold text-lg mb-2">Ranking de Campanhas</h3>
+                    {campaignComparisonData.map((item, idx) => <div key={item.name} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                        <div className="w-4 h-4 rounded-full" style={{
+                          backgroundColor: CHART_COLORS[idx % CHART_COLORS.length]
+                        }} />
+                        <div className="flex-1">
+                          <p className="font-medium">{item.name}</p>
+                          <p className="text-sm text-muted-foreground">{item.value} leads completos</p>
+                        </div>
+                        <Badge variant="secondary" style={{
+                          backgroundColor: `${CHART_COLORS[idx % CHART_COLORS.length]}20`,
+                          color: CHART_COLORS[idx % CHART_COLORS.length]
+                        }}>
+                          {item.percentage.toFixed(1)}%
+                        </Badge>
+                      </div>)}
+                  </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
 
@@ -1889,6 +2032,102 @@ const Dashboard = () => {
             <CardContent>
               {isLoading ? (
                 <Skeleton className="h-[400px] w-full" />
+              ) : comparisonMode === "comparison" ? (
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Período 1 */}
+                  <div className="border rounded-lg p-4 bg-primary/5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-3 h-3 rounded-full bg-primary" />
+                      <h4 className="font-semibold">
+                        {getPeriodLabel(period1)}
+                      </h4>
+                    </div>
+                    <div className="h-[350px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={dailyVisitsDataP1}>
+                          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                          <XAxis 
+                            dataKey="date" 
+                            stroke="hsl(var(--muted-foreground))"
+                            fontSize={12}
+                          />
+                          <YAxis 
+                            stroke="hsl(var(--muted-foreground))"
+                            fontSize={12}
+                          />
+                          <Tooltip 
+                            contentStyle={{
+                              backgroundColor: "hsl(var(--card))",
+                              border: "1px solid hsl(var(--border))",
+                              borderRadius: "8px",
+                            }}
+                          />
+                          <Legend iconType="line" />
+                          {campaigns
+                            .filter(campaign => selectedCampaigns.includes(campaign.id))
+                            .map((campaign, idx) => (
+                              <Line
+                                key={campaign.id}
+                                type="monotone"
+                                dataKey={campaign.name}
+                                stroke={CHART_COLORS[idx % CHART_COLORS.length]}
+                                strokeWidth={2}
+                                dot={{ r: 4 }}
+                                activeDot={{ r: 6 }}
+                              />
+                            ))}
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* Período 2 */}
+                  <div className="border rounded-lg p-4 bg-chart-orange/5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-3 h-3 rounded-full bg-chart-orange opacity-70" />
+                      <h4 className="font-semibold text-muted-foreground">
+                        {getPeriodLabel(period2)}
+                      </h4>
+                    </div>
+                    <div className="h-[350px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={dailyVisitsDataP2}>
+                          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                          <XAxis 
+                            dataKey="date" 
+                            stroke="hsl(var(--muted-foreground))"
+                            fontSize={12}
+                          />
+                          <YAxis 
+                            stroke="hsl(var(--muted-foreground))"
+                            fontSize={12}
+                          />
+                          <Tooltip 
+                            contentStyle={{
+                              backgroundColor: "hsl(var(--card))",
+                              border: "1px solid hsl(var(--border))",
+                              borderRadius: "8px",
+                            }}
+                          />
+                          <Legend iconType="line" />
+                          {campaigns
+                            .filter(campaign => selectedCampaigns.includes(campaign.id))
+                            .map((campaign, idx) => (
+                              <Line
+                                key={campaign.id}
+                                type="monotone"
+                                dataKey={campaign.name}
+                                stroke={CHART_COLORS[idx % CHART_COLORS.length]}
+                                strokeWidth={2}
+                                dot={{ r: 4 }}
+                                activeDot={{ r: 6 }}
+                              />
+                            ))}
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
               ) : dailyVisitsData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={400}>
                   <LineChart data={dailyVisitsData}>
@@ -1978,83 +2217,199 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Gráfico de Barras - Top UTM Sources */}
-          <div>
-            <h3 className="font-semibold text-lg mb-4">Top 10 Fontes de Tráfego</h3>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topUtmSources} layout="vertical">
-                  <defs>
-                    <linearGradient id="sourceGradient" x1="0" y1="0" x2="1" y2="0">
-                      <stop offset="0%" stopColor="hsl(var(--chart-teal))" stopOpacity={0.9} />
-                      <stop offset="100%" stopColor="hsl(var(--chart-cyan))" stopOpacity={0.7} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                  <XAxis type="number" tick={{
-                  fill: 'hsl(var(--muted-foreground))'
-                }} />
-                  <YAxis dataKey="source" type="category" width={100} tick={{
-                  fill: 'hsl(var(--muted-foreground))'
-                }} />
-                  <Tooltip contentStyle={{
-                  backgroundColor: 'hsl(var(--card))',
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-                }} />
-                  <Bar dataKey="leads" fill="url(#sourceGradient)" radius={[0, 8, 8, 0]} style={{
-                  filter: 'drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.15))'
-                }} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+          {comparisonMode === "comparison" ? (
+            <>
+              {/* Top 10 Fontes - Lado a Lado */}
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Período 1 */}
+                <div className="border rounded-lg p-4 bg-primary/5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-3 h-3 rounded-full bg-primary" />
+                    <h4 className="font-semibold">Top 10 Fontes - {getPeriodLabel(period1)}</h4>
+                  </div>
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={topUtmSources.slice(0, 10)} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                        <XAxis type="number" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                        <YAxis dataKey="source" type="category" width={100} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                        <Tooltip contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                        }} />
+                        <Bar dataKey="leads" fill="hsl(var(--chart-teal))" radius={[0, 8, 8, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
 
-          {/* Tabela Detalhada de UTMs */}
-          <div>
-            <h3 className="font-semibold text-lg mb-4">Detalhamento de UTMs</h3>
-            <div className="rounded-lg border overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-muted">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-semibold">Source</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold">Medium</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold">Campaign</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold">Term</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold">Content</th>
-                      <th className="px-4 py-3 text-right text-sm font-semibold">Leads</th>
-                      <th className="px-4 py-3 text-right text-sm font-semibold">Convertidos</th>
-                      <th className="px-4 py-3 text-right text-sm font-semibold">Taxa</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {filteredUtmData.slice(0, 20).map((item, idx) => <tr key={idx} className="hover:bg-muted/50 transition-colors">
-                        <td className="px-4 py-3 text-sm font-medium">{item.source}</td>
-                        <td className="px-4 py-3 text-sm text-muted-foreground">{item.medium}</td>
-                        <td className="px-4 py-3 text-sm text-muted-foreground">{item.campaign}</td>
-                        <td className="px-4 py-3 text-sm text-muted-foreground truncate max-w-[150px]">{item.term}</td>
-                        <td className="px-4 py-3 text-sm text-muted-foreground truncate max-w-[150px]">{item.content}</td>
-                        <td className="px-4 py-3 text-sm text-right font-semibold">{item.total}</td>
-                        <td className="px-4 py-3 text-sm text-right text-chart-green font-semibold">{item.completed}</td>
-                        <td className="px-4 py-3 text-sm text-right">
-                          <Badge variant={item.conversionRate > 50 ? "default" : "secondary"} style={item.conversionRate > 50 ? {
-                        backgroundColor: 'hsl(var(--chart-green))',
-                        color: 'white'
-                      } : {}}>
-                            {item.conversionRate.toFixed(1)}%
-                          </Badge>
-                        </td>
-                      </tr>)}
-                  </tbody>
-                </table>
+                {/* Período 2 */}
+                <div className="border rounded-lg p-4 bg-chart-orange/5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-3 h-3 rounded-full bg-chart-orange opacity-70" />
+                    <h4 className="font-semibold text-muted-foreground">Top 10 Fontes - {getPeriodLabel(period2)}</h4>
+                  </div>
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={topUtmSources.slice(0, 10)} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                        <XAxis type="number" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                        <YAxis dataKey="source" type="category" width={100} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                        <Tooltip contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                        }} />
+                        <Bar dataKey="leads" fill="hsl(var(--chart-orange))" fillOpacity={0.6} radius={[0, 8, 8, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
               </div>
-            </div>
-            {filteredUtmData.length > 20 && <p className="text-sm text-muted-foreground mt-2 text-center">
-                Mostrando 20 de {filteredUtmData.length} resultados
-              </p>}
-          </div>
+
+              {/* Tabelas Detalhadas - Lado a Lado */}
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Tabela Período 1 */}
+                <div className="border rounded-lg p-4 bg-primary/5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-3 h-3 rounded-full bg-primary" />
+                    <h4 className="font-semibold">Detalhamento - {getPeriodLabel(period1)}</h4>
+                  </div>
+                  <div className="rounded-lg border overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-muted">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-sm font-semibold">Source</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold">Medium</th>
+                            <th className="px-4 py-3 text-right text-sm font-semibold">Leads</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {filteredUtmData.slice(0, 10).map((item, idx) => <tr key={idx} className="hover:bg-muted/50 transition-colors">
+                              <td className="px-4 py-3 text-sm font-medium">{item.source}</td>
+                              <td className="px-4 py-3 text-sm text-muted-foreground">{item.medium}</td>
+                              <td className="px-4 py-3 text-sm text-right font-semibold">{item.total}</td>
+                            </tr>)}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tabela Período 2 */}
+                <div className="border rounded-lg p-4 bg-chart-orange/5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-3 h-3 rounded-full bg-chart-orange opacity-70" />
+                    <h4 className="font-semibold text-muted-foreground">Detalhamento - {getPeriodLabel(period2)}</h4>
+                  </div>
+                  <div className="rounded-lg border overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-muted">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-sm font-semibold">Source</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold">Medium</th>
+                            <th className="px-4 py-3 text-right text-sm font-semibold">Leads</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {filteredUtmData.slice(0, 10).map((item, idx) => <tr key={idx} className="hover:bg-muted/50 transition-colors">
+                              <td className="px-4 py-3 text-sm font-medium">{item.source}</td>
+                              <td className="px-4 py-3 text-sm text-muted-foreground">{item.medium}</td>
+                              <td className="px-4 py-3 text-sm text-right font-semibold">{item.total}</td>
+                            </tr>)}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Gráfico de Barras - Top UTM Sources */}
+              <div>
+                <h3 className="font-semibold text-lg mb-4">Top 10 Fontes de Tráfego</h3>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={topUtmSources} layout="vertical">
+                      <defs>
+                        <linearGradient id="sourceGradient" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="hsl(var(--chart-teal))" stopOpacity={0.9} />
+                          <stop offset="100%" stopColor="hsl(var(--chart-cyan))" stopOpacity={0.7} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                      <XAxis type="number" tick={{
+                        fill: 'hsl(var(--muted-foreground))'
+                      }} />
+                      <YAxis dataKey="source" type="category" width={100} tick={{
+                        fill: 'hsl(var(--muted-foreground))'
+                      }} />
+                      <Tooltip contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                      }} />
+                      <Bar dataKey="leads" fill="url(#sourceGradient)" radius={[0, 8, 8, 0]} style={{
+                        filter: 'drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.15))'
+                      }} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Tabela Detalhada de UTMs */}
+              <div>
+                <h3 className="font-semibold text-lg mb-4">Detalhamento de UTMs</h3>
+                <div className="rounded-lg border overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-muted">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-sm font-semibold">Source</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold">Medium</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold">Campaign</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold">Term</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold">Content</th>
+                          <th className="px-4 py-3 text-right text-sm font-semibold">Leads</th>
+                          <th className="px-4 py-3 text-right text-sm font-semibold">Convertidos</th>
+                          <th className="px-4 py-3 text-right text-sm font-semibold">Taxa</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {filteredUtmData.slice(0, 20).map((item, idx) => <tr key={idx} className="hover:bg-muted/50 transition-colors">
+                            <td className="px-4 py-3 text-sm font-medium">{item.source}</td>
+                            <td className="px-4 py-3 text-sm text-muted-foreground">{item.medium}</td>
+                            <td className="px-4 py-3 text-sm text-muted-foreground">{item.campaign}</td>
+                            <td className="px-4 py-3 text-sm text-muted-foreground truncate max-w-[150px]">{item.term}</td>
+                            <td className="px-4 py-3 text-sm text-muted-foreground truncate max-w-[150px]">{item.content}</td>
+                            <td className="px-4 py-3 text-sm text-right font-semibold">{item.total}</td>
+                            <td className="px-4 py-3 text-sm text-right text-chart-green font-semibold">{item.completed}</td>
+                            <td className="px-4 py-3 text-sm text-right">
+                              <Badge variant={item.conversionRate > 50 ? "default" : "secondary"} style={item.conversionRate > 50 ? {
+                                backgroundColor: 'hsl(var(--chart-green))',
+                                color: 'white'
+                              } : {}}>
+                                {item.conversionRate.toFixed(1)}%
+                              </Badge>
+                            </td>
+                          </tr>)}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                {filteredUtmData.length > 20 && <p className="text-sm text-muted-foreground mt-2 text-center">
+                    Mostrando 20 de {filteredUtmData.length} resultados
+                  </p>}
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -2093,37 +2448,124 @@ const Dashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={designMetrics.avgTimeByStage}>
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                    <XAxis 
-                      dataKey="stage" 
-                      angle={-45}
-                      textAnchor="end"
-                      height={100}
-                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                    />
-                    <YAxis 
-                      label={{ value: 'Horas', angle: -90, position: 'insideLeft' }}
-                      tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                    />
-                    <Tooltip 
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px'
-                      }}
-                      formatter={(value: number) => [`${value.toFixed(1)}h`, 'Tempo Médio']}
-                    />
-                    <Bar 
-                      dataKey="avgHours" 
-                      fill="hsl(var(--chart-orange))" 
-                      radius={[8, 8, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              {comparisonMode === "comparison" ? (
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Período 1 */}
+                  <div className="border rounded-lg p-4 bg-primary/5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-3 h-3 rounded-full bg-primary" />
+                      <h4 className="font-semibold">
+                        {getPeriodLabel(period1)}
+                      </h4>
+                    </div>
+                    <div className="h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={designMetricsP1.avgTimeByStage}>
+                          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                          <XAxis 
+                            dataKey="stage" 
+                            angle={-45}
+                            textAnchor="end"
+                            height={100}
+                            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+                          />
+                          <YAxis 
+                            label={{ value: 'Horas', angle: -90, position: 'insideLeft' }}
+                            tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                          />
+                          <Tooltip 
+                            contentStyle={{
+                              backgroundColor: 'hsl(var(--card))',
+                              border: '1px solid hsl(var(--border))',
+                              borderRadius: '8px'
+                            }}
+                            formatter={(value: number) => [`${value.toFixed(1)}h`, 'Tempo Médio']}
+                          />
+                          <Bar 
+                            dataKey="avgHours" 
+                            fill="hsl(var(--chart-orange))" 
+                            radius={[8, 8, 0, 0]}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* Período 2 */}
+                  <div className="border rounded-lg p-4 bg-chart-orange/5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-3 h-3 rounded-full bg-chart-orange opacity-70" />
+                      <h4 className="font-semibold text-muted-foreground">
+                        {getPeriodLabel(period2)}
+                      </h4>
+                    </div>
+                    <div className="h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={designMetricsP2.avgTimeByStage}>
+                          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                          <XAxis 
+                            dataKey="stage" 
+                            angle={-45}
+                            textAnchor="end"
+                            height={100}
+                            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+                          />
+                          <YAxis 
+                            label={{ value: 'Horas', angle: -90, position: 'insideLeft' }}
+                            tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                          />
+                          <Tooltip 
+                            contentStyle={{
+                              backgroundColor: 'hsl(var(--card))',
+                              border: '1px solid hsl(var(--border))',
+                              borderRadius: '8px'
+                            }}
+                            formatter={(value: number) => [`${value.toFixed(1)}h`, 'Tempo Médio']}
+                          />
+                          <Bar 
+                            dataKey="avgHours" 
+                            fill="hsl(var(--chart-blue))" 
+                            fillOpacity={0.6}
+                            radius={[8, 8, 0, 0]}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={designMetrics.avgTimeByStage}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                      <XAxis 
+                        dataKey="stage" 
+                        angle={-45}
+                        textAnchor="end"
+                        height={100}
+                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+                      />
+                      <YAxis 
+                        label={{ value: 'Horas', angle: -90, position: 'insideLeft' }}
+                        tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                      />
+                      <Tooltip 
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px'
+                        }}
+                        formatter={(value: number) => [`${value.toFixed(1)}h`, 'Tempo Médio']}
+                      />
+                      <Bar 
+                        dataKey="avgHours" 
+                        fill="hsl(var(--chart-orange))" 
+                        radius={[8, 8, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
@@ -2137,48 +2579,128 @@ const Dashboard = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {designMetrics.designerPerformance.map((designer, idx) => (
-                <div 
-                  key={designer.designer_id} 
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent transition-colors"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 font-bold text-lg">
-                      #{idx + 1}
-                    </div>
-                    <div>
-                      <p className="font-semibold">{designer.designer_name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {designer.total_tasks} tarefas • 
-                        {designer.completed_tasks} concluídas • 
-                        {designer.approved_tasks} aprovadas
-                      </p>
-                    </div>
+            {comparisonMode === "comparison" ? (
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Período 1 */}
+                <div className="border rounded-lg p-4 bg-primary/5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-3 h-3 rounded-full bg-primary" />
+                    <h4 className="font-semibold">
+                      {getPeriodLabel(period1)}
+                    </h4>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <p className="text-sm font-medium">
-                        {designer.avg_completion_time > 0 
-                          ? `${designer.avg_completion_time.toFixed(1)}h média`
-                          : '-'}
-                      </p>
-                      <Badge 
-                        variant={designer.efficiency_score >= 70 ? "default" : "secondary"}
-                        className="mt-1"
+                  <div className="space-y-3">
+                    {designMetricsP1.designerPerformance.map((designer, idx) => (
+                      <div 
+                        key={designer.designer_id} 
+                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent transition-colors"
                       >
-                        Score: {designer.efficiency_score}
-                      </Badge>
-                    </div>
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 font-bold text-sm">
+                            #{idx + 1}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-sm">{designer.designer_name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {designer.completed_tasks} tarefas
+                            </p>
+                          </div>
+                        </div>
+                        <Badge variant="secondary" className="text-xs">
+                          {designer.efficiency_score}
+                        </Badge>
+                      </div>
+                    ))}
+                    {designMetricsP1.designerPerformance.length === 0 && (
+                      <p className="text-center text-muted-foreground py-8 text-sm">
+                        Nenhum dado disponível
+                      </p>
+                    )}
                   </div>
                 </div>
-              ))}
-              {designMetrics.designerPerformance.length === 0 && (
-                <p className="text-center text-muted-foreground py-8">
-                  Nenhum designer com tarefas atribuídas ainda
-                </p>
-              )}
-            </div>
+
+                {/* Período 2 */}
+                <div className="border rounded-lg p-4 bg-chart-orange/5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-3 h-3 rounded-full bg-chart-orange opacity-70" />
+                    <h4 className="font-semibold text-muted-foreground">
+                      {getPeriodLabel(period2)}
+                    </h4>
+                  </div>
+                  <div className="space-y-3">
+                    {designMetricsP2.designerPerformance.map((designer, idx) => (
+                      <div 
+                        key={designer.designer_id} 
+                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-chart-orange/10 font-bold text-sm text-chart-orange">
+                            #{idx + 1}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-sm">{designer.designer_name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {designer.completed_tasks} tarefas
+                            </p>
+                          </div>
+                        </div>
+                        <Badge variant="secondary" className="text-xs">
+                          {designer.efficiency_score}
+                        </Badge>
+                      </div>
+                    ))}
+                    {designMetricsP2.designerPerformance.length === 0 && (
+                      <p className="text-center text-muted-foreground py-8 text-sm">
+                        Nenhum dado disponível
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {designMetrics.designerPerformance.map((designer, idx) => (
+                  <div 
+                    key={designer.designer_id} 
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent transition-colors"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 font-bold text-lg">
+                        #{idx + 1}
+                      </div>
+                      <div>
+                        <p className="font-semibold">{designer.designer_name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {designer.total_tasks} tarefas • 
+                          {designer.completed_tasks} concluídas • 
+                          {designer.approved_tasks} aprovadas
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <p className="text-sm font-medium">
+                          {designer.avg_completion_time > 0 
+                            ? `${designer.avg_completion_time.toFixed(1)}h média`
+                            : '-'}
+                        </p>
+                        <Badge 
+                          variant={designer.efficiency_score >= 70 ? "default" : "secondary"}
+                          className="mt-1"
+                        >
+                          Score: {designer.efficiency_score}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {designMetrics.designerPerformance.length === 0 && (
+                  <p className="text-center text-muted-foreground py-8">
+                    Nenhum designer com tarefas atribuídas ainda
+                  </p>
+                )}
+              </div>
+            )}
           </CardContent>
       </Card>
     </div>
