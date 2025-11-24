@@ -1339,33 +1339,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Toggle de Modo de Visualização */}
-      <Card className="shadow-lg">
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h3 className="font-semibold text-lg">Modo de Visualização</h3>
-              <p className="text-sm text-muted-foreground">
-                Escolha entre ver dados de um período ou comparar dois períodos
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant={comparisonMode === "single" ? "default" : "outline"}
-                onClick={() => setComparisonMode("single")}
-              >
-                Período Único
-              </Button>
-              <Button
-                variant={comparisonMode === "comparison" ? "default" : "outline"}
-                onClick={() => setComparisonMode("comparison")}
-              >
-                Comparar Períodos
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Seletores de Períodos */}
       {comparisonMode === "comparison" ? (
@@ -1494,11 +1467,10 @@ const Dashboard = () => {
           </Card>
         </>
       ) : (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          {/* Filtro de Data */}
-          <div className="flex flex-col gap-3">
-            {/* Botões de período rápido */}
-            <div className="flex flex-wrap gap-2">
+        <>
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 bg-muted/30 p-4 rounded-lg border">
+            {/* Botões de período - Esquerda */}
+            <div className="flex flex-wrap gap-2 flex-1">
               <Button
                 size="sm"
                 variant={dateFilter === "today" ? "default" : "outline"}
@@ -1506,7 +1478,6 @@ const Dashboard = () => {
               >
                 Hoje
               </Button>
-              
               <Button
                 size="sm"
                 variant={dateFilter === "yesterday" ? "default" : "outline"}
@@ -1514,7 +1485,6 @@ const Dashboard = () => {
               >
                 Ontem
               </Button>
-              
               <Button
                 size="sm"
                 variant={dateFilter === "7days" ? "default" : "outline"}
@@ -1522,7 +1492,6 @@ const Dashboard = () => {
               >
                 7 dias
               </Button>
-              
               <Button
                 size="sm"
                 variant={dateFilter === "15days" ? "default" : "outline"}
@@ -1530,7 +1499,6 @@ const Dashboard = () => {
               >
                 15 dias
               </Button>
-              
               <Button
                 size="sm"
                 variant={dateFilter === "30days" ? "default" : "outline"}
@@ -1538,7 +1506,6 @@ const Dashboard = () => {
               >
                 30 dias
               </Button>
-              
               <Button
                 size="sm"
                 variant={dateFilter === "month" ? "default" : "outline"}
@@ -1546,7 +1513,6 @@ const Dashboard = () => {
               >
                 Este mês
               </Button>
-              
               <Button
                 size="sm"
                 variant={dateFilter === "lastMonth" ? "default" : "outline"}
@@ -1554,7 +1520,6 @@ const Dashboard = () => {
               >
                 Mês passado
               </Button>
-              
               <Button
                 size="sm"
                 variant={dateFilter === "custom" ? "default" : "outline"}
@@ -1565,65 +1530,83 @@ const Dashboard = () => {
               </Button>
             </div>
 
-              {/* Calendários customizados */}
-              {dateFilter === "custom" && (
-                <div className="flex flex-wrap gap-2">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className={cn(
-                          "justify-start text-left font-normal",
-                          !customStartDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {customStartDate ? format(customStartDate, "dd/MM/yyyy") : "Data início"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={customStartDate}
-                        onSelect={setCustomStartDate}
-                        initialFocus
-                        className="pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  
-                  <span className="text-muted-foreground">até</span>
-                  
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className={cn(
-                          "justify-start text-left font-normal",
-                          !customEndDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {customEndDate ? format(customEndDate, "dd/MM/yyyy") : "Data fim"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={customEndDate}
-                        onSelect={setCustomEndDate}
-                        initialFocus
-                        className="pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              )}
+            {/* Botões de Modo - Direita */}
+            <div className="flex gap-2 shrink-0">
+              <Button
+                size="sm"
+                variant={comparisonMode === "single" ? "default" : "outline"}
+                onClick={() => setComparisonMode("single" as ComparisonMode)}
+              >
+                Período Único
+              </Button>
+              <Button
+                size="sm"
+                variant={(comparisonMode as string) === "comparison" ? "default" : "outline"}
+                onClick={() => setComparisonMode("comparison" as ComparisonMode)}
+              >
+                Comparar Períodos
+              </Button>
             </div>
           </div>
-        )}
+
+          {/* Calendários customizados */}
+          {dateFilter === "custom" && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "justify-start text-left font-normal",
+                      !customStartDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {customStartDate ? format(customStartDate, "dd/MM/yyyy") : "Data início"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={customStartDate}
+                    onSelect={setCustomStartDate}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+              
+              <span className="text-muted-foreground">até</span>
+              
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "justify-start text-left font-normal",
+                      !customEndDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {customEndDate ? format(customEndDate, "dd/MM/yyyy") : "Data fim"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={customEndDate}
+                    onSelect={setCustomEndDate}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
+        </>
+      )}
 
       {/* Seção 1: Métricas Cards com Visual Moderno */}
       <div className="grid gap-4 md:grid-cols-4">
