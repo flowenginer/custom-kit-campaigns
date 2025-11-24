@@ -97,8 +97,14 @@ const AdminLayout = () => {
     <SidebarProvider defaultOpen={true}>
       <div className="min-h-screen flex w-full">
         <Sidebar collapsible="icon" className="bg-card border-r border-primary/20">
-          <SidebarHeader className="border-b p-6">
+          <SidebarHeader className="border-b p-6 space-y-4">
             <SidebarLogo />
+            
+            {/* Controles: Trigger e Notificações */}
+            <div className="flex items-center gap-2 pt-2">
+              <SidebarTrigger className="h-9 w-9 flex-shrink-0" />
+              <NotificationsDropdown />
+            </div>
           </SidebarHeader>
 
           <SidebarContent className="py-4">
@@ -388,12 +394,6 @@ const AdminLayout = () => {
         </Sidebar>
 
         <main className="flex-1 overflow-auto">
-          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-            <div className="flex items-center justify-between h-16 px-6">
-              <SidebarTrigger className="-ml-1" />
-              <NotificationsDropdown />
-            </div>
-          </div>
           <Outlet />
         </main>
       </div>
