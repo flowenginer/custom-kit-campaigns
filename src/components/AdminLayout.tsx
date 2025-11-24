@@ -354,12 +354,12 @@ const AdminLayout = () => {
             </SidebarGroup>
           </SidebarContent>
 
-          <SidebarFooter className="bg-accent border-t border-accent/30 p-4">
+          <SidebarFooter className="bg-muted border-t border-border p-4">
             <SidebarMenu>
               <SidebarMenuItem>
               <SidebarMenuButton 
                 onClick={handleSignOut}
-                className="hover:bg-accent-foreground/10 text-accent-foreground"
+                className="hover:bg-accent hover:text-accent-foreground"
               >
                 <LogOut className="h-5 w-5" />
                 <span className="text-xl font-medium">Sair</span>
