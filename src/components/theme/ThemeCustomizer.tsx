@@ -96,6 +96,8 @@ export const ThemeCustomizer = ({ campaignId }: ThemeCustomizerProps) => {
         .upsert({
           campaign_id: campaignId,
           ...theme,
+        }, {
+          onConflict: 'campaign_id'
         });
 
       if (error) throw error;
