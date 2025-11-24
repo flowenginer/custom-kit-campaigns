@@ -106,6 +106,16 @@ const Models = () => {
     image_front_clean: "",
   });
 
+  // Estados para Upload em Massa
+  const [isBulkUploadDialogOpen, setIsBulkUploadDialogOpen] = useState(false);
+  const [bulkFiles, setBulkFiles] = useState<File[]>([]);
+  const [bulkGroupedModels, setBulkGroupedModels] = useState<Record<string, Record<string, File>>>({});
+  const [bulkSegmentTag, setBulkSegmentTag] = useState("");
+  const [bulkModelTag, setBulkModelTag] = useState("");
+  const [bulkUploading, setBulkUploading] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState(0);
+  const [bulkCurrentModel, setBulkCurrentModel] = useState("");
+
   useEffect(() => {
     loadModels();
     loadSegments();
@@ -186,6 +196,13 @@ const Models = () => {
       setImagePreviews(prev => ({ ...prev, [field]: reader.result as string }));
     };
     reader.readAsDataURL(file);
+  };
+
+  // Extrai o número do modelo do nome do arquivo
+  // Ex: "01 CAPA.jpg" -> "01", "02 FRENTE.png" -> "02"
+  const extractModelNumber = (filename: string): string | null => {
+    const match = filename.match(/^(\d+)/);
+    return match ? match[1] : null;
   };
 
   const detectImageType = (filename: string): keyof typeof imageFiles | null => {
@@ -269,6 +286,221 @@ const Models = () => {
         `⚠️ ${unrecognized.length} ${unrecognized.length === 1 ? 'arquivo não reconhecido' : 'arquivos não reconhecidos'}. Verifique os nomes.`,
         { duration: 5000 }
       );
+    }
+  };
+
+  const processBulkFiles = (files: FileList) => {
+    const grouped: Record<string, Record<string, File>> = {};
+    const errors: string[] = [];
+    
+    Array.from(files).forEach(file => {
+      // Validar tipo
+      if (!file.type.startsWith("image/")) {
+        errors.push(`${file.name} não é uma imagem`);
+        return;
+      }
+      
+      // Validar tamanho
+      if (file.size > 5 * 1024 * 1024) {
+        errors.push(`${file.name} é muito grande (máx. 5MB)`);
+        return;
+      }
+      
+      // Extrair número do modelo
+      const modelNumber = extractModelNumber(file.name);
+      if (!modelNumber) {
+        errors.push(`${file.name} não tem número no início`);
+        return;
+      }
+      
+      // Detectar tipo de imagem
+      const imageType = detectImageType(file.name);
+      if (!imageType) {
+        errors.push(`${file.name} não foi reconhecido (use: CAPA, FRENTE, COSTAS, etc.)`);
+        return;
+      }
+      
+      // Agrupar por modelo
+      if (!grouped[modelNumber]) {
+        grouped[modelNumber] = {};
+      }
+      
+      grouped[modelNumber][imageType] = file;
+    });
+    
+    // Validar grupos (cada modelo precisa ter as 5 imagens obrigatórias)
+    const requiredImages = ['photo_main', 'image_front', 'image_back', 'image_right', 'image_left'];
+    const validGroups: Record<string, Record<string, File>> = {};
+    
+    Object.entries(grouped).forEach(([modelNumber, images]) => {
+      const missingImages = requiredImages.filter(img => !images[img]);
+      
+      if (missingImages.length > 0) {
+        errors.push(`Modelo ${modelNumber}: faltam imagens (${missingImages.join(', ')})`);
+      } else {
+        validGroups[modelNumber] = images;
+      }
+    });
+    
+    // Mostrar erros se houver
+    if (errors.length > 0) {
+      toast.error(
+        <div>
+          <p className="font-bold">Alguns arquivos têm problemas:</p>
+          <ul className="text-xs mt-2 space-y-1">
+            {errors.slice(0, 5).map((err, i) => <li key={i}>• {err}</li>)}
+            {errors.length > 5 && <li>... e mais {errors.length - 5}</li>}
+          </ul>
+        </div>,
+        { duration: 8000 }
+      );
+    }
+    
+    // Atualizar estados
+    setBulkFiles(Array.from(files));
+    setBulkGroupedModels(validGroups);
+    
+    // Feedback de sucesso
+    const modelCount = Object.keys(validGroups).length;
+    if (modelCount > 0) {
+      toast.success(`✅ ${modelCount} modelo(s) detectado(s) e pronto(s) para upload!`);
+    }
+  };
+
+  const handleBulkUpload = async () => {
+    if (Object.keys(bulkGroupedModels).length === 0) {
+      toast.error("Nenhum modelo válido para criar");
+      return;
+    }
+    
+    if (!bulkSegmentTag || !bulkModelTag) {
+      toast.error("Selecione o Segmento e o Tipo de Uniforme");
+      return;
+    }
+    
+    setBulkUploading(true);
+    setBulkProgress(0);
+    
+    const modelNumbers = Object.keys(bulkGroupedModels).sort();
+    const totalModels = modelNumbers.length;
+    let successCount = 0;
+    let errorCount = 0;
+    
+    try {
+      for (let i = 0; i < modelNumbers.length; i++) {
+        const modelNumber = modelNumbers[i];
+        const images = bulkGroupedModels[modelNumber];
+        
+        setBulkCurrentModel(`Modelo ${modelNumber}`);
+        
+        try {
+          // Criar modelo no banco
+          const { data: model, error: insertError } = await supabase
+            .from("shirt_models")
+            .insert({
+              name: `Modelo ${modelNumber}`,
+              segment_tag: bulkSegmentTag,
+              model_tag: bulkModelTag,
+              segment_id: segments.find((s: any) => s.segment_tag === bulkSegmentTag)?.id || null,
+              photo_main: "temp",
+              image_front: "temp",
+              image_back: "temp",
+              image_right: "temp",
+              image_left: "temp",
+            })
+            .select()
+            .single();
+          
+          if (insertError) throw insertError;
+          
+          // Upload das imagens - precisa do segment_id temporário
+          const tempSegmentId = segments.find((s: any) => s.segment_tag === bulkSegmentTag)?.id || "";
+          const imageUrls: Record<string, string> = {};
+          const requiredImages = ['photo_main', 'image_front', 'image_back', 'image_right', 'image_left'];
+          
+          for (const field of requiredImages) {
+            if (images[field]) {
+              const file = images[field];
+              const fileExt = file.name.split('.').pop();
+              const filePath = `${tempSegmentId}/${model.id}/${field}.${fileExt}`;
+
+              const { error: uploadError } = await supabase.storage
+                .from("shirt-models-images")
+                .upload(filePath, file, { upsert: true });
+
+              if (uploadError) throw uploadError;
+
+              const { data: urlData } = supabase.storage
+                .from("shirt-models-images")
+                .getPublicUrl(filePath);
+
+              imageUrls[field] = urlData.publicUrl;
+            }
+          }
+          
+          // Upload das variações opcionais (se existirem)
+          const optionalImages = ['image_front_small_logo', 'image_front_large_logo', 'image_front_clean'];
+          for (const field of optionalImages) {
+            if (images[field]) {
+              const file = images[field];
+              const fileExt = file.name.split('.').pop();
+              const filePath = `${tempSegmentId}/${model.id}/${field}.${fileExt}`;
+
+              const { error: uploadError } = await supabase.storage
+                .from("shirt-models-images")
+                .upload(filePath, file, { upsert: true });
+
+              if (uploadError) throw uploadError;
+
+              const { data: urlData } = supabase.storage
+                .from("shirt-models-images")
+                .getPublicUrl(filePath);
+
+              imageUrls[field] = urlData.publicUrl;
+            }
+          }
+          
+          // Atualizar modelo com URLs das imagens
+          const { error: updateError } = await supabase
+            .from("shirt_models")
+            .update(imageUrls)
+            .eq("id", model.id);
+          
+          if (updateError) throw updateError;
+          
+          successCount++;
+        } catch (error: any) {
+          console.error(`Erro ao criar modelo ${modelNumber}:`, error);
+          errorCount++;
+        }
+        
+        // Atualizar progresso
+        setBulkProgress(((i + 1) / totalModels) * 100);
+      }
+      
+      // Feedback final
+      if (successCount > 0) {
+        toast.success(`🎉 ${successCount} modelo(s) criado(s) com sucesso!`);
+        loadModels();
+      }
+      
+      if (errorCount > 0) {
+        toast.error(`❌ ${errorCount} modelo(s) falharam`);
+      }
+      
+      // Fechar diálogo e resetar
+      setIsBulkUploadDialogOpen(false);
+      setBulkFiles([]);
+      setBulkGroupedModels({});
+      setBulkSegmentTag("");
+      setBulkModelTag("");
+      
+    } catch (error: any) {
+      toast.error("Erro no upload em massa: " + error.message);
+    } finally {
+      setBulkUploading(false);
+      setBulkProgress(0);
+      setBulkCurrentModel("");
     }
   };
 
@@ -836,7 +1068,7 @@ const Models = () => {
           </p>
         </div>
 
-        {/* Modo de Visualização - Integrado */}
+        {/* Modo de Visualização e Botões */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
           <div className="flex gap-1 bg-muted/30 p-1.5 rounded-lg border">
             <Button
@@ -884,440 +1116,101 @@ const Models = () => {
                 Novo Modelo
               </Button>
             </DialogTrigger>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Novo Modelo de Camisa</DialogTitle>
-              <DialogDescription>
-                Faça upload das imagens do modelo (máx. 5MB cada). As variações da frente são opcionais.
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <Label htmlFor="name">Nome do Modelo*</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Ex: Regata Performance, Camisa Gola V"
-                  required
-                  disabled={uploading}
-                />
-              </div>
+          </Dialog>
 
-              <div>
-                <Label htmlFor="segment_tag">Tag do Segmento*</Label>
-                <Select
-                  value={formData.segment_tag}
-                  onValueChange={(value) => setFormData({ ...formData, segment_tag: value })}
-                  disabled={uploading}
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a tag do segmento" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {segments.map((segment: any) => (
-                      <SelectItem key={segment.id} value={segment.segment_tag || ""}>
-                        {segment.name} ({segment.segment_tag})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="model_tag">Tipo de Uniforme*</Label>
-                <Select
-                  value={formData.model_tag}
-                  onValueChange={(value) => setFormData({ ...formData, model_tag: value })}
-                  disabled={uploading}
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o tipo de uniforme" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="manga_longa">👕 Manga Longa</SelectItem>
-                    <SelectItem value="ziper">🧥 Zíper</SelectItem>
-                    <SelectItem value="manga_curta">👔 Manga Curta</SelectItem>
-                    <SelectItem value="regata">🎽 Regata</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="sku">SKU</Label>
-                <Input
-                  id="sku"
-                  value={formData.sku}
-                  onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                  placeholder="Ex: CM-001, REG-PERF-01"
-                  disabled={uploading}
-                />
-              </div>
-
-              <div className="space-y-3">
-                <Label>Características do Modelo</Label>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Ex: UV50+, Dry-fit, Absorção rápida"
-                    value={newFeature}
-                    onChange={(e) => setNewFeature(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        if (newFeature.trim()) {
-                          setFormData({ ...formData, features: [...formData.features, newFeature.trim()] });
-                          setNewFeature('');
-                        }
-                      }
-                    }}
-                    disabled={uploading}
-                  />
-                  <Button
-                    type="button"
-                    size="icon"
-                    onClick={() => {
-                      if (newFeature.trim()) {
-                        setFormData({ ...formData, features: [...formData.features, newFeature.trim()] });
-                        setNewFeature('');
-                      }
-                    }}
-                    disabled={uploading}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                {formData.features.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {formData.features.map((feature, index) => (
-                      <div key={index} className="flex items-center gap-1 bg-primary/10 text-primary px-2 py-1 rounded-md text-sm">
-                        <span>{feature}</span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-4 w-4 p-0"
-                          onClick={() => {
-                            setFormData({
-                              ...formData,
-                              features: formData.features.filter((_, i) => i !== index)
-                            });
-                          }}
-                          disabled={uploading}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* UPLOAD MÚLTIPLO INTELIGENTE */}
-              <div className="space-y-3 p-4 border-2 border-dashed border-primary/30 rounded-lg bg-primary/5">
-                <div className="flex items-center justify-between">
-                  <Label className="text-base font-semibold">
-                    🚀 Upload Rápido (Recomendado)
-                  </Label>
-                </div>
-                
-                <p className="text-sm text-muted-foreground">
-                  Selecione todas as fotos de uma vez. O sistema irá distribuí-las automaticamente baseado nos nomes dos arquivos:
-                </p>
-                
-                <div className="bg-background/50 p-3 rounded text-xs space-y-1 font-mono">
-                  <div>✓ <strong>CAPA</strong> → Foto Principal</div>
-                  <div>✓ <strong>FRENTE</strong> → Imagem Frente</div>
-                  <div>✓ <strong>COSTAS</strong> → Imagem Costas</div>
-                  <div>✓ <strong>LATERAL DIREITO</strong> → Lado Direito</div>
-                  <div>✓ <strong>LATERAL ESQUERDO</strong> → Lado Esquerdo</div>
-                  <p className="text-muted-foreground mt-2">
-                    * Números no início são ignorados (ex: "01 FRENTE")
-                  </p>
-                </div>
-                
-                <Input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files.length > 0) {
-                      handleMultipleFilesUpload(e.target.files);
-                    }
-                  }}
-                  disabled={uploading}
-                  className="cursor-pointer"
-                />
-                
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <ImageIcon className="h-4 w-4" />
-                  <span>Selecione 5 imagens ou mais</span>
-                </div>
-              </div>
-
-              {/* SEPARADOR */}
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">
-                    ou upload individual
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <Label>Imagens Obrigatórias* (ou use o upload rápido acima)</Label>
-                
-                {[
-                  { field: "photo_main" as const, label: "Foto Principal (para seleção)" },
-                  { field: "image_front" as const, label: "Imagem - Frente" },
-                  { field: "image_back" as const, label: "Imagem - Costas" },
-                  { field: "image_right" as const, label: "Imagem - Lado Direito" },
-                  { field: "image_left" as const, label: "Imagem - Lado Esquerdo" },
-                ].map(({ field, label }) => (
-                  <div key={field} className="space-y-2">
-                    <Label htmlFor={field} className="text-sm text-muted-foreground">
-                      {label}
-                    </Label>
-                    <div className="flex gap-2 items-start">
-                      <Input
-                        id={field}
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleFileChange(field, e.target.files?.[0] || null)}
-                        disabled={uploading}
-                      />
-                      {imagePreviews[field] && (
-                        <div className="flex items-center gap-2">
-                          <div className="w-20 h-20 border rounded flex-shrink-0">
-                            <img
-                              src={imagePreviews[field]}
-                              alt={label}
-                              className="w-full h-full object-cover rounded"
-                            />
-                          </div>
-                          {imageFiles[field] && (
-                            <span className="text-xs text-green-600 font-medium">
-                              ✓ Auto
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="space-y-4">
-                <Label className="text-sm">Variações da Frente (Opcional)</Label>
-                <p className="text-xs text-muted-foreground">
-                  Faça upload das variações da frente para permitir preview durante a personalização
-                </p>
-                
-                {[
-                  { field: "image_front_small_logo" as const, label: "Frente - Logo Pequena no Peito" },
-                  { field: "image_front_large_logo" as const, label: "Frente - Logo Grande no Centro" },
-                  { field: "image_front_clean" as const, label: "Frente - Limpa (sem logo)" },
-                ].map(({ field, label }) => (
-                  <div key={field} className="space-y-2">
-                    <Label htmlFor={field} className="text-sm text-muted-foreground">
-                      {label}
-                    </Label>
-                    <div className="flex gap-2 items-start">
-                      <Input
-                        id={field}
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleFileChange(field, e.target.files?.[0] || null)}
-                        disabled={uploading}
-                      />
-                      {imagePreviews[field] && (
-                        <div className="w-20 h-20 border rounded flex-shrink-0">
-                          <img
-                            src={imagePreviews[field]}
-                            alt={label}
-                            className="w-full h-full object-cover rounded"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {uploading && (
-                <div className="space-y-2">
-                  <Label>Fazendo upload...</Label>
-                  <Progress value={uploadProgress} />
-                </div>
-              )}
-
-              <Button type="submit" className="w-full" disabled={uploading}>
-                <Upload className="mr-2 h-4 w-4" />
-                {uploading ? "Criando Modelo..." : "Criar Modelo"}
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+          <Button 
+            variant="secondary"
+            onClick={() => setIsBulkUploadDialogOpen(true)}
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            🚀 Upload em Massa
+          </Button>
         </div>
       </div>
 
-      {/* Seção de Filtros */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Filtros</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Filtros em uma única linha */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Busca por Nome */}
-            <div className="space-y-2">
-              <Label htmlFor="search-name">Buscar por Nome</Label>
-              <Input
-                id="search-name"
-                placeholder="Digite o nome do modelo..."
-                value={searchName}
-                onChange={(e) => setSearchName(e.target.value)}
-              />
-            </div>
+      {/* Filtros */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Input
+          placeholder="Buscar por nome..."
+          value={searchName}
+          onChange={(e) => setSearchName(e.target.value)}
+          className="sm:w-64"
+        />
+        <Select value={filterSegmentTag} onValueChange={setFilterSegmentTag}>
+          <SelectTrigger className="sm:w-48">
+            <SelectValue placeholder="Filtrar por segmento" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os Segmentos</SelectItem>
+            {availableSegmentTags.map((tag) => (
+              <SelectItem key={tag} value={tag}>
+                📁 {tag}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterModelTag} onValueChange={setFilterModelTag}>
+          <SelectTrigger className="sm:w-48">
+            <SelectValue placeholder="Filtrar por tipo" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os Tipos</SelectItem>
+            <SelectItem value="manga_longa">👕 Manga Longa</SelectItem>
+            <SelectItem value="ziper">🧥 Zíper</SelectItem>
+            <SelectItem value="manga_curta">👔 Manga Curta</SelectItem>
+            <SelectItem value="regata">🎽 Regata</SelectItem>
+          </SelectContent>
+        </Select>
+        {segmentFilter && (
+          <Button variant="outline" onClick={() => navigate('/admin/models')}>
+            Limpar Filtro de Segmento
+          </Button>
+        )}
+      </div>
 
-            {/* Filtro Segment Tag */}
-            <div className="space-y-2">
-              <Label htmlFor="filter-segment-tag">Tag do Segmento</Label>
-              <Select
-                value={filterSegmentTag}
-                onValueChange={(value) => setFilterSegmentTag(value)}
-              >
-                <SelectTrigger id="filter-segment-tag">
-                  <SelectValue placeholder="Todos os segmentos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">📁 Todos os Segmentos</SelectItem>
-                  {availableSegmentTags.map((tag) => (
-                    <SelectItem key={tag} value={tag}>
-                      📁 {tag}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Filtro Model Tag */}
-            <div className="space-y-2">
-              <Label htmlFor="filter-model-tag">Tipo de Uniforme</Label>
-              <Select
-                value={filterModelTag}
-                onValueChange={(value) => setFilterModelTag(value)}
-              >
-                <SelectTrigger id="filter-model-tag">
-                  <SelectValue placeholder="Todos os tipos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">🎽 Todos os Tipos</SelectItem>
-                  {availableModelTags.map((tag) => {
-                    const icon = 
-                      tag === 'manga_longa' ? '👕' :
-                      tag === 'ziper' ? '🧥' :
-                      tag === 'manga_curta' ? '👔' :
-                      tag === 'regata' ? '🎽' : '👕';
-                    const label = 
-                      tag === 'manga_longa' ? 'Manga Longa' :
-                      tag === 'ziper' ? 'Zíper' :
-                      tag === 'manga_curta' ? 'Manga Curta' :
-                      tag === 'regata' ? 'Regata' : tag;
-                    return (
-                      <SelectItem key={tag} value={tag}>
-                        {icon} {label}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Botão Limpar Filtros */}
-          {(searchName !== "" || filterSegmentTag !== "all" || filterModelTag !== "all") && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setSearchName("");
-                setFilterSegmentTag("all");
-                setFilterModelTag("all");
-              }}
-            >
-              <X className="mr-2 h-4 w-4" />
-              Limpar Todos os Filtros
-            </Button>
-          )}
-
-          {/* Contador de Resultados */}
-          <p className="text-sm text-muted-foreground">
-            {filteredModels.length} {filteredModels.length === 1 ? "modelo encontrado" : "modelos encontrados"}
+      {/* Mostrar qual segmento está filtrado */}
+      {filteredSegment && (
+        <div className="bg-muted/50 rounded-lg p-4">
+          <p className="text-sm">
+            Filtrando por segmento: <strong>{filteredSegment.name}</strong>
           </p>
-        </CardContent>
-      </Card>
-
-
-      {segmentFilter && filteredSegment && (
-        <Card className="bg-primary/5 border-primary/20">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">
-                  Exibindo modelos do segmento: <strong>{filteredSegment.name}</strong>
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {filteredModels.length} {filteredModels.length === 1 ? "modelo encontrado" : "modelos encontrados"}
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate("/admin/models")}
-              >
-                <X className="mr-2 h-4 w-4" />
-                Limpar Filtro
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        </div>
       )}
 
-      {/* Renderização dinâmica baseada no modo */}
-      {viewMode === 'list' && renderListView()}
-      {viewMode === 'small' && renderSmallView()}
-      {viewMode === 'medium' && renderMediumView()}
-      {viewMode === 'large' && renderLargeView()}
-
-      {filteredModels.length === 0 && (
-        <Card>
-          <CardContent className="pt-6 text-center text-muted-foreground">
-            {segmentFilter
-              ? "Nenhum modelo encontrado para este segmento."
-              : "Nenhum modelo cadastrado. Clique em \"Novo Modelo\" para começar!"}
-          </CardContent>
+      {/* Lista de Modelos */}
+      {filteredModels.length === 0 ? (
+        <Card className="p-12">
+          <div className="text-center space-y-3">
+            <p className="text-muted-foreground">Nenhum modelo encontrado</p>
+            <Button onClick={() => setIsDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Criar Primeiro Modelo
+            </Button>
+          </div>
         </Card>
+      ) : (
+        <>
+          {viewMode === 'list' && renderListView()}
+          {viewMode === 'small' && renderSmallView()}
+          {viewMode === 'medium' && renderMediumView()}
+          {viewMode === 'large' && renderLargeView()}
+        </>
       )}
 
-      {/* Dialog de Edição */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+      {/* Dialog: Novo Modelo */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Editar Modelo de Camisa</DialogTitle>
+            <DialogTitle>Novo Modelo de Camisa</DialogTitle>
             <DialogDescription>
-              Atualize as informações e fotos do modelo. Você pode alterar apenas as fotos que desejar.
+              Faça upload das imagens do modelo (máx. 5MB cada). As variações da frente são opcionais.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleUpdate} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <Label htmlFor="edit-name">Nome do Modelo*</Label>
+              <Label htmlFor="name">Nome do Modelo*</Label>
               <Input
-                id="edit-name"
+                id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Ex: Regata Performance, Camisa Gola V"
@@ -1327,9 +1220,50 @@ const Models = () => {
             </div>
 
             <div>
-              <Label htmlFor="edit-sku">SKU</Label>
+              <Label htmlFor="segment_tag">Tag do Segmento*</Label>
+              <Select
+                value={formData.segment_tag}
+                onValueChange={(value) => setFormData({ ...formData, segment_tag: value })}
+                disabled={uploading}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a tag do segmento" />
+                </SelectTrigger>
+                <SelectContent>
+                  {segments.map((segment: any) => (
+                    <SelectItem key={segment.id} value={segment.segment_tag || ""}>
+                      {segment.name} ({segment.segment_tag})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="model_tag">Tipo de Uniforme*</Label>
+              <Select
+                value={formData.model_tag}
+                onValueChange={(value) => setFormData({ ...formData, model_tag: value })}
+                disabled={uploading}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo de uniforme" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="manga_longa">👕 Manga Longa</SelectItem>
+                  <SelectItem value="ziper">🧥 Zíper</SelectItem>
+                  <SelectItem value="manga_curta">👔 Manga Curta</SelectItem>
+                  <SelectItem value="regata">🎽 Regata</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="sku">SKU</Label>
               <Input
-                id="edit-sku"
+                id="sku"
                 value={formData.sku}
                 onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
                 placeholder="Ex: CM-001, REG-PERF-01"
@@ -1370,166 +1304,528 @@ const Models = () => {
                 </Button>
               </div>
               {formData.features.length > 0 && (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1 mt-2">
                   {formData.features.map((feature, index) => (
-                    <div key={index} className="flex items-center gap-1 bg-primary/10 text-primary px-2 py-1 rounded-md text-sm">
-                      <span>{feature}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-4 w-4 p-0"
+                    <Badge key={index} variant="secondary" className="gap-1">
+                      {feature}
+                      <X
+                        className="h-3 w-3 cursor-pointer"
                         onClick={() => {
                           setFormData({
                             ...formData,
                             features: formData.features.filter((_, i) => i !== index)
                           });
                         }}
-                        disabled={uploading}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
+                      />
+                    </Badge>
                   ))}
                 </div>
               )}
             </div>
 
-            {/* UPLOAD MÚLTIPLO INTELIGENTE - PARA EDIÇÃO */}
-            <div className="space-y-3 p-4 border-2 border-dashed border-primary/30 rounded-lg bg-primary/5">
-              <div className="flex items-center justify-between">
-                <Label className="text-base font-semibold">
-                  🚀 Upload Rápido (Recomendado)
-                </Label>
-              </div>
-              
-              <p className="text-sm text-muted-foreground">
-                Selecione todas as fotos de uma vez para substituir. O sistema irá distribuí-las automaticamente baseado nos nomes dos arquivos:
-              </p>
-              
-              <div className="bg-background/50 p-3 rounded text-xs space-y-1 font-mono">
-                <div>✓ <strong>CAPA</strong> → Foto Principal</div>
-                <div>✓ <strong>FRENTE</strong> → Imagem Frente</div>
-                <div>✓ <strong>COSTAS</strong> → Imagem Costas</div>
-                <div>✓ <strong>LATERAL DIREITO</strong> → Lado Direito</div>
-                <div>✓ <strong>LATERAL ESQUERDO</strong> → Lado Esquerdo</div>
-                <p className="text-muted-foreground mt-2">
-                  * Números no início são ignorados (ex: "01 FRENTE")
-                </p>
-              </div>
-              
-              <Input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={(e) => {
-                  if (e.target.files && e.target.files.length > 0) {
-                    handleMultipleFilesUpload(e.target.files);
-                  }
-                }}
-                disabled={uploading}
-                className="cursor-pointer"
-              />
-              
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <ImageIcon className="h-4 w-4" />
-                <span>Selecione as imagens que deseja atualizar</span>
-              </div>
-            </div>
-
-            {/* SEPARADOR */}
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  ou upload individual
-                </span>
-              </div>
-            </div>
-
             <div className="space-y-4">
-              <Label>Imagens Atuais (ou use o upload rápido acima)</Label>
-              <p className="text-xs text-muted-foreground">
-                As imagens atuais serão mantidas, a menos que você selecione novos arquivos
-              </p>
-              
-              {[
-                { field: "photo_main" as const, label: "Foto Principal" },
-                { field: "image_front" as const, label: "Frente" },
-                { field: "image_back" as const, label: "Costas" },
-                { field: "image_right" as const, label: "Lado Direito" },
-                { field: "image_left" as const, label: "Lado Esquerdo" },
-                { field: "image_front_small_logo" as const, label: "Frente - Logo Pequena" },
-                { field: "image_front_large_logo" as const, label: "Frente - Logo Grande" },
-                { field: "image_front_clean" as const, label: "Frente - Limpa" },
-              ].map(({ field, label }) => (
-                <div key={field} className="space-y-2">
-                  <Label htmlFor={`edit-${field}`} className="text-sm text-muted-foreground">
-                    {label}
-                  </Label>
-                  <div className="flex gap-2 items-start">
+              <div className="flex items-center justify-between">
+                <Label>Imagens do Modelo*</Label>
+                <div className="text-sm text-muted-foreground">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const input = document.createElement('input');
+                      input.type = 'file';
+                      input.multiple = true;
+                      input.accept = 'image/*';
+                      input.onchange = (e: any) => {
+                        const files = e.target?.files;
+                        if (files && files.length > 0) {
+                          handleMultipleFilesUpload(files);
+                        }
+                      };
+                      input.click();
+                    }}
+                    disabled={uploading}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload Rápido (Múltiplas Imagens)
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {[
+                  { field: 'photo_main' as const, label: '📷 Foto Principal (CAPA)' },
+                  { field: 'image_front' as const, label: '👕 Frente (FRENTE)' },
+                  { field: 'image_back' as const, label: '🔙 Costas (COSTAS)' },
+                  { field: 'image_right' as const, label: '➡️ Lateral Direita' },
+                  { field: 'image_left' as const, label: '⬅️ Lateral Esquerda' },
+                ].map(({ field, label }) => (
+                  <div key={field} className="space-y-2">
+                    <Label htmlFor={field}>{label}*</Label>
                     <Input
-                      id={`edit-${field}`}
+                      id={field}
                       type="file"
                       accept="image/*"
                       onChange={(e) => handleFileChange(field, e.target.files?.[0] || null)}
                       disabled={uploading}
+                      className="cursor-pointer"
                     />
                     {imagePreviews[field] && (
-                      <div className="w-20 h-20 border rounded flex-shrink-0">
+                      <div className="relative w-full h-32 rounded overflow-hidden border">
                         <img
                           src={imagePreviews[field]}
                           alt={label}
-                          className="w-full h-full object-cover rounded"
+                          className="w-full h-full object-cover"
                         />
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="icon"
+                          className="absolute top-2 right-2 h-6 w-6"
+                          onClick={() => {
+                            setImageFiles(prev => ({ ...prev, [field]: null }));
+                            setImagePreviews(prev => ({ ...prev, [field]: "" }));
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
                       </div>
                     )}
                   </div>
+                ))}
+              </div>
+
+              <div>
+                <Label className="text-sm text-muted-foreground">Variações Opcionais da Frente</Label>
+                <div className="grid grid-cols-3 gap-4 mt-3">
+                  {[
+                    { field: 'image_front_small_logo' as const, label: '🔹 Logo Pequeno' },
+                    { field: 'image_front_large_logo' as const, label: '🔷 Logo Grande' },
+                    { field: 'image_front_clean' as const, label: '✨ Limpa' },
+                  ].map(({ field, label }) => (
+                    <div key={field} className="space-y-2">
+                      <Label htmlFor={field} className="text-xs">{label}</Label>
+                      <Input
+                        id={field}
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleFileChange(field, e.target.files?.[0] || null)}
+                        disabled={uploading}
+                        className="cursor-pointer text-xs"
+                      />
+                      {imagePreviews[field] && (
+                        <div className="relative w-full h-24 rounded overflow-hidden border">
+                          <img
+                            src={imagePreviews[field]}
+                            alt={label}
+                            className="w-full h-full object-cover"
+                          />
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="icon"
+                            className="absolute top-1 right-1 h-5 w-5"
+                            onClick={() => {
+                              setImageFiles(prev => ({ ...prev, [field]: null }));
+                              setImagePreviews(prev => ({ ...prev, [field]: "" }));
+                            }}
+                          >
+                            <X className="h-2 w-2" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
             </div>
 
             {uploading && (
-              <div className="space-y-2">
-                <Label>Atualizando...</Label>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Fazendo upload...</Label>
+                  <span className="text-sm font-medium">{Math.round(uploadProgress)}%</span>
+                </div>
                 <Progress value={uploadProgress} />
               </div>
             )}
 
-            <div className="flex gap-2">
-              <Button 
-                type="button" 
-                variant="outline" 
-                className="flex-1"
-                onClick={() => {
-                  setIsEditDialogOpen(false);
-                  setEditingModel(null);
-                  setFormData({ name: "", segment_id: "", segment_tag: "", model_tag: "", sku: "", features: [] });
-                  setNewFeature('');
-                  setImageFiles({
-                    photo_main: null,
-                    image_front: null,
-                    image_back: null,
-                    image_right: null,
-                    image_left: null,
-                    image_front_small_logo: null,
-                    image_front_large_logo: null,
-                    image_front_clean: null,
-                  });
-                  setImagePreviews({
-                    photo_main: "",
-                    image_front: "",
-                    image_back: "",
-                    image_right: "",
-                    image_left: "",
-                    image_front_small_logo: "",
-                    image_front_large_logo: "",
-                    image_front_clean: "",
-                  });
-                }}
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsDialogOpen(false)}
                 disabled={uploading}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" className="flex-1" disabled={uploading}>
+                <Upload className="mr-2 h-4 w-4" />
+                {uploading ? "Criando..." : "Criar Modelo"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Upload em Massa */}
+      <Dialog open={isBulkUploadDialogOpen} onOpenChange={setIsBulkUploadDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>🚀 Upload em Massa de Modelos</DialogTitle>
+            <DialogDescription>
+              Selecione TODOS os arquivos de uma vez. O sistema vai detectar automaticamente os modelos baseado nos números dos arquivos.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* Instruções */}
+            <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+              <CardContent className="pt-4">
+                <p className="text-sm font-medium mb-2">📋 Como usar:</p>
+                <ul className="text-xs space-y-1 text-muted-foreground">
+                  <li>1. Nomeie seus arquivos com números no início: <code className="bg-muted px-1 py-0.5 rounded">01 CAPA.jpg</code>, <code className="bg-muted px-1 py-0.5 rounded">01 FRENTE.jpg</code>, etc.</li>
+                  <li>2. Selecione TODOS os arquivos de uma vez (pode ser 20, 50, 100...)</li>
+                  <li>3. O sistema agrupa automaticamente por número</li>
+                  <li>4. Cada modelo precisa ter: CAPA, FRENTE, COSTAS, LATERAL DIREITO, LATERAL ESQUERDO</li>
+                </ul>
+              </CardContent>
+            </Card>
+            
+            {/* Upload de Arquivos */}
+            <div className="space-y-3">
+              <Label>Selecionar Arquivos:</Label>
+              <Input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files.length > 0) {
+                    processBulkFiles(e.target.files);
+                  }
+                }}
+                disabled={bulkUploading}
+                className="cursor-pointer"
+              />
+              {bulkFiles.length > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  {bulkFiles.length} arquivo(s) selecionado(s)
+                </p>
+              )}
+            </div>
+            
+            {/* Preview dos Modelos Detectados */}
+            {Object.keys(bulkGroupedModels).length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">
+                    ✅ {Object.keys(bulkGroupedModels).length} Modelo(s) Detectado(s)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-[200px] overflow-y-auto">
+                    {Object.entries(bulkGroupedModels)
+                      .sort(([a], [b]) => a.localeCompare(b))
+                      .map(([modelNumber, images]) => (
+                        <div key={modelNumber} className="border rounded p-2 text-center">
+                          <p className="font-bold text-sm">Modelo {modelNumber}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {Object.keys(images).length} imagem(ns)
+                          </p>
+                        </div>
+                      ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            
+            {/* Configurações Comuns */}
+            {Object.keys(bulkGroupedModels).length > 0 && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Tag do Segmento* (aplicado a TODOS os modelos)</Label>
+                  <Select
+                    value={bulkSegmentTag}
+                    onValueChange={setBulkSegmentTag}
+                    disabled={bulkUploading}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a tag do segmento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {segments.map((segment: any) => (
+                        <SelectItem key={segment.id} value={segment.segment_tag || ""}>
+                          {segment.name} ({segment.segment_tag})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Tipo de Uniforme* (aplicado a TODOS os modelos)</Label>
+                  <Select
+                    value={bulkModelTag}
+                    onValueChange={setBulkModelTag}
+                    disabled={bulkUploading}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo de uniforme" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="manga_longa">👕 Manga Longa</SelectItem>
+                      <SelectItem value="ziper">🧥 Zíper</SelectItem>
+                      <SelectItem value="manga_curta">👔 Manga Curta</SelectItem>
+                      <SelectItem value="regata">🎽 Regata</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+            
+            {/* Progresso */}
+            {bulkUploading && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Criando modelos...</Label>
+                  <span className="text-sm font-medium">{Math.round(bulkProgress)}%</span>
+                </div>
+                <Progress value={bulkProgress} />
+                {bulkCurrentModel && (
+                  <p className="text-sm text-muted-foreground text-center">
+                    Processando: {bulkCurrentModel}
+                  </p>
+                )}
+              </div>
+            )}
+            
+            {/* Botões de Ação */}
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsBulkUploadDialogOpen(false);
+                  setBulkFiles([]);
+                  setBulkGroupedModels({});
+                  setBulkSegmentTag("");
+                  setBulkModelTag("");
+                }}
+                disabled={bulkUploading}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={handleBulkUpload}
+                disabled={bulkUploading || Object.keys(bulkGroupedModels).length === 0}
+                className="flex-1"
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                {bulkUploading 
+                  ? `Criando ${Object.keys(bulkGroupedModels).length} Modelo(s)...` 
+                  : `Criar ${Object.keys(bulkGroupedModels).length} Modelo(s)`
+                }
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Editar Modelo */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Modelo de Camisa</DialogTitle>
+            <DialogDescription>
+              Atualize os dados e imagens do modelo.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdate} className="space-y-6">
+            <div>
+              <Label htmlFor="name">Nome do Modelo*</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Ex: Regata Performance, Camisa Gola V"
+                required
+                disabled={uploading}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="sku">SKU</Label>
+              <Input
+                id="sku"
+                value={formData.sku}
+                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                placeholder="Ex: CM-001, REG-PERF-01"
+                disabled={uploading}
+              />
+            </div>
+
+            <div className="space-y-3">
+              <Label>Características do Modelo</Label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Ex: UV50+, Dry-fit, Absorção rápida"
+                  value={newFeature}
+                  onChange={(e) => setNewFeature(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (newFeature.trim()) {
+                        setFormData({ ...formData, features: [...formData.features, newFeature.trim()] });
+                        setNewFeature('');
+                      }
+                    }
+                  }}
+                  disabled={uploading}
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  onClick={() => {
+                    if (newFeature.trim()) {
+                      setFormData({ ...formData, features: [...formData.features, newFeature.trim()] });
+                      setNewFeature('');
+                    }
+                  }}
+                  disabled={uploading}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              {formData.features.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {formData.features.map((feature, index) => (
+                    <Badge key={index} variant="secondary" className="gap-1">
+                      {feature}
+                      <X
+                        className="h-3 w-3 cursor-pointer"
+                        onClick={() => {
+                          setFormData({
+                            ...formData,
+                            features: formData.features.filter((_, i) => i !== index)
+                          });
+                        }}
+                      />
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-4">
+              <Label>Imagens do Modelo</Label>
+              <div className="grid grid-cols-2 gap-4">
+                {[ 
+                  { field: 'photo_main' as const, label: '📷 Foto Principal (CAPA)' },
+                  { field: 'image_front' as const, label: '👕 Frente (FRENTE)' },
+                  { field: 'image_back' as const, label: '🔙 Costas (COSTAS)' },
+                  { field: 'image_right' as const, label: '➡️ Lateral Direita' },
+                  { field: 'image_left' as const, label: '⬅️ Lateral Esquerda' },
+                ].map(({ field, label }) => (
+                  <div key={field} className="space-y-2">
+                    <Label htmlFor={field}>{label}</Label>
+                    <Input
+                      id={field}
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleFileChange(field, e.target.files?.[0] || null)}
+                      disabled={uploading}
+                      className="cursor-pointer"
+                    />
+                    {imagePreviews[field] && (
+                      <div className="relative w-full h-32 rounded overflow-hidden border">
+                        <img
+                          src={imagePreviews[field]}
+                          alt={label}
+                          className="w-full h-full object-cover"
+                        />
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="icon"
+                          className="absolute top-2 right-2 h-6 w-6"
+                          onClick={() => {
+                            setImageFiles(prev => ({ ...prev, [field]: null }));
+                            setImagePreviews(prev => ({ ...prev, [field]: "" }));
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div>
+                <Label className="text-sm text-muted-foreground">Variações Opcionais da Frente</Label>
+                <div className="grid grid-cols-3 gap-4 mt-3">
+                  {[
+                    { field: 'image_front_small_logo' as const, label: '🔹 Logo Pequeno' },
+                    { field: 'image_front_large_logo' as const, label: '🔷 Logo Grande' },
+                    { field: 'image_front_clean' as const, label: '✨ Limpa' },
+                  ].map(({ field, label }) => (
+                    <div key={field} className="space-y-2">
+                      <Label htmlFor={field} className="text-xs">{label}</Label>
+                      <Input
+                        id={field}
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleFileChange(field, e.target.files?.[0] || null)}
+                        disabled={uploading}
+                        className="cursor-pointer text-xs"
+                      />
+                      {imagePreviews[field] && (
+                        <div className="relative w-full h-24 rounded overflow-hidden border">
+                          <img
+                            src={imagePreviews[field]}
+                            alt={label}
+                            className="w-full h-full object-cover"
+                          />
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="icon"
+                            className="absolute top-1 right-1 h-5 w-5"
+                            onClick={() => {
+                              setImageFiles(prev => ({ ...prev, [field]: null }));
+                              setImagePreviews(prev => ({ ...prev, [field]: "" }));
+                            }}
+                          >
+                            <X className="h-2 w-2" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {uploading && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Fazendo upload...</Label>
+                  <span className="text-sm font-medium">{Math.round(uploadProgress)}%</span>
+                </div>
+                <Progress value={uploadProgress} />
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsEditDialogOpen(false)}
+                disabled={uploading}
+                className="flex-1"
               >
                 Cancelar
               </Button>
