@@ -31,10 +31,7 @@ const SidebarLogo = () => {
     <div className="flex items-center gap-2">
       <img src={logoSS} alt="Space Sports Logo" className="h-10 w-10 object-contain flex-shrink-0" />
       {open && (
-        <div>
-            <h1 className="font-bold text-xl">Space Sports</h1>
-            <p className="text-sm text-muted-foreground">Painel de Controle</p>
-        </div>
+        <h1 className="font-bold text-xl">Space Sports</h1>
       )}
     </div>
   );
@@ -393,10 +390,7 @@ const AdminLayout = () => {
         <main className="flex-1 overflow-auto">
           <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
             <div className="flex items-center justify-between h-16 px-6">
-              <div className="flex items-center gap-4">
-                <SidebarTrigger className="-ml-1" />
-                <h2 className="text-2xl font-bold">Painel de Controle</h2>
-              </div>
+              <SidebarTrigger className="-ml-1" />
               <NotificationsDropdown />
             </div>
           </div>
