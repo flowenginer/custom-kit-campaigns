@@ -1129,20 +1129,19 @@ const Models = () => {
           <CardTitle className="text-lg">Filtros</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Busca por Nome */}
-          <div className="space-y-2">
-            <Label htmlFor="search-name">Buscar por Nome</Label>
-            <Input
-              id="search-name"
-              placeholder="Digite o nome do modelo..."
-              value={searchName}
-              onChange={(e) => setSearchName(e.target.value)}
-              className="max-w-sm"
-            />
-          </div>
+          {/* Filtros em uma única linha */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Busca por Nome */}
+            <div className="space-y-2">
+              <Label htmlFor="search-name">Buscar por Nome</Label>
+              <Input
+                id="search-name"
+                placeholder="Digite o nome do modelo..."
+                value={searchName}
+                onChange={(e) => setSearchName(e.target.value)}
+              />
+            </div>
 
-          {/* Filtros de Tags */}
-          <div className="grid md:grid-cols-2 gap-4">
             {/* Filtro Segment Tag */}
             <div className="space-y-2">
               <Label htmlFor="filter-segment-tag">Tag do Segmento</Label>
