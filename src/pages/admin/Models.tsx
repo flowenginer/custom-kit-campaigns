@@ -8,8 +8,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Trash2, Upload, ImageIcon, X, Pencil } from "lucide-react";
+import { Plus, Trash2, Upload, ImageIcon, X, Pencil, LayoutGrid, LayoutList, Grid3x3, Grid2x2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 
 interface Segment {
   id: string;
@@ -36,6 +38,8 @@ interface ShirtModel {
   segments?: Segment;
 }
 
+type ViewMode = 'list' | 'small' | 'medium' | 'large';
+
 const Models = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -48,6 +52,7 @@ const Models = () => {
   const [editingModel, setEditingModel] = useState<ShirtModel | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [viewMode, setViewMode] = useState<ViewMode>('medium');
   const [formData, setFormData] = useState({
     name: "",
     segment_id: "",
@@ -105,7 +110,16 @@ const Models = () => {
     loadModels();
     loadSegments();
     loadTags();
+    
+    // Load view mode preference
+    const savedView = localStorage.getItem('models-view-mode');
+    if (savedView) setViewMode(savedView as ViewMode);
   }, []);
+
+  const setAndSaveViewMode = (mode: ViewMode) => {
+    setViewMode(mode);
+    localStorage.setItem('models-view-mode', mode);
+  };
 
   const loadModels = async () => {
     const { data } = await supabase
@@ -568,6 +582,250 @@ const Models = () => {
 
   const filteredSegment = segments.find((s) => s.id === segmentFilter);
 
+  const renderListView = () => (
+    <Card>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[80px]">Imagem</TableHead>
+            <TableHead>Nome</TableHead>
+            <TableHead>Segmento</TableHead>
+            <TableHead>Tipo</TableHead>
+            <TableHead className="w-[100px]">Ações</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {filteredModels.map((model) => (
+            <TableRow key={model.id}>
+              <TableCell>
+                <div className="w-16 h-16 rounded overflow-hidden">
+                  <img
+                    src={model.photo_main}
+                    alt={model.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </TableCell>
+              <TableCell className="font-medium">{model.name}</TableCell>
+              <TableCell>
+                {model.segment_tag && (
+                  <Badge variant="outline">📁 {model.segment_tag}</Badge>
+                )}
+              </TableCell>
+              <TableCell>
+                {model.model_tag && (
+                  <Badge variant="secondary">
+                    {model.model_tag === 'manga_longa' && '👕 Manga Longa'}
+                    {model.model_tag === 'ziper' && '🧥 Zíper'}
+                    {model.model_tag === 'manga_curta' && '👔 Manga Curta'}
+                    {model.model_tag === 'regata' && '🎽 Regata'}
+                  </Badge>
+                )}
+              </TableCell>
+              <TableCell>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => openEditDialog(model)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDelete(model.id, model.segment_id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </Card>
+  );
+
+  const renderSmallView = () => (
+    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+      {filteredModels.map((model) => (
+        <Card key={model.id} className="overflow-hidden hover:shadow-md transition-shadow">
+          <div className="aspect-square bg-muted relative group">
+            <img
+              src={model.photo_main}
+              alt={model.name}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={() => openEditDialog(model)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={() => handleDelete(model.id, model.segment_id)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <CardContent className="p-2">
+            <p className="text-xs font-medium truncate">{model.name}</p>
+            {model.model_tag && (
+              <p className="text-[10px] text-muted-foreground truncate">
+                {model.model_tag === 'manga_longa' && '👕'}
+                {model.model_tag === 'ziper' && '🧥'}
+                {model.model_tag === 'manga_curta' && '👔'}
+                {model.model_tag === 'regata' && '🎽'}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+
+  const renderMediumView = () => (
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      {filteredModels.map((model) => (
+        <Card key={model.id} className="overflow-hidden">
+          <div className="aspect-square bg-muted relative">
+            <img
+              src={model.photo_main}
+              alt={model.name}
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <CardHeader className="p-4">
+            <CardTitle className="flex items-start justify-between text-base">
+              <span className="line-clamp-1">{model.name}</span>
+              <div className="flex gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => openEditDialog(model)}
+                >
+                  <Pencil className="h-3 w-3" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => handleDelete(model.id, model.segment_id)}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            </CardTitle>
+            <CardDescription className="space-y-1 text-xs">
+              <div>{model.segments?.name || "Sem segmento"} • 5 imagens</div>
+              <div className="flex gap-1 flex-wrap mt-2">
+                {model.segment_tag && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                    📁 {model.segment_tag}
+                  </Badge>
+                )}
+                {model.model_tag && (
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                    {model.model_tag === 'manga_longa' && '👕'}
+                    {model.model_tag === 'ziper' && '🧥'}
+                    {model.model_tag === 'manga_curta' && '👔'}
+                    {model.model_tag === 'regata' && '🎽'}
+                  </Badge>
+                )}
+              </div>
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      ))}
+    </div>
+  );
+
+  const renderLargeView = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {filteredModels.map((model) => (
+        <Card key={model.id} className="overflow-hidden">
+          <div className="aspect-video bg-muted relative">
+            <img
+              src={model.photo_main}
+              alt={model.name}
+              className="w-full h-full object-contain"
+            />
+          </div>
+          <CardHeader>
+            <CardTitle className="flex items-start justify-between">
+              <span>{model.name}</span>
+              <div className="flex gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => openEditDialog(model)}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleDelete(model.id, model.segment_id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardTitle>
+            <CardDescription className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span>{model.segments?.name || "Sem segmento"}</span>
+                <span>•</span>
+                <span>5 imagens</span>
+                {model.sku && (
+                  <>
+                    <span>•</span>
+                    <span>SKU: {model.sku}</span>
+                  </>
+                )}
+              </div>
+              
+              <div className="flex gap-2 flex-wrap">
+                {model.segment_tag && (
+                  <Badge variant="outline">
+                    📁 {model.segment_tag}
+                  </Badge>
+                )}
+                {model.model_tag && (
+                  <Badge variant="secondary">
+                    {model.model_tag === 'manga_longa' && '👕 Manga Longa'}
+                    {model.model_tag === 'ziper' && '🧥 Zíper'}
+                    {model.model_tag === 'manga_curta' && '👔 Manga Curta'}
+                    {model.model_tag === 'regata' && '🎽 Regata'}
+                  </Badge>
+                )}
+              </div>
+
+              {model.features && model.features.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Características:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {model.features.map((feature, idx) => (
+                      <Badge key={idx} variant="outline" className="text-xs">
+                        {feature}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      ))}
+    </div>
+  );
+
   return (
     <div className="p-8 space-y-6">
       <div className="flex justify-between items-center">
@@ -963,6 +1221,51 @@ const Models = () => {
         </CardContent>
       </Card>
 
+      {/* Controle de Visualização */}
+      <Card>
+        <CardContent className="py-4">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm font-medium">
+              Modo de Visualização
+            </Label>
+            <div className="flex gap-1">
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setAndSaveViewMode('list')}
+              >
+                <LayoutList className="h-4 w-4 mr-1" />
+                Lista
+              </Button>
+              <Button
+                variant={viewMode === 'small' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setAndSaveViewMode('small')}
+              >
+                <Grid3x3 className="h-4 w-4 mr-1" />
+                Pequeno
+              </Button>
+              <Button
+                variant={viewMode === 'medium' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setAndSaveViewMode('medium')}
+              >
+                <Grid2x2 className="h-4 w-4 mr-1" />
+                Médio
+              </Button>
+              <Button
+                variant={viewMode === 'large' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setAndSaveViewMode('large')}
+              >
+                <LayoutGrid className="h-4 w-4 mr-1" />
+                Grande
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {segmentFilter && filteredSegment && (
         <Card className="bg-primary/5 border-primary/20">
           <CardContent className="pt-6">
@@ -988,63 +1291,11 @@ const Models = () => {
         </Card>
       )}
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredModels.map((model) => (
-          <Card key={model.id} className="overflow-hidden">
-            <div className="aspect-square bg-muted relative">
-              <img
-                src={model.photo_main}
-                alt={model.name}
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <CardHeader>
-              <CardTitle className="flex items-start justify-between">
-                <span className="line-clamp-1">{model.name}</span>
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => openEditDialog(model)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDelete(model.id, model.segment_id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardTitle>
-              <CardDescription className="space-y-1">
-                <div>{model.segments?.name || "Sem segmento"} • 5 imagens</div>
-                <div className="flex gap-2 flex-wrap mt-2">
-                  {model.segment_tag && (
-                    <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-2 py-0.5 rounded">
-                      📁 {model.segment_tag}
-                    </span>
-                  )}
-                  {model.model_tag && (
-                    <span className="text-xs bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 px-2 py-0.5 rounded">
-                      {model.model_tag === 'manga_longa' && '👕'}
-                      {model.model_tag === 'ziper' && '🧥'}
-                      {model.model_tag === 'manga_curta' && '👔'}
-                      {model.model_tag === 'regata' && '🎽'}
-                      {' '}
-                      {model.model_tag === 'manga_longa' ? 'Manga Longa' :
-                       model.model_tag === 'ziper' ? 'Zíper' :
-                       model.model_tag === 'manga_curta' ? 'Manga Curta' :
-                       model.model_tag === 'regata' ? 'Regata' : model.model_tag}
-                    </span>
-                  )}
-                </div>
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        ))}
-      </div>
+      {/* Renderização dinâmica baseada no modo */}
+      {viewMode === 'list' && renderListView()}
+      {viewMode === 'small' && renderSmallView()}
+      {viewMode === 'medium' && renderMediumView()}
+      {viewMode === 'large' && renderLargeView()}
 
       {filteredModels.length === 0 && (
         <Card>
