@@ -627,11 +627,13 @@ const Dashboard = () => {
           ...statusLabels[status as keyof typeof statusLabels]
         }));
 
-        const { data: historyData } = await supabase
-          .from("design_task_history")
-          .select("task_id, old_status, new_status, created_at")
-          .eq("action", "status_changed")
-          .order("created_at", { ascending: true });
+    const { data: historyData } = await supabase
+      .from("design_task_history")
+      .select("task_id, old_status, new_status, created_at")
+      .eq("action", "status_changed")
+      .gte("created_at", dateRange.start.toISOString())
+      .lte("created_at", dateRange.end.toISOString())
+      .order("created_at", { ascending: true });
 
         const timeByStage: Record<string, number[]> = {};
         
