@@ -32,8 +32,8 @@ const SidebarLogo = () => {
       <img src={logoSS} alt="Space Sports Logo" className="h-10 w-10 object-contain flex-shrink-0" />
       {open && (
         <div>
-            <h1 className="font-bold text-xl text-primary-foreground">Space Sports</h1>
-            <p className="text-sm text-primary-foreground/80">Painel de Controle</p>
+            <h1 className="font-bold text-xl">Space Sports</h1>
+            <p className="text-sm text-muted-foreground">Painel de Controle</p>
         </div>
       )}
     </div>
@@ -100,7 +100,7 @@ const AdminLayout = () => {
     <SidebarProvider defaultOpen={true}>
       <div className="min-h-screen flex w-full">
         <Sidebar collapsible="icon" className="bg-card border-r border-primary/20">
-          <SidebarHeader className="bg-gradient-to-r from-primary to-primary/90 border-b border-primary/30 p-6">
+          <SidebarHeader className="border-b p-6">
             <SidebarLogo />
           </SidebarHeader>
 
