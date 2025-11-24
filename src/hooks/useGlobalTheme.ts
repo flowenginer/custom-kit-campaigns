@@ -57,5 +57,13 @@ export const useGlobalTheme = () => {
     }
   };
 
-  return { currentTheme, changeTheme, isLoading };
+  const resetToDefault = () => {
+    const defaultTheme = GLOBAL_THEMES[0]; // Azul Oceano
+    setCurrentTheme(defaultTheme);
+    applyTheme(defaultTheme);
+    localStorage.removeItem('global-theme-id');
+    toast.success(`Tema padrão "${defaultTheme.name}" restaurado com sucesso!`);
+  };
+
+  return { currentTheme, changeTheme, resetToDefault, isLoading };
 };
