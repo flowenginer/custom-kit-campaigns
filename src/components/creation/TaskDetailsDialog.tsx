@@ -498,7 +498,7 @@ export const TaskDetailsDialog = ({
   const priorityBadge = getPriorityBadge(task.priority);
   
   // Identificar contexto do vendedor (precisa de logo e ainda não foi enviado)
-  const isVendorContext = isSalesperson && 
+  const isVendorContext = (isSalesperson || isSuperAdmin || isAdmin) && 
                           context === 'orders' && 
                           task?.needs_logo === true;
   
