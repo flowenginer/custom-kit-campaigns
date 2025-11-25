@@ -6,8 +6,9 @@ import { TaskCardSkeleton } from "@/components/creation/TaskCardSkeleton";
 import { TaskCard } from "@/components/creation/TaskCard";
 import { DesignTask } from "@/types/design-task";
 import { toast } from "sonner";
-import { RefreshCw, PackageSearch } from "lucide-react";
+import { RefreshCw, PackageSearch, Plus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { NewLayoutRequestDialog } from "@/components/orders/NewLayoutRequestDialog";
 
 /**
  * Página EXCLUSIVA de Vendedores para gerenciar LEADS SEM LOGO
@@ -24,6 +25,7 @@ const Orders = () => {
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<DesignTask | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [newRequestOpen, setNewRequestOpen] = useState(false);
 
   useEffect(() => {
     loadTasks();
@@ -143,14 +145,23 @@ const Orders = () => {
           </p>
         </div>
 
-        <Button 
-          variant="outline" 
-          onClick={loadTasks}
-          disabled={loading}
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Atualizar
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="default"
+            onClick={() => setNewRequestOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Nova Requisição
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={loadTasks}
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Atualizar
+          </Button>
+        </div>
       </div>
 
       {loading ? (
@@ -190,6 +201,13 @@ const Orders = () => {
         onOpenChange={setDialogOpen}
         onTaskUpdated={handleTaskUpdated}
         context="orders"
+      />
+
+      {/* ✅ Modal de Nova Requisição de Layout */}
+      <NewLayoutRequestDialog
+        open={newRequestOpen}
+        onOpenChange={setNewRequestOpen}
+        onSuccess={loadTasks}
       />
     </div>
   );
