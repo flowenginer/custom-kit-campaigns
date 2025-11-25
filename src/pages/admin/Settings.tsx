@@ -70,6 +70,7 @@ const Settings = () => {
     { value: 'super_admin', label: 'Super Admin', description: 'Acesso total + gerenciar usuários' },
     { value: 'admin', label: 'Admin', description: 'Acesso a todas funcionalidades' },
     { value: 'designer', label: 'Designer', description: 'Acesso apenas a tarefas de design' },
+    { value: 'salesperson', label: 'Vendedor', description: 'Acesso a Pedidos e Temas' },
     { value: 'viewer', label: 'Visualizador', description: 'Apenas visualização' },
   ];
 
