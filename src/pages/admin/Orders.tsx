@@ -6,9 +6,11 @@ import { TaskCardSkeleton } from "@/components/creation/TaskCardSkeleton";
 import { TaskCard } from "@/components/creation/TaskCard";
 import { DesignTask } from "@/types/design-task";
 import { toast } from "sonner";
-import { RefreshCw, PackageSearch, Plus } from "lucide-react";
+import { RefreshCw, PackageSearch, Plus, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { NewLayoutRequestDialog } from "@/components/orders/NewLayoutRequestDialog";
+import { useUserRole } from "@/hooks/useUserRole";
+import { Checkbox } from "@/components/ui/checkbox";
 
 /**
  * Página EXCLUSIVA de Vendedores para gerenciar LEADS SEM LOGO
@@ -21,11 +23,13 @@ import { NewLayoutRequestDialog } from "@/components/orders/NewLayoutRequestDial
  */
 
 const Orders = () => {
+  const { isSuperAdmin } = useUserRole();
   const [tasks, setTasks] = useState<DesignTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<DesignTask | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newRequestOpen, setNewRequestOpen] = useState(false);
+  const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
 
   useEffect(() => {
     loadTasks();
@@ -135,6 +139,48 @@ const Orders = () => {
     loadTasks();
   };
 
+  const handleSelectAll = () => {
+    if (selectedTasks.length === tasks.length) {
+      setSelectedTasks([]);
+    } else {
+      setSelectedTasks(tasks.map(t => t.id));
+    }
+  };
+
+  const handleSelectTask = (taskId: string) => {
+    setSelectedTasks(prev => 
+      prev.includes(taskId) 
+        ? prev.filter(id => id !== taskId)
+        : [...prev, taskId]
+    );
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedTasks.length === 0) return;
+
+    const confirmed = window.confirm(
+      `Tem certeza que deseja excluir ${selectedTasks.length} tarefa(s)? Esta ação não pode ser desfeita.`
+    );
+    
+    if (!confirmed) return;
+
+    try {
+      const { error } = await supabase
+        .from('design_tasks')
+        .update({ deleted_at: new Date().toISOString() })
+        .in('id', selectedTasks);
+
+      if (error) throw error;
+
+      toast.success(`${selectedTasks.length} tarefa(s) excluída(s) com sucesso`);
+      setSelectedTasks([]);
+      loadTasks();
+    } catch (error) {
+      console.error("Error deleting tasks:", error);
+      toast.error("Erro ao excluir tarefas");
+    }
+  };
+
   return (
     <div className="p-8 space-y-6">
       <div className="flex items-center justify-between">
@@ -164,6 +210,33 @@ const Orders = () => {
         </div>
       </div>
 
+      {isSuperAdmin && tasks.length > 0 && (
+        <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg border">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="select-all"
+              checked={selectedTasks.length === tasks.length && tasks.length > 0}
+              onCheckedChange={handleSelectAll}
+            />
+            <label htmlFor="select-all" className="text-sm font-medium cursor-pointer">
+              Selecionar todos
+              {selectedTasks.length > 0 && ` (${selectedTasks.length} selecionado${selectedTasks.length !== 1 ? 's' : ''})`}
+            </label>
+          </div>
+          
+          {selectedTasks.length > 0 && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleDeleteSelected}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Apagar Selecionados ({selectedTasks.length})
+            </Button>
+          )}
+        </div>
+      )}
+
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[...Array(6)].map((_, i) => (
@@ -189,6 +262,9 @@ const Orders = () => {
               key={task.id}
               task={task}
               onClick={() => handleTaskClick(task)}
+              selectable={isSuperAdmin}
+              selected={selectedTasks.includes(task.id)}
+              onSelect={handleSelectTask}
             />
           ))}
         </div>

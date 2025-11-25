@@ -11,6 +11,7 @@ import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface TaskCardProps {
   task: DesignTask;
@@ -18,9 +19,12 @@ interface TaskCardProps {
   showAcceptButton?: boolean;
   currentUserId?: string;
   onTaskAccepted?: () => void;
+  selectable?: boolean;
+  selected?: boolean;
+  onSelect?: (taskId: string) => void;
 }
 
-export const TaskCard = ({ task, onClick, showAcceptButton, currentUserId, onTaskAccepted }: TaskCardProps) => {
+export const TaskCard = ({ task, onClick, showAcceptButton, currentUserId, onTaskAccepted, selectable, selected, onSelect }: TaskCardProps) => {
   const isOverdue = task.deadline && isPast(new Date(task.deadline)) && task.status !== 'completed';
   
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -58,6 +62,11 @@ export const TaskCard = ({ task, onClick, showAcceptButton, currentUserId, onTas
       console.error("Error accepting task:", error);
       toast.error("Erro ao aceitar tarefa");
     }
+  };
+
+  const handleCheckboxClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onSelect?.(task.id);
   };
 
   const formatDeadline = (deadline: string) => {
@@ -106,6 +115,15 @@ export const TaskCard = ({ task, onClick, showAcceptButton, currentUserId, onTas
           <Badge className="gap-1 bg-amber-500 hover:bg-amber-600 text-white">
             👤 Vendedor
           </Badge>
+        </div>
+      )}
+
+      {selectable && (
+        <div className="absolute top-2 right-2 z-10" onClick={handleCheckboxClick}>
+          <Checkbox
+            checked={selected}
+            className="h-5 w-5 border-2"
+          />
         </div>
       )}
       
