@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Plus, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { WorkflowCard } from "@/components/workflow/WorkflowCard";
 import { WorkflowEditorDialog } from "@/components/workflow/WorkflowEditorDialog";
 import { ApplyWorkflowDialog } from "@/components/workflow/ApplyWorkflowDialog";
@@ -127,8 +129,22 @@ export default function Workflows() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Card key={i}>
+              <CardHeader>
+                <Skeleton className="h-6 w-3/4 mb-2" />
+                <Skeleton className="h-4 w-1/2" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-20 w-full mb-4" />
+                <div className="flex gap-2">
+                  <Skeleton className="h-9 flex-1" />
+                  <Skeleton className="h-9 flex-1" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       ) : workflows.length === 0 ? (
         <div className="text-center py-12 border border-dashed rounded-lg">
@@ -139,7 +155,7 @@ export default function Workflows() {
           </Button>
         </div>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {workflows.map((workflow) => (
             <WorkflowCard
               key={workflow.id}
