@@ -100,7 +100,7 @@ const AdminLayout = () => {
 
   const showAll = isSuperAdmin;
   const showAdminLinks = showAll || isAdmin;
-  const showDesignerLinks = showAll || isDesigner;
+  const showDesignerLinks = showAll || isDesigner || isSalesperson;
   const showSalespersonLinks = showAll || isSalesperson;
   const showDashboard = showAll || isAdmin || isDesigner; // Exclui vendedor
 
