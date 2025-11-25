@@ -17,6 +17,266 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+// Função para gerar layout padrão baseado no stepId
+const generateDefaultLayout = (stepId: string): PageLayout => {
+  const baseLayout = {
+    backgroundColor: "#ffffff",
+    containerWidth: "800px",
+    padding: "2rem",
+  };
+
+  switch (stepId) {
+    case 'enter_name':
+      return {
+        ...baseLayout,
+        components: [
+          { 
+            id: 'heading-1', 
+            type: 'heading', 
+            content: 'Me informa o seu nome', 
+            level: 2, 
+            align: 'center', 
+            order: 0 
+          } as PageComponent,
+          { 
+            id: 'field-1', 
+            type: 'form_field', 
+            fieldType: 'text', 
+            label: '', 
+            placeholder: 'Digite seu nome completo', 
+            dataKey: 'name', 
+            required: true,
+            order: 1 
+          } as PageComponent,
+        ],
+      };
+
+    case 'enter_phone':
+      return {
+        ...baseLayout,
+        components: [
+          { 
+            id: 'heading-1', 
+            type: 'heading', 
+            content: 'Digite seu WhatsApp abaixo', 
+            level: 2, 
+            align: 'center', 
+            order: 0 
+          } as PageComponent,
+          { 
+            id: 'field-1', 
+            type: 'form_field', 
+            fieldType: 'tel', 
+            label: '', 
+            placeholder: '(DDD) 00000-0000', 
+            dataKey: 'phone', 
+            required: true,
+            order: 1 
+          } as PageComponent,
+          { 
+            id: 'text-1', 
+            type: 'text', 
+            content: 'Formato: (DDD) 00000-0000', 
+            align: 'center',
+            fontSize: '0.875rem',
+            color: '#6b7280',
+            order: 2 
+          } as PageComponent,
+        ],
+      };
+
+    case 'select_type':
+      return {
+        ...baseLayout,
+        components: [
+          { 
+            id: 'heading-1', 
+            type: 'heading', 
+            content: 'Escolha o tipo de uniforme', 
+            level: 2, 
+            align: 'center', 
+            order: 0 
+          } as PageComponent,
+          { 
+            id: 'text-1', 
+            type: 'text', 
+            content: 'Selecione o modelo que melhor se adapta às suas necessidades', 
+            align: 'center',
+            fontSize: '1.25rem',
+            color: '#6b7280',
+            order: 1 
+          } as PageComponent,
+        ],
+      };
+
+    case 'select_quantity':
+      return {
+        ...baseLayout,
+        components: [
+          { 
+            id: 'heading-1', 
+            type: 'heading', 
+            content: 'Quantas camisas você precisa?', 
+            level: 2, 
+            align: 'center', 
+            order: 0 
+          } as PageComponent,
+        ],
+      };
+
+    case 'choose_model':
+      return {
+        ...baseLayout,
+        components: [
+          { 
+            id: 'heading-1', 
+            type: 'heading', 
+            content: 'Escolha o modelo', 
+            level: 2, 
+            align: 'center', 
+            order: 0 
+          } as PageComponent,
+        ],
+      };
+
+    case 'customize_front':
+      return {
+        ...baseLayout,
+        components: [
+          { 
+            id: 'heading-1', 
+            type: 'heading', 
+            content: 'Personalize a Frente', 
+            level: 2, 
+            align: 'center', 
+            order: 0 
+          } as PageComponent,
+          { 
+            id: 'custom-editor-1', 
+            type: 'custom_editor', 
+            editorType: 'front',
+            order: 1 
+          } as PageComponent,
+        ],
+      };
+
+    case 'customize_back':
+      return {
+        ...baseLayout,
+        components: [
+          { 
+            id: 'heading-1', 
+            type: 'heading', 
+            content: 'Personalize as Costas', 
+            level: 2, 
+            align: 'center', 
+            order: 0 
+          } as PageComponent,
+          { 
+            id: 'custom-editor-1', 
+            type: 'custom_editor', 
+            editorType: 'back',
+            order: 1 
+          } as PageComponent,
+        ],
+      };
+
+    case 'customize_sleeves_left':
+      return {
+        ...baseLayout,
+        components: [
+          { 
+            id: 'heading-1', 
+            type: 'heading', 
+            content: 'Personalize a Manga Esquerda', 
+            level: 2, 
+            align: 'center', 
+            order: 0 
+          } as PageComponent,
+          { 
+            id: 'custom-editor-1', 
+            type: 'custom_editor', 
+            editorType: 'sleeve_left',
+            order: 1 
+          } as PageComponent,
+        ],
+      };
+
+    case 'customize_sleeves_right':
+      return {
+        ...baseLayout,
+        components: [
+          { 
+            id: 'heading-1', 
+            type: 'heading', 
+            content: 'Personalize a Manga Direita', 
+            level: 2, 
+            align: 'center', 
+            order: 0 
+          } as PageComponent,
+          { 
+            id: 'custom-editor-1', 
+            type: 'custom_editor', 
+            editorType: 'sleeve_right',
+            order: 1 
+          } as PageComponent,
+        ],
+      };
+
+    case 'upload_logos':
+      return {
+        ...baseLayout,
+        components: [
+          { 
+            id: 'heading-1', 
+            type: 'heading', 
+            content: 'Upload de Logos', 
+            level: 2, 
+            align: 'center', 
+            order: 0 
+          } as PageComponent,
+        ],
+      };
+
+    case 'review':
+      return {
+        ...baseLayout,
+        components: [
+          { 
+            id: 'heading-1', 
+            type: 'heading', 
+            content: 'Revisão do Pedido', 
+            level: 2, 
+            align: 'center', 
+            order: 0 
+          } as PageComponent,
+          { 
+            id: 'text-1', 
+            type: 'text', 
+            content: 'Confira todos os detalhes antes de finalizar', 
+            align: 'center',
+            order: 1 
+          } as PageComponent,
+        ],
+      };
+
+    default:
+      return {
+        ...baseLayout,
+        components: [
+          { 
+            id: 'heading-1', 
+            type: 'heading', 
+            content: 'Nova Etapa', 
+            level: 2, 
+            align: 'center', 
+            order: 0 
+          } as PageComponent,
+        ],
+      };
+  }
+};
+
 const CampaignStepBuilder = () => {
   const { campaignId, stepId } = useParams<{ campaignId: string; stepId: string }>();
   const navigate = useNavigate();
@@ -55,8 +315,12 @@ const CampaignStepBuilder = () => {
 
       if (step) {
         setCurrentStep(step);
-        if (step.page_layout) {
+        if (step.page_layout && (step.page_layout as PageLayout).components?.length > 0) {
           setLayout(step.page_layout as PageLayout);
+        } else {
+          // Gerar layout padrão se não existir
+          const defaultLayout = generateDefaultLayout(stepId);
+          setLayout(defaultLayout);
         }
       }
     } catch (error) {

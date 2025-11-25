@@ -14,7 +14,12 @@ interface ComponentRendererProps {
   formData?: Record<string, any>;
   onFormChange?: (key: string, value: any) => void;
   onButtonClick?: (action: string) => void;
-  customizationProps?: any; // Props para editores customizados
+  customizationProps?: {
+    selectedModel?: any;
+    customizations?: any;
+    onCustomizationChange?: (data: any) => void;
+    onNext?: () => void;
+  };
 }
 
 const RenderComponent = ({ 
@@ -163,7 +168,74 @@ const RenderComponent = ({
       );
 
     case 'custom_editor':
-      // Renderizar placeholder visual para editores customizados no Page Builder
+      // Renderizar editores customizados funcionais na página pública
+      if (customizationProps?.selectedModel) {
+        const { selectedModel, customizations, onCustomizationChange, onNext } = customizationProps;
+        
+        switch (component.editorType) {
+          case 'front':
+            return (
+              <FrontEditor
+                model={selectedModel}
+                value={customizations?.front || {}}
+                onChange={(data) => onCustomizationChange?.({ 
+                  ...customizations, 
+                  front: { ...customizations.front, ...data } 
+                })}
+                onNext={onNext || (() => {})}
+              />
+            );
+          
+          case 'back':
+            return (
+              <BackEditor
+                model={selectedModel}
+                value={customizations?.back || {}}
+                onChange={(data) => onCustomizationChange?.({ 
+                  ...customizations, 
+                  back: { ...customizations.back, ...data } 
+                })}
+                onNext={onNext || (() => {})}
+              />
+            );
+          
+          case 'sleeve_left':
+            return (
+              <SleeveEditor
+                model={selectedModel}
+                side="left"
+                value={customizations?.sleeves?.left || {}}
+                onChange={(data) => onCustomizationChange?.({
+                  ...customizations,
+                  sleeves: {
+                    ...customizations.sleeves,
+                    left: { ...customizations.sleeves.left, ...data }
+                  }
+                })}
+                onNext={onNext || (() => {})}
+              />
+            );
+          
+          case 'sleeve_right':
+            return (
+              <SleeveEditor
+                model={selectedModel}
+                side="right"
+                value={customizations?.sleeves?.right || {}}
+                onChange={(data) => onCustomizationChange?.({
+                  ...customizations,
+                  sleeves: {
+                    ...customizations.sleeves,
+                    right: { ...customizations.sleeves.right, ...data }
+                  }
+                })}
+                onNext={onNext || (() => {})}
+              />
+            );
+        }
+      }
+      
+      // Fallback: renderizar placeholder visual para editores customizados no Page Builder
       const editorLabels = {
         front: 'Editor de Personalização - Frente',
         back: 'Editor de Personalização - Costas',
