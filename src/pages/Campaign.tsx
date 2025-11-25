@@ -678,7 +678,7 @@ export default function Campaign() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen campaign-themed">
       <CustomScriptManager 
         headScripts={campaign.custom_head_scripts}
         bodyScripts={campaign.custom_body_scripts}
@@ -686,8 +686,8 @@ export default function Campaign() {
 
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-        {/* Faixa vermelha com logo */}
-        <div className="bg-red-600 py-3">
+        {/* Faixa com cor primária do tema e logo */}
+        <div className="py-3" style={{ backgroundColor: `hsl(var(--campaign-primary))` }}>
           <div className="container mx-auto px-4">
             <div className="flex justify-center">
               <img src={logoImg} alt="Logo" className="h-12" />
@@ -756,7 +756,7 @@ export default function Campaign() {
               {availableUniformTypes.map((type) => (
                 <Card
                   key={type}
-                  className={`cursor-pointer hover:shadow-xl transition-all border-2 hover:border-primary w-[calc(50%-8px)] md:w-[200px] ${
+                  className={`themed-card cursor-pointer hover:shadow-xl transition-all border-2 hover:border-primary w-[calc(50%-8px)] md:w-[200px] ${
                     selectedUniformType === type ? 'border-primary ring-4 ring-primary/20' : ''
                   }`}
                   onClick={() => {
@@ -784,7 +784,7 @@ export default function Campaign() {
 
         {/* Step 2: Enter Name */}
         {currentStepId === 'enter_name' && (
-          <Card className="max-w-lg mx-auto shadow-lg">
+          <Card className="themed-card max-w-lg mx-auto shadow-lg">
             <CardContent className="p-8">
               <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">
                 Me informa o seu nome
@@ -809,7 +809,7 @@ export default function Campaign() {
 
         {/* Step 3: Enter Phone */}
         {currentStepId === 'enter_phone' && (
-          <Card className="max-w-lg mx-auto shadow-lg">
+          <Card className="themed-card max-w-lg mx-auto shadow-lg">
             <CardContent className="p-8">
               <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">
                 Digite seu WhatsApp abaixo
@@ -838,7 +838,7 @@ export default function Campaign() {
 
         {/* Step 4: Select Quantity */}
         {currentStepId === 'select_quantity' && (
-          <Card className="max-w-3xl mx-auto shadow-lg">
+          <Card className="themed-card max-w-3xl mx-auto shadow-lg">
             <CardContent className="p-8">
               <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">
                 Quantas camisas você precisa?
@@ -858,7 +858,7 @@ export default function Campaign() {
                     
                     <Button
                       variant={customerData.quantity === qty ? 'default' : 'outline'}
-                      className={`h-16 md:h-20 text-xl md:text-2xl font-bold w-full ${
+                      className={`btn-primary h-16 md:h-20 text-xl md:text-2xl font-bold w-full ${
                         qty === 20 ? 'ring-2 ring-green-600' : ''
                       }`}
                       onClick={() => setCustomerData({
@@ -874,7 +874,7 @@ export default function Campaign() {
 
                 <Button
                   variant={customerData.quantity === 'custom' ? 'default' : 'outline'}
-                  className="h-16 md:h-20 text-lg md:text-xl font-bold"
+                  className="btn-primary h-16 md:h-20 text-lg md:text-xl font-bold"
                   onClick={() => setCustomerData({
                     ...customerData,
                     quantity: 'custom'
@@ -927,7 +927,7 @@ export default function Campaign() {
             </h3>
 
             {availableModels.filter(m => m.model_tag === selectedUniformType).length === 0 ? (
-              <Card className="max-w-lg mx-auto">
+              <Card className="themed-card max-w-lg mx-auto">
                 <CardContent className="p-8 text-center">
                   <p className="text-muted-foreground">
                     Nenhum modelo disponível para este tipo de uniforme.
@@ -941,7 +941,7 @@ export default function Campaign() {
                   .map((model) => (
                     <Card
                       key={model.id}
-                      className={`hover:shadow-xl transition-all border-2 ${
+                      className={`themed-card hover:shadow-xl transition-all border-2 ${
                         selectedModel?.id === model.id ? 'border-primary ring-4 ring-primary/20' : 'border-border'
                       }`}
                       onClick={() => handleSelectModel(model)}
@@ -972,7 +972,7 @@ export default function Campaign() {
                         <div className="p-4 border-t">
                           <Button
                             size="lg"
-                            className="w-full h-auto min-h-[56px] py-3 text-sm md:text-lg md:h-14 md:py-0 !whitespace-normal md:!whitespace-nowrap"
+                            className="btn-primary w-full h-auto min-h-[56px] py-3 text-sm md:text-lg md:h-14 md:py-0 !whitespace-normal md:!whitespace-nowrap"
                           >
                             {selectedModel?.id === model.id ? (
                               <>
@@ -1096,7 +1096,7 @@ export default function Campaign() {
               Revisão e Envio
             </h2>
             
-            <Card>
+            <Card className="themed-card">
               <CardContent className="p-4 md:p-6 space-y-6 pb-8 md:pb-6">
                 {/* Modelo Selecionado */}
                 <div>
@@ -1236,7 +1236,7 @@ export default function Campaign() {
           )}
 
           {/* Mostrar Próximo EXCETO nas páginas de seleção e personalização */}
-          {currentStepId !== 'select_type' && 
+           {currentStepId !== 'select_type' && 
            currentStepId !== 'choose_model' && 
            currentStepId !== 'customize_front' && 
            currentStepId !== 'customize_back' && 
@@ -1246,7 +1246,7 @@ export default function Campaign() {
               onClick={handleNext}
               disabled={isSaving}
               size="lg"
-              className="ml-auto"
+              className="btn-primary ml-auto"
             >
               {currentStepId === 'review' ? 'Finalizar Pedido' : 'Próximo'}
             </Button>
