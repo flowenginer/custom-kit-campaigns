@@ -282,25 +282,6 @@ const AdminLayout = () => {
                       <SidebarMenuItem>
                         <SidebarMenuButton 
                           asChild 
-                          isActive={location.pathname === "/admin/campaign-pages"}
-                          disabled={isNavigating}
-                          className={cn(
-                            "transition-colors",
-                            location.pathname === "/admin/campaign-pages" 
-                              ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                              : "hover:bg-accent/10 hover:text-primary"
-                          )}
-                        >
-                          <NavLink to="/admin/campaign-pages" onClick={() => setIsNavigating(true)}>
-                            <FileEdit className="h-5 w-5" />
-                            <span className="text-base">Páginas de Campanha</span>
-                          </NavLink>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-
-                      <SidebarMenuItem>
-                        <SidebarMenuButton 
-                          asChild 
                           isActive={location.pathname === "/admin/ab-tests"}
                           disabled={isNavigating}
                           className={cn(
