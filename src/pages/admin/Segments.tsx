@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,8 +9,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Eye } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, LayoutGrid, LayoutList, Grid3x3, Grid2x2, Folder, FolderOpen, ChevronDown, ChevronRight } from "lucide-react";
 
 interface Segment {
   id: string;
@@ -20,6 +22,8 @@ interface Segment {
   model_tag: string | null;
   created_at: string;
 }
+
+type ViewMode = 'list' | 'small' | 'medium' | 'large';
 
 const Segments = () => {
   const navigate = useNavigate();
@@ -34,11 +38,51 @@ const Segments = () => {
   const [isCreatingModelTag, setIsCreatingModelTag] = useState(false);
   const [newSegmentTag, setNewSegmentTag] = useState("");
   const [newModelTag, setNewModelTag] = useState("");
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const saved = localStorage.getItem('segments-view-mode');
+    return (saved as ViewMode) || 'medium';
+  });
+  const [expandedFolders, setExpandedFolders] = useState<string[]>([]);
 
   useEffect(() => {
     loadSegments();
     loadTags();
   }, []);
+
+  const setAndSaveViewMode = (mode: ViewMode) => {
+    setViewMode(mode);
+    localStorage.setItem('segments-view-mode', mode);
+  };
+
+  const groupedSegments = useMemo(() => {
+    const groups: Record<string, Segment[]> = {};
+    
+    segments.forEach(segment => {
+      const folder = segment.segment_tag || 'sem_categoria';
+      if (!groups[folder]) {
+        groups[folder] = [];
+      }
+      groups[folder].push(segment);
+    });
+    
+    return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [segments]);
+
+  const toggleFolder = (folderId: string) => {
+    setExpandedFolders(prev => 
+      prev.includes(folderId) 
+        ? prev.filter(f => f !== folderId)
+        : [...prev, folderId]
+    );
+  };
+
+  const expandAllFolders = () => {
+    setExpandedFolders(groupedSegments.map(([folder]) => folder));
+  };
+
+  const collapseAllFolders = () => {
+    setExpandedFolders([]);
+  };
 
   const loadSegments = async () => {
     const { data } = await supabase
@@ -216,9 +260,178 @@ const Segments = () => {
     setIsDialogOpen(true);
   };
 
+  const renderListView = (segmentsList: Segment[]) => (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Nome</TableHead>
+          <TableHead>Tipo de Modelo</TableHead>
+          <TableHead>Modelos</TableHead>
+          <TableHead className="w-[200px]">Ações</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {segmentsList.map(segment => (
+          <TableRow key={segment.id}>
+            <TableCell className="font-medium">{segment.name}</TableCell>
+            <TableCell>
+              {segment.model_tag && (
+                <Badge variant="secondary" className="text-xs">
+                  {segment.model_tag === 'ziper' && '🧥 '}
+                  {segment.model_tag === 'manga_longa' && '👕 '}
+                  {segment.model_tag === 'manga_curta' && '👔 '}
+                  {segment.model_tag === 'regata' && '🎽 '}
+                  {segment.model_tag}
+                </Badge>
+              )}
+            </TableCell>
+            <TableCell>
+              <span className="text-sm text-muted-foreground">
+                {modelCounts[segment.id] || 0} {modelCounts[segment.id] === 1 ? "modelo" : "modelos"}
+              </span>
+            </TableCell>
+            <TableCell>
+              <div className="flex gap-1">
+                <Button variant="ghost" size="icon" onClick={() => openEditDialog(segment)}>
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => handleDelete(segment.id)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => navigate(`/admin/models?segment=${segment.id}`)}>
+                  <Eye className="mr-1 h-3 w-3" />
+                  Ver
+                </Button>
+              </div>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+
+  const renderSmallView = (segmentsList: Segment[]) => (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
+      {segmentsList.map(segment => (
+        <Card key={segment.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/admin/models?segment=${segment.id}`)}>
+          <CardContent className="p-3">
+            <div className="text-sm font-medium line-clamp-2 mb-2">{segment.name}</div>
+            <div className="flex flex-col gap-1">
+              {segment.model_tag && (
+                <Badge variant="secondary" className="text-xs w-fit">
+                  {segment.model_tag === 'ziper' && '🧥'}
+                  {segment.model_tag === 'manga_longa' && '👕'}
+                  {segment.model_tag === 'manga_curta' && '👔'}
+                  {segment.model_tag === 'regata' && '🎽'}
+                </Badge>
+              )}
+              <span className="text-xs text-muted-foreground">
+                {modelCounts[segment.id] || 0} modelo{modelCounts[segment.id] !== 1 ? 's' : ''}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+
+  const renderMediumView = (segmentsList: Segment[]) => (
+    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {segmentsList.map(segment => (
+        <Card key={segment.id}>
+          <CardHeader>
+            <CardTitle className="flex items-start justify-between">
+              <div className="flex flex-col gap-2">
+                <span className="line-clamp-1">{segment.name}</span>
+                {segment.model_tag && (
+                  <Badge variant="secondary" className="text-xs w-fit">
+                    {segment.model_tag === 'ziper' && '🧥 '}
+                    {segment.model_tag === 'manga_longa' && '👕 '}
+                    {segment.model_tag === 'manga_curta' && '👔 '}
+                    {segment.model_tag === 'regata' && '🎽 '}
+                    {segment.model_tag}
+                  </Badge>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button variant="ghost" size="icon" onClick={() => openEditDialog(segment)}>
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => handleDelete(segment.id)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardTitle>
+            {segment.description && (
+              <CardDescription className="line-clamp-2">{segment.description}</CardDescription>
+            )}
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">
+                {modelCounts[segment.id] || 0} {modelCounts[segment.id] === 1 ? "modelo" : "modelos"}
+              </span>
+              <Button variant="outline" size="sm" onClick={() => navigate(`/admin/models?segment=${segment.id}`)}>
+                <Eye className="mr-2 h-4 w-4" />
+                Ver Modelos
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+
+  const renderLargeView = (segmentsList: Segment[]) => (
+    <div className="grid md:grid-cols-2 gap-6">
+      {segmentsList.map(segment => (
+        <Card key={segment.id}>
+          <CardHeader>
+            <CardTitle className="flex items-start justify-between text-xl">
+              <div className="flex flex-col gap-3">
+                <span>{segment.name}</span>
+                {segment.model_tag && (
+                  <Badge variant="secondary" className="text-sm w-fit">
+                    {segment.model_tag === 'ziper' && '🧥 '}
+                    {segment.model_tag === 'manga_longa' && '👕 '}
+                    {segment.model_tag === 'manga_curta' && '👔 '}
+                    {segment.model_tag === 'regata' && '🎽 '}
+                    {segment.model_tag}
+                  </Badge>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button variant="ghost" size="icon" onClick={() => openEditDialog(segment)}>
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => handleDelete(segment.id)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardTitle>
+            {segment.description && (
+              <CardDescription className="text-base">{segment.description}</CardDescription>
+            )}
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <span className="text-base text-muted-foreground">
+                {modelCounts[segment.id] || 0} {modelCounts[segment.id] === 1 ? "modelo" : "modelos"}
+              </span>
+              <Button variant="outline" onClick={() => navigate(`/admin/models?segment=${segment.id}`)}>
+                <Eye className="mr-2 h-4 w-4" />
+                Ver Modelos
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+
   return (
     <div className="p-8 space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold">Segmentos</h1>
           <p className="text-muted-foreground mt-1">
@@ -226,7 +439,58 @@ const Segments = () => {
           </p>
         </div>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <div className="flex gap-2 flex-wrap items-center">
+          {/* Botões de Expandir/Colapsar */}
+          <div className="flex gap-1">
+            <Button variant="outline" size="sm" onClick={expandAllFolders}>
+              Expandir Tudo
+            </Button>
+            <Button variant="outline" size="sm" onClick={collapseAllFolders}>
+              Fechar Tudo
+            </Button>
+          </div>
+
+          {/* Modo de Visualização */}
+          <div className="flex gap-1 bg-muted/30 p-1.5 rounded-lg border">
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setAndSaveViewMode('list')}
+              className="h-8"
+            >
+              <LayoutList className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Lista</span>
+            </Button>
+            <Button
+              variant={viewMode === 'small' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setAndSaveViewMode('small')}
+              className="h-8"
+            >
+              <Grid3x3 className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Pequeno</span>
+            </Button>
+            <Button
+              variant={viewMode === 'medium' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setAndSaveViewMode('medium')}
+              className="h-8"
+            >
+              <Grid2x2 className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Médio</span>
+            </Button>
+            <Button
+              variant={viewMode === 'large' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setAndSaveViewMode('large')}
+              className="h-8"
+            >
+              <LayoutGrid className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Grande</span>
+            </Button>
+          </div>
+
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={() => { 
               setEditingSegment(null); 
@@ -405,72 +669,47 @@ const Segments = () => {
               </Button>
             </form>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {segments.map((segment) => (
-          <Card key={segment.id}>
-            <CardHeader>
-              <CardTitle className="flex items-start justify-between">
-                <div className="flex flex-col gap-2">
-                  <span className="line-clamp-1">{segment.name}</span>
-                  <div className="flex gap-2 flex-wrap">
-                    {segment.segment_tag && (
-                      <Badge variant="outline" className="text-xs w-fit">
-                        📁 {segment.segment_tag}
-                      </Badge>
-                    )}
-                    {segment.model_tag && (
-                      <Badge variant="secondary" className="text-xs w-fit">
-                        {segment.model_tag === 'ziper' && '🧥 '}
-                        {segment.model_tag === 'manga_longa' && '👕 '}
-                        {segment.model_tag === 'manga_curta' && '👔 '}
-                        {segment.model_tag === 'regata' && '🎽 '}
-                        {segment.model_tag}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => openEditDialog(segment)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDelete(segment.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardTitle>
-              {segment.description && (
-                <CardDescription className="line-clamp-2">
-                  {segment.description}
-                </CardDescription>
-              )}
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">
-                  {modelCounts[segment.id] || 0} {modelCounts[segment.id] === 1 ? "modelo" : "modelos"}
+      {/* Visualização em Pastas */}
+      <div className="space-y-3">
+        {groupedSegments.map(([folderName, folderSegments]) => (
+          <Collapsible
+            key={folderName}
+            open={expandedFolders.includes(folderName)}
+            onOpenChange={() => toggleFolder(folderName)}
+          >
+            <CollapsibleTrigger className="w-full">
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                {expandedFolders.includes(folderName) ? (
+                  <>
+                    <FolderOpen className="h-5 w-5 text-primary" />
+                    <ChevronDown className="h-4 w-4" />
+                  </>
+                ) : (
+                  <>
+                    <Folder className="h-5 w-5 text-muted-foreground" />
+                    <ChevronRight className="h-4 w-4" />
+                  </>
+                )}
+                <span className="font-medium capitalize">
+                  {folderName.replace(/_/g, ' ')}
                 </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate(`/admin/models?segment=${segment.id}`)}
-                >
-                  <Eye className="mr-2 h-4 w-4" />
-                  Ver Modelos
-                </Button>
+                <Badge variant="secondary" className="ml-auto">
+                  {folderSegments.length} {folderSegments.length === 1 ? 'segmento' : 'segmentos'}
+                </Badge>
               </div>
-            </CardContent>
-          </Card>
+            </CollapsibleTrigger>
+            
+            <CollapsibleContent className="mt-3 ml-4">
+              {viewMode === 'list' && renderListView(folderSegments)}
+              {viewMode === 'small' && renderSmallView(folderSegments)}
+              {viewMode === 'medium' && renderMediumView(folderSegments)}
+              {viewMode === 'large' && renderLargeView(folderSegments)}
+            </CollapsibleContent>
+          </Collapsible>
         ))}
       </div>
 
