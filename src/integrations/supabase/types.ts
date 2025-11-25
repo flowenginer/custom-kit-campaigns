@@ -167,6 +167,7 @@ export type Database = {
           created_at: string | null
           custom_body_scripts: string | null
           custom_head_scripts: string | null
+          deleted_at: string | null
           id: string
           model_tag: string | null
           name: string
@@ -181,6 +182,7 @@ export type Database = {
           created_at?: string | null
           custom_body_scripts?: string | null
           custom_head_scripts?: string | null
+          deleted_at?: string | null
           id?: string
           model_tag?: string | null
           name: string
@@ -195,6 +197,7 @@ export type Database = {
           created_at?: string | null
           custom_body_scripts?: string | null
           custom_head_scripts?: string | null
+          deleted_at?: string | null
           id?: string
           model_tag?: string | null
           name?: string
