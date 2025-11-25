@@ -417,7 +417,12 @@ export default function Campaign() {
         utm_term: utmParams.utm_term,
         utm_content: utmParams.utm_content,
         is_online: true,
-        last_seen: new Date().toISOString()
+        last_seen: new Date().toISOString(),
+        // Definir needs_logo baseado na escolha de upload quando pedido completo
+        ...(completed && {
+          needs_logo: uploadChoice === 'depois',
+          salesperson_status: uploadChoice === 'depois' ? 'awaiting_logo' : null
+        })
       };
 
       if (leadId) {
@@ -652,6 +657,20 @@ export default function Campaign() {
 
       // Update lead as completed
       await createOrUpdateLead(enabledSteps.length, true, order.id);
+      
+      // Garantir que needs_logo está corretamente setado no lead
+      if (leadId) {
+        await supabase
+          .from('leads')
+          .update({ 
+            needs_logo: uploadChoice === 'depois',
+            uploaded_logo_url: uploadChoice === 'agora' && uploadedLogos.frontLogo ? 
+              (await uploadLogoFile(uploadedLogos.frontLogo, 'front')) : null,
+            salesperson_status: uploadChoice === 'depois' ? 'awaiting_logo' : null
+          })
+          .eq('id', leadId);
+      }
+      
       await trackEvent('order_completed');
 
       // Clear session storage
