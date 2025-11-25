@@ -12,8 +12,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CreateABTestDialog } from "@/components/abtest/CreateABTestDialog";
 import { ThemeCustomizer } from "@/components/theme/ThemeCustomizer";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { ABTest } from "@/types/ab-test";
 import { generateUniqueSlug } from "@/lib/utils";
+import { useUserRole } from "@/hooks/useUserRole";
 
 interface Campaign {
   id: string;
@@ -49,6 +51,7 @@ interface Segment {
 }
 
 export default function Campaigns() {
+  const { isSuperAdmin } = useUserRole();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [segments, setSegments] = useState<Segment[]>([]);
   const [workflows, setWorkflows] = useState<WorkflowTemplate[]>([]);
@@ -62,6 +65,7 @@ export default function Campaigns() {
   const [showChangeWorkflow, setShowChangeWorkflow] = useState(false);
   const [showThemeDialog, setShowThemeDialog] = useState(false);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
+  const [selectedCampaigns, setSelectedCampaigns] = useState<string[]>([]);
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [isCreatingSegmentTag, setIsCreatingSegmentTag] = useState(false);
   const [isCreatingModelTag, setIsCreatingModelTag] = useState(false);
@@ -377,6 +381,48 @@ export default function Campaigns() {
     }
   };
 
+  const handleSelectAll = () => {
+    if (selectedCampaigns.length === campaigns.length) {
+      setSelectedCampaigns([]);
+    } else {
+      setSelectedCampaigns(campaigns.map(c => c.id));
+    }
+  };
+
+  const handleSelectCampaign = (campaignId: string) => {
+    setSelectedCampaigns(prev => 
+      prev.includes(campaignId)
+        ? prev.filter(id => id !== campaignId)
+        : [...prev, campaignId]
+    );
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedCampaigns.length === 0) {
+      toast.error("Nenhuma campanha selecionada");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Tem certeza que deseja arquivar ${selectedCampaigns.length} campanha(s)?`
+    );
+    if (!confirmed) return;
+
+    const { error } = await supabase
+      .from("campaigns")
+      .update({ deleted_at: new Date().toISOString() })
+      .in("id", selectedCampaigns);
+
+    if (error) {
+      toast.error("Erro ao arquivar campanhas");
+      console.error(error);
+    } else {
+      toast.success(`${selectedCampaigns.length} campanha(s) arquivada(s)!`);
+      setSelectedCampaigns([]);
+      loadData();
+    }
+  };
+
   const copyLink = (link: string) => {
     const fullLink = `${window.location.origin}/c/${link}`;
     navigator.clipboard.writeText(fullLink);
@@ -625,6 +671,31 @@ export default function Campaigns() {
         </div>
       </div>
 
+        {campaigns.length > 0 && isSuperAdmin && (
+          <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg border">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="select-all"
+                checked={selectedCampaigns.length === campaigns.length}
+                onCheckedChange={handleSelectAll}
+              />
+              <Label htmlFor="select-all" className="cursor-pointer font-medium">
+                Selecionar todas {selectedCampaigns.length > 0 && `(${selectedCampaigns.length} selecionadas)`}
+              </Label>
+            </div>
+            {selectedCampaigns.length > 0 && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleDeleteSelected}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Arquivar Selecionadas ({selectedCampaigns.length})
+              </Button>
+            )}
+          </div>
+        )}
+
         {campaigns.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
@@ -634,7 +705,16 @@ export default function Campaigns() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {campaigns.map((campaign) => (
-              <Card key={campaign.id}>
+              <Card key={campaign.id} className="relative">
+                {isSuperAdmin && (
+                  <div className="absolute top-4 right-4 z-10">
+                    <Checkbox
+                      checked={selectedCampaigns.includes(campaign.id)}
+                      onCheckedChange={() => handleSelectCampaign(campaign.id)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                )}
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1">
