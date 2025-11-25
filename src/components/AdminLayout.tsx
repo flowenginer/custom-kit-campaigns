@@ -393,7 +393,7 @@ const AdminLayout = () => {
                     </SidebarMenuItem>
                   )}
 
-                  {showAll && (
+                  {(showAll || isSalesperson) && (
                     <SidebarMenuItem>
                       <SidebarMenuButton 
                         asChild 
