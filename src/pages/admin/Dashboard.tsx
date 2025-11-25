@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, Fragment } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { useUserRole } from "@/hooks/useUserRole";
 import { RealtimeChannel } from "@supabase/supabase-js";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -208,6 +209,7 @@ type ComparisonMode = "single" | "comparison";
 const CHART_COLORS = ["hsl(var(--chart-purple))", "hsl(var(--chart-green))", "hsl(var(--chart-orange))", "hsl(var(--chart-blue))", "hsl(var(--chart-pink))", "hsl(var(--chart-teal))", "hsl(var(--chart-indigo))", "hsl(var(--chart-cyan))", "hsl(var(--chart-amber))", "hsl(var(--chart-red))"];
 
 const Dashboard = () => {
+  const { isDesigner, isLoading: isLoadingRole } = useUserRole();
   const [workflows, setWorkflows] = useState<WorkflowTemplate[]>([]);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>(loadSelectedWorkflow());
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -331,6 +333,12 @@ const Dashboard = () => {
   };
 
   const refreshDashboard = useCallback(async () => {
+    // Designers sempre precisam das métricas de design
+    if (isDesigner) {
+      await loadDesignMetrics();
+      return;
+    }
+    
     if (comparisonMode === "comparison") {
       await Promise.all([
         loadComparisonData(),
@@ -342,7 +350,7 @@ const Dashboard = () => {
         loadDailyVisits()
       ]);
     }
-  }, [comparisonMode, dateFilter, customStartDate, customEndDate, period1, period2, customStartDateP1, customEndDateP1, customStartDateP2, customEndDateP2, selectedCampaigns, selectedWorkflowId]);
+  }, [isDesigner, comparisonMode, dateFilter, customStartDate, customEndDate, period1, period2, customStartDateP1, customEndDateP1, customStartDateP2, customEndDateP2, selectedCampaigns, selectedWorkflowId]);
 
   const { lastUpdated, isRefreshing, refresh } = useAutoRefresh(
     refreshDashboard,
@@ -354,6 +362,12 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
+    // Designers sempre precisam das métricas de design
+    if (isDesigner) {
+      loadDesignMetrics();
+      return;
+    }
+    
     if (comparisonMode === "comparison") {
       loadComparisonData();
     } else {
@@ -361,7 +375,7 @@ const Dashboard = () => {
       loadDesignMetrics();
       loadDailyVisits();
     }
-  }, [comparisonMode, dateFilter, customStartDate, customEndDate, period1, period2, customStartDateP1, customEndDateP1, customStartDateP2, customEndDateP2, selectedWorkflowId]);
+  }, [isDesigner, comparisonMode, dateFilter, customStartDate, customEndDate, period1, period2, customStartDateP1, customEndDateP1, customStartDateP2, customEndDateP2, selectedWorkflowId]);
   
   useEffect(() => {
     if (campaigns.length > 0) {
@@ -1266,7 +1280,7 @@ const Dashboard = () => {
   const uniqueSources = ["all", ...Array.from(new Set(utmData.map(d => d.source)))];
   const uniqueMediums = ["all", ...Array.from(new Set(utmData.map(d => d.medium)))];
   
-  if (isLoading) {
+  if (isLoading || isLoadingRole) {
     return (
       <div className="p-8 space-y-6">
         <Skeleton className="h-8 w-64 mb-4" />
@@ -1299,6 +1313,151 @@ const Dashboard = () => {
               </CardContent>
             </Card>
           ))}
+        </div>
+      </div>
+    );
+  }
+  
+  // 🎨 VISUALIZAÇÃO PARA DESIGNERS - Apenas 3 seções relevantes
+  if (isDesigner) {
+    return (
+      <div className="p-8 space-y-8">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-chart-purple bg-clip-text text-transparent">
+                Dashboard do Designer
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                Acompanhe suas métricas de criação e performance
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <RefreshIndicator 
+              lastUpdated={lastUpdated}
+              isRefreshing={isRefreshing}
+              onRefresh={refresh}
+            />
+          </div>
+        </div>
+
+        {/* Seção: Métricas de Criação de Design */}
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-2xl font-bold">📐 Métricas de Criação</h2>
+            <p className="text-muted-foreground">Acompanhe o desempenho da equipe de design</p>
+          </div>
+
+          {/* Cards de Status de Tarefas */}
+          <div className="grid gap-4 md:grid-cols-6">
+            {designMetrics.tasksByStatus.map((status) => (
+              <Card key={status.status} style={{ borderColor: status.color, borderWidth: '2px' }}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs font-medium text-muted-foreground">
+                    {status.label}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" style={{ color: status.color }}>
+                    {status.count}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Gráfico de Tempo Médio por Etapa */}
+          {designMetrics.avgTimeByStage.length > 0 && (
+            <Card className="shadow-xl">
+              <CardHeader>
+                <CardTitle>⏱️ Tempo Médio Entre Etapas</CardTitle>
+                <CardDescription>
+                  Média de horas gastas em cada transição de status (Top 10)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={designMetrics.avgTimeByStage}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                      <XAxis 
+                        dataKey="stage" 
+                        angle={-45}
+                        textAnchor="end"
+                        height={100}
+                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+                      />
+                      <YAxis 
+                        label={{ value: 'Horas', angle: -90, position: 'insideLeft' }}
+                        tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                      />
+                      <Tooltip 
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px'
+                        }}
+                        formatter={(value: number) => [`${value.toFixed(1)}h`, 'Tempo Médio']}
+                      />
+                      <Bar 
+                        dataKey="avgHours" 
+                        fill="hsl(var(--chart-orange))" 
+                        radius={[8, 8, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Tabela de Performance dos Designers */}
+          <Card className="shadow-xl">
+            <CardHeader>
+              <CardTitle>🏆 Ranking de Designers</CardTitle>
+              <CardDescription>
+                Performance baseada em tarefas concluídas, aprovadas e tempo médio
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {designMetrics.designerPerformance.map((designer, idx) => (
+                  <div 
+                    key={designer.designer_id} 
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent transition-colors"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 font-bold text-lg">
+                        #{idx + 1}
+                      </div>
+                      <div>
+                        <p className="font-semibold">{designer.designer_name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {designer.total_tasks} tarefas · {designer.completed_tasks} concluídas · {designer.approved_tasks} aprovadas
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <Badge className="text-sm px-3 py-1">
+                        Score: {designer.efficiency_score}
+                      </Badge>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {designer.avg_completion_time.toFixed(1)}h média
+                      </p>
+                    </div>
+                  </div>
+                ))}
+                {designMetrics.designerPerformance.length === 0 && (
+                  <p className="text-center text-muted-foreground py-8">
+                    Nenhum dado disponível no período selecionado
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
