@@ -1,16 +1,19 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Loader2, LayoutGrid, Columns2, Square } from "lucide-react";
+import { Plus, Loader2, LayoutGrid, Columns2, Square, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { WorkflowCard } from "@/components/workflow/WorkflowCard";
 import { WorkflowEditorDialog } from "@/components/workflow/WorkflowEditorDialog";
 import { ApplyWorkflowDialog } from "@/components/workflow/ApplyWorkflowDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { WorkflowTemplate, WorkflowStep } from "@/types/workflow";
+import { useUserRole } from "@/hooks/useUserRole";
 
 export default function Workflows() {
   const [workflows, setWorkflows] = useState<WorkflowTemplate[]>([]);
@@ -20,10 +23,12 @@ export default function Workflows() {
   const [showApply, setShowApply] = useState(false);
   const [workflowToApply, setWorkflowToApply] = useState<WorkflowTemplate | null>(null);
   const [workflowToDelete, setWorkflowToDelete] = useState<string | null>(null);
+  const [selectedWorkflows, setSelectedWorkflows] = useState<string[]>([]);
   const [viewColumns, setViewColumns] = useState<1 | 2 | 3>(() => {
     const saved = localStorage.getItem('workflows-view-columns');
     return saved ? (Number(saved) as 1 | 2 | 3) : 3;
   });
+  const { isSuperAdmin } = useUserRole();
 
   useEffect(() => {
     loadWorkflows();
@@ -38,6 +43,7 @@ export default function Workflows() {
     const { data, error } = await supabase
       .from("workflow_templates")
       .select("*")
+      .is("deleted_at", null)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -98,30 +104,57 @@ export default function Workflows() {
   const confirmDeleteWorkflow = async () => {
     if (!workflowToDelete) return;
 
-    const { data: campaigns } = await supabase
-      .from("campaigns")
-      .select("id")
-      .eq("workflow_template_id", workflowToDelete);
+    const { error } = await supabase
+      .from("workflow_templates")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", workflowToDelete);
 
-    if (campaigns && campaigns.length > 0) {
-      toast.error(`Este workflow está sendo usado por ${campaigns.length} campanha(s)`);
-      setWorkflowToDelete(null);
+    if (error) {
+      toast.error("Erro ao arquivar workflow");
+      console.error(error);
+    } else {
+      toast.success("Workflow arquivado!");
+      loadWorkflows();
+    }
+    setWorkflowToDelete(null);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedWorkflows.length === workflows.length) {
+      setSelectedWorkflows([]);
+    } else {
+      setSelectedWorkflows(workflows.map(w => w.id));
+    }
+  };
+
+  const handleSelectWorkflow = (workflowId: string) => {
+    setSelectedWorkflows(prev => 
+      prev.includes(workflowId) 
+        ? prev.filter(id => id !== workflowId)
+        : [...prev, workflowId]
+    );
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedWorkflows.length === 0) return;
+    
+    if (!confirm(`Tem certeza que deseja arquivar ${selectedWorkflows.length} workflow(s) selecionado(s)?`)) {
       return;
     }
 
     const { error } = await supabase
       .from("workflow_templates")
-      .delete()
-      .eq("id", workflowToDelete);
+      .update({ deleted_at: new Date().toISOString() })
+      .in("id", selectedWorkflows);
 
     if (error) {
-      toast.error("Erro ao deletar workflow");
+      toast.error("Erro ao arquivar workflows");
       console.error(error);
     } else {
-      toast.success("Workflow deletado!");
+      toast.success(`${selectedWorkflows.length} workflow(s) arquivado(s)!`);
+      setSelectedWorkflows([]);
       loadWorkflows();
     }
-    setWorkflowToDelete(null);
   };
 
   return (
@@ -154,6 +187,30 @@ export default function Workflows() {
           </Button>
         </div>
       </div>
+
+      {isSuperAdmin && workflows.length > 0 && (
+        <div className="flex items-center justify-between bg-muted/50 p-4 rounded-lg">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="select-all"
+              checked={selectedWorkflows.length === workflows.length}
+              onCheckedChange={handleSelectAll}
+            />
+            <Label htmlFor="select-all" className="cursor-pointer">
+              Selecionar todos ({workflows.length})
+            </Label>
+          </div>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleDeleteSelected}
+            disabled={selectedWorkflows.length === 0}
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Arquivar Selecionados ({selectedWorkflows.length})
+          </Button>
+        </div>
+      )}
 
       {loading ? (
         <div className={`grid gap-4 ${
@@ -192,14 +249,24 @@ export default function Workflows() {
           "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
         }`}>
           {workflows.map((workflow) => (
-            <WorkflowCard
-              key={workflow.id}
-              workflow={workflow}
-              onEdit={handleEditWorkflow}
-              onDuplicate={handleDuplicateWorkflow}
-              onDelete={handleDeleteWorkflow}
-              onApplyToCampaign={handleApplyToCampaign}
-            />
+            <div key={workflow.id} className="relative">
+              {isSuperAdmin && (
+                <div className="absolute top-4 left-4 z-10">
+                  <Checkbox
+                    checked={selectedWorkflows.includes(workflow.id)}
+                    onCheckedChange={() => handleSelectWorkflow(workflow.id)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+              )}
+              <WorkflowCard
+                workflow={workflow}
+                onEdit={handleEditWorkflow}
+                onDuplicate={handleDuplicateWorkflow}
+                onDelete={handleDeleteWorkflow}
+                onApplyToCampaign={handleApplyToCampaign}
+              />
+            </div>
           ))}
         </div>
       )}
@@ -221,14 +288,14 @@ export default function Workflows() {
       <AlertDialog open={!!workflowToDelete} onOpenChange={() => setWorkflowToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogTitle>Confirmar arquivamento</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja deletar este workflow? Esta ação não pode ser desfeita.
+              Tem certeza que deseja arquivar este workflow? Ele não aparecerá mais na listagem.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteWorkflow}>Deletar</AlertDialogAction>
+            <AlertDialogAction onClick={confirmDeleteWorkflow}>Arquivar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
