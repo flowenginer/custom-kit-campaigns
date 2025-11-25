@@ -67,7 +67,10 @@ export const ApplyWorkflowDialog = ({ workflow, open, onOpenChange, onApply }: A
         const campaignIds = campaigns.map(c => c.id);
         const { error } = await supabase
           .from("campaigns")
-          .update({ workflow_template_id: workflow.id })
+          .update({ 
+            workflow_template_id: workflow.id,
+            workflow_config: workflow.workflow_config as any
+          })
           .in("id", campaignIds);
 
         if (error) throw error;
@@ -75,7 +78,10 @@ export const ApplyWorkflowDialog = ({ workflow, open, onOpenChange, onApply }: A
       } else {
         const { error } = await supabase
           .from("campaigns")
-          .update({ workflow_template_id: workflow.id })
+          .update({ 
+            workflow_template_id: workflow.id,
+            workflow_config: workflow.workflow_config as any
+          })
           .eq("id", selectedCampaignId);
 
         if (error) throw error;

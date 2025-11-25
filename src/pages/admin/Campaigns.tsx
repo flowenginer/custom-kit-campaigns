@@ -250,6 +250,13 @@ export default function Campaigns() {
       return;
     }
 
+    // Buscar workflow_config do template selecionado
+    const { data: template } = await supabase
+      .from("workflow_templates")
+      .select("workflow_config")
+      .eq("id", formData.workflow_template_id)
+      .single();
+
     // Gerar slug amigável baseado no nome da campanha
     const uniqueLink = await generateUniqueSlug(formData.name);
 
@@ -258,6 +265,7 @@ export default function Campaigns() {
       segment_tag: formData.segment_tag,
       model_tag: formData.model_tag,
       workflow_template_id: formData.workflow_template_id,
+      workflow_config: template?.workflow_config as any,
       unique_link: uniqueLink,
     };
 
@@ -286,11 +294,19 @@ export default function Campaigns() {
       return;
     }
 
+    // Buscar workflow_config do template selecionado
+    const { data: template } = await supabase
+      .from("workflow_templates")
+      .select("workflow_config")
+      .eq("id", formData.workflow_template_id)
+      .single();
+
     const updateData = {
       name: formData.name,
       segment_tag: formData.segment_tag,
       model_tag: formData.model_tag,
       workflow_template_id: formData.workflow_template_id,
+      workflow_config: template?.workflow_config as any,
     };
 
     const { error } = await supabase
@@ -317,9 +333,19 @@ export default function Campaigns() {
   const handleChangeWorkflow = async (workflowId: string) => {
     if (!selectedCampaignId) return;
 
+    // Buscar workflow_config do template selecionado
+    const { data: template } = await supabase
+      .from("workflow_templates")
+      .select("workflow_config")
+      .eq("id", workflowId)
+      .single();
+
     const { error } = await supabase
       .from("campaigns")
-      .update({ workflow_template_id: workflowId })
+      .update({ 
+        workflow_template_id: workflowId,
+        workflow_config: template?.workflow_config as any
+      })
       .eq("id", selectedCampaignId);
 
     if (error) {
