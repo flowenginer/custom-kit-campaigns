@@ -367,6 +367,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "design_tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "design_tasks_campaign_id_fkey"
             columns: ["campaign_id"]
             isOneToOne: false
