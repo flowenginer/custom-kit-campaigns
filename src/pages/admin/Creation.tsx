@@ -40,6 +40,7 @@ const Creation = () => {
     return saved ? JSON.parse(saved) : [];
   });
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [priorityFilter, setPriorityFilter] = useState<string>("all");
   
   const { allowedKanbanColumns, isSuperAdmin, isAdmin, isDesigner } = useUserRole();
 
@@ -263,48 +264,54 @@ const Creation = () => {
     return tasks;
   };
 
+  // Filtrar tarefas por prioridade
+  const filterByPriority = (tasks: DesignTask[]) => {
+    if (priorityFilter === "all") return tasks;
+    return tasks.filter(task => task.priority === priorityFilter);
+  };
+
   const columns = [
     {
       title: "Leads sem Logo",
       status: "logo_needed" as const,
       icon: Inbox,
-      tasks: filterTasksForDesigner(tasks.filter(t => t.needs_logo === true)),
+      tasks: filterByPriority(filterTasksForDesigner(tasks.filter(t => t.needs_logo === true))),
     },
     {
       title: "Novos Com Logo",
       status: "pending" as const,
       icon: Inbox,
-      tasks: filterTasksForDesigner(tasks.filter(t => !t.needs_logo && t.status === "pending")),
+      tasks: filterByPriority(filterTasksForDesigner(tasks.filter(t => !t.needs_logo && t.status === "pending"))),
     },
     {
       title: "Em Progresso",
       status: "in_progress" as const,
       icon: Palette,
-      tasks: filterTasksForDesigner(tasks.filter(t => t.status === "in_progress")),
+      tasks: filterByPriority(filterTasksForDesigner(tasks.filter(t => t.status === "in_progress"))),
     },
     {
       title: "Aguard. Aprovação",
       status: "awaiting_approval" as const,
       icon: Eye,
-      tasks: filterTasksForDesigner(tasks.filter(t => t.status === "awaiting_approval")),
+      tasks: filterByPriority(filterTasksForDesigner(tasks.filter(t => t.status === "awaiting_approval"))),
     },
     {
       title: "Revisão Necessária",
       status: "changes_requested" as const,
       icon: AlertCircle,
-      tasks: filterTasksForDesigner(tasks.filter(t => t.status === "changes_requested")),
+      tasks: filterByPriority(filterTasksForDesigner(tasks.filter(t => t.status === "changes_requested"))),
     },
     {
       title: "Aprovado",
       status: "approved" as const,
       icon: CheckCircle,
-      tasks: filterTasksForDesigner(tasks.filter(t => t.status === "approved")),
+      tasks: filterByPriority(filterTasksForDesigner(tasks.filter(t => t.status === "approved"))),
     },
     {
       title: "Produção",
       status: "completed" as const,
       icon: Package,
-      tasks: filterTasksForDesigner(tasks.filter(t => t.status === "completed")),
+      tasks: filterByPriority(filterTasksForDesigner(tasks.filter(t => t.status === "completed"))),
     },
   ];
 
@@ -333,7 +340,7 @@ const Creation = () => {
         </div>
 
         <div className="flex gap-2">
-          <Select>
+          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Prioridade" />
             </SelectTrigger>
