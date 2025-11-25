@@ -11,6 +11,9 @@ interface KanbanColumnProps {
   tasks: DesignTask[];
   onTaskClick: (task: DesignTask) => void;
   backgroundColor?: string;
+  showAcceptButton?: boolean;
+  currentUserId?: string;
+  onTaskAccepted?: () => void;
 }
 export const KanbanColumn = ({
   title,
@@ -18,7 +21,10 @@ export const KanbanColumn = ({
   icon: Icon,
   tasks,
   onTaskClick,
-  backgroundColor
+  backgroundColor,
+  showAcceptButton,
+  currentUserId,
+  onTaskAccepted
 }: KanbanColumnProps) => {
   const {
     setNodeRef,
@@ -59,7 +65,16 @@ export const KanbanColumn = ({
         </div>
 
         <div className="space-y-3">
-          {tasks.map(task => <TaskCard key={task.id} task={task} onClick={() => onTaskClick(task)} />)}
+          {tasks.map(task => (
+            <TaskCard 
+              key={task.id} 
+              task={task} 
+              onClick={() => onTaskClick(task)}
+              showAcceptButton={showAcceptButton}
+              currentUserId={currentUserId}
+              onTaskAccepted={onTaskAccepted}
+            />
+          ))}
           
           {tasks.length === 0 && <div className={cn("text-center py-8 text-sm", emptyTextClass)}>
               Nenhuma tarefa

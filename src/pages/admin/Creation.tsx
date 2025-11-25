@@ -39,8 +39,9 @@ const Creation = () => {
     const saved = localStorage.getItem('kanban-column-colors');
     return saved ? JSON.parse(saved) : [];
   });
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   
-  const { allowedKanbanColumns, isSuperAdmin } = useUserRole();
+  const { allowedKanbanColumns, isSuperAdmin, isAdmin, isDesigner } = useUserRole();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -52,7 +53,13 @@ const Creation = () => {
 
   useEffect(() => {
     loadTasks();
+    getCurrentUser();
   }, []);
+
+  const getCurrentUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    setCurrentUserId(user?.id || null);
+  };
 
   useEffect(() => {
     if (columnColors.length > 0) {
@@ -235,50 +242,64 @@ const Creation = () => {
     }
   };
 
+  // Filtrar tarefas para designers
+  const filterTasksForDesigner = (tasks: DesignTask[]) => {
+    // Super Admin e Admin veem tudo
+    if (isSuperAdmin || isAdmin) return tasks;
+    
+    // Designer vê: tarefas não atribuídas + suas próprias tarefas
+    if (isDesigner) {
+      return tasks.filter(task => 
+        task.assigned_to === null ||           // Não atribuída
+        task.assigned_to === currentUserId     // Atribuída a ele
+      );
+    }
+    
+    return tasks;
+  };
+
   const columns = [
     {
-      title: "Leads sem Logo", // 🆕 PRIMEIRA COLUNA - Visível apenas se permitida
+      title: "Leads sem Logo",
       status: "logo_needed" as const,
       icon: Inbox,
-      // Filtra tarefas que precisam de logo (needs_logo = true)
-      tasks: tasks.filter(t => t.needs_logo === true),
+      tasks: filterTasksForDesigner(tasks.filter(t => t.needs_logo === true)),
     },
     {
-      title: "Novos Com Logo", // 🆕 RENOMEADO de "Novos"
+      title: "Novos Com Logo",
       status: "pending" as const,
       icon: Inbox,
-      // Filtra tarefas que NÃO precisam de logo E estão com status 'pending'
-      tasks: tasks.filter(t => !t.needs_logo && t.status === "pending"),
+      tasks: filterTasksForDesigner(tasks.filter(t => !t.needs_logo && t.status === "pending")),
     },
     {
       title: "Em Progresso",
       status: "in_progress" as const,
       icon: Palette,
-      tasks: tasks.filter(t => t.status === "in_progress"),
+      tasks: filterTasksForDesigner(tasks.filter(t => t.status === "in_progress")),
     },
     {
       title: "Aguard. Aprovação",
       status: "awaiting_approval" as const,
       icon: Eye,
-      tasks: tasks.filter(t => t.status === "awaiting_approval"),
+      tasks: filterTasksForDesigner(tasks.filter(t => t.status === "awaiting_approval")),
     },
     {
       title: "Revisão Necessária",
       status: "changes_requested" as const,
       icon: AlertCircle,
-      tasks: tasks.filter(t => t.status === "changes_requested"),
+      tasks: filterTasksForDesigner(tasks.filter(t => t.status === "changes_requested")),
     },
     {
       title: "Aprovado",
       status: "approved" as const,
       icon: CheckCircle,
-      tasks: tasks.filter(t => t.status === "approved"),
+      tasks: filterTasksForDesigner(tasks.filter(t => t.status === "approved")),
     },
     {
       title: "Produção",
       status: "completed" as const,
       icon: Package,
-      tasks: tasks.filter(t => t.status === "completed"),
+      tasks: filterTasksForDesigner(tasks.filter(t => t.status === "completed")),
     },
   ];
 
@@ -354,6 +375,9 @@ const Creation = () => {
                 tasks={column.tasks}
                 onTaskClick={handleTaskClick}
                 backgroundColor={columnColors[index]}
+                showAcceptButton={isDesigner}
+                currentUserId={currentUserId || undefined}
+                onTaskAccepted={loadTasks}
               />
             ))}
           </div>

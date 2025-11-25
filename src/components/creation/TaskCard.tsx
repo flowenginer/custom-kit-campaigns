@@ -1,20 +1,26 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Shirt, Clock, AlertCircle, Package } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Shirt, Clock, AlertCircle, Package, UserPlus } from "lucide-react";
 import { DesignTask } from "@/types/design-task";
 import { cn } from "@/lib/utils";
 import { format, isPast, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface TaskCardProps {
   task: DesignTask;
   onClick: () => void;
+  showAcceptButton?: boolean;
+  currentUserId?: string;
+  onTaskAccepted?: () => void;
 }
 
-export const TaskCard = ({ task, onClick }: TaskCardProps) => {
+export const TaskCard = ({ task, onClick, showAcceptButton, currentUserId, onTaskAccepted }: TaskCardProps) => {
   const isOverdue = task.deadline && isPast(new Date(task.deadline)) && task.status !== 'completed';
   
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -24,6 +30,34 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
 
   const style = {
     transform: CSS.Translate.toString(transform),
+  };
+
+  const handleAcceptTask = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!currentUserId) {
+      toast.error("Erro: usuário não autenticado");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("design_tasks")
+        .update({
+          assigned_to: currentUserId,
+          assigned_at: new Date().toISOString(),
+          status: 'in_progress'
+        })
+        .eq("id", task.id);
+
+      if (error) throw error;
+
+      toast.success("Tarefa aceita com sucesso!");
+      onTaskAccepted?.();
+    } catch (error) {
+      console.error("Error accepting task:", error);
+      toast.error("Erro ao aceitar tarefa");
+    }
   };
 
   const formatDeadline = (deadline: string) => {
@@ -154,6 +188,18 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
             </Badge>
           )}
         </div>
+        
+        {showAcceptButton && !task.assigned_to && (
+          <Button 
+            size="sm" 
+            variant="secondary"
+            className="w-full mt-3"
+            onClick={handleAcceptTask}
+          >
+            <UserPlus className="h-3 w-3 mr-1" />
+            Aceitar Tarefa
+          </Button>
+        )}
       </CardContent>
     </Card>
   );
