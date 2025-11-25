@@ -15,6 +15,9 @@ import { BackEditor } from "@/components/customization/BackEditor";
 import { SleeveEditor } from "@/components/customization/SleeveEditor";
 import { LogoUploader } from "@/components/customization/LogoUploader";
 import { CustomizationSummary } from "@/components/creation/CustomizationSummary";
+import { ComponentRenderer } from "@/components/page-builder/ComponentRenderer";
+import { PageLayout } from "@/types/page-builder";
+import { WorkflowStep } from "@/types/workflow";
 
 // Importar imagens dos uniformes
 import mangaCurtaImg from "@/assets/uniforms/manga-curta.png";
@@ -155,6 +158,12 @@ export default function Campaign() {
 
   const currentStepId = TOTAL_STEPS[currentStep]?.id;
   const progress = ((currentStep + 1) / TOTAL_STEPS.length) * 100;
+
+  // Buscar workflow step atual e verificar se tem page_layout customizado
+  const workflowConfig = campaign?.workflow_config as unknown as WorkflowStep[] | undefined;
+  const currentWorkflowStep = workflowConfig?.find((s) => s.id === currentStepId);
+  const customPageLayout = currentWorkflowStep?.page_layout as PageLayout | undefined;
+  const hasCustomLayout = customPageLayout && customPageLayout.components && customPageLayout.components.length > 0;
 
   // Carregar campanha
   useEffect(() => {
@@ -702,8 +711,39 @@ export default function Campaign() {
 
       {/* Main content */}
       <main className="container mx-auto px-4 py-8">
-        {/* Step 1: Select Uniform Type */}
-        {currentStepId === 'select_type' && (
+        {/* Renderizar layout customizado se existir */}
+        {hasCustomLayout ? (
+          <div className="max-w-6xl mx-auto">
+            <ComponentRenderer
+              layout={customPageLayout}
+              formData={{
+                name: customerData.name,
+                phone: customerData.phone,
+                quantity: customerData.quantity,
+              }}
+              onFormChange={(key, value) => {
+                setCustomerData({ ...customerData, [key]: value });
+              }}
+              onButtonClick={(action) => {
+                if (action === 'next') {
+                  handleNext();
+                } else if (action === 'back') {
+                  handleBack();
+                }
+              }}
+              customizationProps={{
+                // Props para editores customizados
+                selectedModel,
+                customizations,
+                onCustomizationChange: setCustomizations,
+                onNext: goToNextStep,
+              }}
+            />
+          </div>
+        ) : (
+          <>
+            {/* Step 1: Select Uniform Type */}
+            {currentStepId === 'select_type' && (
           <div className="max-w-6xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
               Escolha o tipo de uniforme
@@ -1176,6 +1216,8 @@ export default function Campaign() {
               </CardContent>
             </Card>
           </div>
+        )}
+          </>
         )}
 
         {/* Navigation buttons */}
