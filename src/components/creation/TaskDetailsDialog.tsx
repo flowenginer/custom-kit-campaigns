@@ -45,6 +45,7 @@ import { ptBR } from "date-fns/locale";
 import { CustomizationViewer } from "./CustomizationViewer";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useUserRole } from "@/hooks/useUserRole";
+import { LogoSectionUploader } from "@/components/orders/LogoSectionUploader";
 import { 
   Download, 
   ExternalLink, 
@@ -86,6 +87,7 @@ export const TaskDetailsDialog = ({
   const [uploadProgress, setUploadProgress] = useState<string>("");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoUploading, setLogoUploading] = useState(false);
+  const [logoSections, setLogoSections] = useState<any[]>([]);
   
   const { roles, isSalesperson, isDesigner, isSuperAdmin, isAdmin } = useUserRole();
 
@@ -111,7 +113,7 @@ export const TaskDetailsDialog = ({
     if (!open) {
       setUploadedPreviews([]);
       setUploadProgress("");
-      setLogoFile(null);
+      setLogoSections([]);
     }
   }, [open]);
 
@@ -220,12 +222,16 @@ export const TaskDetailsDialog = ({
   };
 
   const handleSendToDesigner = async () => {
-    if (!logoFile) {
-      toast.error("Selecione um arquivo de logo primeiro");
+    // Validar se todas as logos obrigatórias foram selecionadas
+    const requiredSections = logoSections.filter(s => s.required);
+    const allFilled = requiredSections.every(s => s.file !== null);
+    
+    if (!allFilled) {
+      toast.error("Selecione todas as logos obrigatórias antes de enviar");
       return;
     }
     
-    if (!task || !task.lead_id) {
+    if (!task || !task.lead_id || !task.order_id) {
       toast.error("Dados da tarefa incompletos");
       return;
     }
@@ -237,27 +243,66 @@ export const TaskDetailsDialog = ({
 
     setLogoUploading(true);
     try {
-      // Upload logo para o storage
-      const fileExt = logoFile.name.split('.').pop();
-      const fileName = `${task.lead_id}_${Date.now()}.${fileExt}`;
-      const filePath = `logos/${fileName}`;
+      // Upload de todas as logos e construir customization_data atualizado
+      const uploadedUrls: Record<string, string> = {};
+      
+      for (const section of logoSections) {
+        if (section.file) {
+          const fileExt = section.file.name.split('.').pop();
+          const fileName = `${task.lead_id}_${section.id}_${Date.now()}.${fileExt}`;
+          const filePath = `logos/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('customer-logos')
-        .upload(filePath, logoFile);
+          const { error: uploadError } = await supabase.storage
+            .from('customer-logos')
+            .upload(filePath, section.file);
 
-      if (uploadError) throw uploadError;
+          if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('customer-logos')
-        .getPublicUrl(filePath);
+          const { data: { publicUrl } } = supabase.storage
+            .from('customer-logos')
+            .getPublicUrl(filePath);
+
+          uploadedUrls[section.fieldPath] = publicUrl;
+        }
+      }
+
+      // Buscar customization_data atual do pedido
+      const { data: orderData, error: orderFetchError } = await supabase
+        .from('orders')
+        .select('customization_data')
+        .eq('id', task.order_id)
+        .single();
+
+      if (orderFetchError || !orderData) throw new Error("Erro ao buscar dados do pedido");
+
+      // Atualizar customization_data com as URLs das logos
+      const updatedCustomization = { ...(orderData.customization_data as any) };
+      
+      for (const [path, url] of Object.entries(uploadedUrls)) {
+        const keys = path.split('.');
+        let current = updatedCustomization;
+        
+        for (let i = 0; i < keys.length - 1; i++) {
+          if (!current[keys[i]]) current[keys[i]] = {};
+          current = current[keys[i]];
+        }
+        
+        current[keys[keys.length - 1]] = url;
+      }
+
+      // Atualizar pedido com customization_data atualizado
+      const { error: orderUpdateError } = await supabase
+        .from('orders')
+        .update({ customization_data: updatedCustomization })
+        .eq('id', task.order_id);
+
+      if (orderUpdateError) throw orderUpdateError;
 
       // Atualizar lead
       const { error: leadError } = await supabase
         .from('leads')
         .update({
           needs_logo: false,
-          uploaded_logo_url: publicUrl,
           salesperson_status: 'sent_to_designer'
         })
         .eq('id', task.lead_id);
@@ -283,13 +328,13 @@ export const TaskDetailsDialog = ({
           action: 'sent_to_designer',
           old_status: task.status as DbTaskStatus,
           new_status: 'pending' as DbTaskStatus,
-          notes: 'Logo enviado. Tarefa encaminhada para o designer.'
+          notes: `${logoSections.length} logo(s) enviada(s). Tarefa encaminhada para o designer.`
         }]);
 
-      toast.success("Logo enviado! Tarefa encaminhada para o designer.");
-      setLogoFile(null);
+      toast.success("Logos enviadas! Tarefa encaminhada para o designer.");
+      setLogoSections([]);
       onTaskUpdated();
-      onOpenChange(false); // ✅ Fecha o modal
+      onOpenChange(false);
     } catch (error) {
       console.error("Error sending to designer:", error);
       toast.error("Erro ao enviar para designer");
@@ -602,72 +647,42 @@ export const TaskDetailsDialog = ({
         </DialogHeader>
 
         {isVendorContext ? (
-          // INTERFACE SIMPLIFICADA DO VENDEDOR
-          <div className="space-y-6 p-6 flex-1">
+          // INTERFACE DE UPLOAD POR SEÇÃO PARA VENDEDOR
+          <div className="space-y-6 p-6 flex-1 overflow-y-auto">
             {/* Informações Básicas */}
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold">Upload do Logo do Cliente</h3>
+              <h3 className="text-lg font-semibold">Upload das Logos do Cliente</h3>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-muted-foreground">Cliente:</span>
                   <p className="font-medium">{task.customer_name || 'N/A'}</p>
                 </div>
                 <div>
+                  <span className="text-muted-foreground">Campanha:</span>
+                  <p className="font-medium">{task.campaign_name || 'N/A'}</p>
+                </div>
+                <div>
                   <span className="text-muted-foreground">Quantidade:</span>
                   <p className="font-medium">{task.quantity || 'N/A'} unidades</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Modelo:</span>
+                  <p className="font-medium">{task.model_name || 'N/A'}</p>
                 </div>
               </div>
             </div>
 
-            {/* Upload Area */}
-            <Card className="border-2 border-dashed">
-              <CardContent className="p-6 space-y-4">
-                <div className="text-center space-y-2">
-                  <Upload className="h-12 w-12 mx-auto text-muted-foreground" />
-                  <Label htmlFor="logo-upload" className="text-lg font-medium cursor-pointer">
-                    Selecione o arquivo do logo
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    PNG, JPG, SVG, AI ou PDF • Máximo 10MB
-                  </p>
-                </div>
-                <Input 
-                  id="logo-upload"
-                  type="file" 
-                  accept=".png,.jpg,.jpeg,.svg,.ai,.pdf"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      if (file.size > 10 * 1024 * 1024) {
-                        toast.error("Arquivo muito grande. Máximo 10MB");
-                        return;
-                      }
-                      setLogoFile(file);
-                      toast.success("Logo selecionado com sucesso!");
-                    }
-                  }}
-                  disabled={logoUploading}
-                  className="cursor-pointer"
-                />
-                {logoFile && (
-                  <div className="flex items-center gap-2 p-3 bg-accent rounded-md">
-                    <Check className="h-5 w-5 text-green-600" />
-                    <span className="text-sm font-medium flex-1">{logoFile.name}</span>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => {
-                        setLogoFile(null);
-                        toast.info("Logo removido");
-                      }}
-                      disabled={logoUploading}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            {/* Componente de Upload por Seção */}
+            <LogoSectionUploader 
+              customizationData={task.customization_data}
+              onAllLogosReady={(sections) => {
+                setLogoSections(sections);
+              }}
+              onLogoChange={(sections) => {
+                setLogoSections(sections);
+              }}
+              currentSections={logoSections}
+            />
           </div>
         ) : (
           // INTERFACE COMPLETA DO DESIGNER
@@ -1079,22 +1094,31 @@ export const TaskDetailsDialog = ({
 
         <div className="flex justify-center pt-4 border-t">
           {isVendorContext ? (
-            // VENDEDOR - Apenas 1 botão centralizado
+            // VENDEDOR - Botão de enviar para designer
             <Button 
-              onClick={handleSendToDesigner} 
-              disabled={!logoFile || logoUploading}
+              onClick={handleSendToDesigner}
+              disabled={
+                logoUploading || 
+                logoSections.length === 0 ||
+                !logoSections.filter(s => s.required).every(s => s.file !== null)
+              }
               size="lg"
               className="w-full max-w-md"
             >
               {logoUploading ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Enviando...
+                  Enviando logos...
                 </>
               ) : (
                 <>
                   <Send className="h-4 w-4 mr-2" />
                   Enviar para Designer
+                  {logoSections.length > 0 && (
+                    <span className="ml-2 text-xs opacity-75">
+                      ({logoSections.filter(s => s.file).length}/{logoSections.length})
+                    </span>
+                  )}
                 </>
               )}
             </Button>
