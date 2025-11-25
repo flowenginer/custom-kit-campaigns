@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2, LayoutGrid, Columns2, Square } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { WorkflowCard } from "@/components/workflow/WorkflowCard";
 import { WorkflowEditorDialog } from "@/components/workflow/WorkflowEditorDialog";
 import { ApplyWorkflowDialog } from "@/components/workflow/ApplyWorkflowDialog";
@@ -19,10 +20,18 @@ export default function Workflows() {
   const [showApply, setShowApply] = useState(false);
   const [workflowToApply, setWorkflowToApply] = useState<WorkflowTemplate | null>(null);
   const [workflowToDelete, setWorkflowToDelete] = useState<string | null>(null);
+  const [viewColumns, setViewColumns] = useState<1 | 2 | 3>(() => {
+    const saved = localStorage.getItem('workflows-view-columns');
+    return saved ? (Number(saved) as 1 | 2 | 3) : 3;
+  });
 
   useEffect(() => {
     loadWorkflows();
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('workflows-view-columns', String(viewColumns));
+  }, [viewColumns]);
 
   const loadWorkflows = async () => {
     setLoading(true);
@@ -122,14 +131,36 @@ export default function Workflows() {
           <h1 className="text-3xl font-bold">Workflows</h1>
           <p className="text-muted-foreground">Gerencie os workflows das suas campanhas</p>
         </div>
-        <Button onClick={handleNewWorkflow}>
-          <Plus className="w-4 h-4" />
-          Novo Workflow
-        </Button>
+        <div className="flex items-center gap-2">
+          <ToggleGroup 
+            type="single" 
+            value={String(viewColumns)} 
+            onValueChange={(v) => v && setViewColumns(Number(v) as 1 | 2 | 3)}
+          >
+            <ToggleGroupItem value="1" aria-label="1 coluna">
+              <Square className="w-4 h-4" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="2" aria-label="2 colunas">
+              <Columns2 className="w-4 h-4" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="3" aria-label="3 colunas">
+              <LayoutGrid className="w-4 h-4" />
+            </ToggleGroupItem>
+          </ToggleGroup>
+          
+          <Button onClick={handleNewWorkflow}>
+            <Plus className="w-4 h-4" />
+            Novo Workflow
+          </Button>
+        </div>
       </div>
 
       {loading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className={`grid gap-4 ${
+          viewColumns === 1 ? "grid-cols-1" :
+          viewColumns === 2 ? "grid-cols-1 md:grid-cols-2" :
+          "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+        }`}>
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <Card key={i}>
               <CardHeader>
@@ -155,7 +186,11 @@ export default function Workflows() {
           </Button>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className={`grid gap-4 ${
+          viewColumns === 1 ? "grid-cols-1" :
+          viewColumns === 2 ? "grid-cols-1 md:grid-cols-2" :
+          "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+        }`}>
           {workflows.map((workflow) => (
             <WorkflowCard
               key={workflow.id}
