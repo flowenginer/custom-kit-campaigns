@@ -213,6 +213,19 @@ const Creation = () => {
       return;
     }
 
+    // ✅ NOVA VALIDAÇÃO: Mockup obrigatório para enviar para aprovação
+    if (newStatus === 'awaiting_approval') {
+      const hasDesignFiles = task.design_files && task.design_files.length > 0;
+      
+      if (!hasDesignFiles) {
+        toast.error(
+          "Para enviar para aprovação, é obrigatório ter pelo menos 1 mockup enviado. " +
+          "Acesse a aba 'Enviar Mockup' no card da tarefa."
+        );
+        return;
+      }
+    }
+
     // ✅ NOVA VALIDAÇÃO: Impedir ir para "in_progress" sem designer
     if (newStatus === 'in_progress' && !task.assigned_to) {
       toast.error("Você precisa assumir a tarefa antes de movê-la para 'Em Progresso'. Clique na tarefa e use o botão 'Assumir Tarefa'.");
