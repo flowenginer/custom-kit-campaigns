@@ -74,6 +74,11 @@ const Settings = () => {
     { value: 'viewer', label: 'Visualizador', description: 'Apenas visualização' },
   ];
 
+  const getRoleLabel = (role: AppRole): string => {
+    const foundRole = allRoles.find(r => r.value === role);
+    return foundRole?.label || role.replace('_', ' ').toUpperCase();
+  };
+
   useEffect(() => {
     fetchCurrentUser();
     fetchUsers();
@@ -497,7 +502,7 @@ const Settings = () => {
                           <div className="flex gap-1 flex-wrap">
                             {user.roles.map((role) => (
                               <Badge key={role} variant={getRoleBadgeVariant(role)}>
-                                {role.replace('_', ' ').toUpperCase()}
+                                {getRoleLabel(role)}
                               </Badge>
                             ))}
                           </div>
