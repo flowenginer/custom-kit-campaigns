@@ -55,6 +55,15 @@ const AdminLayout = () => {
     setIsNavigating(false);
   }, [location]);
 
+  // Redirecionar vendedores para /admin/orders
+  useEffect(() => {
+    if (!isLoading && isSalesperson && !isSuperAdmin && !isAdmin && !isDesigner) {
+      if (location.pathname === '/admin/dashboard' || location.pathname === '/admin') {
+        navigate('/admin/orders');
+      }
+    }
+  }, [isLoading, isSalesperson, isSuperAdmin, isAdmin, isDesigner, location.pathname, navigate]);
+
   useEffect(() => {
     supabase.auth.getSession().then(({
       data: {
@@ -93,6 +102,7 @@ const AdminLayout = () => {
   const showAdminLinks = showAll || isAdmin;
   const showDesignerLinks = showAll || isDesigner;
   const showSalespersonLinks = showAll || isSalesperson;
+  const showDashboard = showAll || isAdmin || isDesigner; // Exclui vendedor
 
   return (
     <SidebarProvider defaultOpen={true}>
@@ -129,7 +139,7 @@ const AdminLayout = () => {
             <SidebarGroup>
               <SidebarGroupContent>
                 <SidebarMenu className="space-y-1">
-                  {showDesignerLinks && (
+                  {showDashboard && (
                     <>
                       <SidebarMenuItem>
                         <SidebarMenuButton 
