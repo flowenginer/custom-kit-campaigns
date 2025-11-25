@@ -80,7 +80,7 @@ export default function Campaigns() {
 
   const loadData = async () => {
     setIsLoading(true);
-    // Carregar campanhas
+    // Carregar campanhas (apenas não deletadas)
     const { data: campaignsData, error: campaignsError } = await supabase
       .from("campaigns")
       .select(`
@@ -95,6 +95,7 @@ export default function Campaigns() {
           name
         )
       `)
+      .is('deleted_at', null)
       .order("created_at", { ascending: false });
 
     if (campaignsError) {
@@ -360,27 +361,18 @@ export default function Campaigns() {
   };
 
   const handleDelete = async (id: string) => {
-    // Verificar se há leads ATIVOS associados (excluir soft-deleted)
-    const { count } = await supabase
-      .from('leads')
-      .select('*', { count: 'exact', head: true })
-      .eq('campaign_id', id)
-      .is('deleted_at', null);
-    
-    if (count && count > 0) {
-      toast.error(`Não é possível deletar. Esta campanha possui ${count} lead(s) ativo(s) associado(s).`);
-      return;
-    }
+    if (!confirm("Tem certeza que deseja arquivar esta campanha?")) return;
 
-    if (!confirm("Tem certeza que deseja deletar esta campanha?")) return;
-
-    const { error } = await supabase.from("campaigns").delete().eq("id", id);
+    const { error } = await supabase
+      .from("campaigns")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", id);
 
     if (error) {
-      toast.error("Erro ao deletar campanha");
+      toast.error("Erro ao arquivar campanha");
       console.error(error);
     } else {
-      toast.success("Campanha deletada!");
+      toast.success("Campanha arquivada!");
       loadData();
     }
   };
