@@ -7,10 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { Loader2, Eye, Filter, Trash2, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import { useUserRole } from "@/hooks/useUserRole";
 
 interface Lead {
   id: string;
@@ -38,9 +41,11 @@ interface Lead {
 }
 
 const Leads = () => {
+  const { isSuperAdmin } = useUserRole();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
@@ -331,6 +336,50 @@ const Leads = () => {
     }
   };
 
+  const handleSelectAll = () => {
+    if (selectedLeads.length === filteredLeads.length) {
+      setSelectedLeads([]);
+    } else {
+      setSelectedLeads(filteredLeads.map(l => l.id));
+    }
+  };
+
+  const handleSelectLead = (leadId: string) => {
+    setSelectedLeads(prev => 
+      prev.includes(leadId)
+        ? prev.filter(id => id !== leadId)
+        : [...prev, leadId]
+    );
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedLeads.length === 0) {
+      toast.error("Nenhum lead selecionado");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Tem certeza que deseja deletar ${selectedLeads.length} lead(s)?`
+    );
+    if (!confirmed) return;
+
+    try {
+      const { error } = await supabase
+        .from("leads")
+        .update({ deleted_at: new Date().toISOString() })
+        .in("id", selectedLeads);
+
+      if (error) throw error;
+
+      toast.success(`${selectedLeads.length} lead(s) deletado(s) com sucesso!`);
+      setSelectedLeads([]);
+      loadLeads();
+    } catch (error: any) {
+      console.error('Error deleting leads:', error);
+      toast.error(error.message || 'Erro ao deletar leads');
+    }
+  };
+
   // Extrair UTM sources únicos para o filtro
   const utmSources = Array.from(new Set(leads.map(lead => lead.utm_source).filter(Boolean)));
 
@@ -541,12 +590,39 @@ const Leads = () => {
         </CardContent>
       </Card>
 
+      {/* Controles de Seleção em Massa - Apenas Super Admin */}
+      {filteredLeads.length > 0 && isSuperAdmin && (
+        <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg border">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="select-all-leads"
+              checked={selectedLeads.length === filteredLeads.length}
+              onCheckedChange={handleSelectAll}
+            />
+            <Label htmlFor="select-all-leads" className="cursor-pointer font-medium">
+              Selecionar todos {selectedLeads.length > 0 && `(${selectedLeads.length} selecionados)`}
+            </Label>
+          </div>
+          {selectedLeads.length > 0 && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleDeleteSelected}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Deletar Selecionados ({selectedLeads.length})
+            </Button>
+          )}
+        </div>
+      )}
+
       {/* Tabela de Leads */}
       <Card>
         <CardContent className="p-0">
           <Table>
           <TableHeader>
             <TableRow>
+              {isSuperAdmin && <TableHead className="w-12"></TableHead>}
               <TableHead>Status</TableHead>
               <TableHead>Nome</TableHead>
               <TableHead>WhatsApp</TableHead>
@@ -564,7 +640,7 @@ const Leads = () => {
             <TableBody>
               {filteredLeads.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="text-center py-12">
+                  <TableCell colSpan={isSuperAdmin ? 13 : 12} className="text-center py-12">
                     <div className="flex flex-col items-center gap-3 text-muted-foreground">
                       <div className="text-5xl">📋</div>
                       {leads.length === 0 ? (
@@ -605,6 +681,15 @@ const Leads = () => {
               ) : (
                 filteredLeads.map((lead) => (
                   <TableRow key={lead.id}>
+                    {isSuperAdmin && (
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedLeads.includes(lead.id)}
+                          onCheckedChange={() => handleSelectLead(lead.id)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell>
                       {lead.is_online ? (
                         <div className="flex items-center gap-2 status-transition">
