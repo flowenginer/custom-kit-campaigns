@@ -63,27 +63,29 @@ export const LogoSectionUploader = ({
       });
     }
 
-    // MANGA ESQUERDA
+    // MANGA ESQUERDA - ✨ Agora opcional
     if (customizationData?.sleeves?.left?.logoSmall === true) {
       sections.push({
         id: 'sleeve-left',
         title: 'Manga Esquerda (Logo Pequeno)',
-        required: true,
+        required: false,
         file: null,
         uploaded: false,
-        fieldPath: 'sleeves.left.logoUrl'
+        fieldPath: 'sleeves.left.logoUrl',
+        useSameAsFront: false
       });
     }
 
-    // MANGA DIREITA
+    // MANGA DIREITA - ✨ Agora opcional
     if (customizationData?.sleeves?.right?.logoSmall === true) {
       sections.push({
         id: 'sleeve-right',
         title: 'Manga Direita (Logo Pequeno)',
-        required: true,
+        required: false,
         file: null,
         uploaded: false,
-        fieldPath: 'sleeves.right.logoUrl'
+        fieldPath: 'sleeves.right.logoUrl',
+        useSameAsFront: false
       });
     }
 
@@ -167,9 +169,10 @@ export const LogoSectionUploader = ({
           : section
       );
       
-      setSections(updatedSections);
-      onLogoChange(updatedSections);
-      toast.success("Logo da frente copiada para as costas");
+    setSections(updatedSections);
+    onLogoChange(updatedSections);
+    const sectionTitle = sections.find(s => s.id === sectionId)?.title || 'esta seção';
+    toast.success(`Logo da frente copiada para ${sectionTitle}`);
     } else {
       // Limpar a logo copiada
       const updatedSections = sections.map(section => 
@@ -242,8 +245,8 @@ export const LogoSectionUploader = ({
                 )}
               </div>
 
-              {/* 🆕 Checkbox para usar mesma logo da frente (apenas para costas) */}
-              {section.id === 'back' && (
+              {/* 🆕 Checkbox para usar mesma logo da frente */}
+              {(section.id === 'back' || section.id === 'sleeve-left' || section.id === 'sleeve-right') && (
                 <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-md border border-blue-200">
                   <Checkbox 
                     id={`same-front-${section.id}`}
