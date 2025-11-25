@@ -157,15 +157,15 @@ All colors MUST be HSL.
   }
   
   /* Button style variants */
-  .campaign-themed.btn-style-rounded button {
+  body.btn-style-rounded .campaign-themed button {
     border-radius: var(--campaign-border-radius);
   }
   
-  .campaign-themed.btn-style-square button {
+  body.btn-style-square .campaign-themed button {
     border-radius: 0;
   }
   
-  .campaign-themed.btn-style-pill button {
+  body.btn-style-pill .campaign-themed button {
     border-radius: 9999px;
   }
 }
