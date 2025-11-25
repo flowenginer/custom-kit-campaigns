@@ -149,23 +149,26 @@ const AdminLayout = () => {
                         </SidebarMenuButton>
                       </SidebarMenuItem>
 
-                      <SidebarMenuItem>
-                        <SidebarMenuButton 
-                          asChild 
-                          isActive={location.pathname === "/admin/advanced-dashboard"}
-                          className={cn(
-                            "transition-colors",
-                            location.pathname === "/admin/advanced-dashboard" 
-                              ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                              : "hover:bg-accent/10 hover:text-primary"
-                          )}
-                        >
-                          <NavLink to="/admin/advanced-dashboard">
-                            <LayoutDashboard className="h-5 w-5" />
-                            <span className="text-base">Data Cross</span>
-                          </NavLink>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
+                      {/* Data Cross - Apenas para Super Admin e Admin */}
+                      {!isDesigner && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton 
+                            asChild 
+                            isActive={location.pathname === "/admin/advanced-dashboard"}
+                            className={cn(
+                              "transition-colors",
+                              location.pathname === "/admin/advanced-dashboard" 
+                                ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                                : "hover:bg-accent/10 hover:text-primary"
+                            )}
+                          >
+                            <NavLink to="/admin/advanced-dashboard">
+                              <LayoutDashboard className="h-5 w-5" />
+                              <span className="text-base">Data Cross</span>
+                            </NavLink>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
                     </>
                   )}
 
