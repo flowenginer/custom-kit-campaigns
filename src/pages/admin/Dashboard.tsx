@@ -1344,6 +1344,125 @@ const Dashboard = () => {
           </div>
         </div>
 
+        {/* Filtros de Data */}
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 bg-muted/30 p-4 rounded-lg border">
+          {/* Botões de período */}
+          <div className="flex flex-wrap gap-2 flex-1">
+            <Button
+              size="sm"
+              variant={dateFilter === "today" ? "default" : "outline"}
+              onClick={() => setDateFilter("today")}
+            >
+              Hoje
+            </Button>
+            <Button
+              size="sm"
+              variant={dateFilter === "yesterday" ? "default" : "outline"}
+              onClick={() => setDateFilter("yesterday")}
+            >
+              Ontem
+            </Button>
+            <Button
+              size="sm"
+              variant={dateFilter === "7days" ? "default" : "outline"}
+              onClick={() => setDateFilter("7days")}
+            >
+              7 dias
+            </Button>
+            <Button
+              size="sm"
+              variant={dateFilter === "15days" ? "default" : "outline"}
+              onClick={() => setDateFilter("15days")}
+            >
+              15 dias
+            </Button>
+            <Button
+              size="sm"
+              variant={dateFilter === "30days" ? "default" : "outline"}
+              onClick={() => setDateFilter("30days")}
+            >
+              30 dias
+            </Button>
+            <Button
+              size="sm"
+              variant={dateFilter === "month" ? "default" : "outline"}
+              onClick={() => setDateFilter("month")}
+            >
+              Este mês
+            </Button>
+            <Button
+              size="sm"
+              variant={dateFilter === "lastMonth" ? "default" : "outline"}
+              onClick={() => setDateFilter("lastMonth")}
+            >
+              Mês passado
+            </Button>
+            <Button
+              size="sm"
+              variant={dateFilter === "custom" ? "default" : "outline"}
+              onClick={() => setDateFilter("custom")}
+            >
+              <CalendarIcon className="mr-1 h-4 w-4" />
+              Personalizado
+            </Button>
+          </div>
+        </div>
+
+        {/* Calendário Personalizado */}
+        {dateFilter === "custom" && (
+          <div className="flex flex-wrap gap-3 items-center bg-muted/30 p-4 rounded-lg border">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "justify-start text-left font-normal",
+                    !customStartDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {customStartDate ? format(customStartDate, "dd/MM/yyyy") : "Data início"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={customStartDate}
+                  onSelect={setCustomStartDate}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+            
+            <span className="text-muted-foreground">até</span>
+            
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "justify-start text-left font-normal",
+                    !customEndDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {customEndDate ? format(customEndDate, "dd/MM/yyyy") : "Data fim"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={customEndDate}
+                  onSelect={setCustomEndDate}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
+
         {/* Seção: Métricas de Criação de Design */}
         <div className="space-y-4">
           <div>
