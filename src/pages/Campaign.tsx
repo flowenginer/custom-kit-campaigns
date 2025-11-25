@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -40,7 +40,15 @@ const UNIFORM_LABELS: Record<string, string> = {
   'regata': 'Regata',
 };
 
-const TOTAL_STEPS = [
+// Mapeamento de IDs do workflow_config para IDs usados no código
+const ID_MAP: Record<string, string> = {
+  'select_uniform_type': 'select_type',
+  'review_send': 'review',
+  // Outros IDs permanecem iguais
+};
+
+// Definições de steps - usado como fallback e para mapeamento
+const STEP_DEFINITIONS = [
   { id: 'select_type', label: 'Tipo', order: 0, enabled: true },
   { id: 'enter_name', label: 'Nome', order: 1, enabled: true },
   { id: 'enter_phone', label: 'WhatsApp', order: 2, enabled: true },
@@ -156,8 +164,24 @@ export default function Campaign() {
   // Load campaign theme (applies CSS variables automatically)
   useCampaignTheme(campaign?.id);
 
-  const currentStepId = TOTAL_STEPS[currentStep]?.id;
-  const progress = ((currentStep + 1) / TOTAL_STEPS.length) * 100;
+  // Criar array dinâmico de steps habilitados do workflow_config
+  const enabledSteps = useMemo(() => {
+    if (!campaign?.workflow_config) return STEP_DEFINITIONS;
+    
+    const workflowSteps = campaign.workflow_config as WorkflowStep[];
+    
+    return workflowSteps
+      .filter(step => step.enabled)
+      .sort((a, b) => a.order - b.order)
+      .map(step => ({
+        ...step,
+        // Mapear IDs do workflow_config para IDs usados no código
+        id: ID_MAP[step.id] || step.id
+      }));
+  }, [campaign?.workflow_config]);
+
+  const currentStepId = enabledSteps[currentStep]?.id;
+  const progress = ((currentStep + 1) / enabledSteps.length) * 100;
 
   // Buscar workflow step atual e verificar se tem page_layout customizado
   const workflowConfig = campaign?.workflow_config as unknown as WorkflowStep[] | undefined;
@@ -257,7 +281,7 @@ export default function Campaign() {
           setCurrentStep(data.currentStep || 0);
           
           // Só restaurar selectedModel se já passou da etapa de seleção
-          const chooseModelStepIndex = TOTAL_STEPS.findIndex(s => s.id === 'choose_model');
+          const chooseModelStepIndex = enabledSteps.findIndex(s => s.id === 'choose_model');
           if (data.currentStep > chooseModelStepIndex) {
             setSelectedModel(data.selectedModel || null);
           }
@@ -627,7 +651,7 @@ export default function Campaign() {
       if (orderError) throw orderError;
 
       // Update lead as completed
-      await createOrUpdateLead(TOTAL_STEPS.length, true, order.id);
+      await createOrUpdateLead(enabledSteps.length, true, order.id);
       await trackEvent('order_completed');
 
       // Clear session storage
