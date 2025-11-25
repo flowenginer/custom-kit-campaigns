@@ -113,6 +113,9 @@ const Creation = () => {
           creator:profiles!design_tasks_created_by_fkey (
             full_name
           ),
+          designer:profiles!design_tasks_assigned_to_fkey (
+            full_name
+          ),
           lead:leads!design_tasks_lead_id_fkey (
             needs_logo,
             uploaded_logo_url
@@ -140,8 +143,10 @@ const Creation = () => {
         uploaded_logo_url: task.lead?.uploaded_logo_url || null,
         created_by_salesperson: task.created_by_salesperson,
         creator_name: task.creator?.full_name || null,
-        designer_name: null,
-        designer_initials: null,
+        designer_name: task.designer?.full_name || null,
+        designer_initials: task.designer?.full_name 
+          ? task.designer.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+          : null,
       }));
 
       // ✅ Filtrar no frontend: Designers NÃO veem tarefas que precisam de logo
