@@ -72,14 +72,15 @@ export const TaskCard = ({ task, onClick, showAcceptButton, currentUserId, onTas
     });
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'urgent': return 'destructive';
-      case 'high': return 'default';
-      case 'normal': return 'secondary';
-      case 'low': return 'outline';
-      default: return 'secondary';
-    }
+  const priorityConfig = {
+    urgent: { label: "🔴 Urgente", variant: "destructive" as const },
+    high: { label: "🟠 Alta", variant: "default" as const },
+    normal: { label: "🟡 Normal", variant: "secondary" as const },
+    low: { label: "🟢 Baixa", variant: "outline" as const }
+  };
+  
+  const getPriorityConfig = (priority: string) => {
+    return priorityConfig[priority as keyof typeof priorityConfig] || priorityConfig.normal;
   };
 
   const productionTime = getProductionTime();
@@ -98,14 +99,7 @@ export const TaskCard = ({ task, onClick, showAcceptButton, currentUserId, onTas
       )}
       onClick={onClick}
     >
-      {task.priority === 'urgent' && (
-        <div className="absolute -top-2 -right-2 z-10">
-          <Badge variant="destructive" className="gap-1">
-            <AlertCircle className="h-3 w-3" />
-            Urgente
-          </Badge>
-        </div>
-      )}
+      {/* Badge de urgente removida - agora a prioridade está sempre visível no corpo do card */}
       
       {isSalespersonOrigin && (
         <div className="absolute -top-2 -left-2 z-10">
@@ -155,6 +149,10 @@ export const TaskCard = ({ task, onClick, showAcceptButton, currentUserId, onTas
               🎽 {task.model_name}
             </div>
           )}
+          
+          <Badge variant={getPriorityConfig(task.priority).variant} className="text-xs w-fit">
+            {getPriorityConfig(task.priority).label}
+          </Badge>
           
           {productionTime && (
             <div className="flex items-center gap-1 text-xs text-primary">

@@ -430,6 +430,23 @@ export const TaskDetailsDialog = ({
     return variants[priority] || variants.normal;
   };
 
+  const handlePriorityChange = async (newPriority: "low" | "normal" | "high" | "urgent") => {
+    if (!task) return;
+
+    const { error } = await supabase
+      .from("design_tasks")
+      .update({ priority: newPriority })
+      .eq("id", task.id);
+
+    if (error) {
+      toast.error("Erro ao atualizar prioridade");
+      return;
+    }
+
+    toast.success("Prioridade atualizada!");
+    onTaskUpdated();
+  };
+
   if (!task) return null;
 
   const statusBadge = getStatusBadge(task.status);
@@ -742,6 +759,26 @@ export const TaskDetailsDialog = ({
                     <div>
                       <Label className="text-xs text-muted-foreground">Quantidade</Label>
                       <p className="text-sm">{task.quantity} unidades</p>
+                    </div>
+                    
+                    {/* 🆕 Prioridade editável */}
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Prioridade</Label>
+                      <Select 
+                        value={task.priority}
+                        onValueChange={handlePriorityChange}
+                        disabled={!isSuperAdmin && !isAdmin && !isAssignedDesigner}
+                      >
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low">🟢 Baixa</SelectItem>
+                          <SelectItem value="normal">🟡 Normal</SelectItem>
+                          <SelectItem value="high">🟠 Alta</SelectItem>
+                          <SelectItem value="urgent">🔴 Urgente</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     
                     {/* 🆕 FASE 6: Exibir nome do criador/vendedor */}
