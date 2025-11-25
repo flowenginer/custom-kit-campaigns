@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Upload, Check, X, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
@@ -14,6 +15,7 @@ interface LogoSection {
   file: File | null;
   uploaded: boolean;
   fieldPath: string; // Caminho no customization_data (ex: "front.logoUrl")
+  useSameAsFront?: boolean; // 🆕 Para copiar logo da frente
 }
 
 interface LogoSectionUploaderProps {
@@ -48,15 +50,16 @@ export const LogoSectionUploader = ({
       });
     }
 
-    // COSTAS
+    // COSTAS - ✨ Agora opcional
     if (customizationData?.back?.logoLarge === true) {
       sections.push({
         id: 'back',
         title: 'Costas (Logo Grande)',
-        required: true,
+        required: false, // ✨ Mudado para opcional
         file: null,
         uploaded: false,
-        fieldPath: 'back.logoUrl'
+        fieldPath: 'back.logoUrl',
+        useSameAsFront: false
       });
     }
 
@@ -142,6 +145,48 @@ export const LogoSectionUploader = ({
     toast.info("Logo removido");
   };
 
+  // 🆕 Função para usar a mesma logo da frente
+  const handleUseSameAsFront = (sectionId: string, checked: boolean) => {
+    if (checked) {
+      // Encontrar a logo da frente
+      const frontSection = sections.find(s => s.id === 'front');
+      
+      if (!frontSection?.file) {
+        toast.error("Primeiro selecione a logo da frente");
+        return;
+      }
+      
+      // Copiar para a seção de costas
+      const updatedSections = sections.map(section => 
+        section.id === sectionId 
+          ? { 
+              ...section, 
+              file: frontSection.file,
+              useSameAsFront: true 
+            }
+          : section
+      );
+      
+      setSections(updatedSections);
+      onLogoChange(updatedSections);
+      toast.success("Logo da frente copiada para as costas");
+    } else {
+      // Limpar a logo copiada
+      const updatedSections = sections.map(section => 
+        section.id === sectionId 
+          ? { 
+              ...section, 
+              file: null,
+              useSameAsFront: false 
+            }
+          : section
+      );
+      
+      setSections(updatedSections);
+      onLogoChange(updatedSections);
+    }
+  };
+
   const allRequiredFilled = sections
     .filter(s => s.required)
     .every(s => s.file !== null);
@@ -188,11 +233,34 @@ export const LogoSectionUploader = ({
                   {section.required && (
                     <span className="text-xs text-destructive">*obrigatório</span>
                   )}
+                  {!section.required && (
+                    <span className="text-xs text-muted-foreground">opcional</span>
+                  )}
                 </div>
                 {section.file && (
                   <Check className="h-5 w-5 text-green-600" />
                 )}
               </div>
+
+              {/* 🆕 Checkbox para usar mesma logo da frente (apenas para costas) */}
+              {section.id === 'back' && (
+                <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-md border border-blue-200">
+                  <Checkbox 
+                    id={`same-front-${section.id}`}
+                    checked={section.useSameAsFront || false}
+                    onCheckedChange={(checked) => 
+                      handleUseSameAsFront(section.id, checked as boolean)
+                    }
+                    disabled={!sections.find(s => s.id === 'front')?.file}
+                  />
+                  <Label 
+                    htmlFor={`same-front-${section.id}`}
+                    className="text-sm cursor-pointer text-blue-900"
+                  >
+                    Usar mesma logo da frente
+                  </Label>
+                </div>
+              )}
 
               {section.file ? (
                 // Arquivo selecionado
@@ -200,6 +268,11 @@ export const LogoSectionUploader = ({
                   <span className="text-sm font-medium flex-1 truncate">
                     {section.file.name}
                   </span>
+                  {section.useSameAsFront && (
+                    <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">
+                      copiada da frente
+                    </span>
+                  )}
                   <Button 
                     variant="ghost" 
                     size="sm" 
@@ -209,25 +282,27 @@ export const LogoSectionUploader = ({
                   </Button>
                 </div>
               ) : (
-                // Campo de upload
-                <div className="border-2 border-dashed rounded-md p-4 text-center hover:border-primary/50 transition-colors">
-                  <Input 
-                    id={`upload-${section.id}`}
-                    type="file" 
-                    accept=".png,.jpg,.jpeg,.svg,.pdf"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleFileChange(section.id, file);
-                    }}
-                    className="cursor-pointer"
-                  />
-                  <Label 
-                    htmlFor={`upload-${section.id}`} 
-                    className="text-xs text-muted-foreground mt-1 cursor-pointer block"
-                  >
-                    PNG, JPG, SVG ou PDF • Máximo 10MB
-                  </Label>
-                </div>
+                // Campo de upload - ✨ Ocultado se checkbox marcada
+                !section.useSameAsFront && (
+                  <div className="border-2 border-dashed rounded-md p-4 text-center hover:border-primary/50 transition-colors">
+                    <Input 
+                      id={`upload-${section.id}`}
+                      type="file" 
+                      accept=".png,.jpg,.jpeg,.svg,.pdf"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileChange(section.id, file);
+                      }}
+                      className="cursor-pointer"
+                    />
+                    <Label 
+                      htmlFor={`upload-${section.id}`} 
+                      className="text-xs text-muted-foreground mt-1 cursor-pointer block"
+                    >
+                      PNG, JPG, SVG ou PDF • Máximo 10MB
+                    </Label>
+                  </div>
+                )
               )}
             </CardContent>
           </Card>
