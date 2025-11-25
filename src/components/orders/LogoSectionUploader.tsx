@@ -97,7 +97,9 @@ export const LogoSectionUploader = ({
   };
 
   const [sections, setSections] = useState<LogoSection[]>(
-    currentSections || identifyRequiredLogos()
+    currentSections && currentSections.length > 0 
+      ? currentSections 
+      : identifyRequiredLogos()
   );
 
   const handleFileChange = (sectionId: string, file: File | null) => {
