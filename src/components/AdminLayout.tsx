@@ -8,6 +8,7 @@ import { Session } from "@supabase/supabase-js";
 import { NotificationsDropdown } from "./NotificationsDropdown";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useGlobalTheme } from "@/hooks/useGlobalTheme";
+import { usePendingApprovalsCount } from "@/hooks/usePendingApprovalsCount";
 import { cn } from "@/lib/utils";
 import logoSS from "@/assets/logo-ss.png";
 import {
@@ -157,6 +158,53 @@ const SidebarLogoutButton = ({ onSignOut }: { onSignOut: () => void }) => {
   );
 };
 
+const ApprovalsMenuItem = ({ 
+  isActive, 
+  isNavigating, 
+  setIsNavigating,
+  pendingCount 
+}: { 
+  isActive: boolean; 
+  isNavigating: boolean; 
+  setIsNavigating: (val: boolean) => void;
+  pendingCount: number;
+}) => {
+  const { open } = useSidebar();
+  
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton 
+        asChild 
+        isActive={isActive}
+        disabled={isNavigating}
+        className={cn(
+          "transition-colors",
+          isActive 
+            ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+            : "hover:bg-accent/10 hover:text-primary"
+        )}
+      >
+        <NavLink to="/admin/approvals" onClick={() => setIsNavigating(true)}>
+          <div className="relative">
+            <CheckCircle className="h-5 w-5" />
+            {pendingCount > 0 && !open && (
+              <span className="absolute -top-1 -right-1 h-4 w-4 bg-destructive text-destructive-foreground text-[10px] rounded-full flex items-center justify-center font-semibold">
+                {pendingCount}
+              </span>
+            )}
+          </div>
+          <span className="text-base">Aprovações</span>
+          {pendingCount > 0 && open && (
+            <span className="ml-auto bg-destructive text-destructive-foreground text-xs rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center font-semibold">
+              {pendingCount}
+            </span>
+          )}
+        </NavLink>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+};
+
 const AdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -171,6 +219,7 @@ const AdminLayout = () => {
   } = useUserRole();
   
   const { currentTheme, changeTheme } = useGlobalTheme();
+  const { count: pendingCount } = usePendingApprovalsCount();
   
   useEffect(() => {
     setIsNavigating(false);
@@ -465,24 +514,12 @@ const AdminLayout = () => {
 
                   {/* Aprovações - Apenas para Admins */}
                   {showAdminLinks && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton 
-                        asChild 
-                        isActive={location.pathname === "/admin/approvals"}
-                        disabled={isNavigating}
-                        className={cn(
-                          "transition-colors",
-                          location.pathname === "/admin/approvals" 
-                            ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                            : "hover:bg-accent/10 hover:text-primary"
-                        )}
-                      >
-                        <NavLink to="/admin/approvals" onClick={() => setIsNavigating(true)}>
-                          <CheckCircle className="h-5 w-5" />
-                          <span className="text-base">Aprovações</span>
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
+                    <ApprovalsMenuItem 
+                      isActive={location.pathname === "/admin/approvals"}
+                      isNavigating={isNavigating}
+                      setIsNavigating={setIsNavigating}
+                      pendingCount={pendingCount}
+                    />
                   )}
 
                   {showAdminLinks && (
