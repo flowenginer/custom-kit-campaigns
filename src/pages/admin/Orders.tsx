@@ -77,7 +77,8 @@ const Orders = () => {
           ),
           lead:leads!design_tasks_lead_id_fkey (
             needs_logo,
-            uploaded_logo_url
+            uploaded_logo_url,
+            logo_action
           )
         `)
         .is('deleted_at', null)
@@ -98,6 +99,7 @@ const Orders = () => {
         model_name: task.orders?.shirt_models?.name,
         model_code: task.orders?.shirt_models?.sku,
         needs_logo: task.lead?.needs_logo,
+        logo_action: task.lead?.logo_action,
         uploaded_logo_url: task.lead?.uploaded_logo_url || null,
         created_by_salesperson: task.created_by_salesperson,
         creator_name: task.creator?.full_name || null,
@@ -105,9 +107,11 @@ const Orders = () => {
         designer_initials: null,
       }));
 
-      // ✅ Filtrar APENAS tarefas que PRECISAM de logo (needs_logo = true)
-      const pendingLogoTasks = formattedTasks.filter(task => task.needs_logo === true);
-      console.log('🔍 Orders.tsx - Tasks needing logo:', pendingLogoTasks.length);
+      // ✅ Filtrar APENAS tarefas que estão AGUARDANDO logo (waiting_client)
+      const pendingLogoTasks = formattedTasks.filter(task => 
+        task.needs_logo === true && task.logo_action === 'waiting_client'
+      );
+      console.log('🔍 Orders.tsx - Tasks waiting for client logo:', pendingLogoTasks.length);
 
       setTasks(pendingLogoTasks);
 

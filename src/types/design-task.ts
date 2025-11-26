@@ -55,6 +55,7 @@ export interface DesignTask {
   needs_logo?: boolean;
   uploaded_logo_url?: string | null;
   creator_name?: string | null;
+  logo_action?: 'designer_create' | 'waiting_client' | null;
 }
 
 export interface DesignTaskHistory {
