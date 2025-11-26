@@ -1,8 +1,13 @@
 import { UrgentApprovalsList } from "@/components/admin/UrgentApprovalsList";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ApprovalsHistory } from "@/components/admin/ApprovalsHistory";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertCircle } from "lucide-react";
+import { usePendingApprovalsCount } from "@/hooks/usePendingApprovalsCount";
 
 const Approvals = () => {
+  const { count } = usePendingApprovalsCount();
+
   return (
     <div className="space-y-6">
       <div>
@@ -27,7 +32,20 @@ const Approvals = () => {
         </CardHeader>
       </Card>
 
-      <UrgentApprovalsList />
+      <Tabs defaultValue="pending" className="w-full">
+        <TabsList>
+          <TabsTrigger value="pending">
+            Pendentes {count > 0 && `(${count})`}
+          </TabsTrigger>
+          <TabsTrigger value="history">Histórico</TabsTrigger>
+        </TabsList>
+        <TabsContent value="pending" className="mt-6">
+          <UrgentApprovalsList />
+        </TabsContent>
+        <TabsContent value="history" className="mt-6">
+          <ApprovalsHistory />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
