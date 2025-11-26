@@ -9,16 +9,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Upload, Download, CheckCircle, AlertCircle, Paperclip, X } from "lucide-react";
+import { Upload, Download, CheckCircle, AlertCircle, Paperclip, X, Send } from "lucide-react";
 import { ChangeRequest } from "@/types/design-task";
 
 interface ChangeRequestsTabProps {
   taskId: string;
+  taskStatus?: string;
   onChangeRequestAdded?: () => void;
   onClose?: () => void;
+  onSendForApproval?: () => void;
 }
 
-export const ChangeRequestsTab = ({ taskId, onChangeRequestAdded, onClose }: ChangeRequestsTabProps) => {
+export const ChangeRequestsTab = ({ taskId, taskStatus, onChangeRequestAdded, onClose, onSendForApproval }: ChangeRequestsTabProps) => {
   const [changeRequests, setChangeRequests] = useState<ChangeRequest[]>([]);
   const [description, setDescription] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -354,6 +356,16 @@ export const ChangeRequestsTab = ({ taskId, onChangeRequestAdded, onClose }: Cha
           </div>
         )}
       </div>
+
+      {/* Botão Enviar para Aprovação */}
+      {taskStatus === 'changes_requested' && onSendForApproval && (
+        <div className="flex justify-end pt-4 border-t mt-6">
+          <Button onClick={onSendForApproval} className="gap-2">
+            <Send className="h-4 w-4" />
+            Enviar para Aprovação
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

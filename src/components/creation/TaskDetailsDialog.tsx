@@ -1114,9 +1114,11 @@ export const TaskDetailsDialog = ({
 
             <TabsContent value="changes" className="mt-0">
               <ChangeRequestsTab 
-                taskId={task.id} 
+                taskId={task.id}
+                taskStatus={task.status}
                 onChangeRequestAdded={checkUnresolvedChanges}
                 onClose={() => onOpenChange(false)}
+                onSendForApproval={() => handleStatusChange('awaiting_approval')}
               />
             </TabsContent>
 
