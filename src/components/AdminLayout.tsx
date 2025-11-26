@@ -126,6 +126,37 @@ const SidebarThemeButtons = ({ currentTheme, changeTheme }: { currentTheme: any,
   );
 };
 
+const SidebarLogoutButton = ({ onSignOut }: { onSignOut: () => void }) => {
+  const { open } = useSidebar();
+  
+  return (
+    <div className="p-3">
+      <div className={cn(
+        "flex",
+        !open && "justify-center"
+      )}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size={open ? "default" : "icon"}
+              onClick={onSignOut}
+              className={cn(
+                "hover:bg-accent hover:text-accent-foreground",
+                open ? "w-full justify-start gap-2" : "h-8 w-8"
+              )}
+            >
+              <LogOut className={cn(open ? "h-5 w-5" : "h-4 w-4")} />
+              {open && <span className="text-base">Sair</span>}
+            </Button>
+          </TooltipTrigger>
+          {!open && <TooltipContent side="right">Sair</TooltipContent>}
+        </Tooltip>
+      </div>
+    </div>
+  );
+};
+
 const AdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -501,19 +532,7 @@ const AdminLayout = () => {
 
           <SidebarFooter className="border-t border-border">
             <SidebarThemeButtons currentTheme={currentTheme} changeTheme={changeTheme} />
-
-            {/* Botão Sair */}
-            <SidebarMenu className="p-3">
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  onClick={handleSignOut}
-                  className="hover:bg-accent hover:text-accent-foreground"
-                >
-                  <LogOut className="h-5 w-5" />
-                  <span className="text-base">Sair</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
+            <SidebarLogoutButton onSignOut={handleSignOut} />
           </SidebarFooter>
         </Sidebar>
 
