@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DateRangeFilter } from "@/components/dashboard/DateRangeFilter";
@@ -12,6 +12,8 @@ import { Download, FileText, Mail, Share2 } from "lucide-react";
 import { subDays } from "date-fns";
 import { toast } from "sonner";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
 
 interface CrossData {
   utm_source: string;
@@ -109,6 +111,15 @@ export default function AdvancedDashboard() {
       setLoading(false);
     }
   };
+
+  const refreshData = useCallback(async () => {
+    await fetchData();
+  }, [startDate, endDate]);
+
+  const { lastUpdated, isRefreshing, refresh } = useAutoRefresh(
+    refreshData,
+    { interval: 60000, enabled: true }
+  );
 
   useEffect(() => {
     fetchData();
@@ -283,23 +294,31 @@ export default function AdvancedDashboard() {
           </p>
         </div>
         
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handleExport}>
-            <Download className="mr-2 h-4 w-4" />
-            Excel
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleExport}>
-            <FileText className="mr-2 h-4 w-4" />
-            PDF
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleExport}>
-            <Mail className="mr-2 h-4 w-4" />
-            Agendar
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleExport}>
-            <Share2 className="mr-2 h-4 w-4" />
-            Compartilhar
-          </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          <RefreshIndicator 
+            lastUpdated={lastUpdated}
+            isRefreshing={isRefreshing}
+            onRefresh={refresh}
+          />
+          
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={handleExport}>
+              <Download className="mr-2 h-4 w-4" />
+              Excel
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleExport}>
+              <FileText className="mr-2 h-4 w-4" />
+              PDF
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleExport}>
+              <Mail className="mr-2 h-4 w-4" />
+              Agendar
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleExport}>
+              <Share2 className="mr-2 h-4 w-4" />
+              Compartilhar
+            </Button>
+          </div>
         </div>
       </div>
 

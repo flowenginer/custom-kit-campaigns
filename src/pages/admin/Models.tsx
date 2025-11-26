@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
 
 interface Segment {
   id: string;
@@ -121,6 +123,15 @@ const Models = () => {
   // Estados para seleção múltipla
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  const refreshData = useCallback(async () => {
+    await loadModels();
+  }, []);
+
+  const { lastUpdated, isRefreshing, refresh } = useAutoRefresh(
+    refreshData,
+    { interval: 60000, enabled: true }
+  );
 
   useEffect(() => {
     loadModels();
@@ -1254,6 +1265,12 @@ const Models = () => {
 
         {/* Modo de Visualização e Botões */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <RefreshIndicator 
+            lastUpdated={lastUpdated}
+            isRefreshing={isRefreshing}
+            onRefresh={refresh}
+          />
+          
           <div className="flex gap-1 bg-muted/30 p-1.5 rounded-lg border">
             <Button
               variant={viewMode === 'list' ? 'default' : 'ghost'}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { TaskDetailsDialog } from "@/components/creation/TaskDetailsDialog";
@@ -6,11 +6,13 @@ import { TaskCardSkeleton } from "@/components/creation/TaskCardSkeleton";
 import { TaskCard } from "@/components/creation/TaskCard";
 import { DesignTask } from "@/types/design-task";
 import { toast } from "sonner";
-import { RefreshCw, PackageSearch, Plus, Trash2 } from "lucide-react";
+import { PackageSearch, Plus, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { NewLayoutRequestDialog } from "@/components/orders/NewLayoutRequestDialog";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
 
 /**
  * Página EXCLUSIVA de Vendedores para gerenciar LEADS SEM LOGO
@@ -31,6 +33,15 @@ const Orders = () => {
   const [newRequestOpen, setNewRequestOpen] = useState(false);
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  const refreshData = useCallback(async () => {
+    await loadTasks();
+  }, []);
+
+  const { lastUpdated, isRefreshing, refresh } = useAutoRefresh(
+    refreshData,
+    { interval: 60000, enabled: true }
+  );
 
   useEffect(() => {
     const loadCurrentUser = async () => {
@@ -215,14 +226,12 @@ const Orders = () => {
             <Plus className="h-4 w-4 mr-2" />
             Nova Requisição
           </Button>
-          <Button 
-            variant="outline" 
-            onClick={loadTasks}
-            disabled={loading}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Atualizar
-          </Button>
+          
+          <RefreshIndicator 
+            lastUpdated={lastUpdated}
+            isRefreshing={isRefreshing}
+            onRefresh={refresh}
+          />
         </div>
       </div>
 

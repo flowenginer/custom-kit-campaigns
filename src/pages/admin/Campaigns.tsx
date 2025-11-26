@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import type { ABTest } from "@/types/ab-test";
 import { generateUniqueSlug } from "@/lib/utils";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
 
 interface Campaign {
   id: string;
@@ -77,6 +79,15 @@ export default function Campaigns() {
     model_tag: "",
     workflow_template_id: "",
   });
+
+  const refreshData = useCallback(async () => {
+    await loadData();
+  }, []);
+
+  const { lastUpdated, isRefreshing, refresh } = useAutoRefresh(
+    refreshData,
+    { interval: 60000, enabled: true }
+  );
 
   useEffect(() => {
     loadData();
@@ -474,7 +485,13 @@ export default function Campaigns() {
             <p className="text-muted-foreground">Gerencie suas campanhas de vendas</p>
           </div>
           <div className="flex gap-2">
-          <Dialog open={showDialog} onOpenChange={setShowDialog}>
+            <RefreshIndicator 
+              lastUpdated={lastUpdated}
+              isRefreshing={isRefreshing}
+              onRefresh={refresh}
+            />
+            
+            <Dialog open={showDialog} onOpenChange={setShowDialog}>
               <DialogTrigger asChild>
                 <Button onClick={() => {
                   setFormData({ name: "", segment_tag: "", model_tag: "", workflow_template_id: "" });

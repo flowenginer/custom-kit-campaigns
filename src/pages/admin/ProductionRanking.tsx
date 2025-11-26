@@ -1,12 +1,14 @@
-import { useState } from "react";
-import { subDays, startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns";
+import { useState, useCallback } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DateRangeFilter } from "@/components/dashboard/DateRangeFilter";
+import { ProductionCharts } from "@/components/ranking/ProductionCharts";
 import { SalespersonRankingTable } from "@/components/ranking/SalespersonRankingTable";
 import { DesignerRankingTable } from "@/components/ranking/DesignerRankingTable";
 import { SegmentCrossTable } from "@/components/ranking/SegmentCrossTable";
-import { ProductionCharts } from "@/components/ranking/ProductionCharts";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { subDays } from "date-fns";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
 
 const ProductionRanking = () => {
   const [startDate, setStartDate] = useState<Date>(subDays(new Date(), 30));
@@ -16,6 +18,16 @@ const ProductionRanking = () => {
     setStartDate(start);
     setEndDate(end);
   };
+
+  const refreshData = useCallback(async () => {
+    // Forçar re-render dos componentes filhos atualizando as datas
+    setStartDate(prev => new Date(prev));
+  }, []);
+
+  const { lastUpdated, isRefreshing, refresh } = useAutoRefresh(
+    refreshData,
+    { interval: 60000, enabled: true }
+  );
 
   return (
     <div className="p-8 space-y-6">
@@ -27,11 +39,13 @@ const ProductionRanking = () => {
       </div>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Filtros</CardTitle>
-          <CardDescription>
-            Selecione o período para análise
-          </CardDescription>
+          <RefreshIndicator 
+            lastUpdated={lastUpdated}
+            isRefreshing={isRefreshing}
+            onRefresh={refresh}
+          />
         </CardHeader>
         <CardContent>
           <DateRangeFilter
@@ -88,9 +102,6 @@ const ProductionRanking = () => {
           <Card>
             <CardHeader>
               <CardTitle>Ranking Completo de Vendedores</CardTitle>
-              <CardDescription>
-                Todos os vendedores ordenados por número de solicitações
-              </CardDescription>
             </CardHeader>
             <CardContent>
               <SalespersonRankingTable 
@@ -111,9 +122,6 @@ const ProductionRanking = () => {
           <Card>
             <CardHeader>
               <CardTitle>Ranking Completo de Designers</CardTitle>
-              <CardDescription>
-                Todos os designers ordenados por produtividade
-              </CardDescription>
             </CardHeader>
             <CardContent>
               <DesignerRankingTable 

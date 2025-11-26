@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,8 @@ import { ABTest } from "@/types/ab-test";
 import { FlaskConical, Copy, Play, Pause, BarChart3, Trash2, ExternalLink } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
 
 export default function ABTests() {
   const [tests, setTests] = useState<ABTest[]>([]);
@@ -18,6 +20,15 @@ export default function ABTests() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [deleteTestId, setDeleteTestId] = useState<string | null>(null);
   const { toast } = useToast();
+
+  const refreshData = useCallback(async () => {
+    await fetchTests();
+  }, []);
+
+  const { lastUpdated, isRefreshing, refresh } = useAutoRefresh(
+    refreshData,
+    { interval: 60000, enabled: true }
+  );
 
   useEffect(() => {
     fetchTests();
@@ -241,11 +252,17 @@ export default function ABTests() {
               Compare campanhas e otimize suas conversões
             </p>
           </div>
-          <Button onClick={() => setCreateDialogOpen(true)}>
-            <FlaskConical className="mr-2 h-4 w-4" />
-            Novo Teste A/B
-          </Button>
-        </div>
+          <div className="flex gap-2">
+            <RefreshIndicator 
+              lastUpdated={lastUpdated}
+              isRefreshing={isRefreshing}
+              onRefresh={refresh}
+            />
+            <Button onClick={() => setCreateDialogOpen(true)}>
+              <FlaskConical className="mr-2 h-4 w-4" />
+              Novo Teste A/B
+            </Button>
+          </div>
 
         <div className="grid gap-4 md:grid-cols-3">
           <Card>
