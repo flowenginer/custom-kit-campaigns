@@ -26,6 +26,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const SidebarLogo = () => {
   const { open } = useSidebar();
@@ -127,11 +128,35 @@ const SidebarThemeButtons = ({ currentTheme, changeTheme }: { currentTheme: any,
   );
 };
 
-const SidebarLogoutButton = ({ onSignOut }: { onSignOut: () => void }) => {
+const SidebarLogoutButton = ({ onSignOut, userName }: { onSignOut: () => void; userName?: string | null }) => {
   const { open } = useSidebar();
   
   return (
-    <div className="p-3">
+    <div className="p-3 space-y-2">
+      {userName && (
+        <div className={cn(
+          "flex items-center gap-2",
+          !open && "justify-center"
+        )}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className={cn(
+                "flex items-center gap-2",
+                !open && "justify-center"
+              )}>
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
+                    {userName.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                {open && <span className="text-sm font-medium">{userName}</span>}
+              </div>
+            </TooltipTrigger>
+            {!open && <TooltipContent side="right">{userName}</TooltipContent>}
+          </Tooltip>
+        </div>
+      )}
+      
       <div className={cn(
         "flex",
         !open && "justify-center"
@@ -210,6 +235,7 @@ const AdminLayout = () => {
   const location = useLocation();
   const [session, setSession] = useState<Session | null>(null);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [userFirstName, setUserFirstName] = useState<string | null>(null);
   const {
     isSuperAdmin,
     isAdmin,
@@ -257,6 +283,26 @@ const AdminLayout = () => {
     });
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  // Buscar o primeiro nome do usuário
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (session?.user?.id) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (data?.full_name) {
+          const firstName = data.full_name.split(' ')[0];
+          setUserFirstName(firstName);
+        }
+      }
+    };
+    
+    fetchUserProfile();
+  }, [session?.user?.id]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -591,7 +637,7 @@ const AdminLayout = () => {
 
           <SidebarFooter className="border-t border-border">
             <SidebarThemeButtons currentTheme={currentTheme} changeTheme={changeTheme} />
-            <SidebarLogoutButton onSignOut={handleSignOut} />
+            <SidebarLogoutButton onSignOut={handleSignOut} userName={userFirstName} />
           </SidebarFooter>
         </Sidebar>
 
