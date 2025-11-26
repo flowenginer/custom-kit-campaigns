@@ -120,7 +120,7 @@ serve(async (req) => {
 
     // ATUALIZAR ROLES
     if (action === 'update_roles' && req.method === 'PATCH') {
-      const { user_id, roles, allowed_kanban_columns } = await req.json();
+      const { user_id, roles, allowed_kanban_columns, full_name } = await req.json();
 
       if (!user_id || !roles) {
         throw new Error('user_id e roles são obrigatórios');
@@ -145,14 +145,24 @@ serve(async (req) => {
         .from('user_roles')
         .insert(roleInserts);
 
-      // 🆕 ATUALIZAR COLUNAS PERMITIDAS SE FORNECIDO
-      if (allowed_kanban_columns) {
+      // 🆕 ATUALIZAR PERFIL (nome + colunas permitidas)
+      const profileUpdate: Record<string, any> = {};
+      
+      if (allowed_kanban_columns !== undefined) {
+        profileUpdate.allowed_kanban_columns = allowed_kanban_columns;
+      }
+      
+      if (full_name !== undefined) {
+        profileUpdate.full_name = full_name;
+      }
+      
+      if (Object.keys(profileUpdate).length > 0) {
         await supabaseAdmin
           .from('profiles')
-          .update({ allowed_kanban_columns })
+          .update(profileUpdate)
           .eq('id', user_id);
         
-        console.log(`Colunas Kanban atualizadas: ${JSON.stringify(allowed_kanban_columns)}`);
+        console.log(`Perfil atualizado: ${JSON.stringify(profileUpdate)}`);
       }
 
       console.log(`Roles e permissões atualizados com sucesso`);
