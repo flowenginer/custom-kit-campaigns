@@ -1,11 +1,17 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-interface CampaignTheme {
+export interface CampaignTheme {
   theme_primary_color: string;
   theme_background_color: string;
   theme_text_color: string;
   theme_accent_color: string;
+  theme_button_color: string;
+  theme_primary_opacity: number;
+  theme_background_opacity: number;
+  theme_text_opacity: number;
+  theme_accent_opacity: number;
+  theme_button_opacity: number;
   theme_heading_font: string;
   theme_body_font: string;
   theme_font_size_base: string;
@@ -71,6 +77,12 @@ export const useCampaignTheme = (campaignId: string) => {
             theme_background_color: data.theme_background_color,
             theme_text_color: data.theme_text_color,
             theme_accent_color: data.theme_accent_color,
+            theme_button_color: data.theme_button_color || '#4F9CF9',
+            theme_primary_opacity: data.theme_primary_opacity || 100,
+            theme_background_opacity: data.theme_background_opacity || 100,
+            theme_text_opacity: data.theme_text_opacity || 100,
+            theme_accent_opacity: data.theme_accent_opacity || 100,
+            theme_button_opacity: data.theme_button_opacity || 100,
             theme_heading_font: data.theme_heading_font,
             theme_body_font: data.theme_body_font,
             theme_font_size_base: data.theme_font_size_base,
@@ -94,11 +106,34 @@ export const useCampaignTheme = (campaignId: string) => {
   const applyTheme = (themeConfig: CampaignTheme) => {
     const root = document.documentElement;
     
+    // Converter HEX para RGB
+    const hexToRgb = (hex: string) => {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result
+        ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16),
+          }
+        : { r: 0, g: 0, b: 0 };
+    };
+    
     // Convert hex colors to HSL and apply as CSS variables
     root.style.setProperty('--theme-primary', hexToHSL(themeConfig.theme_primary_color));
     root.style.setProperty('--theme-background', hexToHSL(themeConfig.theme_background_color));
     root.style.setProperty('--theme-text', hexToHSL(themeConfig.theme_text_color));
     root.style.setProperty('--theme-accent', hexToHSL(themeConfig.theme_accent_color));
+    
+    // Aplicar cor dos botões com opacidade
+    const buttonRgb = hexToRgb(themeConfig.theme_button_color);
+    const buttonOpacity = (themeConfig.theme_button_opacity || 100) / 100;
+    root.style.setProperty('--theme-button', `rgba(${buttonRgb.r}, ${buttonRgb.g}, ${buttonRgb.b}, ${buttonOpacity})`);
+    
+    // Aplicar opacidades como variáveis separadas
+    root.style.setProperty('--theme-primary-opacity', String(themeConfig.theme_primary_opacity || 100));
+    root.style.setProperty('--theme-background-opacity', String(themeConfig.theme_background_opacity || 100));
+    root.style.setProperty('--theme-text-opacity', String(themeConfig.theme_text_opacity || 100));
+    root.style.setProperty('--theme-accent-opacity', String(themeConfig.theme_accent_opacity || 100));
     
     // Apply font variables
     root.style.setProperty('--theme-heading-font', themeConfig.theme_heading_font);
