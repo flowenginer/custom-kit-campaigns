@@ -142,12 +142,6 @@ export const TaskCard = ({ task, onClick, showAcceptButton, currentUserId, onTas
                 🧑‍💼 {task.creator_name}
               </p>
             )}
-            {/* Badge visual para logo_action */}
-            {task.logo_action === 'designer_create' && (
-              <Badge className="text-[10px] bg-amber-500 text-white w-fit">
-                🎨 Designer Cria
-              </Badge>
-            )}
             {task.logo_action === 'waiting_client' && (
               <Badge variant="destructive" className="text-[10px] w-fit">
                 ⏳ Aguard. Logo

@@ -118,7 +118,7 @@ const Creation = () => {
           designer:profiles!design_tasks_assigned_to_fkey (
             full_name
           ),
-          lead:leads!design_tasks_lead_id_fkey (
+          lead:leads!leads_order_id_fkey (
             needs_logo,
             uploaded_logo_url,
             logo_action
@@ -154,12 +154,10 @@ const Creation = () => {
           : null,
       }));
 
-      // ✅ Filtrar no frontend: Designers NÃO veem tarefas que precisam de logo
-      // Tasks com needs_logo=true aparecem APENAS na página Orders (Vendedores)
-      const designerTasks = formattedTasks.filter(task => task.needs_logo !== true);
-      console.log('✅ Creation.tsx - Designer tasks (needs_logo !== true):', designerTasks.length);
+      // ✅ Todas as tarefas são carregadas - os filtros das colunas determinam onde aparecem
+      console.log('✅ Creation.tsx - Total tasks loaded:', formattedTasks.length);
 
-      setTasks(designerTasks);
+      setTasks(formattedTasks);
 
       // Atualizar tarefa selecionada se o modal estiver aberto
       if (selectedTask) {
@@ -299,8 +297,7 @@ const Creation = () => {
       status: "pending" as const,
       icon: Inbox,
       tasks: filterByPriority(filterTasksForDesigner(tasks.filter(t => 
-        (t.status === "pending" && !t.needs_logo) || 
-        (t.status === "pending" && t.logo_action === 'designer_create')
+        t.status === "pending" && (!t.needs_logo || t.logo_action !== 'waiting_client')
       ))),
     },
     {

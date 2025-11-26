@@ -146,7 +146,7 @@ export default function Campaign() {
     leftLogo: null
   });
   
-  const [uploadChoice, setUploadChoice] = useState<'agora' | 'depois' | 'designer_criar' | null>(null);
+  const [uploadChoice, setUploadChoice] = useState<'agora' | 'depois' | null>(null);
   
   // UTM Parameters
   const [utmParams, setUtmParams] = useState({
@@ -421,10 +421,8 @@ export default function Campaign() {
         last_seen: new Date().toISOString(),
         // Definir needs_logo e logo_action baseado na escolha de upload quando pedido completo
         ...(completed && {
-          needs_logo: uploadChoice !== 'agora',
-          logo_action: uploadChoice === 'designer_criar' ? 'designer_create' 
-                     : uploadChoice === 'depois' ? 'waiting_client' 
-                     : null,
+          needs_logo: uploadChoice === 'depois',
+          logo_action: uploadChoice === 'depois' ? 'waiting_client' : null,
           salesperson_status: uploadChoice === 'depois' ? 'awaiting_logo' : null
         })
       };

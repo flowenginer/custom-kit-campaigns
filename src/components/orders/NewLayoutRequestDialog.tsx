@@ -76,7 +76,7 @@ export const NewLayoutRequestDialog = ({
   const [customerEmail, setCustomerEmail] = useState("");
   const [quantity, setQuantity] = useState<string>("");
   const [customQuantity, setCustomQuantity] = useState<string>("");
-  const [hasLogo, setHasLogo] = useState<"sim" | "designer_criar" | "enviar_depois" | null>(null);
+  const [hasLogo, setHasLogo] = useState<"sim" | "nao" | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [internalNotes, setInternalNotes] = useState("");
   const [currentStep, setCurrentStep] = useState<
@@ -371,10 +371,8 @@ export const NewLayoutRequestDialog = ({
           order_id: orderData.id,
           created_by: user.id,
           created_by_salesperson: true,
-          needs_logo: hasLogo !== "sim",
-          logo_action: hasLogo === "designer_criar" ? "designer_create" 
-                     : hasLogo === "enviar_depois" ? "waiting_client" 
-                     : null,
+          needs_logo: hasLogo === "nao",
+          logo_action: hasLogo === "nao" ? "waiting_client" : null,
           uploaded_logo_url: uploadedLogoUrl,
           customization_summary: customizationData,
           completed: true,
@@ -383,6 +381,16 @@ export const NewLayoutRequestDialog = ({
         .single();
 
       if (leadError) throw leadError;
+
+      // 3. Atualizar lead_id no design_task que foi criado pelo trigger
+      const { error: updateTaskError } = await supabase
+        .from('design_tasks')
+        .update({ lead_id: leadData.id })
+        .eq('order_id', orderData.id);
+
+      if (updateTaskError) {
+        console.error('Erro ao atualizar lead_id no design_task:', updateTaskError);
+      }
 
       toast.success("Requisição criada com sucesso!");
       resetForm();
@@ -731,7 +739,7 @@ export const NewLayoutRequestDialog = ({
               <Label>Cliente tem logo? *</Label>
               <RadioGroup
                 value={hasLogo || ""}
-                onValueChange={(val) => setHasLogo(val as "sim" | "designer_criar" | "enviar_depois")}
+                onValueChange={(val) => setHasLogo(val as "sim" | "nao")}
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="sim" id="logo-sim" />
@@ -740,15 +748,9 @@ export const NewLayoutRequestDialog = ({
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="designer_criar" id="logo-designer" />
-                  <Label htmlFor="logo-designer" className="cursor-pointer">
-                    🎨 Não tenho - Designer vai criar
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="enviar_depois" id="logo-depois" />
-                  <Label htmlFor="logo-depois" className="cursor-pointer">
-                    ⏳ Vou enviar depois (email/WhatsApp)
+                  <RadioGroupItem value="nao" id="logo-nao" />
+                  <Label htmlFor="logo-nao" className="cursor-pointer">
+                    ❌ Não, vou enviar depois (email/WhatsApp)
                   </Label>
                 </div>
               </RadioGroup>

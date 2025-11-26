@@ -30,8 +30,8 @@ interface UploadedLogos {
 
 interface LogoUploaderProps {
   customizations: CustomizationData;
-  uploadChoice: 'agora' | 'depois' | 'designer_criar' | null;
-  onUploadChoiceChange: (choice: 'agora' | 'depois' | 'designer_criar') => void;
+  uploadChoice: 'agora' | 'depois' | null;
+  onUploadChoiceChange: (choice: 'agora' | 'depois') => void;
   onLogosUpload: (logos: UploadedLogos) => void;
   currentLogos: UploadedLogos;
   onNext: () => void;
@@ -123,20 +123,6 @@ export const LogoUploader = ({
             onChange={handleFileChange}
           />
 
-          {/* Botão Designer Vai Criar */}
-          <Button
-            variant="outline"
-            size="lg"
-            className="h-16 text-lg"
-            onClick={() => {
-              console.log('Botão "Designer Vai Criar" clicado');
-              onUploadChoiceChange('designer_criar');
-            }}
-          >
-            <Palette className="mr-2 h-5 w-5" />
-            Não Tenho Logo - Designer Vai Criar
-          </Button>
-
           {/* Botão Vou Enviar Depois */}
           <Button
             variant="outline"
@@ -167,14 +153,6 @@ export const LogoUploader = ({
                 Toque em "Adicionar Logo" para escolher uma imagem da sua galeria.
               </p>
             )}
-          </div>
-        )}
-
-        {uploadChoice === 'designer_criar' && (
-          <div className="mt-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
-            <p className="text-sm text-center text-amber-800">
-              ✅ O designer vai criar uma logo personalizada para você.
-            </p>
           </div>
         )}
 
