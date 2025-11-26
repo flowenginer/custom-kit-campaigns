@@ -1022,10 +1022,10 @@ export default function Campaign() {
                             {selectedModel?.id === model.id ? (
                               <>
                                 <Check className="mr-2 h-5 w-5" />
-                                Modelo Selecionado
+                                MODELO SELECIONADO
                               </>
                             ) : (
-                              'Selecionar Modelo'
+                              'ESCOLHER MODELO'
                             )}
                           </Button>
                         </div>
