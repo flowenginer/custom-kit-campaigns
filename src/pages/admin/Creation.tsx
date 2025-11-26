@@ -45,11 +45,6 @@ const Creation = () => {
   
   const { allowedKanbanColumns, isSuperAdmin, isAdmin, isDesigner, isSalesperson, isLoading } = useUserRole();
 
-  console.log('🔍 === CREATION PAGE DEBUG ===');
-  console.log('👤 User Roles:', { isSuperAdmin, isAdmin, isDesigner, isSalesperson, isLoading });
-  console.log('📊 Allowed Kanban Columns:', allowedKanbanColumns);
-  console.log('📊 Allowed Kanban Columns Length:', allowedKanbanColumns?.length);
-
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -145,17 +140,6 @@ const Creation = () => {
 
       if (error) throw error;
 
-      console.log('📥 Tarefas carregadas do banco:', {
-        total: data?.length || 0,
-        tarefas: data?.map(t => ({
-          id: t.id,
-          status: t.status,
-          customer: t.orders?.customer_name,
-          created_by: t.created_by,
-          created_by_salesperson: t.created_by_salesperson
-        }))
-      });
-
       const formattedTasks: DesignTask[] = (data || []).map((task: any) => ({
         ...task,
         customer_name: task.orders?.customer_name,
@@ -177,9 +161,6 @@ const Creation = () => {
           ? task.designer.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
           : null,
       }));
-
-      // ✅ Todas as tarefas são carregadas - os filtros das colunas determinam onde aparecem
-      console.log('✅ Creation.tsx - Total tasks loaded:', formattedTasks.length);
 
       setTasks(formattedTasks);
 
@@ -320,38 +301,16 @@ const Creation = () => {
 
   // Filtrar tarefas para vendedores
   const filterTasksForSalesperson = (tasks: DesignTask[]) => {
-    console.log('🔍 Filtrando para vendedor:', {
-      isSalesperson,
-      isDesigner,
-      isSuperAdmin,
-      isAdmin,
-      currentUserId,
-      totalTasks: tasks.length
-    });
-    
     // Super Admin e Admin veem tudo
     if (isSuperAdmin || isAdmin) {
-      console.log('✅ Admin/SuperAdmin: vê todas as tarefas');
       return tasks;
     }
     
     // Vendedor vê APENAS suas próprias tarefas criadas
     if (isSalesperson && !isDesigner) {
-      const filtered = tasks.filter(task => task.created_by === currentUserId);
-      console.log('🎯 Vendedor filtrado:', {
-        antes: tasks.length,
-        depois: filtered.length,
-        tarefas: filtered.map(t => ({
-          id: t.id,
-          customer: t.customer_name,
-          status: t.status,
-          created_by: t.created_by
-        }))
-      });
-      return filtered;
+      return tasks.filter(task => task.created_by === currentUserId);
     }
     
-    console.log('⚠️ Nenhum filtro aplicado');
     return tasks;
   };
 
@@ -408,27 +367,10 @@ const Creation = () => {
     },
   ];
 
-  // 🆕 FILTRAR COLUNAS BASEADO EM PERMISSÕES (Super Admin e Admin veem todas)
+  // Filtrar colunas baseado em permissões (Super Admin e Admin veem todas)
   const visibleColumns = (isSuperAdmin || isAdmin)
     ? columns 
-    : columns.filter(col => {
-        const isVisible = allowedKanbanColumns.includes(col.status);
-        console.log(`🔍 Column "${col.title}" (${col.status}): ${isVisible ? '✅ VISIBLE' : '❌ HIDDEN'}`);
-        return isVisible;
-      });
-
-  console.log('📊 Visibilidade Kanban Debug:', {
-    isSuperAdmin,
-    isAdmin,
-    isDesigner,
-    isSalesperson,
-    allowedKanbanColumns,
-    allColumns: columns.map(c => c.status),
-    visibleColumns: visibleColumns.map(c => c.status),
-    shouldSeeAll: isSuperAdmin || isAdmin,
-    totalVisible: visibleColumns.length,
-    totalColumns: columns.length
-  });
+    : columns.filter(col => allowedKanbanColumns.includes(col.status));
 
   const inProgressCount = tasks.filter(t => t.status === "in_progress").length;
 
