@@ -36,29 +36,52 @@ export const ChangeRequestsTab = ({ taskId, onChangeRequestAdded, onClose }: Cha
   };
 
   const loadChangeRequests = async () => {
-    const { data, error } = await supabase
-      .from("change_requests")
-      .select(`
-        *,
-        creator:profiles!change_requests_created_by_fkey (full_name),
-        resolver:profiles!change_requests_resolved_by_fkey (full_name)
-      `)
-      .eq("task_id", taskId)
-      .order("created_at", { ascending: false });
+    try {
+      // Buscar todas as solicitações de alteração
+      const { data: requests, error: requestsError } = await supabase
+        .from("change_requests")
+        .select("*")
+        .eq("task_id", taskId)
+        .order("created_at", { ascending: false });
 
-    if (error) {
+      if (requestsError) {
+        console.error("Error loading change requests:", requestsError);
+        toast.error("Erro ao carregar solicitações");
+        return;
+      }
+
+      if (!requests || requests.length === 0) {
+        setChangeRequests([]);
+        return;
+      }
+
+      // Buscar os perfis dos criadores e resolvedores
+      const userIds = [
+        ...new Set([
+          ...requests.map((r) => r.created_by).filter(Boolean),
+          ...requests.map((r) => r.resolved_by).filter(Boolean),
+        ]),
+      ] as string[];
+
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", userIds);
+
+      const profileMap = new Map(profiles?.map((p) => [p.id, p.full_name]) || []);
+
+      const formatted: ChangeRequest[] = requests.map((req) => ({
+        ...req,
+        creator_name: profileMap.get(req.created_by) || "Desconhecido",
+        resolver_name: req.resolved_by ? profileMap.get(req.resolved_by) || null : null,
+        attachments: (req.attachments as Array<{ name: string; url: string }>) || []
+      }));
+
+      setChangeRequests(formatted);
+    } catch (error) {
       console.error("Error loading change requests:", error);
-      return;
+      toast.error("Erro ao carregar solicitações");
     }
-
-    const formatted: ChangeRequest[] = (data || []).map((cr: any) => ({
-      ...cr,
-      creator_name: cr.creator?.full_name,
-      resolver_name: cr.resolver?.full_name,
-      attachments: cr.attachments || []
-    }));
-
-    setChangeRequests(formatted);
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
