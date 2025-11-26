@@ -23,15 +23,21 @@ import { Checkbox } from "@/components/ui/checkbox";
  */
 
 const Orders = () => {
-  const { isSuperAdmin } = useUserRole();
+  const { isSuperAdmin, isAdmin, isSalesperson } = useUserRole();
   const [tasks, setTasks] = useState<DesignTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<DesignTask | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newRequestOpen, setNewRequestOpen] = useState(false);
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
+    const loadCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) setCurrentUserId(user.id);
+    };
+    loadCurrentUser();
     loadTasks();
   }, []);
 
@@ -108,10 +114,16 @@ const Orders = () => {
       }));
 
       // ✅ Filtrar APENAS tarefas que estão AGUARDANDO logo (waiting_client)
-      const pendingLogoTasks = formattedTasks.filter(task => 
+      let pendingLogoTasks = formattedTasks.filter(task => 
         task.needs_logo === true && task.logo_action === 'waiting_client'
       );
       console.log('🔍 Orders.tsx - Tasks waiting for client logo:', pendingLogoTasks.length);
+
+      // Filtrar por vendedor se não for admin
+      if (isSalesperson && !isSuperAdmin && !isAdmin && currentUserId) {
+        pendingLogoTasks = pendingLogoTasks.filter(task => task.created_by === currentUserId);
+        console.log('👤 Orders.tsx - Filtered by salesperson:', pendingLogoTasks.length);
+      }
 
       setTasks(pendingLogoTasks);
 

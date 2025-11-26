@@ -456,6 +456,8 @@ export const NewLayoutRequestDialog = ({
         .update({ 
           lead_id: leadData.id,
           priority: selectedPriority,
+          created_by: user.id,
+          created_by_salesperson: true,
         })
         .eq('order_id', orderData.id);
 
