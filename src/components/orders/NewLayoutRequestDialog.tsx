@@ -31,6 +31,7 @@ import { Loader2, Plus, AlertTriangle } from "lucide-react";
 import { FrontEditor } from "@/components/customization/FrontEditor";
 import { BackEditor } from "@/components/customization/BackEditor";
 import { SleeveEditor } from "@/components/customization/SleeveEditor";
+import { UrgentReasonDialog } from "@/components/orders/UrgentReasonDialog";
 import { TaskPriority } from "@/types/design-task";
 
 // Importar imagens dos uniformes
@@ -82,6 +83,9 @@ export const NewLayoutRequestDialog = ({
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [internalNotes, setInternalNotes] = useState("");
   const [selectedPriority, setSelectedPriority] = useState<TaskPriority>("normal");
+  const [urgentReasonId, setUrgentReasonId] = useState<string>("");
+  const [urgentReasonText, setUrgentReasonText] = useState<string>("");
+  const [urgentReasonDialogOpen, setUrgentReasonDialogOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState<
     | "campaign"
     | "uniform"
@@ -343,6 +347,12 @@ export const NewLayoutRequestDialog = ({
 
       // Se prioridade é URGENTE, criar solicitação de aprovação
       if (selectedPriority === "urgent") {
+        if (!urgentReasonId) {
+          toast.error("Selecione o motivo da urgência");
+          setLoading(false);
+          return;
+        }
+
         const requestData = {
           campaignId: selectedCampaignId,
           model: selectedModel,
@@ -364,6 +374,8 @@ export const NewLayoutRequestDialog = ({
             request_data: requestData,
             requested_priority: "urgent",
             requested_by: user.id,
+            urgent_reason_id: urgentReasonId,
+            urgent_reason_text: urgentReasonText || null,
           });
 
         if (pendingError) throw pendingError;
@@ -476,6 +488,8 @@ export const NewLayoutRequestDialog = ({
     setLogoFile(null);
     setInternalNotes("");
     setSelectedPriority("normal");
+    setUrgentReasonId("");
+    setUrgentReasonText("");
     setCurrentStep("campaign");
     setFrontCustomization({
       logoType: "none",
@@ -853,7 +867,13 @@ export const NewLayoutRequestDialog = ({
               <Label>Prioridade</Label>
               <RadioGroup 
                 value={selectedPriority} 
-                onValueChange={(value) => setSelectedPriority(value as TaskPriority)}
+                onValueChange={(value) => {
+                  const newPriority = value as TaskPriority;
+                  setSelectedPriority(newPriority);
+                  if (newPriority === "urgent") {
+                    setUrgentReasonDialogOpen(true);
+                  }
+                }}
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="low" id="priority-low" />
@@ -877,7 +897,7 @@ export const NewLayoutRequestDialog = ({
                   <AlertTriangle className="h-4 w-4 text-orange-600" />
                   <AlertDescription className="text-orange-800">
                     A prioridade URGENTE requer aprovação de um administrador.
-                    Você será notificado quando a solicitação for aprovada.
+                    {urgentReasonId && " Motivo selecionado ✓"}
                   </AlertDescription>
                 </Alert>
               )}
@@ -944,6 +964,15 @@ export const NewLayoutRequestDialog = ({
 
         {renderStepContent()}
       </DialogContent>
+
+      <UrgentReasonDialog
+        open={urgentReasonDialogOpen}
+        onOpenChange={setUrgentReasonDialogOpen}
+        onConfirm={(reasonId, reasonText) => {
+          setUrgentReasonId(reasonId);
+          setUrgentReasonText(reasonText || "");
+        }}
+      />
     </Dialog>
   );
 };
