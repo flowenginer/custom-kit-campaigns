@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 interface Segment {
   id: string;
   name: string;
+  segment_tag?: string;
 }
 
 interface ShirtModel {
@@ -111,7 +112,7 @@ const Models = () => {
   const [isBulkUploadDialogOpen, setIsBulkUploadDialogOpen] = useState(false);
   const [bulkFiles, setBulkFiles] = useState<File[]>([]);
   const [bulkGroupedModels, setBulkGroupedModels] = useState<Record<string, Record<string, File>>>({});
-  const [bulkSegmentTag, setBulkSegmentTag] = useState("");
+  const [bulkSegmentId, setBulkSegmentId] = useState("");
   const [bulkModelTag, setBulkModelTag] = useState("");
   const [bulkUploading, setBulkUploading] = useState(false);
   const [bulkProgress, setBulkProgress] = useState(0);
@@ -378,7 +379,7 @@ const Models = () => {
       return;
     }
     
-    if (!bulkSegmentTag || !bulkModelTag) {
+    if (!bulkSegmentId || !bulkModelTag) {
       toast.error("Selecione o Segmento e o Tipo de Uniforme");
       return;
     }
@@ -399,14 +400,18 @@ const Models = () => {
         setBulkCurrentModel(`Modelo ${modelNumber}`);
         
         try {
+          // Recuperar segment_tag a partir do ID selecionado
+          const selectedSegment = segments.find((s: any) => s.id === bulkSegmentId);
+          const segmentTag = selectedSegment?.segment_tag || "";
+          
           // Criar modelo no banco
           const { data: model, error: insertError } = await supabase
             .from("shirt_models")
             .insert({
               name: `Modelo ${modelNumber}`,
-              segment_tag: bulkSegmentTag,
+              segment_tag: segmentTag,
               model_tag: bulkModelTag,
-              segment_id: segments.find((s: any) => s.segment_tag === bulkSegmentTag)?.id || null,
+              segment_id: bulkSegmentId,
               photo_main: "temp",
               image_front: "temp",
               image_back: "temp",
@@ -418,8 +423,8 @@ const Models = () => {
           
           if (insertError) throw insertError;
           
-          // Upload das imagens - precisa do segment_id temporário
-          const tempSegmentId = segments.find((s: any) => s.segment_tag === bulkSegmentTag)?.id || "";
+          // Upload das imagens
+          const tempSegmentId = bulkSegmentId;
           const imageUrls: Record<string, string> = {};
           const requiredImages = ['photo_main', 'image_front', 'image_back', 'image_right', 'image_left'];
           
@@ -497,7 +502,7 @@ const Models = () => {
       setIsBulkUploadDialogOpen(false);
       setBulkFiles([]);
       setBulkGroupedModels({});
-      setBulkSegmentTag("");
+      setBulkSegmentId("");
       setBulkModelTag("");
       
     } catch (error: any) {
@@ -1778,8 +1783,8 @@ const Models = () => {
                 <div className="space-y-2">
                   <Label>Tag do Segmento* (aplicado a TODOS os modelos)</Label>
                   <Select
-                    value={bulkSegmentTag}
-                    onValueChange={setBulkSegmentTag}
+                    value={bulkSegmentId}
+                    onValueChange={setBulkSegmentId}
                     disabled={bulkUploading}
                   >
                     <SelectTrigger>
@@ -1787,7 +1792,7 @@ const Models = () => {
                     </SelectTrigger>
                     <SelectContent>
                       {segments.map((segment: any) => (
-                        <SelectItem key={segment.id} value={segment.segment_tag || ""}>
+                        <SelectItem key={segment.id} value={segment.id}>
                           {segment.name} ({segment.segment_tag})
                         </SelectItem>
                       ))}
@@ -1841,7 +1846,7 @@ const Models = () => {
                   setIsBulkUploadDialogOpen(false);
                   setBulkFiles([]);
                   setBulkGroupedModels({});
-                  setBulkSegmentTag("");
+                  setBulkSegmentId("");
                   setBulkModelTag("");
                 }}
                 disabled={bulkUploading}
