@@ -168,7 +168,7 @@ export const TaskCard = ({ task, onClick, showAcceptButton, currentUserId, onTas
                 🧑‍💼 {task.creator_name}
               </p>
             )}
-            {task.logo_action === 'waiting_client' && (
+            {task.needs_logo && task.logo_action === 'waiting_client' && (
               <Badge variant="destructive" className="text-[10px] w-fit">
                 ⏳ Aguard. Logo
               </Badge>
