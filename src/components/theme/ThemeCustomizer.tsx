@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { ColorPicker } from "@/components/customization/ColorPicker";
+import { ColorPickerWithOpacity } from "@/components/customization/ColorPickerWithOpacity";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Palette, Save } from "lucide-react";
 
@@ -13,6 +13,12 @@ interface ThemeConfig {
   theme_background_color: string;
   theme_text_color: string;
   theme_accent_color: string;
+  theme_button_color: string;
+  theme_primary_opacity: number;
+  theme_background_opacity: number;
+  theme_text_opacity: number;
+  theme_accent_opacity: number;
+  theme_button_opacity: number;
   theme_heading_font: string;
   theme_body_font: string;
   theme_font_size_base: string;
@@ -39,6 +45,12 @@ const DEFAULT_THEME: ThemeConfig = {
   theme_background_color: '#FAFBFF',
   theme_text_color: '#1A1F36',
   theme_accent_color: '#34A853',
+  theme_button_color: '#4F9CF9',
+  theme_primary_opacity: 100,
+  theme_background_opacity: 100,
+  theme_text_opacity: 100,
+  theme_accent_opacity: 100,
+  theme_button_opacity: 100,
   theme_heading_font: 'Inter',
   theme_body_font: 'Inter',
   theme_font_size_base: '16px',
@@ -72,6 +84,12 @@ export const ThemeCustomizer = ({ campaignId }: ThemeCustomizerProps) => {
           theme_background_color: data.theme_background_color,
           theme_text_color: data.theme_text_color,
           theme_accent_color: data.theme_accent_color,
+          theme_button_color: data.theme_button_color || '#4F9CF9',
+          theme_primary_opacity: data.theme_primary_opacity || 100,
+          theme_background_opacity: data.theme_background_opacity || 100,
+          theme_text_opacity: data.theme_text_opacity || 100,
+          theme_accent_opacity: data.theme_accent_opacity || 100,
+          theme_button_opacity: data.theme_button_opacity || 100,
           theme_heading_font: data.theme_heading_font,
           theme_body_font: data.theme_body_font,
           theme_font_size_base: data.theme_font_size_base,
@@ -132,26 +150,41 @@ export const ThemeCustomizer = ({ campaignId }: ThemeCustomizerProps) => {
             Defina as cores principais que serão aplicadas em toda a campanha
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <ColorPicker
+        <CardContent className="space-y-6">
+          <ColorPickerWithOpacity
             label="Cor Principal (Primary)"
             value={theme.theme_primary_color}
-            onChange={(color) => setTheme({ ...theme, theme_primary_color: color })}
+            opacity={theme.theme_primary_opacity}
+            onColorChange={(color) => setTheme({ ...theme, theme_primary_color: color })}
+            onOpacityChange={(opacity) => setTheme({ ...theme, theme_primary_opacity: opacity })}
           />
-          <ColorPicker
+          <ColorPickerWithOpacity
             label="Cor de Fundo (Background)"
             value={theme.theme_background_color}
-            onChange={(color) => setTheme({ ...theme, theme_background_color: color })}
+            opacity={theme.theme_background_opacity}
+            onColorChange={(color) => setTheme({ ...theme, theme_background_color: color })}
+            onOpacityChange={(opacity) => setTheme({ ...theme, theme_background_opacity: opacity })}
           />
-          <ColorPicker
+          <ColorPickerWithOpacity
             label="Cor do Texto (Text)"
             value={theme.theme_text_color}
-            onChange={(color) => setTheme({ ...theme, theme_text_color: color })}
+            opacity={theme.theme_text_opacity}
+            onColorChange={(color) => setTheme({ ...theme, theme_text_color: color })}
+            onOpacityChange={(opacity) => setTheme({ ...theme, theme_text_opacity: opacity })}
           />
-          <ColorPicker
+          <ColorPickerWithOpacity
             label="Cor de Destaque (Accent)"
             value={theme.theme_accent_color}
-            onChange={(color) => setTheme({ ...theme, theme_accent_color: color })}
+            opacity={theme.theme_accent_opacity}
+            onColorChange={(color) => setTheme({ ...theme, theme_accent_color: color })}
+            onOpacityChange={(opacity) => setTheme({ ...theme, theme_accent_opacity: opacity })}
+          />
+          <ColorPickerWithOpacity
+            label="Cor dos Botões"
+            value={theme.theme_button_color}
+            opacity={theme.theme_button_opacity}
+            onColorChange={(color) => setTheme({ ...theme, theme_button_color: color })}
+            onOpacityChange={(opacity) => setTheme({ ...theme, theme_button_opacity: opacity })}
           />
         </CardContent>
       </Card>

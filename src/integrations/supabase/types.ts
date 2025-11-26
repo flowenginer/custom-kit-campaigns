@@ -109,15 +109,21 @@ export type Database = {
           created_at: string
           id: string
           theme_accent_color: string | null
+          theme_accent_opacity: number | null
           theme_background_color: string | null
+          theme_background_opacity: number | null
           theme_body_font: string | null
           theme_border_radius: string | null
+          theme_button_color: string | null
+          theme_button_opacity: number | null
           theme_button_style: string | null
           theme_font_size_base: string | null
           theme_heading_font: string | null
           theme_primary_color: string | null
+          theme_primary_opacity: number | null
           theme_spacing_unit: string | null
           theme_text_color: string | null
+          theme_text_opacity: number | null
           updated_at: string
         }
         Insert: {
@@ -125,15 +131,21 @@ export type Database = {
           created_at?: string
           id?: string
           theme_accent_color?: string | null
+          theme_accent_opacity?: number | null
           theme_background_color?: string | null
+          theme_background_opacity?: number | null
           theme_body_font?: string | null
           theme_border_radius?: string | null
+          theme_button_color?: string | null
+          theme_button_opacity?: number | null
           theme_button_style?: string | null
           theme_font_size_base?: string | null
           theme_heading_font?: string | null
           theme_primary_color?: string | null
+          theme_primary_opacity?: number | null
           theme_spacing_unit?: string | null
           theme_text_color?: string | null
+          theme_text_opacity?: number | null
           updated_at?: string
         }
         Update: {
@@ -141,15 +153,21 @@ export type Database = {
           created_at?: string
           id?: string
           theme_accent_color?: string | null
+          theme_accent_opacity?: number | null
           theme_background_color?: string | null
+          theme_background_opacity?: number | null
           theme_body_font?: string | null
           theme_border_radius?: string | null
+          theme_button_color?: string | null
+          theme_button_opacity?: number | null
           theme_button_style?: string | null
           theme_font_size_base?: string | null
           theme_heading_font?: string | null
           theme_primary_color?: string | null
+          theme_primary_opacity?: number | null
           theme_spacing_unit?: string | null
           theme_text_color?: string | null
+          theme_text_opacity?: number | null
           updated_at?: string
         }
         Relationships: [
