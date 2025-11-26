@@ -56,11 +56,10 @@ export const UrgentApprovalsList = () => {
         .from("pending_urgent_requests")
         .select(`
           *,
-          requester:requested_by (
-            id,
-            profiles:id (full_name)
+          requester:profiles!pending_urgent_requests_requested_by_fkey(
+            full_name
           ),
-          urgent_reason:urgent_reason_id (
+          urgent_reason:urgent_reasons!pending_urgent_requests_urgent_reason_id_fkey(
             label,
             description
           )
@@ -72,7 +71,7 @@ export const UrgentApprovalsList = () => {
 
       const formattedData = data?.map((req: any) => ({
         ...req,
-        requester_name: req.requester?.profiles?.full_name || "Vendedor",
+        requester_name: req.requester?.full_name || "Vendedor",
       })) || [];
 
       setRequests(formattedData);
