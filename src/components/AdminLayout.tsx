@@ -355,47 +355,45 @@ const AdminLayout = () => {
                       </SidebarMenuItem>
 
                       {/* Data Cross - Apenas para Super Admin e Admin */}
-                      {!isDesigner && (
-                        <SidebarMenuItem>
-                          <SidebarMenuButton 
-                            asChild 
-                            isActive={location.pathname === "/admin/advanced-dashboard"}
-                            className={cn(
-                              "transition-colors",
-                              location.pathname === "/admin/advanced-dashboard" 
-                                ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                                : "hover:bg-accent/10 hover:text-primary"
-                            )}
-                          >
-                            <NavLink to="/admin/advanced-dashboard">
-                              <LayoutDashboard className="h-5 w-5" />
-                              <span className="text-base">Data Cross</span>
-                            </NavLink>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      )}
-
-                      {/* Ranking - Para Designer, Vendedor, Admin e Super Admin */}
-                      {(showAll || isAdmin || isDesigner || isSalesperson) && (
-                        <SidebarMenuItem>
-                          <SidebarMenuButton 
-                            asChild 
-                            isActive={location.pathname === "/admin/production-ranking"}
-                            className={cn(
-                              "transition-colors",
-                              location.pathname === "/admin/production-ranking" 
-                                ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                                : "hover:bg-accent/10 hover:text-primary"
-                            )}
-                          >
-                            <NavLink to="/admin/production-ranking">
-                              <Trophy className="h-5 w-5" />
-                              <span className="text-base">Ranking</span>
-                            </NavLink>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      )}
+                      <SidebarMenuItem>
+                        <SidebarMenuButton 
+                          asChild 
+                          isActive={location.pathname === "/admin/advanced-dashboard"}
+                          className={cn(
+                            "transition-colors",
+                            location.pathname === "/admin/advanced-dashboard" 
+                              ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                              : "hover:bg-accent/10 hover:text-primary"
+                          )}
+                        >
+                          <NavLink to="/admin/advanced-dashboard">
+                            <LayoutDashboard className="h-5 w-5" />
+                            <span className="text-base">Data Cross</span>
+                          </NavLink>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
                     </>
+                  )}
+
+                  {/* Ranking - Para Designer, Vendedor, Admin e Super Admin */}
+                  {(showAll || isAdmin || isDesigner || isSalesperson) && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton 
+                        asChild 
+                        isActive={location.pathname === "/admin/production-ranking"}
+                        className={cn(
+                          "transition-colors",
+                          location.pathname === "/admin/production-ranking" 
+                            ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                            : "hover:bg-accent/10 hover:text-primary"
+                        )}
+                      >
+                        <NavLink to="/admin/production-ranking">
+                          <Trophy className="h-5 w-5" />
+                          <span className="text-base">Ranking</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
                   )}
 
                   {showAdminLinks && (
