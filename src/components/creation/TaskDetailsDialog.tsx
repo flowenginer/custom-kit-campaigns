@@ -183,15 +183,37 @@ export const TaskDetailsDialog = ({
   const handleStatusChange = async (newStatus: DbTaskStatus, notes?: string) => {
     if (!task) return;
 
+    console.log('🔄 Tentando atualizar status:', { 
+      taskId: task.id, 
+      currentStatus: task.status, 
+      newStatus,
+      createdBy: task.created_by,
+      assignedTo: task.assigned_to,
+      isSalesperson,
+      isDesigner,
+      isAdmin,
+      isSuperAdmin,
+      currentUserId: currentUser?.id
+    });
+
     const { error } = await supabase
       .from("design_tasks")
       .update({ status: newStatus })
       .eq("id", task.id);
 
     if (error) {
-      toast.error("Erro ao atualizar status");
+      console.error("❌ Erro ao atualizar status:", error);
+      console.error("❌ Detalhes do erro:", {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      toast.error(`Erro ao atualizar status: ${error.message}`);
       return;
     }
+
+    console.log('✅ Status atualizado com sucesso!');
 
     // Se foi criado por vendedor e está indo para aprovação, atualizar lead ao invés de webhook
     if (task.created_by_salesperson && newStatus === 'awaiting_approval') {
