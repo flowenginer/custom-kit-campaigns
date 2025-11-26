@@ -105,7 +105,8 @@ const Creation = () => {
             model_id,
             shirt_models (
               name,
-              sku
+              sku,
+              image_front
             )
           ),
           campaigns (
@@ -140,6 +141,7 @@ const Creation = () => {
         campaign_name: task.campaigns?.name,
         model_name: task.orders?.shirt_models?.name,
         model_code: task.orders?.shirt_models?.sku,
+        model_image_front: task.orders?.shirt_models?.image_front,
         needs_logo: task.lead?.needs_logo,
         uploaded_logo_url: task.lead?.uploaded_logo_url || null,
         created_by_salesperson: task.created_by_salesperson,
