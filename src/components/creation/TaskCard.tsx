@@ -12,6 +12,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useState, useEffect } from "react";
 
 interface TaskCardProps {
   task: DesignTask;
@@ -26,11 +27,28 @@ interface TaskCardProps {
 
 export const TaskCard = ({ task, onClick, showAcceptButton, currentUserId, onTaskAccepted, selectable, selected, onSelect }: TaskCardProps) => {
   const isOverdue = task.deadline && isPast(new Date(task.deadline)) && task.status !== 'completed';
+  const [unresolvedChangesCount, setUnresolvedChangesCount] = useState(0);
   
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task.id,
     data: { task }
   });
+
+  useEffect(() => {
+    loadUnresolvedChangesCount();
+  }, [task.id]);
+
+  const loadUnresolvedChangesCount = async () => {
+    const { data, error } = await supabase
+      .from("change_requests")
+      .select("id", { count: "exact" })
+      .eq("task_id", task.id)
+      .is("resolved_at", null);
+
+    if (!error && data) {
+      setUnresolvedChangesCount(data.length);
+    }
+  };
 
   const style = {
     transform: CSS.Translate.toString(transform),
@@ -109,6 +127,14 @@ export const TaskCard = ({ task, onClick, showAcceptButton, currentUserId, onTas
       onClick={onClick}
     >
       {/* Badge de urgente removida - agora a prioridade está sempre visível no corpo do card */}
+      
+      {unresolvedChangesCount > 0 && (
+        <div className="absolute -top-2 -right-2 z-10">
+          <Badge className="gap-1 bg-red-500 hover:bg-red-600 text-white">
+            🔄 {unresolvedChangesCount}
+          </Badge>
+        </div>
+      )}
       
       {isSalespersonOrigin && (
         <div className="absolute -top-2 -left-2 z-10">

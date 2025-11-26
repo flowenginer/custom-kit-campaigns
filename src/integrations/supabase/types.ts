@@ -243,6 +243,47 @@ export type Database = {
           },
         ]
       }
+      change_requests: {
+        Row: {
+          attachments: Json | null
+          created_at: string | null
+          created_by: string | null
+          description: string
+          id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          task_id: string
+        }
+        Insert: {
+          attachments?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          description: string
+          id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          task_id: string
+        }
+        Update: {
+          attachments?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string
+          id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "change_requests_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "design_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       design_task_comments: {
         Row: {
           comment: string
