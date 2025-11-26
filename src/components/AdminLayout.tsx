@@ -39,6 +39,93 @@ const SidebarLogo = () => {
   );
 };
 
+const SidebarControls = () => {
+  const { open } = useSidebar();
+  
+  return (
+    <div className={cn(
+      "flex gap-2 pt-2",
+      open ? "items-center" : "flex-col items-center"
+    )}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <SidebarTrigger className="h-9 w-9 flex-shrink-0" />
+        </TooltipTrigger>
+        <TooltipContent side="right">
+          <p>Recolher menu lateral</p>
+        </TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div>
+            <NotificationsDropdown />
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="right">
+          <p>Notificações</p>
+        </TooltipContent>
+      </Tooltip>
+    </div>
+  );
+};
+
+const SidebarThemeButtons = ({ currentTheme, changeTheme }: { currentTheme: any, changeTheme: (id: string) => void }) => {
+  const { open } = useSidebar();
+  
+  return (
+    <div className="p-3 border-b border-border/50">
+      {open && <span className="text-xs text-muted-foreground mb-2 block">Tema</span>}
+      <div className={cn(
+        "flex gap-2",
+        open ? "items-center justify-center" : "flex-col items-center"
+      )}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant={currentTheme?.id === 'light' ? 'default' : 'outline'}
+              size="icon"
+              onClick={() => changeTheme('light')}
+              className="h-8 w-8"
+            >
+              <Sun className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Tema Claro</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant={currentTheme?.id === 'gray' ? 'default' : 'outline'}
+              size="icon"
+              onClick={() => changeTheme('gray')}
+              className="h-8 w-8"
+            >
+              <Cloud className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Tema Médio</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant={currentTheme?.id === 'dark' ? 'default' : 'outline'}
+              size="icon"
+              onClick={() => changeTheme('dark')}
+              className="h-8 w-8"
+            >
+              <Moon className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Tema Escuro</TooltipContent>
+        </Tooltip>
+      </div>
+    </div>
+  );
+};
+
 const AdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -114,29 +201,7 @@ const AdminLayout = () => {
         <Sidebar collapsible="icon" className="bg-card border-r border-primary/20">
           <SidebarHeader className="border-b p-6 space-y-4">
             <SidebarLogo />
-            
-            {/* Controles: Trigger e Notificações */}
-            <div className="flex items-center gap-2 pt-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <SidebarTrigger className="h-9 w-9 flex-shrink-0" />
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  <p>Recolher menu lateral</p>
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <NotificationsDropdown />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  <p>Notificações</p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
+            <SidebarControls />
           </SidebarHeader>
 
           <SidebarContent className="py-4">
@@ -435,53 +500,7 @@ const AdminLayout = () => {
           </SidebarContent>
 
           <SidebarFooter className="border-t border-border">
-            {/* Container 1: Botões de Tema */}
-            <div className="p-3 border-b border-border/50">
-              <span className="text-xs text-muted-foreground mb-2 block">Tema</span>
-              <div className="flex items-center justify-center gap-2">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant={currentTheme?.id === 'light' ? 'default' : 'outline'}
-                      size="icon"
-                      onClick={() => changeTheme('light')}
-                      className="h-8 w-8"
-                    >
-                      <Sun className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Tema Claro</TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant={currentTheme?.id === 'gray' ? 'default' : 'outline'}
-                      size="icon"
-                      onClick={() => changeTheme('gray')}
-                      className="h-8 w-8"
-                    >
-                      <Cloud className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Tema Médio</TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant={currentTheme?.id === 'dark' ? 'default' : 'outline'}
-                      size="icon"
-                      onClick={() => changeTheme('dark')}
-                      className="h-8 w-8"
-                    >
-                      <Moon className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Tema Escuro</TooltipContent>
-                </Tooltip>
-              </div>
-            </div>
+            <SidebarThemeButtons currentTheme={currentTheme} changeTheme={changeTheme} />
 
             {/* Container 2: Botão Sair */}
             <div className="p-4">
