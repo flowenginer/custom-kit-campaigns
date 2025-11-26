@@ -118,7 +118,7 @@ const Creation = () => {
           designer:profiles!design_tasks_assigned_to_fkey (
             full_name
           ),
-          lead:leads!leads_order_id_fkey (
+          lead:leads!design_tasks_lead_id_fkey (
             needs_logo,
             uploaded_logo_url,
             logo_action
