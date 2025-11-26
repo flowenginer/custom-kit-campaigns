@@ -1116,6 +1116,7 @@ export const TaskDetailsDialog = ({
               <ChangeRequestsTab 
                 taskId={task.id} 
                 onChangeRequestAdded={checkUnresolvedChanges}
+                onClose={() => onOpenChange(false)}
               />
             </TabsContent>
 
