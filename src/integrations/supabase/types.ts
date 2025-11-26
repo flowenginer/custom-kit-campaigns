@@ -726,6 +726,72 @@ export type Database = {
           },
         ]
       }
+      pending_urgent_requests: {
+        Row: {
+          created_at: string | null
+          created_order_id: string | null
+          created_task_id: string | null
+          final_priority: Database["public"]["Enums"]["task_priority"] | null
+          id: string
+          rejection_reason: string | null
+          request_data: Json
+          requested_at: string | null
+          requested_by: string | null
+          requested_priority: Database["public"]["Enums"]["task_priority"]
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_order_id?: string | null
+          created_task_id?: string | null
+          final_priority?: Database["public"]["Enums"]["task_priority"] | null
+          id?: string
+          rejection_reason?: string | null
+          request_data: Json
+          requested_at?: string | null
+          requested_by?: string | null
+          requested_priority?: Database["public"]["Enums"]["task_priority"]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_order_id?: string | null
+          created_task_id?: string | null
+          final_priority?: Database["public"]["Enums"]["task_priority"] | null
+          id?: string
+          rejection_reason?: string | null
+          request_data?: Json
+          requested_at?: string | null
+          requested_by?: string | null
+          requested_priority?: Database["public"]["Enums"]["task_priority"]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_urgent_requests_created_order_id_fkey"
+            columns: ["created_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_urgent_requests_created_task_id_fkey"
+            columns: ["created_task_id"]
+            isOneToOne: false
+            referencedRelation: "design_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           allowed_kanban_columns: Json | null

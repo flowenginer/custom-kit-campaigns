@@ -25,11 +25,13 @@ import {
 } from "@/components/ui/accordion";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Plus, AlertTriangle } from "lucide-react";
 import { FrontEditor } from "@/components/customization/FrontEditor";
 import { BackEditor } from "@/components/customization/BackEditor";
 import { SleeveEditor } from "@/components/customization/SleeveEditor";
+import { TaskPriority } from "@/types/design-task";
 
 // Importar imagens dos uniformes
 import mangaCurtaImg from "@/assets/uniforms/manga-curta.png";
@@ -79,6 +81,7 @@ export const NewLayoutRequestDialog = ({
   const [hasLogo, setHasLogo] = useState<"sim" | "nao" | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [internalNotes, setInternalNotes] = useState("");
+  const [selectedPriority, setSelectedPriority] = useState<TaskPriority>("normal");
   const [currentStep, setCurrentStep] = useState<
     | "campaign"
     | "uniform"
@@ -320,9 +323,6 @@ export const NewLayoutRequestDialog = ({
         return;
       }
 
-      // Criar session_id único para vendedor
-      const sessionId = `salesperson_${user.id}_${Date.now()}`;
-
       // Calcular quantidade final
       const finalQuantity =
         quantity === "custom" ? parseInt(customQuantity) : parseInt(quantity);
@@ -340,6 +340,61 @@ export const NewLayoutRequestDialog = ({
         uploadChoice: hasLogo === "sim" ? "agora" : "depois",
         internalNotes,
       };
+
+      // Se prioridade é URGENTE, criar solicitação de aprovação
+      if (selectedPriority === "urgent") {
+        const requestData = {
+          campaignId: selectedCampaignId,
+          model: selectedModel,
+          customer: {
+            name: customerName,
+            phone: customerPhone,
+            email: customerEmail || null,
+          },
+          quantity: finalQuantity,
+          customization: customizationData,
+          hasLogo: hasLogo === "nao",
+          logoUrl: uploadedLogoUrl,
+          internalNotes,
+        };
+
+        const { error: pendingError } = await supabase
+          .from("pending_urgent_requests")
+          .insert({
+            request_data: requestData,
+            requested_priority: "urgent",
+            requested_by: user.id,
+          });
+
+        if (pendingError) throw pendingError;
+
+        // Notificar admins
+        const { data: adminRoles } = await supabase
+          .from("user_roles")
+          .select("user_id")
+          .in("role", ["super_admin", "admin"]);
+
+        if (adminRoles && adminRoles.length > 0) {
+          const notifications = adminRoles.map((r) => ({
+            user_id: r.user_id,
+            title: "🔴 Solicitação de Urgência",
+            message: `${customerName} - Aguardando aprovação de prioridade urgente`,
+            type: "urgent_approval_request",
+          }));
+
+          await supabase.from("notifications").insert(notifications);
+        }
+
+        toast.info("Solicitação de urgência enviada para aprovação!");
+        resetForm();
+        onOpenChange(false);
+        onSuccess();
+        setLoading(false);
+        return;
+      }
+
+      // Fluxo normal - criar diretamente
+      const sessionId = `salesperson_${user.id}_${Date.now()}`;
 
       // 1. Criar ORDER primeiro
       const { data: orderData, error: orderError } = await supabase
@@ -383,14 +438,17 @@ export const NewLayoutRequestDialog = ({
 
       if (leadError) throw leadError;
 
-      // 3. Atualizar lead_id no design_task que foi criado pelo trigger
+      // 3. Atualizar lead_id e prioridade no design_task que foi criado pelo trigger
       const { error: updateTaskError } = await supabase
         .from('design_tasks')
-        .update({ lead_id: leadData.id })
+        .update({ 
+          lead_id: leadData.id,
+          priority: selectedPriority,
+        })
         .eq('order_id', orderData.id);
 
       if (updateTaskError) {
-        console.error('Erro ao atualizar lead_id no design_task:', updateTaskError);
+        console.error('Erro ao atualizar design_task:', updateTaskError);
       }
 
       toast.success("Requisição criada com sucesso!");
@@ -417,6 +475,7 @@ export const NewLayoutRequestDialog = ({
     setHasLogo(null);
     setLogoFile(null);
     setInternalNotes("");
+    setSelectedPriority("normal");
     setCurrentStep("campaign");
     setFrontCustomization({
       logoType: "none",
@@ -790,6 +849,40 @@ export const NewLayoutRequestDialog = ({
       case "notes":
         return (
           <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Prioridade</Label>
+              <RadioGroup 
+                value={selectedPriority} 
+                onValueChange={(value) => setSelectedPriority(value as TaskPriority)}
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="low" id="priority-low" />
+                  <Label htmlFor="priority-low" className="cursor-pointer">🟢 Baixa</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="normal" id="priority-normal" />
+                  <Label htmlFor="priority-normal" className="cursor-pointer">🟡 Normal</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="high" id="priority-high" />
+                  <Label htmlFor="priority-high" className="cursor-pointer">🟠 Alta</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="urgent" id="priority-urgent" />
+                  <Label htmlFor="priority-urgent" className="cursor-pointer">🔴 Urgente ⚠️ Requer aprovação</Label>
+                </div>
+              </RadioGroup>
+              {selectedPriority === "urgent" && (
+                <Alert className="border-orange-200 bg-orange-50">
+                  <AlertTriangle className="h-4 w-4 text-orange-600" />
+                  <AlertDescription className="text-orange-800">
+                    A prioridade URGENTE requer aprovação de um administrador.
+                    Você será notificado quando a solicitação for aprovada.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+
             <div className="space-y-2">
               <Label>Observações Internas (opcional)</Label>
               <Textarea

@@ -17,7 +17,8 @@ import Leads from "./pages/admin/Leads";
 import Workflows from "./pages/admin/Workflows";
 import ABTests from "./pages/admin/ABTests";
 import Creation from "./pages/admin/Creation";
-import Orders from "./pages/admin/Orders"; // 🆕 Página de Pedidos (Vendedores)
+import Orders from "./pages/admin/Orders";
+import Approvals from "./pages/admin/Approvals";
 import Api from "./pages/admin/Api";
 import Settings from "./pages/admin/Settings";
 import PageBuilder from "./pages/admin/PageBuilder";
@@ -82,7 +83,8 @@ const App = () => (
             <Route path="campaigns/:campaignId/step/:stepId/builder" element={<CampaignStepBuilder />} />
             <Route path="ab-tests" element={<ABTests />} />
             <Route path="creation" element={<Creation />} />
-            <Route path="orders" element={<Orders />} /> {/* 🆕 Rota de Pedidos */}
+            <Route path="orders" element={<Orders />} />
+            <Route path="approvals" element={<Approvals />} />
             <Route path="api" element={<Api />} />
             <Route path="settings" element={<Settings />} />
             <Route path="temas" element={<ThemeSelector />} />
