@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { UserPlus, Trash2, Edit, KeyRound, Loader2, Code2, AlertCircle } from "lucide-react";
 import { UrgentReasonsManager } from "@/components/admin/UrgentReasonsManager";
+import { KanbanVisibilityManager } from "@/components/admin/KanbanVisibilityManager";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AppRole } from "@/hooks/useUserRole";
@@ -416,8 +417,9 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="users" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="users">Usuários</TabsTrigger>
+          <TabsTrigger value="kanban">Visibilidade Kanban</TabsTrigger>
           <TabsTrigger value="password">Senha</TabsTrigger>
           <TabsTrigger value="scripts"><Code2 className="w-4 h-4 mr-2 inline" />Scripts</TabsTrigger>
           <TabsTrigger value="urgent-reasons"><AlertCircle className="w-4 h-4 mr-2 inline" />Motivos Urgência</TabsTrigger>
@@ -579,6 +581,11 @@ const Settings = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* TAB: VISIBILIDADE KANBAN */}
+        <TabsContent value="kanban" className="space-y-4">
+          <KanbanVisibilityManager />
         </TabsContent>
 
         {/* TAB: RECUPERAR SENHA */}
