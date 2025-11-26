@@ -838,6 +838,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "pending_urgent_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_urgent_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "pending_urgent_requests_urgent_reason_id_fkey"
             columns: ["urgent_reason_id"]
             isOneToOne: false
