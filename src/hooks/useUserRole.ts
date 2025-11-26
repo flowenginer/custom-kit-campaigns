@@ -36,45 +36,44 @@ export const useUserRole = () => {
         console.log('Is Super Admin:', userRoles.includes('super_admin'));
 
         // 🆕 BUSCAR COLUNAS PERMITIDAS DO KANBAN
-        // Primeiro, determinar o papel primário do usuário
+        // Determinar o papel primário do usuário
         const primaryRole = userRoles.includes('super_admin') ? 'super_admin' :
                           userRoles.includes('admin') ? 'admin' :
                           userRoles.includes('designer') ? 'designer' :
                           userRoles.includes('salesperson') ? 'salesperson' : 'viewer';
+
+        console.log('👤 Primary role:', primaryRole);
 
         // Buscar configuração padrão do papel
         const { data: roleDefaults } = await supabase
           .from('role_kanban_defaults')
           .select('allowed_columns')
           .eq('role', primaryRole)
-          .single();
-
-        const defaultColumns = roleDefaults?.allowed_columns || 
-          ['pending', 'in_progress', 'awaiting_approval', 'changes_requested', 'approved', 'completed'];
+          .maybeSingle();
 
         // Verificar se o usuário tem configuração personalizada
         const { data: profileData } = await supabase
           .from('profiles')
           .select('allowed_kanban_columns')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
 
         let columns: string[];
-        const allColumns = ['pending', 'in_progress', 'awaiting_approval', 'changes_requested', 'approved', 'completed'];
-        const profileColumns = profileData?.allowed_kanban_columns as string[] | null;
 
-        // Se o usuário tem configuração personalizada E ela é diferente do padrão completo
-        // então usar a personalizada. Caso contrário, usar o padrão do papel.
-        const hasCustomConfig = profileColumns && 
-                               profileColumns.length !== allColumns.length &&
-                               JSON.stringify(profileColumns.sort()) !== JSON.stringify(allColumns.sort());
-
-        if (hasCustomConfig) {
-          columns = profileColumns;
-          console.log('📊 Using custom Kanban columns for user:', columns);
+        // Se o usuário tem configuração personalizada (não null e não vazia), usar ela
+        // Caso contrário, usar o padrão do papel
+        if (profileData?.allowed_kanban_columns && 
+            Array.isArray(profileData.allowed_kanban_columns) && 
+            profileData.allowed_kanban_columns.length > 0) {
+          columns = profileData.allowed_kanban_columns as string[];
+          console.log('📊 Using CUSTOM Kanban columns for user:', columns);
+        } else if (roleDefaults?.allowed_columns) {
+          columns = roleDefaults.allowed_columns as string[];
+          console.log(`📊 Using ROLE DEFAULT Kanban columns for ${primaryRole}:`, columns);
         } else {
-          columns = defaultColumns;
-          console.log(`📊 Using default Kanban columns for role ${primaryRole}:`, columns);
+          // Fallback completo
+          columns = ['pending', 'in_progress', 'awaiting_approval', 'changes_requested', 'approved', 'completed'];
+          console.log('⚠️ Using FALLBACK Kanban columns:', columns);
         }
         
         setAllowedKanbanColumns(columns);

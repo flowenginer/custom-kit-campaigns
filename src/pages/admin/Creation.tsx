@@ -403,12 +403,21 @@ const Creation = () => {
     },
   ];
 
-  // 🆕 FILTRAR COLUNAS BASEADO EM PERMISSÕES (Super Admin vê todas)
-  const visibleColumns = isSuperAdmin 
+  // 🆕 FILTRAR COLUNAS BASEADO EM PERMISSÕES (Super Admin e Admin veem todas)
+  const visibleColumns = (isSuperAdmin || isAdmin)
     ? columns 
     : columns.filter(col => allowedKanbanColumns.includes(col.status));
 
-  console.log('📊 Colunas Visíveis:', visibleColumns.map(c => c.title), '| Total:', visibleColumns.length);
+  console.log('📊 Visibilidade Kanban Debug:', {
+    isSuperAdmin,
+    isAdmin,
+    isDesigner,
+    isSalesperson,
+    allowedKanbanColumns,
+    allColumns: columns.map(c => c.status),
+    visibleColumns: visibleColumns.map(c => c.status),
+    shouldSeeAll: isSuperAdmin || isAdmin
+  });
 
   const inProgressCount = tasks.filter(t => t.status === "in_progress").length;
 
