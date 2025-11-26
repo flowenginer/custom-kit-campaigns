@@ -455,6 +455,7 @@ const Dashboard = () => {
       const { data: workflowsData } = await supabase
         .from("workflow_templates")
         .select("id, name, description")
+        .is('deleted_at', null)
         .order("name", { ascending: true });
       
       if (workflowsData) {
@@ -502,6 +503,7 @@ const Dashboard = () => {
       let campaignQuery = supabase
         .from("campaigns")
         .select("id, name, workflow_config, workflow_template_id")
+        .is('deleted_at', null)
         .order("created_at", { ascending: false });
       
       if (selectedWorkflowId !== 'all') {
@@ -735,6 +737,7 @@ const Dashboard = () => {
       let campaignQuery = supabase
         .from("campaigns")
         .select("id, name, workflow_config, workflow_template_id")
+        .is('deleted_at', null)
         .order("created_at", { ascending: false });
       
       // Filtrar por workflow se não for "all"

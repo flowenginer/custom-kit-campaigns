@@ -45,6 +45,7 @@ export const ApplyWorkflowDialog = ({ workflow, open, onOpenChange, onApply }: A
     const { data, error } = await supabase
       .from("campaigns")
       .select("id, name, segment_id, segments(name)")
+      .is('deleted_at', null)
       .order("name");
 
     if (error) {

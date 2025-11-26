@@ -53,6 +53,7 @@ export function DynamicFilters({ startDate, endDate, onFiltersChange }: DynamicF
     const { data: campaignsData } = await supabase
       .from("campaigns")
       .select("id, name")
+      .is('deleted_at', null)
       .order("name");
     setCampaigns(campaignsData || []);
 

@@ -68,7 +68,8 @@ export default function AdvancedDashboard() {
       // Fetch campaign and segment names for badges
       const { data: campaignsData } = await supabase
         .from("campaigns")
-        .select("id, name");
+        .select("id, name")
+        .is('deleted_at', null);
       const { data: segmentsData } = await supabase
         .from("segments")
         .select("id, name");
