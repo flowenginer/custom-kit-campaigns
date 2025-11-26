@@ -502,20 +502,18 @@ const AdminLayout = () => {
           <SidebarFooter className="border-t border-border">
             <SidebarThemeButtons currentTheme={currentTheme} changeTheme={changeTheme} />
 
-            {/* Container 2: Botão Sair */}
-            <div className="p-4">
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton 
-                    onClick={handleSignOut}
-                    className="hover:bg-accent hover:text-accent-foreground"
-                  >
-                    <LogOut className="h-5 w-5" />
-                    <span className="text-base">Sair</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </div>
+            {/* Botão Sair */}
+            <SidebarMenu className="p-3">
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  onClick={handleSignOut}
+                  className="hover:bg-accent hover:text-accent-foreground"
+                >
+                  <LogOut className="h-5 w-5" />
+                  <span className="text-base">Sair</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
           </SidebarFooter>
         </Sidebar>
 
