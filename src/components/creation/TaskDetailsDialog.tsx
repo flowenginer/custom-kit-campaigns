@@ -1118,7 +1118,10 @@ export const TaskDetailsDialog = ({
                 taskStatus={task.status}
                 onChangeRequestAdded={checkUnresolvedChanges}
                 onClose={() => onOpenChange(false)}
-                onSendForApproval={() => handleStatusChange('awaiting_approval')}
+                onSendForApproval={async () => {
+                  await handleStatusChange('awaiting_approval');
+                  onOpenChange(false);
+                }}
               />
             </TabsContent>
 
