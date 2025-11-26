@@ -210,10 +210,11 @@ export default function Campaign() {
         
         // Load models based on segment_tag
         if (campaignData.segment_tag) {
-          const { data: modelsData } = await supabase
-            .from("shirt_models")
-            .select("*")
-            .eq("segment_tag", campaignData.segment_tag);
+      const { data: modelsData } = await supabase
+        .from("shirt_models")
+        .select("*")
+        .eq("segment_tag", campaignData.segment_tag)
+        .order('name');
 
           if (modelsData) {
             setAvailableModels(modelsData);
@@ -981,6 +982,7 @@ export default function Campaign() {
               <div className="space-y-6">
                 {availableModels
                   .filter(m => m.model_tag === selectedUniformType)
+                  .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { numeric: true }))
                   .map((model) => (
                     <Card
                       key={model.id}
