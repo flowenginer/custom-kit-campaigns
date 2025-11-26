@@ -128,6 +128,11 @@ export const ThemeCustomizer = ({ campaignId }: ThemeCustomizerProps) => {
     }
   };
 
+  const handleReset = () => {
+    setTheme(DEFAULT_THEME);
+    toast.info('Tema restaurado para os valores padrão');
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-12">
@@ -284,7 +289,7 @@ export const ThemeCustomizer = ({ campaignId }: ThemeCustomizerProps) => {
       </Card>
 
       <div className="flex justify-end gap-3">
-        <Button variant="outline" onClick={loadTheme} disabled={saving}>
+        <Button variant="outline" onClick={handleReset} disabled={saving}>
           Resetar
         </Button>
         <Button onClick={handleSave} disabled={saving}>
