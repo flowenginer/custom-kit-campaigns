@@ -42,7 +42,7 @@ const Creation = () => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   
-  const { allowedKanbanColumns, isSuperAdmin, isAdmin, isDesigner } = useUserRole();
+  const { allowedKanbanColumns, isSuperAdmin, isAdmin, isDesigner, isSalesperson } = useUserRole();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -294,6 +294,19 @@ const Creation = () => {
     return tasks;
   };
 
+  // Filtrar tarefas para vendedores
+  const filterTasksForSalesperson = (tasks: DesignTask[]) => {
+    // Super Admin e Admin veem tudo
+    if (isSuperAdmin || isAdmin) return tasks;
+    
+    // Vendedor vê APENAS suas próprias tarefas criadas
+    if (isSalesperson && !isDesigner) {
+      return tasks.filter(task => task.created_by === currentUserId);
+    }
+    
+    return tasks;
+  };
+
   // Filtrar tarefas por prioridade
   const filterByPriority = (tasks: DesignTask[]) => {
     if (priorityFilter === "all") return tasks;
@@ -305,45 +318,45 @@ const Creation = () => {
       title: "Leads sem Logo",
       status: "logo_needed" as const,
       icon: Inbox,
-      tasks: filterByPriority(filterTasksForDesigner(tasks.filter(t => t.needs_logo === true && t.logo_action === 'waiting_client'))),
+      tasks: filterByPriority(filterTasksForSalesperson(filterTasksForDesigner(tasks.filter(t => t.needs_logo === true && t.logo_action === 'waiting_client')))),
     },
     {
       title: "Novos Com Logo",
       status: "pending" as const,
       icon: Inbox,
-      tasks: filterByPriority(filterTasksForDesigner(tasks.filter(t => 
+      tasks: filterByPriority(filterTasksForSalesperson(filterTasksForDesigner(tasks.filter(t => 
         t.status === "pending" && (!t.needs_logo || t.logo_action !== 'waiting_client')
-      ))),
+      )))),
     },
     {
       title: "Em Progresso",
       status: "in_progress" as const,
       icon: Palette,
-      tasks: filterByPriority(filterTasksForDesigner(tasks.filter(t => t.status === "in_progress"))),
+      tasks: filterByPriority(filterTasksForSalesperson(filterTasksForDesigner(tasks.filter(t => t.status === "in_progress")))),
     },
     {
       title: "Aguard. Aprovação",
       status: "awaiting_approval" as const,
       icon: Eye,
-      tasks: filterByPriority(filterTasksForDesigner(tasks.filter(t => t.status === "awaiting_approval"))),
+      tasks: filterByPriority(filterTasksForSalesperson(filterTasksForDesigner(tasks.filter(t => t.status === "awaiting_approval")))),
     },
     {
       title: "Revisão Necessária",
       status: "changes_requested" as const,
       icon: AlertCircle,
-      tasks: filterByPriority(filterTasksForDesigner(tasks.filter(t => t.status === "changes_requested"))),
+      tasks: filterByPriority(filterTasksForSalesperson(filterTasksForDesigner(tasks.filter(t => t.status === "changes_requested")))),
     },
     {
       title: "Aprovado",
       status: "approved" as const,
       icon: CheckCircle,
-      tasks: filterByPriority(filterTasksForDesigner(tasks.filter(t => t.status === "approved"))),
+      tasks: filterByPriority(filterTasksForSalesperson(filterTasksForDesigner(tasks.filter(t => t.status === "approved")))),
     },
     {
       title: "Produção",
       status: "completed" as const,
       icon: Package,
-      tasks: filterByPriority(filterTasksForDesigner(tasks.filter(t => t.status === "completed"))),
+      tasks: filterByPriority(filterTasksForSalesperson(filterTasksForDesigner(tasks.filter(t => t.status === "completed")))),
     },
   ];
 
