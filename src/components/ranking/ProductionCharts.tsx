@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatSegmentTag } from "@/lib/utils";
 
 interface ProductionChartsProps {
   startDate: Date;
@@ -24,7 +25,7 @@ export const ProductionCharts = ({ startDate, endDate }: ProductionChartsProps) 
           completed_at,
           status,
           campaign_id,
-          campaigns(name, segment_id, segments(name))
+          campaigns(name, segment_tag)
         `)
         .is('deleted_at', null)
         .gte('created_at', startDate.toISOString())
@@ -62,7 +63,7 @@ export const ProductionCharts = ({ startDate, endDate }: ProductionChartsProps) 
       const segmentData: { [key: string]: number } = {};
       
       data.forEach(task => {
-        const segment = task.campaigns?.segments?.name || 'Sem Segmento';
+        const segment = formatSegmentTag(task.campaigns?.segment_tag);
         segmentData[segment] = (segmentData[segment] || 0) + 1;
       });
 
