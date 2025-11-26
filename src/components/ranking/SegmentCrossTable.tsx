@@ -56,7 +56,7 @@ export const SegmentCrossTable = ({ startDate, endDate, type }: SegmentCrossTabl
 
       data.forEach((task: any) => {
         const userId = task[userField];
-        const userName = task[profileField]?.full_name || 'Desconhecido';
+        const userName = (task as any).profiles?.full_name || 'Desconhecido';
         const segmentName = formatSegmentTag(task.campaigns?.segment_tag);
 
         allSegments.add(segmentName);
