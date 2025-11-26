@@ -98,15 +98,20 @@ const Settings = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Não autenticado');
 
-      const response = await supabase.functions.invoke('manage-users?action=list', {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const response = await fetch(`${supabaseUrl}/functions/v1/manage-users?action=list`, {
+        method: 'GET',
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
         }
       });
 
-      if (response.error) throw response.error;
-      if (response.data?.success) {
-        setUsers(response.data.data);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Erro ao carregar usuários');
+      
+      if (data.success) {
+        setUsers(data.data);
       }
     } catch (error: any) {
       toast.error(error.message);
@@ -193,11 +198,13 @@ const Settings = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Não autenticado');
 
-      const response = await supabase.functions.invoke('manage-users?action=create', {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const response = await fetch(`${supabaseUrl}/functions/v1/manage-users?action=create`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
         },
         body: JSON.stringify({
           email,
@@ -207,8 +214,10 @@ const Settings = () => {
         })
       });
 
-      if (response.error) throw response.error;
-      if (response.data?.success) {
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Erro ao criar usuário');
+      
+      if (data.success) {
         toast.success('Usuário criado com sucesso');
         setIsCreateDialogOpen(false);
         resetForm();
@@ -226,23 +235,27 @@ const Settings = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Não autenticado');
 
-      const response = await supabase.functions.invoke('manage-users?action=update_roles', {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const response = await fetch(`${supabaseUrl}/functions/v1/manage-users?action=update_roles`, {
         method: 'PATCH',
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
         },
-      body: JSON.stringify({
-        user_id: selectedUser.id,
-        roles: selectedRoles,
-        allowed_kanban_columns: allowedKanbanColumns,
-        full_name: editFullName
-      })
-    });
+        body: JSON.stringify({
+          user_id: selectedUser.id,
+          roles: selectedRoles,
+          allowed_kanban_columns: allowedKanbanColumns,
+          full_name: editFullName
+        })
+      });
 
-      if (response.error) throw response.error;
-      if (response.data?.success) {
-        toast.success('Roles e permissões atualizados com sucesso'); // 🆕 Mensagem atualizada
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Erro ao atualizar');
+      
+      if (data.success) {
+        toast.success('Roles e permissões atualizados com sucesso');
         setIsEditDialogOpen(false);
         resetForm();
         fetchUsers();
@@ -259,19 +272,23 @@ const Settings = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Não autenticado');
 
-      const response = await supabase.functions.invoke('manage-users?action=delete', {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const response = await fetch(`${supabaseUrl}/functions/v1/manage-users?action=delete`, {
         method: 'DELETE',
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
         },
         body: JSON.stringify({
           user_id: selectedUser.id
         })
       });
 
-      if (response.error) throw response.error;
-      if (response.data?.success) {
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Erro ao deletar usuário');
+      
+      if (data.success) {
         toast.success('Usuário deletado com sucesso');
         setIsDeleteDialogOpen(false);
         setSelectedUser(null);
@@ -292,11 +309,13 @@ const Settings = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Não autenticado');
 
-      const response = await supabase.functions.invoke('manage-users?action=reset_password', {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const response = await fetch(`${supabaseUrl}/functions/v1/manage-users?action=reset_password`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
         },
         body: JSON.stringify({
           user_id: selectedUserForReset,
@@ -304,8 +323,10 @@ const Settings = () => {
         })
       });
 
-      if (response.error) throw response.error;
-      if (response.data?.success) {
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Erro ao resetar senha');
+      
+      if (data.success) {
         toast.success('Senha resetada com sucesso');
         setSelectedUserForReset("");
         setNewPassword("");
