@@ -462,7 +462,6 @@ export const TaskDetailsDialog = ({
       setUploadNotes("");
       setUploadProgress("");
       onTaskUpdated();
-      onOpenChange(false); // ✅ Fecha o modal para forçar recarregamento ao reabrir
     } catch (error) {
       console.error("Error uploading files:", error);
       toast.error("Erro ao enviar mockup");
