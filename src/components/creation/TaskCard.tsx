@@ -137,12 +137,21 @@ export const TaskCard = ({ task, onClick, showAcceptButton, currentUserId, onTas
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-sm truncate">{task.customer_name}</p>
             <p className="text-xs text-muted-foreground truncate">{task.campaign_name}</p>
-            {isSalespersonOrigin && task.creator_name && (
+            {task.creator_name && (
               <p className="text-xs font-medium text-amber-600 truncate">
-                Por: {task.creator_name}
+                🧑‍💼 {task.creator_name}
               </p>
             )}
           </div>
+          {task.model_image_front && (
+            <div className="w-16 h-20 flex-shrink-0">
+              <img 
+                src={task.model_image_front} 
+                alt="Modelo" 
+                className="w-full h-full object-contain rounded"
+              />
+            </div>
+          )}
         </div>
         
         <div className="space-y-2">

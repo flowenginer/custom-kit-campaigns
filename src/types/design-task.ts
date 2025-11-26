@@ -51,6 +51,7 @@ export interface DesignTask {
   designer_initials?: string;
   model_name?: string;
   model_code?: string;
+  model_image_front?: string | null;
   needs_logo?: boolean;
   uploaded_logo_url?: string | null;
   creator_name?: string | null;
