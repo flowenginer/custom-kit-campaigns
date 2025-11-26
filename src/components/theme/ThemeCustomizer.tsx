@@ -41,7 +41,7 @@ const FONT_OPTIONS = [
 ];
 
 const DEFAULT_THEME: ThemeConfig = {
-  theme_primary_color: '#4F9CF9',
+  theme_primary_color: '#FF0000',
   theme_background_color: '#FAFBFF',
   theme_text_color: '#1A1F36',
   theme_accent_color: '#34A853',
