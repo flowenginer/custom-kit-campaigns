@@ -143,74 +143,80 @@ export const TaskCard = ({ task, onClick, showAcceptButton, currentUserId, onTas
               </p>
             )}
           </div>
+        </div>
+        
+        {/* Layout com informações à esquerda e imagem à direita */}
+        <div className="flex gap-3">
+          {/* Coluna esquerda: todas as informações */}
+          <div className="flex-1 space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="flex items-center gap-1 text-muted-foreground">
+                <Shirt className="h-3 w-3" />
+                {task.quantity} un.
+              </span>
+              {task.deadline && (
+                <span className={cn(
+                  "flex items-center gap-1",
+                  isOverdue ? "text-destructive font-semibold" : "text-muted-foreground"
+                )}>
+                  <Clock className="h-3 w-3" />
+                  {formatDeadline(task.deadline)}
+                </span>
+              )}
+            </div>
+            
+            {task.model_name && (
+              <div className="text-xs text-muted-foreground truncate">
+                🎽 {task.model_name}
+              </div>
+            )}
+            
+            <Badge variant={getPriorityConfig(task.priority).variant} className="text-xs w-fit">
+              {getPriorityConfig(task.priority).label}
+            </Badge>
+            
+            {productionTime && (
+              <div className="flex items-center gap-1 text-xs text-primary">
+                <Package className="h-3 w-3" />
+                {productionTime}
+              </div>
+            )}
+            
+            <div className="flex items-center justify-between">
+              {task.assigned_to && task.designer_name ? (
+                <div className="flex items-center gap-1.5">
+                  <Avatar className="h-5 w-5">
+                    <AvatarFallback className="text-[10px] bg-secondary">
+                      {task.designer_initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-xs text-muted-foreground truncate max-w-[100px]">
+                    {task.designer_name}
+                  </span>
+                </div>
+              ) : (
+                <Badge variant="outline" className="text-[10px]">
+                  Não atribuído
+                </Badge>
+              )}
+              
+              {task.current_version > 0 && (
+                <Badge variant="secondary" className="text-[10px]">
+                  v{task.current_version}
+                </Badge>
+              )}
+            </div>
+          </div>
+          
+          {/* Coluna direita: imagem da camisa */}
           {task.model_image_front && (
-            <div className="w-16 h-20 flex-shrink-0">
+            <div className="w-16 flex-shrink-0">
               <img 
                 src={task.model_image_front} 
                 alt="Modelo" 
-                className="w-full h-full object-contain rounded"
+                className="w-full h-auto object-contain rounded"
               />
             </div>
-          )}
-        </div>
-        
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs">
-            <span className="flex items-center gap-1 text-muted-foreground">
-              <Shirt className="h-3 w-3" />
-              {task.quantity} un.
-            </span>
-            {task.deadline && (
-              <span className={cn(
-                "flex items-center gap-1",
-                isOverdue ? "text-destructive font-semibold" : "text-muted-foreground"
-              )}>
-                <Clock className="h-3 w-3" />
-                {formatDeadline(task.deadline)}
-              </span>
-            )}
-          </div>
-          
-          {task.model_name && (
-            <div className="text-xs text-muted-foreground truncate">
-              🎽 {task.model_name}
-            </div>
-          )}
-          
-          <Badge variant={getPriorityConfig(task.priority).variant} className="text-xs w-fit">
-            {getPriorityConfig(task.priority).label}
-          </Badge>
-          
-          {productionTime && (
-            <div className="flex items-center gap-1 text-xs text-primary">
-              <Package className="h-3 w-3" />
-              {productionTime}
-            </div>
-          )}
-        </div>
-        
-        <div className="flex items-center justify-between">
-          {task.assigned_to && task.designer_name ? (
-            <div className="flex items-center gap-1.5">
-              <Avatar className="h-5 w-5">
-                <AvatarFallback className="text-[10px] bg-secondary">
-                  {task.designer_initials}
-                </AvatarFallback>
-              </Avatar>
-              <span className="text-xs text-muted-foreground truncate max-w-[100px]">
-                {task.designer_name}
-              </span>
-            </div>
-          ) : (
-            <Badge variant="outline" className="text-[10px]">
-              Não atribuído
-            </Badge>
-          )}
-          
-          {task.current_version > 0 && (
-            <Badge variant="secondary" className="text-[10px]">
-              v{task.current_version}
-            </Badge>
           )}
         </div>
         
