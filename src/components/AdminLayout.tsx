@@ -2,11 +2,12 @@ import { useNavigate, Outlet, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "./ui/button";
-import { LogOut, LayoutDashboard, Tag, Megaphone, Users, Workflow, FlaskConical, Palette, Code, Settings, ShoppingBag, PaintBucket, FileEdit, Trophy } from "lucide-react";
+import { LogOut, LayoutDashboard, Tag, Megaphone, Users, Workflow, FlaskConical, Palette, Code, Settings, ShoppingBag, PaintBucket, FileEdit, Trophy, Sun, Cloud, Moon } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { Session } from "@supabase/supabase-js";
 import { NotificationsDropdown } from "./NotificationsDropdown";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useGlobalTheme } from "@/hooks/useGlobalTheme";
 import { cn } from "@/lib/utils";
 import logoSS from "@/assets/logo-ss.png";
 import {
@@ -23,7 +24,7 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
 const SidebarLogo = () => {
   const { open } = useSidebar();
@@ -50,6 +51,8 @@ const AdminLayout = () => {
     isSalesperson,
     isLoading
   } = useUserRole();
+  
+  const { currentTheme, changeTheme } = useGlobalTheme();
   
   useEffect(() => {
     setIsNavigating(false);
@@ -105,8 +108,9 @@ const AdminLayout = () => {
   const showDashboard = showAll || isAdmin || isDesigner; // Exclui vendedor
 
   return (
-    <SidebarProvider defaultOpen={true}>
-      <div className="min-h-screen flex w-full">
+    <TooltipProvider>
+      <SidebarProvider defaultOpen={true}>
+        <div className="min-h-screen flex w-full">
         <Sidebar collapsible="icon" className="bg-card border-r border-primary/20">
           <SidebarHeader className="border-b p-6 space-y-4">
             <SidebarLogo />
@@ -430,18 +434,69 @@ const AdminLayout = () => {
             </SidebarGroup>
           </SidebarContent>
 
-          <SidebarFooter className="bg-muted border-t border-border p-4">
-            <SidebarMenu>
-              <SidebarMenuItem>
-              <SidebarMenuButton 
-                onClick={handleSignOut}
-                className="hover:bg-accent hover:text-accent-foreground"
-              >
-                <LogOut className="h-5 w-5" />
-                <span className="text-base">Sair</span>
-              </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
+          <SidebarFooter className="border-t border-border">
+            {/* Container 1: Botões de Tema */}
+            <div className="p-3 border-b border-border/50">
+              <span className="text-xs text-muted-foreground mb-2 block">Tema</span>
+              <div className="flex items-center justify-center gap-2">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={currentTheme?.id === 'light' ? 'default' : 'outline'}
+                      size="icon"
+                      onClick={() => changeTheme('light')}
+                      className="h-8 w-8"
+                    >
+                      <Sun className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Tema Claro</TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={currentTheme?.id === 'gray' ? 'default' : 'outline'}
+                      size="icon"
+                      onClick={() => changeTheme('gray')}
+                      className="h-8 w-8"
+                    >
+                      <Cloud className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Tema Médio</TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={currentTheme?.id === 'dark' ? 'default' : 'outline'}
+                      size="icon"
+                      onClick={() => changeTheme('dark')}
+                      className="h-8 w-8"
+                    >
+                      <Moon className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Tema Escuro</TooltipContent>
+                </Tooltip>
+              </div>
+            </div>
+
+            {/* Container 2: Botão Sair */}
+            <div className="p-4">
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton 
+                    onClick={handleSignOut}
+                    className="hover:bg-accent hover:text-accent-foreground"
+                  >
+                    <LogOut className="h-5 w-5" />
+                    <span className="text-base">Sair</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </div>
           </SidebarFooter>
         </Sidebar>
 
@@ -450,6 +505,7 @@ const AdminLayout = () => {
         </main>
       </div>
     </SidebarProvider>
+    </TooltipProvider>
   );
 };
 
