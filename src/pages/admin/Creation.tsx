@@ -140,7 +140,16 @@ const Creation = () => {
 
       if (error) throw error;
 
-      console.log('📊 Creation.tsx - Total tasks before filter:', data?.length);
+      console.log('📥 Tarefas carregadas do banco:', {
+        total: data?.length || 0,
+        tarefas: data?.map(t => ({
+          id: t.id,
+          status: t.status,
+          customer: t.orders?.customer_name,
+          created_by: t.created_by,
+          created_by_salesperson: t.created_by_salesperson
+        }))
+      });
 
       const formattedTasks: DesignTask[] = (data || []).map((task: any) => ({
         ...task,
@@ -306,14 +315,38 @@ const Creation = () => {
 
   // Filtrar tarefas para vendedores
   const filterTasksForSalesperson = (tasks: DesignTask[]) => {
+    console.log('🔍 Filtrando para vendedor:', {
+      isSalesperson,
+      isDesigner,
+      isSuperAdmin,
+      isAdmin,
+      currentUserId,
+      totalTasks: tasks.length
+    });
+    
     // Super Admin e Admin veem tudo
-    if (isSuperAdmin || isAdmin) return tasks;
+    if (isSuperAdmin || isAdmin) {
+      console.log('✅ Admin/SuperAdmin: vê todas as tarefas');
+      return tasks;
+    }
     
     // Vendedor vê APENAS suas próprias tarefas criadas
     if (isSalesperson && !isDesigner) {
-      return tasks.filter(task => task.created_by === currentUserId);
+      const filtered = tasks.filter(task => task.created_by === currentUserId);
+      console.log('🎯 Vendedor filtrado:', {
+        antes: tasks.length,
+        depois: filtered.length,
+        tarefas: filtered.map(t => ({
+          id: t.id,
+          customer: t.customer_name,
+          status: t.status,
+          created_by: t.created_by
+        }))
+      });
+      return filtered;
     }
     
+    console.log('⚠️ Nenhum filtro aplicado');
     return tasks;
   };
 
