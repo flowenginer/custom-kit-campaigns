@@ -44,6 +44,8 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CustomizationViewer } from "./CustomizationViewer";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useUserRole } from "@/hooks/useUserRole";
 import { LogoSectionUploader } from "@/components/orders/LogoSectionUploader";
 import { ChangeRequestsTab } from "./ChangeRequestsTab";
@@ -63,7 +65,9 @@ import {
   History as HistoryIcon,
   Copy,
   Phone,
-  AlertCircle
+  AlertCircle,
+  ChevronDown,
+  Eye
 } from "lucide-react";
 
 interface TaskDetailsDialogProps {
@@ -91,6 +95,7 @@ export const TaskDetailsDialog = ({
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoSections, setLogoSections] = useState<any[]>([]);
   const [hasUnresolvedChanges, setHasUnresolvedChanges] = useState(false);
+  const [selectedApprovedMockups, setSelectedApprovedMockups] = useState<Set<string>>(new Set());
   
   const { roles, isSalesperson, isDesigner, isSuperAdmin, isAdmin } = useUserRole();
 
@@ -573,6 +578,10 @@ export const TaskDetailsDialog = ({
                    context === 'creation' &&
                    !isVendorContext;
   
+  // Verificar se há mockups com client_approved para exibir colapsados
+  const hasApprovedMockups = task?.design_files?.some(file => file.client_approved === true) || false;
+  const showCollapsedView = (task?.status === 'approved' || task?.status === 'completed') && hasApprovedMockups;
+  
   // ✅ FASE 5: Log de debug detalhado
   console.log('🎯 Permissões Debug (DETALHADO):', {
     // Permissões
@@ -618,7 +627,7 @@ export const TaskDetailsDialog = ({
                            task?.status === 'approved';
   
   // Permissões para vendedores
-  const canSalespersonApprove = isSalesperson && 
+  const canSalespersonApprove = (isSalesperson || isAdmin) && 
                                 isTaskCreator && 
                                 task?.status === 'awaiting_approval';
   const canSalespersonRequestChanges = isSalesperson && 
@@ -1061,66 +1070,156 @@ export const TaskDetailsDialog = ({
 
               <div className="space-y-3">
                 <Label>Mockups Enviados</Label>
-                {[...task.design_files].reverse().map((file) => (
-                  <Card key={`${file.version}-${file.uploaded_at}`}>
-                    <CardContent className="p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant={file.version === task.current_version ? "default" : "outline"}>
-                            v{file.version} {file.version === task.current_version && "(atual)"}
-                          </Badge>
-                          
-                          {file.is_revision && (
-                            <Badge variant="warning">
-                              📝 Revisão
+                {[...task.design_files].reverse().map((file) => {
+                  // Se está em modo colapsado (já aprovado) e o mockup não foi aprovado
+                  if (showCollapsedView && file.client_approved === false) {
+                    return (
+                      <Collapsible key={`${file.version}-${file.uploaded_at}`}>
+                        <Card className="opacity-60 border-muted">
+                          <CollapsibleTrigger asChild>
+                            <CardContent className="p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline">v{file.version}</Badge>
+                                  {file.is_revision && (
+                                    <Badge variant="warning">📝 Revisão</Badge>
+                                  )}
+                                  <span className="text-sm text-muted-foreground">Mockup não aprovado</span>
+                                </div>
+                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                              </div>
+                            </CardContent>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <CardContent className="p-4 pt-0 space-y-3">
+                              {file.notes && (
+                                <p className="text-sm text-muted-foreground bg-muted/50 p-2 rounded">
+                                  <strong>Notas:</strong> {file.notes}
+                                </p>
+                              )}
+                              
+                              <div 
+                                className="relative w-full h-48 bg-muted rounded-lg overflow-hidden cursor-pointer group"
+                                onClick={() => window.open(file.url, '_blank')}
+                              >
+                                <img 
+                                  src={file.url} 
+                                  alt={`Mockup v${file.version}`}
+                                  className="w-full h-full object-contain group-hover:scale-105 transition-transform"
+                                />
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                  <ExternalLink className="h-8 w-8 text-white" />
+                                </div>
+                              </div>
+                              
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => window.open(file.url, '_blank')}
+                              >
+                                <Download className="h-4 w-4 mr-2" />
+                                Baixar
+                              </Button>
+                            </CardContent>
+                          </CollapsibleContent>
+                        </Card>
+                      </Collapsible>
+                    );
+                  }
+
+                  // Card normal para mockups aprovados ou em processo de aprovação
+                  return (
+                    <Card 
+                      key={`${file.version}-${file.uploaded_at}`}
+                      className={selectedApprovedMockups.has(file.url) ? "border-2 border-green-500" : ""}
+                    >
+                      <CardContent className="p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant={file.version === task.current_version ? "default" : "outline"}>
+                              v{file.version} {file.version === task.current_version && "(atual)"}
                             </Badge>
-                          )}
-                          
-                          <span className="text-xs text-muted-foreground">
-                            {format(new Date(file.uploaded_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                          </span>
+                            
+                            {file.is_revision && (
+                              <Badge variant="warning">
+                                📝 Revisão
+                              </Badge>
+                            )}
+                            
+                            {file.client_approved && (
+                              <Badge className="bg-green-100 text-green-700 border-green-300">
+                                ✅ Aprovado pelo cliente
+                              </Badge>
+                            )}
+                            
+                            <span className="text-xs text-muted-foreground">
+                              {format(new Date(file.uploaded_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                            </span>
+                          </div>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => window.open(file.url, '_blank')}
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            Baixar
+                          </Button>
                         </div>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
+
+                        {/* Preview Visual do Mockup */}
+                        <div 
+                          className="relative w-full h-48 bg-muted rounded-lg overflow-hidden cursor-pointer group"
                           onClick={() => window.open(file.url, '_blank')}
                         >
-                          <Download className="h-4 w-4 mr-2" />
-                          Baixar
-                        </Button>
-                      </div>
-
-                      {/* Preview Visual do Mockup */}
-                      <div 
-                        className="relative w-full h-48 bg-muted rounded-lg overflow-hidden cursor-pointer group"
-                        onClick={() => window.open(file.url, '_blank')}
-                      >
-                        <img 
-                          src={file.url} 
-                          alt={`Mockup v${file.version}`}
-                          className="w-full h-full object-contain group-hover:scale-105 transition-transform"
-                          onError={(e) => {
-                            const target = e.currentTarget;
-                            target.style.display = 'none';
-                            const parent = target.parentElement;
-                            if (parent) {
-                              parent.innerHTML = '<div class="flex items-center justify-center h-full"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg></div>';
-                            }
-                          }}
-                        />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                          <ExternalLink className="h-8 w-8 text-white" />
+                          <img 
+                            src={file.url} 
+                            alt={`Mockup v${file.version}`}
+                            className="w-full h-full object-contain group-hover:scale-105 transition-transform"
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              target.style.display = 'none';
+                              const parent = target.parentElement;
+                              if (parent) {
+                                parent.innerHTML = '<div class="flex items-center justify-center h-full"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg></div>';
+                              }
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                            <ExternalLink className="h-8 w-8 text-white" />
+                          </div>
                         </div>
-                      </div>
 
-                      {file.notes && (
-                        <p className="text-sm text-muted-foreground bg-muted/50 p-2 rounded">
-                          <strong>Notas:</strong> {file.notes}
-                        </p>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
+                        {file.notes && (
+                          <p className="text-sm text-muted-foreground bg-muted/50 p-2 rounded">
+                            <strong>Notas:</strong> {file.notes}
+                          </p>
+                        )}
+                        
+                        {/* Checkbox para vendedor selecionar mockup aprovado */}
+                        {canSalespersonApprove && task.status === 'awaiting_approval' && (
+                          <div className="flex items-center gap-2 p-3 border rounded-lg bg-green-50 border-green-200">
+                            <Checkbox
+                              id={`approve-${file.version}`}
+                              checked={selectedApprovedMockups.has(file.url)}
+                              onCheckedChange={(checked) => {
+                                const newSet = new Set(selectedApprovedMockups);
+                                if (checked) {
+                                  newSet.add(file.url);
+                                } else {
+                                  newSet.delete(file.url);
+                                }
+                                setSelectedApprovedMockups(newSet);
+                              }}
+                            />
+                            <Label htmlFor={`approve-${file.version}`} className="text-sm cursor-pointer font-medium text-green-700">
+                              ✅ Mockup aprovado pelo cliente
+                            </Label>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
                 {task.design_files.length === 0 && (
                   <p className="text-sm text-muted-foreground text-center py-8">
                     Nenhum arquivo enviado ainda
@@ -1308,12 +1407,52 @@ export const TaskDetailsDialog = ({
                   </TooltipProvider>
                 )}
                 
-                {canSalespersonApprove && (
-                  <Button onClick={() => handleStatusChange('approved', 'Mockup aprovado pelo vendedor')}>
-                    <Check className="h-4 w-4 mr-2" />
-                    Aprovar Mockup
-                  </Button>
-                )}
+            {canSalespersonApprove && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <Button 
+                        onClick={async () => {
+                          // Atualizar design_files marcando quais foram aprovados
+                          const updatedFiles = task.design_files.map(file => ({
+                            ...file,
+                            client_approved: selectedApprovedMockups.has(file.url)
+                          }));
+                          
+                          const { error } = await supabase
+                            .from('design_tasks')
+                            .update({ 
+                              design_files: updatedFiles,
+                              status: 'approved',
+                              client_approved_at: new Date().toISOString()
+                            })
+                            .eq('id', task.id);
+
+                          if (error) {
+                            toast.error("Erro ao aprovar mockup", {
+                              description: error.message
+                            });
+                            return;
+                          }
+
+                          await handleStatusChange('approved', 'Mockup aprovado pelo vendedor');
+                        }}
+                        disabled={selectedApprovedMockups.size === 0}
+                      >
+                        <Check className="h-4 w-4 mr-2" />
+                        Aprovar Mockup
+                      </Button>
+                    </div>
+                  </TooltipTrigger>
+                  {selectedApprovedMockups.size === 0 && (
+                    <TooltipContent>
+                      <p>Selecione pelo menos um mockup aprovado pelo cliente</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
+            )}
               </div>
             </div>
           )}
