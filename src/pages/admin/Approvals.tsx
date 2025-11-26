@@ -4,17 +4,37 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertCircle } from "lucide-react";
 import { usePendingApprovalsCount } from "@/hooks/usePendingApprovalsCount";
+import { useCallback } from "react";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
 
 const Approvals = () => {
   const { count } = usePendingApprovalsCount();
 
+  const refreshData = useCallback(async () => {
+    // Forçar re-render (os componentes têm seus próprios refetch)
+    window.location.reload();
+  }, []);
+
+  const { lastUpdated, isRefreshing, refresh } = useAutoRefresh(
+    refreshData,
+    { interval: 60000, enabled: false } // Desabilitado pois tem realtime
+  );
+
   return (
     <div className="p-8 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Aprovações</h1>
-        <p className="text-muted-foreground mt-2">
-          Gerencie solicitações de prioridade urgente
-        </p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Aprovações</h1>
+          <p className="text-muted-foreground mt-2">
+            Gerencie solicitações de prioridade urgente
+          </p>
+        </div>
+        <RefreshIndicator 
+          lastUpdated={lastUpdated}
+          isRefreshing={isRefreshing}
+          onRefresh={refresh}
+        />
       </div>
 
       <Card className="border-orange-200 bg-orange-50/50">

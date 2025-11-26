@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Eye, LayoutGrid, LayoutList, Grid3x3, Grid2x2, Folder, FolderOpen, ChevronDown, ChevronRight } from "lucide-react";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
 
 interface Segment {
   id: string;
@@ -43,6 +45,15 @@ const Segments = () => {
     return (saved as ViewMode) || 'medium';
   });
   const [expandedFolders, setExpandedFolders] = useState<string[]>([]);
+
+  const refreshData = useCallback(async () => {
+    await loadSegments();
+  }, []);
+
+  const { lastUpdated, isRefreshing, refresh } = useAutoRefresh(
+    refreshData,
+    { interval: 60000, enabled: true }
+  );
 
   useEffect(() => {
     loadSegments();
@@ -440,6 +451,12 @@ const Segments = () => {
         </div>
 
         <div className="flex gap-2 flex-wrap items-center">
+          <RefreshIndicator 
+            lastUpdated={lastUpdated}
+            isRefreshing={isRefreshing}
+            onRefresh={refresh}
+          />
+          
           {/* Botões de Expandir/Colapsar */}
           <div className="flex gap-1">
             <Button variant="outline" size="sm" onClick={expandAllFolders}>

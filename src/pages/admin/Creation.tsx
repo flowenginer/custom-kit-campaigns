@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,7 +10,6 @@ import { DesignTask } from "@/types/design-task";
 import { useUserRole } from "@/hooks/useUserRole";
 import { toast } from "sonner";
 import { 
-  RefreshCw, 
   Inbox, 
   Palette, 
   Eye, 
@@ -18,6 +17,8 @@ import {
   AlertCircle,
   Package
 } from "lucide-react";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
 import {
   DndContext,
   DragEndEvent,
@@ -50,6 +51,15 @@ const Creation = () => {
         distance: 8,
       },
     })
+  );
+
+  const refreshData = useCallback(async () => {
+    await loadTasks();
+  }, []);
+
+  const { lastUpdated, isRefreshing, refresh } = useAutoRefresh(
+    refreshData,
+    { interval: 60000, enabled: true }
   );
 
   useEffect(() => {
@@ -398,14 +408,11 @@ const Creation = () => {
             </SelectContent>
           </Select>
 
-          <Button 
-            variant="outline" 
-            onClick={loadTasks}
-            disabled={loading}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Atualizar
-          </Button>
+          <RefreshIndicator 
+            lastUpdated={lastUpdated}
+            isRefreshing={isRefreshing}
+            onRefresh={refresh}
+          />
         </div>
       </div>
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Loader2, LayoutGrid, Columns2, Square, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,6 +14,8 @@ import { ApplyWorkflowDialog } from "@/components/workflow/ApplyWorkflowDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { WorkflowTemplate, WorkflowStep } from "@/types/workflow";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
 
 export default function Workflows() {
   const [workflows, setWorkflows] = useState<WorkflowTemplate[]>([]);
@@ -29,6 +31,15 @@ export default function Workflows() {
     return saved ? (Number(saved) as 1 | 2 | 3) : 3;
   });
   const { isSuperAdmin } = useUserRole();
+
+  const refreshData = useCallback(async () => {
+    await loadWorkflows();
+  }, []);
+
+  const { lastUpdated, isRefreshing, refresh } = useAutoRefresh(
+    refreshData,
+    { interval: 60000, enabled: true }
+  );
 
   useEffect(() => {
     loadWorkflows();
@@ -165,6 +176,12 @@ export default function Workflows() {
           <p className="text-muted-foreground">Gerencie os workflows das suas campanhas</p>
         </div>
         <div className="flex items-center gap-2">
+          <RefreshIndicator 
+            lastUpdated={lastUpdated}
+            isRefreshing={isRefreshing}
+            onRefresh={refresh}
+          />
+          
           <ToggleGroup 
             type="single" 
             value={String(viewColumns)} 

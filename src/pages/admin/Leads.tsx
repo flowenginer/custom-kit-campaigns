@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -9,11 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Loader2, Eye, Filter, Trash2, RefreshCw } from "lucide-react";
+import { Loader2, Eye, Filter, Trash2, Plus, Trash, Edit, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
 
 interface Lead {
   id: string;
@@ -55,6 +57,15 @@ const Leads = () => {
   const [onlineStatusFilter, setOnlineStatusFilter] = useState<string>("all");
   const [showOnlyFirstAttempt, setShowOnlyFirstAttempt] = useState(false);
   const [showDeleted, setShowDeleted] = useState(false);
+
+  const refreshData = useCallback(async () => {
+    await loadLeads();
+  }, []);
+
+  const { lastUpdated, isRefreshing, refresh } = useAutoRefresh(
+    refreshData,
+    { interval: 60000, enabled: true }
+  );
 
   useEffect(() => {
     loadLeads();
@@ -468,6 +479,12 @@ const Leads = () => {
             </span>
           </p>
         </div>
+        
+        <RefreshIndicator 
+          lastUpdated={lastUpdated}
+          isRefreshing={isRefreshing}
+          onRefresh={refresh}
+        />
       </div>
 
       {/* Analytics de Conversão */}
