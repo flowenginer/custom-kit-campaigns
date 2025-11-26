@@ -263,6 +263,7 @@ export default function ABTests() {
               Novo Teste A/B
             </Button>
           </div>
+        </div>
 
         <div className="grid gap-4 md:grid-cols-3">
           <Card>
