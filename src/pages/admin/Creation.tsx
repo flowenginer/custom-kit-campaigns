@@ -43,7 +43,12 @@ const Creation = () => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   
-  const { allowedKanbanColumns, isSuperAdmin, isAdmin, isDesigner, isSalesperson } = useUserRole();
+  const { allowedKanbanColumns, isSuperAdmin, isAdmin, isDesigner, isSalesperson, isLoading } = useUserRole();
+
+  console.log('🔍 === CREATION PAGE DEBUG ===');
+  console.log('👤 User Roles:', { isSuperAdmin, isAdmin, isDesigner, isSalesperson, isLoading });
+  console.log('📊 Allowed Kanban Columns:', allowedKanbanColumns);
+  console.log('📊 Allowed Kanban Columns Length:', allowedKanbanColumns?.length);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -406,7 +411,11 @@ const Creation = () => {
   // 🆕 FILTRAR COLUNAS BASEADO EM PERMISSÕES (Super Admin e Admin veem todas)
   const visibleColumns = (isSuperAdmin || isAdmin)
     ? columns 
-    : columns.filter(col => allowedKanbanColumns.includes(col.status));
+    : columns.filter(col => {
+        const isVisible = allowedKanbanColumns.includes(col.status);
+        console.log(`🔍 Column "${col.title}" (${col.status}): ${isVisible ? '✅ VISIBLE' : '❌ HIDDEN'}`);
+        return isVisible;
+      });
 
   console.log('📊 Visibilidade Kanban Debug:', {
     isSuperAdmin,
@@ -416,10 +425,24 @@ const Creation = () => {
     allowedKanbanColumns,
     allColumns: columns.map(c => c.status),
     visibleColumns: visibleColumns.map(c => c.status),
-    shouldSeeAll: isSuperAdmin || isAdmin
+    shouldSeeAll: isSuperAdmin || isAdmin,
+    totalVisible: visibleColumns.length,
+    totalColumns: columns.length
   });
 
   const inProgressCount = tasks.filter(t => t.status === "in_progress").length;
+
+  // Se ainda está carregando as permissões, mostrar loading
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
+          <p className="text-muted-foreground">Carregando permissões...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 space-y-6">
