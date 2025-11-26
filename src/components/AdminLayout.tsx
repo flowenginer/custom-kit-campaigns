@@ -375,8 +375,8 @@ const AdminLayout = () => {
                         </SidebarMenuItem>
                       )}
 
-                      {/* Ranking de Produção - Apenas para Super Admin e Admin */}
-                      {!isDesigner && (
+                      {/* Ranking - Para Designer, Vendedor, Admin e Super Admin */}
+                      {(showAll || isAdmin || isDesigner || isSalesperson) && (
                         <SidebarMenuItem>
                           <SidebarMenuButton 
                             asChild 
@@ -516,7 +516,8 @@ const AdminLayout = () => {
                     </>
                   )}
 
-                  {showDesignerLinks && (
+                  {/* Criação - Apenas para Vendedor, Admin e Super Admin */}
+                  {(showAll || isAdmin || isSalesperson) && (
                     <SidebarMenuItem>
                       <SidebarMenuButton 
                         asChild 
@@ -537,7 +538,8 @@ const AdminLayout = () => {
                     </SidebarMenuItem>
                   )}
 
-                  {showSalespersonLinks && (
+                  {/* Pedidos - Para Designer, Vendedor, Admin e Super Admin */}
+                  {(showAll || isAdmin || isSalesperson || isDesigner) && (
                     <SidebarMenuItem>
                       <SidebarMenuButton 
                         asChild 
