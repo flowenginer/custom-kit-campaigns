@@ -78,8 +78,17 @@ export const ProductionCharts = ({ startDate, endDate }: ProductionChartsProps) 
         statusData[task.status] = (statusData[task.status] || 0) + 1;
       });
 
+      const statusLabels: { [key: string]: string } = {
+        'pending': 'Pendente',
+        'in_progress': 'Em Produção',
+        'awaiting_approval': 'Aguardando Aprovação',
+        'approved': 'Aprovado',
+        'changes_requested': 'Alterações Solicitadas',
+        'completed': 'Concluído'
+      };
+
       const statusBarData = Object.entries(statusData).map(([status, count]) => ({
-        status: status.replace('_', ' ').toUpperCase(),
+        status: statusLabels[status] || status,
         count
       }));
 
