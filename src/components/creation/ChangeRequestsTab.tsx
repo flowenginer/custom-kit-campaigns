@@ -177,7 +177,6 @@ export const ChangeRequestsTab = ({ taskId, taskStatus, onChangeRequestAdded, on
       setFiles([]);
       loadChangeRequests();
       onChangeRequestAdded?.();
-      onClose?.();
     } catch (error: any) {
       console.error("❌ Error adding change request:", error);
       toast.error(error.message || "Erro ao adicionar solicitação");
