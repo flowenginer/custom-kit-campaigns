@@ -334,7 +334,7 @@ const AdminLayout = () => {
             <SidebarGroup>
               <SidebarGroupContent>
                 <SidebarMenu className="space-y-1">
-                  {showDashboard && (
+                  {showDashboard && !isDesigner && (
                     <>
                       <SidebarMenuItem>
                         <SidebarMenuButton 
@@ -516,8 +516,8 @@ const AdminLayout = () => {
                     </>
                   )}
 
-                  {/* Criação - Apenas para Vendedor, Admin e Super Admin */}
-                  {(showAll || isAdmin || isSalesperson) && (
+                  {/* Criação - Para Designer, Vendedor, Admin e Super Admin */}
+                  {(showAll || isAdmin || isSalesperson || isDesigner) && (
                     <SidebarMenuItem>
                       <SidebarMenuButton 
                         asChild 
@@ -538,8 +538,8 @@ const AdminLayout = () => {
                     </SidebarMenuItem>
                   )}
 
-                  {/* Pedidos - Para Designer, Vendedor, Admin e Super Admin */}
-                  {(showAll || isAdmin || isSalesperson || isDesigner) && (
+                  {/* Pedidos - Para Vendedor, Admin e Super Admin (não para Designer) */}
+                  {(showAll || isAdmin || isSalesperson) && !isDesigner && (
                     <SidebarMenuItem>
                       <SidebarMenuButton 
                         asChild 
