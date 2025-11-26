@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Upload, X, Check } from "lucide-react";
+import { Upload, X, Check, Palette } from "lucide-react";
 import { useRef } from "react";
 
 interface CustomizationData {
@@ -30,8 +30,8 @@ interface UploadedLogos {
 
 interface LogoUploaderProps {
   customizations: CustomizationData;
-  uploadChoice: 'agora' | 'depois' | null;
-  onUploadChoiceChange: (choice: 'agora' | 'depois') => void;
+  uploadChoice: 'agora' | 'depois' | 'designer_criar' | null;
+  onUploadChoiceChange: (choice: 'agora' | 'depois' | 'designer_criar') => void;
   onLogosUpload: (logos: UploadedLogos) => void;
   currentLogos: UploadedLogos;
   onNext: () => void;
@@ -123,18 +123,32 @@ export const LogoUploader = ({
             onChange={handleFileChange}
           />
 
-          {/* Botão Não Tenho Logo */}
+          {/* Botão Designer Vai Criar */}
           <Button
             variant="outline"
             size="lg"
             className="h-16 text-lg"
             onClick={() => {
-              console.log('Botão "Não Tenho Logo" clicado');
+              console.log('Botão "Designer Vai Criar" clicado');
+              onUploadChoiceChange('designer_criar');
+            }}
+          >
+            <Palette className="mr-2 h-5 w-5" />
+            Não Tenho Logo - Designer Vai Criar
+          </Button>
+
+          {/* Botão Vou Enviar Depois */}
+          <Button
+            variant="outline"
+            size="lg"
+            className="h-16 text-lg"
+            onClick={() => {
+              console.log('Botão "Vou Enviar Depois" clicado');
               onUploadChoiceChange('depois');
             }}
           >
             <X className="mr-2 h-5 w-5" />
-            Não Tenho Logo
+            Vou Enviar Depois
           </Button>
         </div>
 
@@ -156,10 +170,18 @@ export const LogoUploader = ({
           </div>
         )}
 
+        {uploadChoice === 'designer_criar' && (
+          <div className="mt-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
+            <p className="text-sm text-center text-amber-800">
+              ✅ O designer vai criar uma logo personalizada para você.
+            </p>
+          </div>
+        )}
+
         {uploadChoice === 'depois' && (
           <div className="mt-6 p-4 bg-muted/50 rounded-lg border">
             <p className="text-sm text-center text-muted-foreground">
-              Você poderá enviar as logos depois por email ou WhatsApp.
+              Você poderá enviar a logo depois por email ou WhatsApp.
             </p>
           </div>
         )}

@@ -76,7 +76,7 @@ export const NewLayoutRequestDialog = ({
   const [customerEmail, setCustomerEmail] = useState("");
   const [quantity, setQuantity] = useState<string>("");
   const [customQuantity, setCustomQuantity] = useState<string>("");
-  const [hasLogo, setHasLogo] = useState<"sim" | "nao" | null>(null);
+  const [hasLogo, setHasLogo] = useState<"sim" | "designer_criar" | "enviar_depois" | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [internalNotes, setInternalNotes] = useState("");
   const [currentStep, setCurrentStep] = useState<
@@ -371,7 +371,10 @@ export const NewLayoutRequestDialog = ({
           order_id: orderData.id,
           created_by: user.id,
           created_by_salesperson: true,
-          needs_logo: hasLogo === "nao",
+          needs_logo: hasLogo !== "sim",
+          logo_action: hasLogo === "designer_criar" ? "designer_create" 
+                     : hasLogo === "enviar_depois" ? "waiting_client" 
+                     : null,
           uploaded_logo_url: uploadedLogoUrl,
           customization_summary: customizationData,
           completed: true,
@@ -728,18 +731,24 @@ export const NewLayoutRequestDialog = ({
               <Label>Cliente tem logo? *</Label>
               <RadioGroup
                 value={hasLogo || ""}
-                onValueChange={(val) => setHasLogo(val as "sim" | "nao")}
+                onValueChange={(val) => setHasLogo(val as "sim" | "designer_criar" | "enviar_depois")}
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="sim" id="logo-sim" />
                   <Label htmlFor="logo-sim" className="cursor-pointer">
-                    Sim, fazer upload agora
+                    ✅ Sim, fazer upload agora
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="nao" id="logo-nao" />
-                  <Label htmlFor="logo-nao" className="cursor-pointer">
-                    Não, designer criará depois
+                  <RadioGroupItem value="designer_criar" id="logo-designer" />
+                  <Label htmlFor="logo-designer" className="cursor-pointer">
+                    🎨 Não tenho - Designer vai criar
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="enviar_depois" id="logo-depois" />
+                  <Label htmlFor="logo-depois" className="cursor-pointer">
+                    ⏳ Vou enviar depois (email/WhatsApp)
                   </Label>
                 </div>
               </RadioGroup>

@@ -120,7 +120,8 @@ const Creation = () => {
           ),
           lead:leads!design_tasks_lead_id_fkey (
             needs_logo,
-            uploaded_logo_url
+            uploaded_logo_url,
+            logo_action
           )
         `)
         .is('deleted_at', null)
@@ -143,6 +144,7 @@ const Creation = () => {
         model_code: task.orders?.shirt_models?.sku,
         model_image_front: task.orders?.shirt_models?.image_front,
         needs_logo: task.lead?.needs_logo,
+        logo_action: task.lead?.logo_action,
         uploaded_logo_url: task.lead?.uploaded_logo_url || null,
         created_by_salesperson: task.created_by_salesperson,
         creator_name: task.creator?.full_name || null,
@@ -290,13 +292,16 @@ const Creation = () => {
       title: "Leads sem Logo",
       status: "logo_needed" as const,
       icon: Inbox,
-      tasks: filterByPriority(filterTasksForDesigner(tasks.filter(t => t.needs_logo === true))),
+      tasks: filterByPriority(filterTasksForDesigner(tasks.filter(t => t.needs_logo === true && t.logo_action === 'waiting_client'))),
     },
     {
       title: "Novos Com Logo",
       status: "pending" as const,
       icon: Inbox,
-      tasks: filterByPriority(filterTasksForDesigner(tasks.filter(t => !t.needs_logo && t.status === "pending"))),
+      tasks: filterByPriority(filterTasksForDesigner(tasks.filter(t => 
+        (t.status === "pending" && !t.needs_logo) || 
+        (t.status === "pending" && t.logo_action === 'designer_create')
+      ))),
     },
     {
       title: "Em Progresso",

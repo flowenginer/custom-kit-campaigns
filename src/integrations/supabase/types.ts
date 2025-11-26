@@ -514,6 +514,7 @@ export type Database = {
           is_online: boolean | null
           last_seen: string | null
           lead_group_identifier: string | null
+          logo_action: string | null
           name: string
           needs_logo: boolean | null
           order_id: string | null
@@ -547,6 +548,7 @@ export type Database = {
           is_online?: boolean | null
           last_seen?: string | null
           lead_group_identifier?: string | null
+          logo_action?: string | null
           name: string
           needs_logo?: boolean | null
           order_id?: string | null
@@ -580,6 +582,7 @@ export type Database = {
           is_online?: boolean | null
           last_seen?: string | null
           lead_group_identifier?: string | null
+          logo_action?: string | null
           name?: string
           needs_logo?: boolean | null
           order_id?: string | null

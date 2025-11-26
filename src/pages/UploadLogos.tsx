@@ -108,6 +108,7 @@ export const UploadLogos = () => {
           .from('leads')
           .update({
             needs_logo: true,
+            logo_action: 'waiting_client',
             salesperson_status: 'awaiting_logo',
             current_step: (leadData?.current_step || 0) + 1,
           })
