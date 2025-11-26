@@ -67,7 +67,8 @@ import {
   Phone,
   AlertCircle,
   ChevronDown,
-  Eye
+  Eye,
+  ArrowRightLeft
 } from "lucide-react";
 
 interface TaskDetailsDialogProps {
@@ -96,6 +97,10 @@ export const TaskDetailsDialog = ({
   const [logoSections, setLogoSections] = useState<any[]>([]);
   const [hasUnresolvedChanges, setHasUnresolvedChanges] = useState(false);
   const [selectedApprovedMockups, setSelectedApprovedMockups] = useState<Set<string>>(new Set());
+  const [showTransferDialog, setShowTransferDialog] = useState(false);
+  const [designers, setDesigners] = useState<Array<{id: string, full_name: string}>>([]);
+  const [selectedDesigner, setSelectedDesigner] = useState<string>("");
+  const [transferring, setTransferring] = useState(false);
   
   const { roles, isSalesperson, isDesigner, isSuperAdmin, isAdmin } = useUserRole();
 
@@ -538,6 +543,78 @@ export const TaskDetailsDialog = ({
     onTaskUpdated();
   };
 
+  const loadDesigners = async () => {
+    // Buscar todos os usuários com role designer
+    const { data: designerRoles, error: rolesError } = await supabase
+      .from('user_roles')
+      .select('user_id')
+      .eq('role', 'designer');
+
+    if (rolesError) {
+      console.error('Error loading designers:', rolesError);
+      return;
+    }
+
+    if (!designerRoles || designerRoles.length === 0) {
+      toast.error("Nenhum designer encontrado");
+      return;
+    }
+
+    const designerIds = designerRoles.map(r => r.user_id);
+
+    // Buscar perfis dos designers
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .in('id', designerIds);
+
+    if (profilesError) {
+      console.error('Error loading designer profiles:', profilesError);
+      return;
+    }
+
+    // Filtrar o designer atual (não pode transferir para si mesmo)
+    const filteredDesigners = (profiles || []).filter(d => d.id !== currentUser?.id);
+    setDesigners(filteredDesigners);
+  };
+
+  const handleTransferTask = async () => {
+    if (!task || !selectedDesigner) return;
+    
+    setTransferring(true);
+    try {
+      const { error } = await supabase
+        .from("design_tasks")
+        .update({
+          assigned_to: selectedDesigner,
+          assigned_at: new Date().toISOString()
+        })
+        .eq("id", task.id);
+
+      if (error) throw error;
+
+      // Registrar no histórico
+      const designerName = designers.find(d => d.id === selectedDesigner)?.full_name || 'Designer';
+      await supabase.from("design_task_history").insert({
+        task_id: task.id,
+        user_id: currentUser?.id,
+        action: 'transfer',
+        notes: `Tarefa transferida para ${designerName}`
+      });
+
+      toast.success("Tarefa transferida com sucesso!");
+      setShowTransferDialog(false);
+      setSelectedDesigner("");
+      onTaskUpdated();
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error transferring task:', error);
+      toast.error("Erro ao transferir tarefa");
+    } finally {
+      setTransferring(false);
+    }
+  };
+
   if (!task) return null;
 
   const statusBadge = getStatusBadge(task.status);
@@ -633,6 +710,15 @@ export const TaskDetailsDialog = ({
   const canSalespersonRequestChanges = isSalesperson && 
                                        isTaskCreator && 
                                        task?.status === 'awaiting_approval';
+
+  // Pode transferir se:
+  // - Tarefa está atribuída a alguém (tem assigned_to)
+  // - E: é o designer atribuído OU é admin/super_admin
+  // - E: tarefa não está em 'completed'
+  const canTransfer = task?.assigned_to && 
+                      (task.assigned_to === currentUser?.id || isSuperAdmin || isAdmin) &&
+                      task.status !== 'completed' &&
+                      context === 'creation';
 
   return (
     <Dialog 
@@ -1314,6 +1400,76 @@ export const TaskDetailsDialog = ({
                 )}
               </div>
               <div className="flex gap-2">
+                {canTransfer && (
+                  <Dialog open={showTransferDialog} onOpenChange={setShowTransferDialog}>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        loadDesigners();
+                        setShowTransferDialog(true);
+                      }}
+                    >
+                      <ArrowRightLeft className="h-4 w-4 mr-2" />
+                      Transferir
+                    </Button>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Transferir Tarefa</DialogTitle>
+                        <p className="text-sm text-muted-foreground">
+                          Selecione o designer que receberá esta tarefa
+                        </p>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label>Designer destino</Label>
+                          <Select value={selectedDesigner} onValueChange={setSelectedDesigner}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione um designer" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {designers.map(designer => (
+                                <SelectItem key={designer.id} value={designer.id}>
+                                  {designer.full_name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        {/* Card mostrando tarefa atual */}
+                        <Card className="bg-muted/50">
+                          <CardContent className="p-3">
+                            <p className="text-sm font-medium">{task?.customer_name}</p>
+                            <p className="text-xs text-muted-foreground">{task?.campaign_name}</p>
+                            <p className="text-xs">Atualmente com: {task?.designer_name}</p>
+                          </CardContent>
+                        </Card>
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" onClick={() => setShowTransferDialog(false)}>
+                          Cancelar
+                        </Button>
+                        <Button 
+                          onClick={handleTransferTask} 
+                          disabled={!selectedDesigner || transferring}
+                        >
+                          {transferring ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Transferindo...
+                            </>
+                          ) : (
+                            <>
+                              <ArrowRightLeft className="h-4 w-4 mr-2" />
+                              Confirmar Transferência
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                )}
+
                 {canAssign && (
                   <Button onClick={handleAssignSelf}>
                     <UserPlus className="h-4 w-4 mr-2" />
