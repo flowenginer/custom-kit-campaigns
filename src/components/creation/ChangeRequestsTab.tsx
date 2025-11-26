@@ -80,6 +80,15 @@ export const ChangeRequestsTab = ({ taskId, onChangeRequestAdded }: ChangeReques
     setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  // Função para sanitizar nomes de arquivo
+  const sanitizeFileName = (name: string): string => {
+    return name
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+      .replace(/[^a-zA-Z0-9.-]/g, '_') // Substitui caracteres especiais por _
+      .replace(/_+/g, '_'); // Remove underscores duplicados
+  };
+
   const handleAddChangeRequest = async () => {
     if (!description.trim()) {
       toast.error("Descreva a alteração solicitada");
@@ -97,14 +106,19 @@ export const ChangeRequestsTab = ({ taskId, onChangeRequestAdded }: ChangeReques
       const attachments: Array<{ name: string; url: string }> = [];
 
       for (const file of files) {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `change_requests/${taskId}/${Date.now()}_${file.name}`;
+        const sanitizedName = sanitizeFileName(file.name);
+        const fileName = `change_requests/${taskId}/${Date.now()}_${sanitizedName}`;
+
+        console.log(`📤 Uploading file: ${file.name} → ${sanitizedName}`);
 
         const { error: uploadError } = await supabase.storage
           .from('customer-logos')
           .upload(fileName, file);
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error(`❌ Upload error for ${file.name}:`, uploadError);
+          throw new Error(`Erro ao enviar arquivo "${file.name}": ${uploadError.message}`);
+        }
 
         const { data: { publicUrl } } = supabase.storage
           .from('customer-logos')
@@ -126,16 +140,20 @@ export const ChangeRequestsTab = ({ taskId, onChangeRequestAdded }: ChangeReques
           created_by: currentUserId
         }]);
 
-      if (error) throw error;
+      if (error) {
+        console.error("❌ Database insert error:", error);
+        throw new Error(`Erro ao salvar solicitação: ${error.message}`);
+      }
 
+      console.log("✅ Change request added successfully");
       toast.success("Solicitação de alteração adicionada!");
       setDescription("");
       setFiles([]);
       loadChangeRequests();
       onChangeRequestAdded?.();
-    } catch (error) {
-      console.error("Error adding change request:", error);
-      toast.error("Erro ao adicionar solicitação");
+    } catch (error: any) {
+      console.error("❌ Error adding change request:", error);
+      toast.error(error.message || "Erro ao adicionar solicitação");
     } finally {
       setUploading(false);
     }
