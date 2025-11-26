@@ -43,6 +43,7 @@ const Settings = () => {
   const [fullName, setFullName] = useState("");
   const [selectedRoles, setSelectedRoles] = useState<AppRole[]>([]);
   const [allowedKanbanColumns, setAllowedKanbanColumns] = useState<string[]>([]); // 🆕 Estado para colunas permitidas
+  const [editFullName, setEditFullName] = useState(""); // 🆕 Estado para editar nome
   
   // Password reset states
   const [selectedUserForReset, setSelectedUserForReset] = useState("");
@@ -231,12 +232,13 @@ const Settings = () => {
           Authorization: `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          user_id: selectedUser.id,
-          roles: selectedRoles,
-          allowed_kanban_columns: allowedKanbanColumns
-        })
-      });
+      body: JSON.stringify({
+        user_id: selectedUser.id,
+        roles: selectedRoles,
+        allowed_kanban_columns: allowedKanbanColumns,
+        full_name: editFullName
+      })
+    });
 
       if (response.error) throw response.error;
       if (response.data?.success) {
@@ -338,11 +340,13 @@ const Settings = () => {
     setPassword("");
     setFullName("");
     setSelectedRoles([]);
+    setEditFullName(""); // 🆕 Limpar nome de edição
   };
 
   const openEditDialog = (user: User) => {
     setSelectedUser(user);
     setSelectedRoles(user.roles);
+    setEditFullName(user.profile?.full_name || ""); // 🆕 Carregar nome
     
     // 🆕 Carregar colunas permitidas
     setAllowedKanbanColumns(
@@ -727,6 +731,20 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           </DialogHeader>
           
           <div className="space-y-6">
+            {/* 🆕 SEÇÃO DE DADOS DO PERFIL */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">Dados do Perfil</Label>
+              <div>
+                <Label htmlFor="editFullName">Nome Completo</Label>
+                <Input
+                  id="editFullName"
+                  value={editFullName}
+                  onChange={(e) => setEditFullName(e.target.value)}
+                  placeholder="Nome do usuário"
+                />
+              </div>
+            </div>
+
             {/* 🆕 SEÇÃO DE ROLES */}
             <div className="space-y-2">
               <Label className="text-base font-semibold">Funções do Usuário</Label>
