@@ -80,3 +80,16 @@ export interface DesignTaskComment {
   created_at: string;
   user_name?: string;
 }
+
+export interface ChangeRequest {
+  id: string;
+  task_id: string;
+  description: string;
+  attachments: Array<{ name: string; url: string }>;
+  created_by: string | null;
+  created_at: string;
+  resolved_at: string | null;
+  resolved_by: string | null;
+  creator_name?: string;
+  resolver_name?: string;
+}

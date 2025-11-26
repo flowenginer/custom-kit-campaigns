@@ -209,6 +209,21 @@ const Creation = () => {
       return;
     }
 
+    // ✅ NOVA VALIDAÇÃO: Obrigatório ter alteração registrada para mover para "changes_requested"
+    if (newStatus === 'changes_requested') {
+      const { data: changeRequests, error } = await supabase
+        .from("change_requests")
+        .select("id")
+        .eq("task_id", task.id)
+        .is("resolved_at", null)
+        .limit(1);
+
+      if (error || !changeRequests || changeRequests.length === 0) {
+        toast.error("Adicione uma solicitação de alteração na aba 'Alterações' antes de mover para Revisão Necessária");
+        return;
+      }
+    }
+
     // Validações de negócio
     if (newStatus === 'awaiting_approval' && !task.assigned_to) {
       toast.error("A tarefa precisa estar atribuída a um designer para ser enviada para aprovação");

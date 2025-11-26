@@ -46,6 +46,7 @@ import { CustomizationViewer } from "./CustomizationViewer";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useUserRole } from "@/hooks/useUserRole";
 import { LogoSectionUploader } from "@/components/orders/LogoSectionUploader";
+import { ChangeRequestsTab } from "./ChangeRequestsTab";
 import { 
   Download, 
   ExternalLink, 
@@ -61,7 +62,8 @@ import {
   Palette,
   History as HistoryIcon,
   Copy,
-  Phone
+  Phone,
+  AlertCircle
 } from "lucide-react";
 
 interface TaskDetailsDialogProps {
@@ -88,6 +90,7 @@ export const TaskDetailsDialog = ({
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoSections, setLogoSections] = useState<any[]>([]);
+  const [hasUnresolvedChanges, setHasUnresolvedChanges] = useState(false);
   
   const { roles, isSalesperson, isDesigner, isSuperAdmin, isAdmin } = useUserRole();
 
@@ -102,8 +105,24 @@ export const TaskDetailsDialog = ({
   useEffect(() => {
     if (task && open) {
       loadHistory();
+      checkUnresolvedChanges();
     }
   }, [task, open]);
+
+  const checkUnresolvedChanges = async () => {
+    if (!task) return;
+    
+    const { data, error } = await supabase
+      .from("change_requests")
+      .select("id")
+      .eq("task_id", task.id)
+      .is("resolved_at", null)
+      .limit(1);
+
+    if (!error && data) {
+      setHasUnresolvedChanges(data.length > 0);
+    }
+  };
 
   useEffect(() => {
     getCurrentUser();
@@ -687,7 +706,7 @@ export const TaskDetailsDialog = ({
         ) : (
           // INTERFACE COMPLETA DO DESIGNER
           <Tabs defaultValue="details" className="flex-1 overflow-hidden flex flex-col">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="details">
                 <FileText className="h-4 w-4 mr-2" />
                 Detalhes
@@ -699,6 +718,13 @@ export const TaskDetailsDialog = ({
               <TabsTrigger value="files">
                 <Upload className="h-4 w-4 mr-2" />
                 Enviar Mockup ({task.design_files.length})
+              </TabsTrigger>
+              <TabsTrigger value="changes">
+                <AlertCircle className="h-4 w-4 mr-2" />
+                Alterações
+                {hasUnresolvedChanges && (
+                  <span className="ml-1 flex h-2 w-2 rounded-full bg-red-600" />
+                )}
               </TabsTrigger>
               <TabsTrigger value="history">
                 <HistoryIcon className="h-4 w-4 mr-2" />
@@ -1065,6 +1091,13 @@ export const TaskDetailsDialog = ({
               </div>
             </TabsContent>
 
+            <TabsContent value="changes" className="mt-0">
+              <ChangeRequestsTab 
+                taskId={task.id} 
+                onChangeRequestAdded={checkUnresolvedChanges}
+              />
+            </TabsContent>
+
             <TabsContent value="history" className="mt-0">
               <div className="space-y-4">
                 {history.map((item) => (
@@ -1169,13 +1202,27 @@ export const TaskDetailsDialog = ({
                 )}
                 
                 {canRequestChanges && !canSalespersonRequestChanges && (
-                  <Button 
-                    variant="outline"
-                    onClick={() => handleStatusChange('changes_requested')}
-                  >
-                    <RefreshCcw className="h-4 w-4 mr-2" />
-                    Solicitar Alterações
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <Button 
+                            variant="outline"
+                            onClick={() => handleStatusChange('changes_requested')}
+                            disabled={!hasUnresolvedChanges}
+                          >
+                            <RefreshCcw className="h-4 w-4 mr-2" />
+                            Solicitar Alterações
+                          </Button>
+                        </div>
+                      </TooltipTrigger>
+                      {!hasUnresolvedChanges && (
+                        <TooltipContent>
+                          <p>Adicione uma solicitação de alteração na aba "Alterações"</p>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </TooltipProvider>
                 )}
                 
                 {canApprove && !canSalespersonApprove && (
@@ -1194,13 +1241,27 @@ export const TaskDetailsDialog = ({
 
                 {/* Botões para Vendedores (quando não é needs_logo) */}
                 {canSalespersonRequestChanges && (
-                  <Button 
-                    variant="outline"
-                    onClick={() => handleStatusChange('changes_requested', 'Cliente solicitou alterações')}
-                  >
-                    <RefreshCcw className="h-4 w-4 mr-2" />
-                    Solicitar Alterações
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <Button 
+                            variant="outline"
+                            onClick={() => handleStatusChange('changes_requested', 'Cliente solicitou alterações')}
+                            disabled={!hasUnresolvedChanges}
+                          >
+                            <RefreshCcw className="h-4 w-4 mr-2" />
+                            Solicitar Alterações
+                          </Button>
+                        </div>
+                      </TooltipTrigger>
+                      {!hasUnresolvedChanges && (
+                        <TooltipContent>
+                          <p>Adicione uma solicitação de alteração na aba "Alterações"</p>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </TooltipProvider>
                 )}
                 
                 {canSalespersonApprove && (
