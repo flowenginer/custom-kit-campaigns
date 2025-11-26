@@ -457,7 +457,8 @@ export const TaskDetailsDialog = ({
           version: newVersion,
           url: publicUrl,
           uploaded_at: new Date().toISOString(),
-          notes: uploadNotes || undefined
+          notes: uploadNotes || undefined,
+          is_revision: task.status === 'changes_requested'
         });
       }
 
@@ -988,6 +989,15 @@ export const TaskDetailsDialog = ({
               {canUpload && (
                 <Card className="border-2 border-dashed hover:border-primary transition-colors">
                   <CardContent className="p-6 space-y-4">
+                    {task.status === 'changes_requested' && (
+                      <div className="flex items-center gap-2 p-3 bg-orange-50 border border-orange-200 rounded-lg mb-4">
+                        <RefreshCcw className="h-4 w-4 text-orange-600 flex-shrink-0" />
+                        <span className="text-sm text-orange-700 font-medium">
+                          Enviando mockup de revisão (alterações solicitadas)
+                        </span>
+                      </div>
+                    )}
+                    
                     <div className="text-center space-y-2">
                       <Upload className="h-12 w-12 mx-auto text-muted-foreground" />
                       <Label htmlFor="mockup-upload" className="text-lg font-medium cursor-pointer">
@@ -1055,10 +1065,17 @@ export const TaskDetailsDialog = ({
                   <Card key={`${file.version}-${file.uploaded_at}`}>
                     <CardContent className="p-4 space-y-3">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <Badge variant={file.version === task.current_version ? "default" : "outline"}>
                             v{file.version} {file.version === task.current_version && "(atual)"}
                           </Badge>
+                          
+                          {file.is_revision && (
+                            <Badge variant="warning">
+                              📝 Revisão
+                            </Badge>
+                          )}
+                          
                           <span className="text-xs text-muted-foreground">
                             {format(new Date(file.uploaded_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                           </span>

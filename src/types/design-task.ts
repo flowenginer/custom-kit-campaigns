@@ -17,6 +17,7 @@ export interface DesignFile {
   url: string;
   uploaded_at: string;
   notes?: string;
+  is_revision?: boolean;
 }
 
 export interface DesignTask {
