@@ -28,6 +28,11 @@ interface PendingUrgentRequest {
   requested_at: string;
   status: string;
   requester_name?: string;
+  urgent_reason?: {
+    label: string;
+    description: string | null;
+  } | null;
+  urgent_reason_text?: string | null;
 }
 
 export const UrgentApprovalsList = () => {
@@ -54,6 +59,10 @@ export const UrgentApprovalsList = () => {
           requester:requested_by (
             id,
             profiles:id (full_name)
+          ),
+          urgent_reason:urgent_reason_id (
+            label,
+            description
           )
         `)
         .eq("status", "pending")
@@ -317,6 +326,38 @@ export const UrgentApprovalsList = () => {
                   </div>
                 )}
               </div>
+
+              {/* Motivo da Urgência */}
+              {(request.urgent_reason || request.urgent_reason_text) && (
+                <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-orange-900 mb-1">
+                        📌 MOTIVO DA URGÊNCIA:
+                      </p>
+                      {request.urgent_reason && (
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium text-orange-800">
+                            {request.urgent_reason.label}
+                          </p>
+                          {request.urgent_reason.description && (
+                            <p className="text-xs text-orange-700">
+                              {request.urgent_reason.description}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      {request.urgent_reason_text && (
+                        <p className="text-sm text-orange-800 mt-2">
+                          <span className="font-medium">Detalhes: </span>
+                          {request.urgent_reason_text}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {request.request_data.internalNotes && (
                 <div className="rounded-lg bg-muted p-3">
