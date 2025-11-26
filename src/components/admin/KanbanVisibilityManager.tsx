@@ -231,7 +231,7 @@ export const KanbanVisibilityManager = () => {
           <h3 className="text-lg font-semibold">Configuração Padrão por Papel</h3>
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
           {(['salesperson', 'designer', 'admin', 'super_admin'] as AppRole[]).map((role) => {
             const info = roleInfo[role];
             const currentColumns = editingRole[role] || [];
