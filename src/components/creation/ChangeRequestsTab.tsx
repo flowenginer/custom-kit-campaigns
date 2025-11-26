@@ -15,9 +15,10 @@ import { ChangeRequest } from "@/types/design-task";
 interface ChangeRequestsTabProps {
   taskId: string;
   onChangeRequestAdded?: () => void;
+  onClose?: () => void;
 }
 
-export const ChangeRequestsTab = ({ taskId, onChangeRequestAdded }: ChangeRequestsTabProps) => {
+export const ChangeRequestsTab = ({ taskId, onChangeRequestAdded, onClose }: ChangeRequestsTabProps) => {
   const [changeRequests, setChangeRequests] = useState<ChangeRequest[]>([]);
   const [description, setDescription] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -151,6 +152,7 @@ export const ChangeRequestsTab = ({ taskId, onChangeRequestAdded }: ChangeReques
       setFiles([]);
       loadChangeRequests();
       onChangeRequestAdded?.();
+      onClose?.();
     } catch (error: any) {
       console.error("❌ Error adding change request:", error);
       toast.error(error.message || "Erro ao adicionar solicitação");
