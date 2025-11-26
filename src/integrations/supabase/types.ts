@@ -887,6 +887,30 @@ export type Database = {
         }
         Relationships: []
       }
+      role_kanban_defaults: {
+        Row: {
+          allowed_columns: string[]
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          allowed_columns?: string[]
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          allowed_columns?: string[]
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       segments: {
         Row: {
           created_at: string | null
