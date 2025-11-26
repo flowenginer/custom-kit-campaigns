@@ -36,6 +36,7 @@ const CampaignPageBuilder = () => {
       const { data, error } = await supabase
         .from("campaigns")
         .select("id, name, unique_link, workflow_config")
+        .is('deleted_at', null)
         .order("created_at", { ascending: false });
 
       if (error) throw error;

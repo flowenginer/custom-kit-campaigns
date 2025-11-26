@@ -49,6 +49,7 @@ export function DuplicateWorkflowDialog({
     const { data, error } = await supabase
       .from("workflow_templates")
       .select("id, name, workflow_config")
+      .is('deleted_at', null)
       .order("name");
 
     if (error) {

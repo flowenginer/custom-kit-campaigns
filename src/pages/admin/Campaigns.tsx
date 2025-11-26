@@ -139,6 +139,7 @@ export default function Campaigns() {
     const { data: workflowsData, error: workflowsError } = await supabase
       .from("workflow_templates")
       .select("id, name, description")
+      .is('deleted_at', null)
       .order("name");
 
     if (workflowsError) {

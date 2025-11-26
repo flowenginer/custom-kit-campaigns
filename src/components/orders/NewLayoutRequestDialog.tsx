@@ -188,6 +188,7 @@ export const NewLayoutRequestDialog = ({
       const { data, error } = await supabase
         .from("campaigns")
         .select("id, name, unique_link, segment_tag")
+        .is('deleted_at', null)
         .order("name");
 
       if (error) throw error;
