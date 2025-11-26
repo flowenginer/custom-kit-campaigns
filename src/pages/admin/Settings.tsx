@@ -231,6 +231,20 @@ const Settings = () => {
   const handleUpdateRoles = async () => {
     if (!selectedUser) return;
 
+    // ✅ VALIDAÇÃO: Impedir remoção de todas as roles
+    if (selectedRoles.length === 0) {
+      toast.error('Selecione pelo menos uma função para o usuário');
+      return;
+    }
+
+    // ✅ VALIDAÇÃO: Avisar se estiver removendo super_admin do próprio usuário
+    if (selectedUser.id === currentUserId && !selectedRoles.includes('super_admin')) {
+      const confirmRemove = window.confirm(
+        '⚠️ ATENÇÃO: Você está removendo sua própria permissão de Super Admin. Isso pode impedir seu acesso a esta tela. Deseja continuar?'
+      );
+      if (!confirmRemove) return;
+    }
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Não autenticado');
@@ -255,7 +269,7 @@ const Settings = () => {
       if (!response.ok) throw new Error(data.error || 'Erro ao atualizar');
       
       if (data.success) {
-        toast.success('Roles e permissões atualizados com sucesso');
+        toast.success('Dados atualizados com sucesso');
         setIsEditDialogOpen(false);
         resetForm();
         fetchUsers();
@@ -366,10 +380,10 @@ const Settings = () => {
 
   const openEditDialog = (user: User) => {
     setSelectedUser(user);
-    setSelectedRoles(user.roles);
-    setEditFullName(user.profile?.full_name || ""); // 🆕 Carregar nome
+    setSelectedRoles(user.roles || []); // Garantir que roles seja um array
+    setEditFullName(user.profile?.full_name || "");
     
-    // 🆕 Carregar colunas permitidas
+    // Carregar colunas permitidas
     setAllowedKanbanColumns(
       user.profile?.allowed_kanban_columns || allKanbanColumns.map(c => c.id)
     );
@@ -741,18 +755,25 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </TabsContent>
       </Tabs>
 
-      {/* Dialog: Editar Roles */}
+      {/* Dialog: Editar Usuário */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Editar Permissões</DialogTitle>
+            <DialogTitle>Editar Usuário</DialogTitle>
             <DialogDescription>
-              Atualize as permissões de acesso de {selectedUser?.email}
+              Atualize os dados e permissões de {selectedUser?.email}
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-6">
-            {/* 🆕 SEÇÃO DE DADOS DO PERFIL */}
+            {/* ⚠️ AVISO IMPORTANTE */}
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+              <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                ⚠️ <strong>Importante:</strong> Ao editar apenas o nome, mantenha as funções marcadas para não remover permissões acidentalmente.
+              </p>
+            </div>
+
+            {/* SEÇÃO DE DADOS DO PERFIL */}
             <div className="space-y-3">
               <Label className="text-base font-semibold">Dados do Perfil</Label>
               <div>
@@ -766,9 +787,14 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
               </div>
             </div>
 
-            {/* 🆕 SEÇÃO DE ROLES */}
-            <div className="space-y-2">
+            {/* SEÇÃO DE ROLES */}
+            <div className="space-y-2 border-t pt-4">
               <Label className="text-base font-semibold">Funções do Usuário</Label>
+              {selectedRoles.length === 0 && (
+                <div className="bg-destructive/10 text-destructive text-sm p-2 rounded-md mb-2">
+                  ⚠️ Selecione pelo menos uma função
+                </div>
+              )}
               {allRoles.map((role) => (
                 <div key={role.value} className="flex items-start space-x-2">
                   <Checkbox
@@ -841,11 +867,30 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                // Restaurar valores originais
+                if (selectedUser) {
+                  setSelectedRoles(selectedUser.roles || []);
+                  setEditFullName(selectedUser.profile?.full_name || "");
+                  setAllowedKanbanColumns(
+                    selectedUser.profile?.allowed_kanban_columns || allKanbanColumns.map(c => c.id)
+                  );
+                }
+              }}
+            >
+              Resetar
+            </Button>
+            <div className="flex-1" />
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleUpdateRoles} disabled={allowedKanbanColumns.length === 0}>
+            <Button 
+              onClick={handleUpdateRoles} 
+              disabled={selectedRoles.length === 0 || allowedKanbanColumns.length === 0}
+            >
               Salvar Alterações
             </Button>
           </DialogFooter>
