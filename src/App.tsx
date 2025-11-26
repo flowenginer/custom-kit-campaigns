@@ -29,6 +29,7 @@ import TrafficDashboard from "./pages/admin/TrafficDashboard";
 import ThemeSelector from "./pages/admin/ThemeSelector";
 import CampaignPageBuilder from "./pages/admin/CampaignPageBuilder";
 import CampaignStepBuilder from "./pages/admin/CampaignStepBuilder";
+import ProductionRanking from "./pages/admin/ProductionRanking";
 
 // Componente para rastrear mudanças de rota em SPAs
 const AnalyticsTracker = () => {
@@ -70,6 +71,7 @@ const App = () => (
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="traffic" element={<TrafficDashboard />} />
             <Route path="advanced-dashboard" element={<AdvancedDashboard />} />
+            <Route path="production-ranking" element={<ProductionRanking />} />
             <Route path="segments" element={<Segments />} />
             <Route path="models" element={<Models />} />
             <Route path="campaigns" element={<Campaigns />} />

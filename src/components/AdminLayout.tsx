@@ -2,7 +2,7 @@ import { useNavigate, Outlet, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "./ui/button";
-import { LogOut, LayoutDashboard, Tag, Megaphone, Users, Workflow, FlaskConical, Palette, Code, Settings, ShoppingBag, PaintBucket, FileEdit } from "lucide-react";
+import { LogOut, LayoutDashboard, Tag, Megaphone, Users, Workflow, FlaskConical, Palette, Code, Settings, ShoppingBag, PaintBucket, FileEdit, Trophy } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { Session } from "@supabase/supabase-js";
 import { NotificationsDropdown } from "./NotificationsDropdown";
@@ -175,6 +175,27 @@ const AdminLayout = () => {
                             <NavLink to="/admin/advanced-dashboard">
                               <LayoutDashboard className="h-5 w-5" />
                               <span className="text-base">Data Cross</span>
+                            </NavLink>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+
+                      {/* Ranking de Produção - Apenas para Super Admin e Admin */}
+                      {!isDesigner && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton 
+                            asChild 
+                            isActive={location.pathname === "/admin/production-ranking"}
+                            className={cn(
+                              "transition-colors",
+                              location.pathname === "/admin/production-ranking" 
+                                ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                                : "hover:bg-accent/10 hover:text-primary"
+                            )}
+                          >
+                            <NavLink to="/admin/production-ranking">
+                              <Trophy className="h-5 w-5" />
+                              <span className="text-base">Ranking</span>
                             </NavLink>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
