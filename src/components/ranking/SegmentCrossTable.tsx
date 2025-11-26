@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { formatSegmentTag } from "@/lib/utils";
 
 interface SegmentCrossTableProps {
   startDate: Date;
@@ -32,7 +33,7 @@ export const SegmentCrossTable = ({ startDate, endDate, type }: SegmentCrossTabl
           id,
           ${userField},
           campaign_id,
-          campaigns(name, segment_id, segments(name)),
+          campaigns(name, segment_tag),
           ${profileField}(id, full_name)
         `)
         .is('deleted_at', null)
@@ -56,7 +57,7 @@ export const SegmentCrossTable = ({ startDate, endDate, type }: SegmentCrossTabl
       data.forEach((task: any) => {
         const userId = task[userField];
         const userName = task[profileField]?.full_name || 'Desconhecido';
-        const segmentName = task.campaigns?.segments?.name || 'Sem Segmento';
+        const segmentName = formatSegmentTag(task.campaigns?.segment_tag);
 
         allSegments.add(segmentName);
 

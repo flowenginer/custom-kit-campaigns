@@ -40,3 +40,14 @@ export const generateUniqueSlug = async (
   
   return slug;
 };
+
+// Formatar tag de segmento para exibição amigável
+export const formatSegmentTag = (tag: string | null | undefined): string => {
+  if (!tag) return 'Sem Segmento';
+  return tag
+    .replace(/_/g, ' ')
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .filter(word => word.length > 0)
+    .join(' ');
+};

@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, TrendingUp } from "lucide-react";
+import { formatSegmentTag } from "@/lib/utils";
 
 interface SalespersonRankingTableProps {
   startDate: Date;
@@ -32,7 +33,7 @@ export const SalespersonRankingTable = ({ startDate, endDate, limit }: Salespers
           created_at,
           created_by,
           campaign_id,
-          campaigns(name, segment_id, segments(name)),
+          campaigns(name, segment_tag),
           profiles!design_tasks_created_by_fkey(id, full_name)
         `)
         .eq('created_by_salesperson', true)
@@ -46,7 +47,7 @@ export const SalespersonRankingTable = ({ startDate, endDate, limit }: Salespers
       const grouped = data.reduce((acc: { [key: string]: SalespersonStats }, task: any) => {
         const userId = task.created_by;
         const userName = task.profiles?.full_name || 'Desconhecido';
-        const segmentName = task.campaigns?.segments?.name || 'Sem Segmento';
+        const segmentName = formatSegmentTag(task.campaigns?.segment_tag);
         const taskDate = new Date(task.created_at);
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
