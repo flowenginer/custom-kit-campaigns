@@ -742,6 +742,8 @@ export type Database = {
           reviewed_by: string | null
           status: string
           updated_at: string | null
+          urgent_reason_id: string | null
+          urgent_reason_text: string | null
         }
         Insert: {
           created_at?: string | null
@@ -758,6 +760,8 @@ export type Database = {
           reviewed_by?: string | null
           status?: string
           updated_at?: string | null
+          urgent_reason_id?: string | null
+          urgent_reason_text?: string | null
         }
         Update: {
           created_at?: string | null
@@ -774,6 +778,8 @@ export type Database = {
           reviewed_by?: string | null
           status?: string
           updated_at?: string | null
+          urgent_reason_id?: string | null
+          urgent_reason_text?: string | null
         }
         Relationships: [
           {
@@ -788,6 +794,13 @@ export type Database = {
             columns: ["created_task_id"]
             isOneToOne: false
             referencedRelation: "design_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_urgent_requests_urgent_reason_id_fkey"
+            columns: ["urgent_reason_id"]
+            isOneToOne: false
+            referencedRelation: "urgent_reasons"
             referencedColumns: ["id"]
           },
         ]
@@ -935,6 +948,36 @@ export type Database = {
           id?: string
           tag_type?: string
           tag_value?: string
+        }
+        Relationships: []
+      }
+      urgent_reasons: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          label: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          label: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          label?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
