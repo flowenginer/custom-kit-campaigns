@@ -25,6 +25,7 @@ interface WidgetConfigDialogProps {
   onOpenChange: (open: boolean) => void;
   dataSource: DataSource | null;
   onSave: (widget: Partial<Widget>) => void;
+  editWidget?: Widget | null;
 }
 
 export const WidgetConfigDialog = ({
@@ -32,17 +33,18 @@ export const WidgetConfigDialog = ({
   onOpenChange,
   dataSource,
   onSave,
+  editWidget,
 }: WidgetConfigDialogProps) => {
   const [step, setStep] = useState(1);
-  const [widgetType, setWidgetType] = useState<WidgetType>("metric");
-  const [field, setField] = useState("");
-  const [aggregation, setAggregation] = useState<AggregationType>("count");
-  const [title, setTitle] = useState("");
-  const [chartType, setChartType] = useState<ChartType>("bar");
+  const [widgetType, setWidgetType] = useState<WidgetType>(editWidget?.type || "metric");
+  const [field, setField] = useState(editWidget?.query_config.field || "");
+  const [aggregation, setAggregation] = useState<AggregationType>(editWidget?.query_config.aggregation || "count");
+  const [title, setTitle] = useState(editWidget?.display_config.title || "");
+  const [chartType, setChartType] = useState<ChartType>(editWidget?.display_config.chartType || "bar");
 
   const handleSave = () => {
     const widget: Partial<Widget> = {
-      id: crypto.randomUUID(),
+      id: editWidget?.id || crypto.randomUUID(),
       type: widgetType,
       query_config: {
         table: dataSource?.table_name || "",
@@ -53,7 +55,7 @@ export const WidgetConfigDialog = ({
         title: title || `Widget ${widgetType}`,
         chartType: widgetType === "chart" ? chartType : undefined,
       },
-      position: {
+      position: editWidget?.position || {
         x: 0,
         y: 0,
         w: widgetType === "metric" ? 1 : 2,
@@ -86,7 +88,7 @@ export const WidgetConfigDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Adicionar Widget</DialogTitle>
+          <DialogTitle>{editWidget ? "Editar Widget" : "Adicionar Widget"}</DialogTitle>
           <DialogDescription>
             Passo {step} de 3: {step === 1 ? "Tipo" : step === 2 ? "Dados" : "Visual"}
           </DialogDescription>
@@ -190,7 +192,7 @@ export const WidgetConfigDialog = ({
           {step < 3 ? (
             <Button onClick={() => setStep(step + 1)}>Próximo</Button>
           ) : (
-            <Button onClick={handleSave}>Adicionar</Button>
+            <Button onClick={handleSave}>{editWidget ? "Salvar" : "Adicionar"}</Button>
           )}
         </div>
       </DialogContent>

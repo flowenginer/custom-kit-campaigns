@@ -11,7 +11,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Save, FolderOpen, LayoutDashboard, Database, Table2, Trash2 } from "lucide-react";
+import { Plus, Save, FolderOpen, LayoutDashboard, Database, Table2, Trash2, Eye, Edit3 } from "lucide-react";
 import { toast } from "sonner";
 
 const DashboardBuilder = () => {
@@ -25,6 +25,8 @@ const DashboardBuilder = () => {
   const [dashboardName, setDashboardName] = useState("");
   const [currentDashboardId, setCurrentDashboardId] = useState<string | null>(null);
   const [showWidgetDialog, setShowWidgetDialog] = useState(false);
+  const [editingWidget, setEditingWidget] = useState<Widget | null>(null);
+  const [previewMode, setPreviewMode] = useState(false);
 
   const { data: loadedDashboard } = useLoadDashboard(currentDashboardId);
 
@@ -52,7 +54,31 @@ const DashboardBuilder = () => {
   }
 
   const handleAddWidget = (widget: Partial<Widget>) => {
-    setWidgets([...widgets, widget as Widget]);
+    if (editingWidget) {
+      // Editing existing widget
+      setWidgets(widgets.map(w => w.id === widget.id ? widget as Widget : w));
+      setEditingWidget(null);
+    } else {
+      // Adding new widget
+      setWidgets([...widgets, widget as Widget]);
+    }
+  };
+
+  const handleEditWidget = (widget: Widget) => {
+    setEditingWidget(widget);
+    setShowWidgetDialog(true);
+  };
+
+  const handleReorderWidgets = (newWidgets: Widget[]) => {
+    setWidgets(newWidgets);
+  };
+
+  const handleResizeWidget = (widgetId: string, size: { w: number; h: number }) => {
+    setWidgets(widgets.map(w => 
+      w.id === widgetId 
+        ? { ...w, position: { ...w.position, ...size } }
+        : w
+    ));
   };
 
   const handleDeleteWidget = (widgetId: string) => {
@@ -64,6 +90,7 @@ const DashboardBuilder = () => {
     setDashboardName("");
     setCurrentDashboardId(null);
     setSelectedSource(null);
+    setPreviewMode(false);
   };
 
   const handleSelectSource = (sourceId: string) => {
@@ -91,6 +118,14 @@ const DashboardBuilder = () => {
                 className="w-48"
               />
             </div>
+            <Button 
+              variant={previewMode ? "default" : "outline"} 
+              size="sm" 
+              onClick={() => setPreviewMode(!previewMode)}
+            >
+              {previewMode ? <Edit3 className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
+              {previewMode ? "Editar" : "Preview"}
+            </Button>
             <Button variant="outline" size="sm" onClick={handleNewDashboard}>
               Novo
             </Button>
@@ -193,10 +228,19 @@ const DashboardBuilder = () => {
           {/* Canvas Toolbar */}
           <div className="border-b bg-background p-3">
             <div className="flex items-center gap-2">
-              <Button size="sm" onClick={() => setShowWidgetDialog(true)} disabled={!selectedSource}>
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Widget
-              </Button>
+              {!previewMode && (
+                <Button 
+                  size="sm" 
+                  onClick={() => {
+                    setEditingWidget(null);
+                    setShowWidgetDialog(true);
+                  }} 
+                  disabled={!selectedSource}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar Widget
+                </Button>
+              )}
               
               {selectedSource && (
                 <div className="ml-auto flex items-center gap-2 text-sm text-muted-foreground">
@@ -245,7 +289,11 @@ const DashboardBuilder = () => {
               ) : (
                 <WidgetGrid 
                   widgets={widgets} 
+                  onEdit={handleEditWidget}
                   onDelete={handleDeleteWidget}
+                  onReorder={handleReorderWidgets}
+                  onResize={handleResizeWidget}
+                  previewMode={previewMode}
                 />
               )}
             </div>
@@ -312,9 +360,13 @@ const DashboardBuilder = () => {
 
       <WidgetConfigDialog
         open={showWidgetDialog}
-        onOpenChange={setShowWidgetDialog}
+        onOpenChange={(open) => {
+          setShowWidgetDialog(open);
+          if (!open) setEditingWidget(null);
+        }}
         dataSource={selectedSource}
         onSave={handleAddWidget}
+        editWidget={editingWidget}
       />
     </div>
   );
