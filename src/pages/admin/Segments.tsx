@@ -633,6 +633,7 @@ const Segments = () => {
                             {tag === 'manga_longa' && '👕 '}
                             {tag === 'manga_curta' && '👔 '}
                             {tag === 'regata' && '🎽 '}
+                            {tag === 'short' && '🩳 '}
                             {tag}
                           </SelectItem>
                         ))}
