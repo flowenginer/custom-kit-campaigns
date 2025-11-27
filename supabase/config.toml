@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.manage-users]
 verify_jwt = true
+
+[functions.process-event-webhooks]
+verify_jwt = false
+
+[functions.check-offline-leads]
+verify_jwt = false
