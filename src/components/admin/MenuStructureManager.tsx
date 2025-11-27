@@ -363,11 +363,13 @@ export const MenuStructureManager = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Menu Principal</SelectItem>
-                      {getMainMenus().map((menu) => (
-                        <SelectItem key={menu.id} value={menu.id}>
-                          Submenu de: {menu.label}
-                        </SelectItem>
-                      ))}
+                      {getMainMenus()
+                        .filter((menu) => !editingItem || menu.id !== editingItem.id)
+                        .map((menu) => (
+                          <SelectItem key={menu.id} value={menu.id}>
+                            Submenu de: {menu.label}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>

@@ -42,13 +42,15 @@ export const useMenuStructure = () => {
     // Depois construir a hierarquia
     menuItems.forEach((item) => {
       const menuItem = itemsMap.get(item.id)!;
-      if (item.parent_id) {
+      
+      // Validar se não é pai de si mesmo (proteção contra ciclos)
+      if (item.parent_id && item.parent_id !== item.id) {
         const parent = itemsMap.get(item.parent_id);
-        if (parent) {
+        if (parent && parent.id !== item.id) {
           parent.children = parent.children || [];
           parent.children.push(menuItem);
         } else {
-          // Se não encontrar o pai, colocar como root
+          // Se não encontrar o pai ou criar ciclo, colocar como root
           rootItems.push(menuItem);
         }
       } else {
