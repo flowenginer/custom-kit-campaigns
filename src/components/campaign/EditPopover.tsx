@@ -3,7 +3,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -19,6 +19,12 @@ interface TextEditPopoverProps {
 export const TextEditPopover = ({ value, onChange, label, multiline, children }: TextEditPopoverProps) => {
   const [open, setOpen] = useState(false);
   const [localValue, setLocalValue] = useState(value);
+
+  useEffect(() => {
+    if (open) {
+      setLocalValue(value);
+    }
+  }, [value, open]);
 
   const handleApply = () => {
     onChange(localValue);
@@ -65,6 +71,12 @@ interface ColorEditPopoverProps {
 export const ColorEditPopover = ({ value, onChange, label, children }: ColorEditPopoverProps) => {
   const [open, setOpen] = useState(false);
   const [localValue, setLocalValue] = useState(value);
+
+  useEffect(() => {
+    if (open) {
+      setLocalValue(value);
+    }
+  }, [value, open]);
 
   const handleApply = () => {
     onChange(localValue);
@@ -115,6 +127,12 @@ export const ImageEditPopover = ({ value, onChange, label, children }: ImageEdit
   const [localValue, setLocalValue] = useState(value);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open) {
+      setLocalValue(value);
+    }
+  }, [value, open]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
