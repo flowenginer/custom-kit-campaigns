@@ -2,12 +2,15 @@ import { useState, useCallback } from "react";
 import { useDataSources, DataSource } from "@/hooks/useDataSources";
 import { useDashboards, useSaveDashboard, useDeleteDashboard, useLoadDashboard } from "@/hooks/useDashboards";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
-import { Widget, WidgetFilter } from "@/types/dashboard";
+import { Widget, WidgetFilter, DashboardTemplate } from "@/types/dashboard";
 import { WidgetConfigDialog } from "@/components/dashboard-builder/WidgetConfigDialog";
 import { WidgetGrid } from "@/components/dashboard-builder/WidgetGrid";
 import { GlobalFiltersPanel } from "@/components/dashboard-builder/GlobalFiltersPanel";
 import { AutoRefreshControl } from "@/components/dashboard-builder/AutoRefreshControl";
 import { ShareDashboardDialog } from "@/components/dashboard-builder/ShareDashboardDialog";
+import { TemplateGallery } from "@/components/dashboard-builder/TemplateGallery";
+import { SaveAsTemplateDialog } from "@/components/dashboard-builder/SaveAsTemplateDialog";
+import { ExportDashboardDialog } from "@/components/dashboard-builder/ExportDashboardDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -15,7 +18,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Save, FolderOpen, LayoutDashboard, Database, Table2, Trash2, Eye, Edit3, Share2, Copy } from "lucide-react";
+import { Plus, Save, FolderOpen, LayoutDashboard, Database, Table2, Trash2, Eye, Edit3, Share2, Copy, FileDown, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -37,6 +40,9 @@ const DashboardBuilder = () => {
   const [autoRefreshInterval, setAutoRefreshInterval] = useState(60000);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [currentDashboardIsPublic, setCurrentDashboardIsPublic] = useState(false);
+  const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false);
+  const [saveAsTemplateOpen, setSaveAsTemplateOpen] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
 
   const queryClient = useQueryClient();
   const { data: loadedDashboard } = useLoadDashboard(currentDashboardId);
@@ -159,6 +165,17 @@ const DashboardBuilder = () => {
     }
   };
 
+  const handleApplyTemplate = (template: DashboardTemplate) => {
+    setDashboardName(template.name);
+    setWidgets(template.layout.map((w: Widget) => ({
+      ...w,
+      id: `${w.id}-${Date.now()}`
+    })));
+    setCurrentDashboardId(null);
+    setTemplateGalleryOpen(false);
+    toast.success(`Template "${template.name}" aplicado!`);
+  };
+
   const handleSelectSource = (sourceId: string) => {
     const source = dataSources.find(s => s.id === sourceId);
     if (source) {
@@ -213,14 +230,26 @@ const DashboardBuilder = () => {
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar - Fontes de Dados */}
         <div className="w-80 border-r bg-muted/30">
-          <div className="p-4 border-b bg-background">
-            <div className="flex items-center gap-2 mb-2">
-              <Database className="h-4 w-4 text-muted-foreground" />
-              <h2 className="font-semibold text-sm">Fontes de Dados</h2>
+          <div className="p-4 border-b bg-background space-y-3">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Database className="h-4 w-4 text-muted-foreground" />
+                <h2 className="font-semibold text-sm">Fontes de Dados</h2>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {dataSources.length} fonte{dataSources.length !== 1 ? 's' : ''} disponíve{dataSources.length !== 1 ? 'is' : 'l'}
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              {dataSources.length} fonte{dataSources.length !== 1 ? 's' : ''} disponíve{dataSources.length !== 1 ? 'is' : 'l'}
-            </p>
+            
+            <Button 
+              size="sm" 
+              variant="secondary" 
+              className="w-full"
+              onClick={() => setTemplateGalleryOpen(true)}
+            >
+              <Sparkles className="h-4 w-4 mr-2" />
+              Ver Templates
+            </Button>
           </div>
 
           <ScrollArea className="h-[calc(100vh-16rem)]">
@@ -326,7 +355,7 @@ const DashboardBuilder = () => {
           </div>
 
           {/* Canvas Area */}
-          <div className="flex-1 overflow-auto bg-muted/20 p-6">
+          <div className="flex-1 overflow-auto bg-muted/20 p-6" id="dashboard-grid">
             <div className="mx-auto max-w-7xl">
               {/* Auto-refresh Control */}
               <AutoRefreshControl
@@ -482,6 +511,42 @@ const DashboardBuilder = () => {
         isPublic={currentDashboardIsPublic}
         onPublicToggle={handleTogglePublic}
       />
+
+      <SaveAsTemplateDialog
+        open={saveAsTemplateOpen}
+        onOpenChange={setSaveAsTemplateOpen}
+        widgets={widgets}
+      />
+
+      <ExportDashboardDialog
+        open={exportDialogOpen}
+        onOpenChange={setExportDialogOpen}
+        dashboardName={dashboardName}
+      />
+
+      {/* Template Gallery Dialog */}
+      {templateGalleryOpen && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm">
+          <div className="fixed left-[50%] top-[50%] z-50 max-h-[85vh] w-full max-w-7xl translate-x-[-50%] translate-y-[-50%] border bg-background p-6 shadow-lg sm:rounded-lg">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-2xl font-semibold">Templates de Dashboard</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Escolha um template pré-configurado para começar
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setTemplateGalleryOpen(false)}
+              >
+                Fechar
+              </Button>
+            </div>
+            <TemplateGallery onApplyTemplate={handleApplyTemplate} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

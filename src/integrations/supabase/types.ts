@@ -352,6 +352,45 @@ export type Database = {
         }
         Relationships: []
       }
+      dashboard_templates: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_system: boolean
+          layout: Json
+          name: string
+          thumbnail: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          layout?: Json
+          name: string
+          thumbnail?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          layout?: Json
+          name?: string
+          thumbnail?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       dashboard_widgets: {
         Row: {
           chart_type: string | null
