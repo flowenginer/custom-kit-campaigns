@@ -319,6 +319,132 @@ export type Database = {
           },
         ]
       }
+      dashboard_configs: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_public: boolean | null
+          layout: Json
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          layout?: Json
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          layout?: Json
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      dashboard_widgets: {
+        Row: {
+          chart_type: string | null
+          created_at: string | null
+          dashboard_id: string | null
+          data_source_id: string | null
+          display_config: Json
+          id: string
+          position: Json
+          query_config: Json
+          title: string
+          updated_at: string | null
+          widget_type: string
+        }
+        Insert: {
+          chart_type?: string | null
+          created_at?: string | null
+          dashboard_id?: string | null
+          data_source_id?: string | null
+          display_config?: Json
+          id?: string
+          position?: Json
+          query_config?: Json
+          title: string
+          updated_at?: string | null
+          widget_type: string
+        }
+        Update: {
+          chart_type?: string | null
+          created_at?: string | null
+          dashboard_id?: string | null
+          data_source_id?: string | null
+          display_config?: Json
+          id?: string
+          position?: Json
+          query_config?: Json
+          title?: string
+          updated_at?: string | null
+          widget_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_widgets_dashboard_id_fkey"
+            columns: ["dashboard_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_configs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dashboard_widgets_data_source_id_fkey"
+            columns: ["data_source_id"]
+            isOneToOne: false
+            referencedRelation: "data_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      data_sources: {
+        Row: {
+          available_fields: Json
+          category: string | null
+          created_at: string | null
+          description: string | null
+          display_name: string
+          id: string
+          is_active: boolean | null
+          table_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          available_fields?: Json
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          display_name: string
+          id?: string
+          is_active?: boolean | null
+          table_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          available_fields?: Json
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          display_name?: string
+          id?: string
+          is_active?: boolean | null
+          table_name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       design_task_comments: {
         Row: {
           comment: string
