@@ -1095,9 +1095,13 @@ export default function Campaign() {
                     )}
                     
                     <Button
-                      variant={customerData.quantity === qty ? 'default' : 'outline'}
-                      className={`btn-primary h-16 md:h-20 text-xl md:text-2xl font-bold w-full ${
-                        qty === 20 ? 'ring-2 ring-green-600' : ''
+                      variant="outline"
+                      className={`h-16 md:h-20 text-xl md:text-2xl font-bold w-full transition-all ${
+                        customerData.quantity === qty
+                          ? 'bg-green-600 border-green-600 text-white hover:bg-green-700'
+                          : qty === 20
+                            ? 'border-2 border-green-600 bg-transparent text-gray-900 hover:bg-green-50'
+                            : 'border-2 border-gray-300 bg-transparent text-gray-900 hover:bg-gray-50'
                       }`}
                       onClick={() => setCustomerData({
                         ...customerData,
@@ -1111,8 +1115,12 @@ export default function Campaign() {
                 ))}
 
                 <Button
-                  variant={customerData.quantity === 'custom' ? 'default' : 'outline'}
-                  className="btn-primary h-16 md:h-20 text-lg md:text-xl font-bold"
+                  variant="outline"
+                  className={`h-16 md:h-20 text-lg md:text-xl font-bold transition-all ${
+                    customerData.quantity === 'custom'
+                      ? 'bg-green-600 border-green-600 text-white hover:bg-green-700'
+                      : 'border-2 border-gray-300 bg-transparent text-gray-900 hover:bg-gray-50'
+                  }`}
                   onClick={() => setCustomerData({
                     ...customerData,
                     quantity: 'custom'
