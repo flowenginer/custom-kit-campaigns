@@ -33,6 +33,13 @@ export interface DisplayConfig {
   showLegend?: boolean;
   showGrid?: boolean;
   target?: number;
+  icon?: string;
+  trend?: {
+    value: number;
+    isPositive: boolean;
+  };
+  description?: string;
+  gradient?: boolean;
 }
 
 export interface WidgetPosition {
