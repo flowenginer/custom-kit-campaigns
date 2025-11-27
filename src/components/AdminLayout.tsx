@@ -134,23 +134,18 @@ const SidebarLogoutButton = ({ onSignOut, userName }: { onSignOut: () => void; u
   return (
     <div className="p-3">
       <div className={cn(
-        "flex items-center gap-2",
-        !open && "justify-center"
+        "flex items-center",
+        open ? "gap-2" : "justify-center"
       )}>
-        {userName && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="flex items-center gap-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
-                    {userName.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                {open && <span className="text-sm font-medium">{userName}</span>}
-              </div>
-            </TooltipTrigger>
-            {!open && <TooltipContent side="right">{userName}</TooltipContent>}
-          </Tooltip>
+        {open && userName && (
+          <div className="flex items-center gap-2">
+            <Avatar className="h-8 w-8">
+              <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
+                {userName.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <span className="text-sm font-medium">{userName}</span>
+          </div>
         )}
         
         <Tooltip>
