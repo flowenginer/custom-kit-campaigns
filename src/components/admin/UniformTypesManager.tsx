@@ -48,7 +48,7 @@ export const UniformTypesManager = () => {
       const { data, error } = await supabase
         .from("tags")
         .select("tag_value, id, created_at, display_label, icon")
-        .eq("tag_type", "model")
+        .eq("tag_type", "model_tag")
         .order("tag_value");
 
       if (error) throw error;
@@ -100,7 +100,7 @@ export const UniformTypesManager = () => {
         .from("tags")
         .insert({ 
           tag_value: formattedTag, 
-          tag_type: "model",
+          tag_type: "model_tag",
           display_label: formLabel.trim(),
           icon: formIcon
         });
