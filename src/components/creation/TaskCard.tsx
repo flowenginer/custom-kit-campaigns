@@ -71,42 +71,42 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
             {/* COLUNA ESQUERDA */}
             <div className="space-y-1.5">
               {/* Segmento/Campanha */}
-              <div className="border border-gray-200 rounded px-2 py-1.5 bg-white text-center min-h-[32px] flex items-center justify-center">
-                <span className="text-[10px] font-medium text-gray-700 truncate">
+              <div className="border border-gray-200 rounded px-2 py-1.5 bg-white text-center min-h-[36px] flex items-center justify-center">
+                <span className="text-xs font-medium text-gray-700 truncate">
                   {task.campaign_name || task.segment_tag || 'N/A'}
                 </span>
               </div>
 
               {/* Quantidade */}
-              <div className="border border-gray-200 rounded px-2 py-1 bg-white flex items-center justify-center gap-1">
-                <Shirt className="h-3 w-3 text-gray-500" />
-                <span className="text-[10px] font-medium text-gray-700">{task.quantity} un.</span>
+              <div className="border border-gray-200 rounded px-2 py-1.5 bg-white flex items-center justify-center gap-1 min-h-[36px]">
+                <Shirt className="h-3.5 w-3.5 text-gray-500" />
+                <span className="text-xs font-medium text-gray-700">{task.quantity} un.</span>
               </div>
 
               {/* Designer */}
-              <div className="border border-gray-200 rounded px-1.5 py-1 bg-white flex items-center justify-center gap-1">
+              <div className="border border-gray-200 rounded px-2 py-1.5 bg-white flex items-center justify-center gap-1.5 min-h-[36px]">
                 {task.designer_name ? (
                   <>
-                    <Avatar className="h-4 w-4">
-                      <AvatarFallback className="text-[7px] bg-primary text-white">
+                    <Avatar className="h-5 w-5">
+                      <AvatarFallback className="text-[8px] bg-primary text-white">
                         {task.designer_initials || '?'}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-[9px] font-medium text-gray-700 truncate flex-1">
+                    <span className="text-xs font-medium text-gray-700 truncate flex-1">
                       {task.designer_name.split(' ')[0]}
                     </span>
                   </>
                 ) : (
                   <>
-                    <User className="h-3 w-3 text-gray-400" />
-                    <span className="text-[9px] text-gray-400">N/A</span>
+                    <User className="h-3.5 w-3.5 text-gray-400" />
+                    <span className="text-xs text-gray-400">N/A</span>
                   </>
                 )}
               </div>
 
               {/* Status/Prioridade */}
-              <div className={`${priorityConfig.color} text-white rounded px-2 py-1 text-center`}>
-                <span className="text-[9px] font-bold">{priorityConfig.label}</span>
+              <div className={`${priorityConfig.color} text-white rounded px-2 py-1.5 text-center min-h-[36px] flex items-center justify-center`}>
+                <span className="text-xs font-bold">{priorityConfig.label}</span>
               </div>
             </div>
 
@@ -139,24 +139,24 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
             {/* COLUNA DIREITA */}
             <div className="space-y-1.5">
               {/* Nome do Vendedor */}
-              <div className="text-center min-h-[32px] flex items-center justify-center">
-                <span className="text-[10px] font-bold text-teal-600 truncate">
+              <div className="border border-gray-200 rounded px-2 py-1.5 bg-white text-center min-h-[36px] flex items-center justify-center">
+                <span className="text-xs font-bold text-teal-600 truncate">
                   {task.creator_name || 'Sistema'}
                 </span>
               </div>
 
               {/* Versão */}
-              <div className="border border-gray-200 rounded px-2 py-1 bg-gray-50 text-center">
-                <span className="text-[10px] font-bold text-gray-700">v{task.current_version || 1}</span>
+              <div className="border border-gray-200 rounded px-2 py-1.5 bg-gray-50 text-center min-h-[36px] flex items-center justify-center">
+                <span className="text-xs font-bold text-gray-700">v{task.current_version || 1}</span>
               </div>
 
               {/* Timer 1 - Tempo total */}
-              <div className="border border-gray-200 rounded px-1.5 py-1 bg-white text-center">
+              <div className="border border-gray-200 rounded px-2 py-1.5 bg-white text-center min-h-[36px] flex items-center justify-center">
                 <ElapsedTimer since={task.created_at} label="Timer 1" />
               </div>
 
               {/* Timer 2 - Tempo no container */}
-              <div className="border border-gray-200 rounded px-1.5 py-1 bg-white text-center">
+              <div className="border border-gray-200 rounded px-2 py-1.5 bg-white text-center min-h-[36px] flex items-center justify-center">
                 <ElapsedTimer since={task.status_changed_at} label="Timer 2" />
               </div>
             </div>
