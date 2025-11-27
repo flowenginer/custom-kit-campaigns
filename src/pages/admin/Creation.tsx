@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { KanbanColumn } from "@/components/creation/KanbanColumn";
 import { TaskDetailsDialog } from "@/components/creation/TaskDetailsDialog";
@@ -15,7 +16,9 @@ import {
   Eye, 
   CheckCircle, 
   AlertCircle,
-  Package
+  Package,
+  Search,
+  X
 } from "lucide-react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
@@ -42,6 +45,9 @@ const Creation = () => {
   });
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [designerFilter, setDesignerFilter] = useState<string>("all");
+  const [salespersonFilter, setSalespersonFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
   
   const { allowedKanbanColumns, isSuperAdmin, isAdmin, isDesigner, isSalesperson, isLoading } = useUserRole();
 
@@ -324,50 +330,111 @@ const Creation = () => {
     return tasks.filter(task => task.priority === priorityFilter);
   };
 
+  // Filtrar tarefas por designer
+  const filterByDesigner = (tasks: DesignTask[]) => {
+    if (designerFilter === "all") return tasks;
+    return tasks.filter(task => task.assigned_to === designerFilter);
+  };
+
+  // Filtrar tarefas por vendedor
+  const filterBySalesperson = (tasks: DesignTask[]) => {
+    if (salespersonFilter === "all") return tasks;
+    return tasks.filter(task => task.created_by === salespersonFilter);
+  };
+
+  // Filtrar tarefas por busca de nome do cliente
+  const filterBySearch = (tasks: DesignTask[]) => {
+    if (!searchQuery.trim()) return tasks;
+    const query = searchQuery.toLowerCase();
+    return tasks.filter(task => 
+      task.customer_name?.toLowerCase().includes(query)
+    );
+  };
+
+  // Aplicar todos os filtros
+  const applyAllFilters = (tasks: DesignTask[]) => {
+    return filterBySearch(
+      filterByDesigner(
+        filterBySalesperson(
+          filterByPriority(
+            filterTasksForSalesperson(
+              filterTasksForDesigner(tasks)
+            )
+          )
+        )
+      )
+    );
+  };
+
+  // Limpar todos os filtros
+  const clearAllFilters = () => {
+    setSearchQuery("");
+    setDesignerFilter("all");
+    setSalespersonFilter("all");
+    setPriorityFilter("all");
+  };
+
+  // Extrair listas únicas de designers e vendedores
+  const uniqueDesigners = useMemo(() => {
+    const designers = tasks
+      .filter(t => t.designer_name && t.assigned_to)
+      .map(t => ({ id: t.assigned_to!, name: t.designer_name! }));
+    
+    return Array.from(new Map(designers.map(d => [d.id, d])).values());
+  }, [tasks]);
+
+  const uniqueSalespersons = useMemo(() => {
+    const salespersons = tasks
+      .filter(t => t.creator_name && t.created_by)
+      .map(t => ({ id: t.created_by!, name: t.creator_name! }));
+    
+    return Array.from(new Map(salespersons.map(s => [s.id, s])).values());
+  }, [tasks]);
+
   const columns = [
     {
       title: "Leads sem Logo",
       status: "logo_needed" as const,
       icon: Inbox,
-      tasks: filterByPriority(filterTasksForSalesperson(filterTasksForDesigner(tasks.filter(t => t.needs_logo === true && t.logo_action === 'waiting_client')))),
+      tasks: applyAllFilters(tasks.filter(t => t.needs_logo === true && t.logo_action === 'waiting_client')),
     },
     {
       title: "Novos Com Logo",
       status: "pending" as const,
       icon: Inbox,
-      tasks: filterByPriority(filterTasksForSalesperson(filterTasksForDesigner(tasks.filter(t => 
+      tasks: applyAllFilters(tasks.filter(t => 
         t.status === "pending" && (!t.needs_logo || t.logo_action !== 'waiting_client')
-      )))),
+      )),
     },
     {
       title: "Em Progresso",
       status: "in_progress" as const,
       icon: Palette,
-      tasks: filterByPriority(filterTasksForSalesperson(filterTasksForDesigner(tasks.filter(t => t.status === "in_progress")))),
+      tasks: applyAllFilters(tasks.filter(t => t.status === "in_progress")),
     },
     {
       title: "Aguard. Aprovação",
       status: "awaiting_approval" as const,
       icon: Eye,
-      tasks: filterByPriority(filterTasksForSalesperson(filterTasksForDesigner(tasks.filter(t => t.status === "awaiting_approval")))),
+      tasks: applyAllFilters(tasks.filter(t => t.status === "awaiting_approval")),
     },
     {
       title: "Revisão Necessária",
       status: "changes_requested" as const,
       icon: AlertCircle,
-      tasks: filterByPriority(filterTasksForSalesperson(filterTasksForDesigner(tasks.filter(t => t.status === "changes_requested")))),
+      tasks: applyAllFilters(tasks.filter(t => t.status === "changes_requested")),
     },
     {
       title: "Aprovado",
       status: "approved" as const,
       icon: CheckCircle,
-      tasks: filterByPriority(filterTasksForSalesperson(filterTasksForDesigner(tasks.filter(t => t.status === "approved")))),
+      tasks: applyAllFilters(tasks.filter(t => t.status === "approved")),
     },
     {
       title: "Produção",
       status: "completed" as const,
       icon: Package,
-      tasks: filterByPriority(filterTasksForSalesperson(filterTasksForDesigner(tasks.filter(t => t.status === "completed")))),
+      tasks: applyAllFilters(tasks.filter(t => t.status === "completed")),
     },
   ];
 
@@ -405,7 +472,49 @@ const Creation = () => {
           </p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          {/* Pesquisa por cliente */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar cliente..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 w-[200px]"
+            />
+          </div>
+
+          {/* Filtro por Designer */}
+          <Select value={designerFilter} onValueChange={setDesignerFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Designer" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos Designers</SelectItem>
+              {uniqueDesigners.map(designer => (
+                <SelectItem key={designer.id} value={designer.id}>
+                  {designer.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Filtro por Vendedor */}
+          <Select value={salespersonFilter} onValueChange={setSalespersonFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Vendedor" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos Vendedores</SelectItem>
+              {uniqueSalespersons.map(salesperson => (
+                <SelectItem key={salesperson.id} value={salesperson.id}>
+                  {salesperson.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Filtro de Prioridade */}
           <Select value={priorityFilter} onValueChange={setPriorityFilter}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Prioridade" />
@@ -418,6 +527,14 @@ const Creation = () => {
               <SelectItem value="low">🟢 Baixa</SelectItem>
             </SelectContent>
           </Select>
+
+          {/* Botão para limpar filtros */}
+          {(searchQuery || designerFilter !== "all" || salespersonFilter !== "all" || priorityFilter !== "all") && (
+            <Button variant="ghost" size="sm" onClick={clearAllFilters}>
+              <X className="h-4 w-4 mr-1" />
+              Limpar
+            </Button>
+          )}
 
           <RefreshIndicator 
             lastUpdated={lastUpdated}
