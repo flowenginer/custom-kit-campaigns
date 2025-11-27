@@ -28,18 +28,6 @@ export function useCampaignVisualOverrides(campaignId: string | undefined, stepI
     queryFn: async () => {
       if (!campaignId) return null;
 
-      // First check for draft in localStorage (for preview)
-      const draftKey = `visual_draft_${campaignId}_${stepId}`;
-      const draft = localStorage.getItem(draftKey);
-      if (draft) {
-        try {
-          return JSON.parse(draft) as VisualOverrides;
-        } catch (e) {
-          console.error("Error parsing draft:", e);
-        }
-      }
-
-      // Fall back to saved data
       const { data, error } = await supabase
         .from("campaign_visual_overrides")
         .select("overrides")
@@ -51,7 +39,6 @@ export function useCampaignVisualOverrides(campaignId: string | undefined, stepI
       return data?.overrides as VisualOverrides | null;
     },
     enabled: !!campaignId,
-    refetchInterval: 1000, // Refresh every second for live preview
   });
 }
 
