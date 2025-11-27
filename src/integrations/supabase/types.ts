@@ -381,6 +381,7 @@ export type Database = {
           order_id: string
           priority: Database["public"]["Enums"]["task_priority"] | null
           status: Database["public"]["Enums"]["task_status"]
+          status_changed_at: string | null
           updated_at: string | null
         }
         Insert: {
@@ -403,6 +404,7 @@ export type Database = {
           order_id: string
           priority?: Database["public"]["Enums"]["task_priority"] | null
           status?: Database["public"]["Enums"]["task_status"]
+          status_changed_at?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -425,6 +427,7 @@ export type Database = {
           order_id?: string
           priority?: Database["public"]["Enums"]["task_priority"] | null
           status?: Database["public"]["Enums"]["task_status"]
+          status_changed_at?: string | null
           updated_at?: string | null
         }
         Relationships: [
