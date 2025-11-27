@@ -29,6 +29,7 @@ interface WidgetGridProps {
   onReorder?: (widgets: Widget[]) => void;
   onResize?: (widgetId: string, size: { w: number; h: number }) => void;
   previewMode?: boolean;
+  globalFilters?: any[];
 }
 
 export const WidgetGrid = ({ 
@@ -37,7 +38,8 @@ export const WidgetGrid = ({
   onDelete, 
   onReorder, 
   onResize,
-  previewMode = false 
+  previewMode = false,
+  globalFilters = []
 }: WidgetGridProps) => {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -70,13 +72,13 @@ export const WidgetGrid = ({
   const renderWidget = (widget: Widget) => {
     switch (widget.type) {
       case "metric":
-        return <MetricWidget widget={widget} />;
+        return <MetricWidget widget={widget} globalFilters={globalFilters} />;
       case "chart":
-        return <ChartWidget widget={widget} />;
+        return <ChartWidget widget={widget} globalFilters={globalFilters} />;
       case "table":
-        return <TableWidget widget={widget} />;
+        return <TableWidget widget={widget} globalFilters={globalFilters} />;
       case "progress":
-        return <ProgressWidget widget={widget} />;
+        return <ProgressWidget widget={widget} globalFilters={globalFilters} />;
       default:
         return null;
     }

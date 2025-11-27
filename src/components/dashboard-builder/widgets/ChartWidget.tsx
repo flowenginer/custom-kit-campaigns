@@ -22,6 +22,7 @@ import {
 
 interface ChartWidgetProps {
   widget: Widget;
+  globalFilters?: any[];
 }
 
 const COLORS = [
@@ -32,8 +33,8 @@ const COLORS = [
   "hsl(var(--chart-5))",
 ];
 
-export const ChartWidget = ({ widget }: ChartWidgetProps) => {
-  const { data, isLoading, error } = useDynamicQuery(widget.query_config);
+export const ChartWidget = ({ widget, globalFilters = [] }: ChartWidgetProps) => {
+  const { data, isLoading, error } = useDynamicQuery(widget.query_config, true, globalFilters);
 
   if (isLoading) {
     return (

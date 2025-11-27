@@ -5,10 +5,11 @@ import { Loader2 } from "lucide-react";
 
 interface MetricWidgetProps {
   widget: Widget;
+  globalFilters?: any[];
 }
 
-export const MetricWidget = ({ widget }: MetricWidgetProps) => {
-  const { data, isLoading, error } = useDynamicQuery(widget.query_config);
+export const MetricWidget = ({ widget, globalFilters = [] }: MetricWidgetProps) => {
+  const { data, isLoading, error } = useDynamicQuery(widget.query_config, true, globalFilters);
 
   const formatValue = (value: number) => {
     const { format, prefix = "", suffix = "" } = widget.display_config;

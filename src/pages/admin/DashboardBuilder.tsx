@@ -1,9 +1,13 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useDataSources, DataSource } from "@/hooks/useDataSources";
 import { useDashboards, useSaveDashboard, useDeleteDashboard, useLoadDashboard } from "@/hooks/useDashboards";
-import { Widget } from "@/types/dashboard";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { Widget, WidgetFilter } from "@/types/dashboard";
 import { WidgetConfigDialog } from "@/components/dashboard-builder/WidgetConfigDialog";
 import { WidgetGrid } from "@/components/dashboard-builder/WidgetGrid";
+import { GlobalFiltersPanel } from "@/components/dashboard-builder/GlobalFiltersPanel";
+import { AutoRefreshControl } from "@/components/dashboard-builder/AutoRefreshControl";
+import { ShareDashboardDialog } from "@/components/dashboard-builder/ShareDashboardDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -11,8 +15,9 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Save, FolderOpen, LayoutDashboard, Database, Table2, Trash2, Eye, Edit3 } from "lucide-react";
+import { Plus, Save, FolderOpen, LayoutDashboard, Database, Table2, Trash2, Eye, Edit3, Share2, Copy } from "lucide-react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 const DashboardBuilder = () => {
   const { dataSources, groupedSources, categoryLabels, isLoading } = useDataSources();
@@ -27,8 +32,24 @@ const DashboardBuilder = () => {
   const [showWidgetDialog, setShowWidgetDialog] = useState(false);
   const [editingWidget, setEditingWidget] = useState<Widget | null>(null);
   const [previewMode, setPreviewMode] = useState(false);
+  const [globalFilters, setGlobalFilters] = useState<WidgetFilter[]>([]);
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false);
+  const [autoRefreshInterval, setAutoRefreshInterval] = useState(60000);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [currentDashboardIsPublic, setCurrentDashboardIsPublic] = useState(false);
 
+  const queryClient = useQueryClient();
   const { data: loadedDashboard } = useLoadDashboard(currentDashboardId);
+
+  // Auto-refresh
+  const refreshData = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ["dynamic-query"] });
+  }, [queryClient]);
+
+  const { lastUpdated, isRefreshing, refresh } = useAutoRefresh(refreshData, {
+    interval: autoRefreshInterval,
+    enabled: autoRefreshEnabled,
+  });
 
   const handleSaveDashboard = () => {
     if (!dashboardName.trim()) {
@@ -39,13 +60,17 @@ const DashboardBuilder = () => {
     saveDashboard.mutate({
       id: currentDashboardId || undefined,
       name: dashboardName,
-      is_public: false,
+      is_public: currentDashboardIsPublic,
       widgets: widgets,
     });
   };
 
   const handleLoadDashboard = (dashboardId: string) => {
     setCurrentDashboardId(dashboardId);
+    const dashboard = dashboards?.find(d => d.id === dashboardId);
+    if (dashboard) {
+      setCurrentDashboardIsPublic(dashboard.is_public);
+    }
   };
 
   if (loadedDashboard && currentDashboardId && widgets.length === 0) {
@@ -91,6 +116,47 @@ const DashboardBuilder = () => {
     setCurrentDashboardId(null);
     setSelectedSource(null);
     setPreviewMode(false);
+    setGlobalFilters([]);
+    setCurrentDashboardIsPublic(false);
+  };
+
+  const handleDuplicateWidget = (widget: Widget) => {
+    const newWidget = {
+      ...widget,
+      id: crypto.randomUUID(),
+      position: {
+        ...widget.position,
+        y: widget.position.y + widget.position.h + 1,
+      },
+    };
+    setWidgets([...widgets, newWidget]);
+    toast.success("Widget duplicado!");
+  };
+
+  const handleDuplicateDashboard = async (dashboardId: string) => {
+    const dashboard = dashboards?.find(d => d.id === dashboardId);
+    if (!dashboard) return;
+
+    await saveDashboard.mutateAsync({
+      name: `${dashboard.name} (Cópia)`,
+      is_public: false,
+      widgets: dashboard.widgets.map(w => ({
+        ...w,
+        id: crypto.randomUUID(),
+      })),
+    });
+  };
+
+  const handleTogglePublic = async (isPublic: boolean) => {
+    setCurrentDashboardIsPublic(isPublic);
+    if (currentDashboardId) {
+      await saveDashboard.mutateAsync({
+        id: currentDashboardId,
+        name: dashboardName,
+        is_public: isPublic,
+        widgets,
+      });
+    }
   };
 
   const handleSelectSource = (sourceId: string) => {
@@ -129,6 +195,12 @@ const DashboardBuilder = () => {
             <Button variant="outline" size="sm" onClick={handleNewDashboard}>
               Novo
             </Button>
+            {currentDashboardId && (
+              <Button variant="outline" size="sm" onClick={() => setShareDialogOpen(true)}>
+                <Share2 className="h-4 w-4 mr-2" />
+                Compartilhar
+              </Button>
+            )}
             <Button size="sm" onClick={handleSaveDashboard} disabled={saveDashboard.isPending}>
               <Save className="h-4 w-4 mr-2" />
               Salvar
@@ -256,6 +328,26 @@ const DashboardBuilder = () => {
           {/* Canvas Area */}
           <div className="flex-1 overflow-auto bg-muted/20 p-6">
             <div className="mx-auto max-w-7xl">
+              {/* Auto-refresh Control */}
+              <AutoRefreshControl
+                enabled={autoRefreshEnabled}
+                interval={autoRefreshInterval}
+                lastUpdated={lastUpdated}
+                isRefreshing={isRefreshing}
+                onEnabledChange={setAutoRefreshEnabled}
+                onIntervalChange={setAutoRefreshInterval}
+                onManualRefresh={refresh}
+              />
+
+              {/* Global Filters */}
+              {selectedSource && (
+                <GlobalFiltersPanel
+                  filters={globalFilters}
+                  onFiltersChange={setGlobalFilters}
+                  availableFields={selectedSource.available_fields}
+                />
+              )}
+
               {!selectedSource ? (
                 <div className="flex items-center justify-center h-full min-h-[400px]">
                   <div className="text-center space-y-3">
@@ -294,6 +386,7 @@ const DashboardBuilder = () => {
                   onReorder={handleReorderWidgets}
                   onResize={handleResizeWidget}
                   previewMode={previewMode}
+                  globalFilters={globalFilters}
                 />
               )}
             </div>
@@ -337,6 +430,18 @@ const DashboardBuilder = () => {
                             className="h-6 w-6"
                             onClick={(e) => {
                               e.stopPropagation();
+                              handleDuplicateDashboard(dashboard.id);
+                            }}
+                            title="Duplicar"
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6"
+                            onClick={(e) => {
+                              e.stopPropagation();
                               deleteDashboard.mutate(dashboard.id);
                             }}
                           >
@@ -367,6 +472,15 @@ const DashboardBuilder = () => {
         dataSource={selectedSource}
         onSave={handleAddWidget}
         editWidget={editingWidget}
+      />
+
+      <ShareDashboardDialog
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+        dashboardId={currentDashboardId || ""}
+        dashboardName={dashboardName}
+        isPublic={currentDashboardIsPublic}
+        onPublicToggle={handleTogglePublic}
       />
     </div>
   );
