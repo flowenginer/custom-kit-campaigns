@@ -1,14 +1,14 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { VisualOverridePanel } from "@/components/campaign/VisualOverridePanel";
 import { VisualOverrides } from "@/hooks/useCampaignVisualOverrides";
+import { CampaignPreviewInteractive } from "@/components/campaign/CampaignPreviewInteractive";
 import { toast } from "sonner";
-import { ArrowLeft, Save, Eye, RefreshCw } from "lucide-react";
+import { ArrowLeft, Save, Eye } from "lucide-react";
 
 const STEP_OPTIONS = [
   { value: "global", label: "🌐 Global (Logo, Cores)" },
@@ -26,9 +26,7 @@ export default function CampaignVisualEditor() {
   const queryClient = useQueryClient();
   const [selectedStep, setSelectedStep] = useState("global");
   const [localOverrides, setLocalOverrides] = useState<VisualOverrides>({});
-  const [previewKey, setPreviewKey] = useState(0);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const { data: campaign } = useQuery({
     queryKey: ["campaign", id],
@@ -89,7 +87,6 @@ export default function CampaignVisualEditor() {
       
       queryClient.invalidateQueries({ queryKey: ["campaign-visual-overrides"] });
       setHasUnsavedChanges(false);
-      setPreviewKey(prev => prev + 1);
       toast.success("Alterações salvas com sucesso!");
     },
     onError: (error) => {
@@ -108,114 +105,93 @@ export default function CampaignVisualEditor() {
     }
   };
 
-  const handleRefreshPreview = () => {
-    setPreviewKey(prev => prev + 1);
-    if (iframeRef.current) {
-      iframeRef.current.src = iframeRef.current.src;
-    }
-  };
-
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate("/admin/campaigns")}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">Editor Visual</h1>
-            <p className="text-muted-foreground">{campaign?.name}</p>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <div className="border-b bg-card sticky top-0 z-10">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" onClick={() => navigate("/admin/campaigns")}>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div>
+                <h1 className="text-2xl font-bold">Editor Visual</h1>
+                <p className="text-sm text-muted-foreground">
+                  {campaign?.name}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePreview}
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                Abrir em Nova Aba
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={saveMutation.isPending || !hasUnsavedChanges}
+                size="sm"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {saveMutation.isPending ? "Salvando..." : "Salvar"}
+              </Button>
+            </div>
           </div>
         </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleRefreshPreview}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Atualizar Preview
-            </Button>
-            <Button variant="outline" onClick={handlePreview}>
-              <Eye className="h-4 w-4 mr-2" />
-              Abrir em Nova Aba
-            </Button>
-            <Button onClick={handleSave} disabled={saveMutation.isPending || !hasUnsavedChanges}>
-              <Save className="h-4 w-4 mr-2" />
-              {saveMutation.isPending ? "Salvando..." : hasUnsavedChanges ? "Salvar Alterações" : "Salvo"}
-            </Button>
-          </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1">
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-6 max-w-6xl">
+        <div className="space-y-6">
+          {/* Section Selector */}
           <Card>
-            <CardHeader>
-              <CardTitle>Selecionar Seção</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Select value={selectedStep} onValueChange={setSelectedStep}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STEP_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <label className="text-sm font-medium whitespace-nowrap">Seção:</label>
+                <Select value={selectedStep} onValueChange={setSelectedStep}>
+                  <SelectTrigger className="max-w-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STEP_OPTIONS.map((step) => (
+                      <SelectItem key={step.value} value={step.value}>
+                        {step.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </CardContent>
           </Card>
 
-          {!isLoading && (
-            <div className="mt-6">
-              <VisualOverridePanel
-                stepId={selectedStep}
-                overrides={localOverrides}
-                onChange={setLocalOverrides}
-              />
-            </div>
+          {/* Interactive Preview */}
+          {!isLoading && campaign && (
+            <CampaignPreviewInteractive
+              stepId={selectedStep}
+              overrides={localOverrides}
+              onChange={setLocalOverrides}
+              campaign={campaign}
+            />
           )}
-        </div>
 
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>Preview em Tempo Real</span>
-                  {hasUnsavedChanges && (
-                    <span className="text-xs text-muted-foreground font-normal">
-                      Alterações não salvas
-                    </span>
-                  )}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="relative w-full" style={{ height: "calc(100vh - 300px)", minHeight: "600px" }}>
-                  {campaign && (
-                    <iframe
-                      ref={iframeRef}
-                      key={previewKey}
-                      src={`/c/${campaign.unique_link}`}
-                      className="w-full h-full border-0 rounded-b-lg"
-                      title="Preview da Campanha"
-                    />
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="mt-6">
-              <CardHeader>
-                <CardTitle>Como Funciona</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm text-muted-foreground">
-                <p>• 🔄 O preview é atualizado automaticamente conforme você edita</p>
-                <p>• 💾 Clique em "Salvar" para aplicar as mudanças permanentemente</p>
-                <p>• 🌐 A seção "Global" (logo e cores) afeta todas as páginas</p>
-                <p>• 🎨 Cada seção permite customizar textos, cores e imagens</p>
-                <p>• ↩️ Use "Atualizar Preview" se o iframe não carregar</p>
-              </CardContent>
-            </Card>
+          {/* Instructions */}
+          <Card>
+            <CardContent className="pt-6">
+              <h3 className="font-semibold mb-3">Como Usar o Editor</h3>
+              <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground">
+                <li>Selecione uma seção no dropdown acima</li>
+                <li>Clique em qualquer elemento com borda pontilhada para editá-lo</li>
+                <li>Para textos: digite o novo conteúdo e clique em "Aplicar"</li>
+                <li>Para imagens: cole uma URL ou faça upload de um arquivo</li>
+                <li>Para cores: use o color picker ou digite o código hexadecimal</li>
+                <li>Clique em "Salvar" no topo para persistir as alterações</li>
+              </ul>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
