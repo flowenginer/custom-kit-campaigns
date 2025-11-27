@@ -52,6 +52,7 @@ export function UtmBreakdownDialog({
     leads: 0,
     completed: 0,
     conversionRate: 0,
+    leadsWithoutVisit: 0,
   });
 
   useEffect(() => {
@@ -83,10 +84,10 @@ export function UtmBreakdownDialog({
       console.log(`[UTM Breakdown] Visitas encontradas: ${visits?.length || 0}`);
       console.log(`[UTM Breakdown] Sessions únicas: ${new Set(visits?.map(v => v.session_id)).size}`);
 
-      // 2. Buscar TODOS os leads da campanha (mais eficiente - removido limitação do .in())
+      // 2. Buscar TODOS os leads da campanha (incluindo campo de vendedor)
       const { data: leads, error: leadsError } = await supabase
         .from("leads")
-        .select("session_id, completed")
+        .select("session_id, completed, created_by_salesperson")
         .eq("campaign_id", campaignId);
 
       if (leadsError) throw leadsError;
@@ -98,6 +99,14 @@ export function UtmBreakdownDialog({
       const leadsMap = new Map(
         leads?.map((lead) => [lead.session_id, lead]) || []
       );
+
+      // 3.1. Contar leads criados por vendedor (sem visita associada)
+      const visitsSessionSet = new Set(visits?.map(v => v.session_id) || []);
+      const leadsWithoutVisit = leads?.filter(lead => 
+        !visitsSessionSet.has(lead.session_id) || 
+        lead.session_id?.startsWith('salesperson_') || 
+        lead.session_id?.startsWith('urgent-')
+      ).length || 0;
 
       // 4. Agrupar por combinação de UTMs
       const utmGroups = new Map<string, UtmStats>();
@@ -161,6 +170,7 @@ export function UtmBreakdownDialog({
         leads: totalLeads,
         completed: totalCompleted,
         conversionRate: totalVisits > 0 ? (totalLeads / totalVisits) * 100 : 0,
+        leadsWithoutVisit, // Adicionar ao state
       });
 
       // ✅ Log para debug
@@ -217,6 +227,11 @@ export function UtmBreakdownDialog({
           <DialogDescription>
             Análise detalhada de visitas, leads e conversões por origem de tráfego
           </DialogDescription>
+          {totals.leadsWithoutVisit > 0 && (
+            <div className="mt-3 p-3 bg-muted/50 rounded-md text-sm text-muted-foreground border border-border">
+              ℹ️ Esta campanha tem <strong>{totals.leadsWithoutVisit} lead(s)</strong> criados por vendedores que não passaram pelo funil de visitas.
+            </div>
+          )}
         </DialogHeader>
 
         {isLoading ? (
