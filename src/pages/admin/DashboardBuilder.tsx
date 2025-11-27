@@ -18,6 +18,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Plus, Save, FolderOpen, LayoutDashboard, Database, Table2, Trash2, Eye, Edit3, Share2, Copy, FileDown, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -525,28 +526,17 @@ const DashboardBuilder = () => {
       />
 
       {/* Template Gallery Dialog */}
-      {templateGalleryOpen && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm">
-          <div className="fixed left-[50%] top-[50%] z-50 max-h-[85vh] w-full max-w-7xl translate-x-[-50%] translate-y-[-50%] border bg-background p-6 shadow-lg sm:rounded-lg">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-2xl font-semibold">Templates de Dashboard</h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Escolha um template pré-configurado para começar
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setTemplateGalleryOpen(false)}
-              >
-                Fechar
-              </Button>
-            </div>
-            <TemplateGallery onApplyTemplate={handleApplyTemplate} />
-          </div>
-        </div>
-      )}
+      <Dialog open={templateGalleryOpen} onOpenChange={setTemplateGalleryOpen}>
+        <DialogContent className="max-w-7xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Templates de Dashboard</DialogTitle>
+            <DialogDescription>
+              Escolha um template pré-configurado para começar
+            </DialogDescription>
+          </DialogHeader>
+          <TemplateGallery onApplyTemplate={handleApplyTemplate} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
