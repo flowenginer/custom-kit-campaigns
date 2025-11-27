@@ -5,10 +5,12 @@ import { DesignTask } from "@/types/design-task";
 import { useDraggable } from '@dnd-kit/core';
 import { Shirt, User } from "lucide-react";
 import { ElapsedTimer } from "./ElapsedTimer";
+import { CardFontSizes } from "@/hooks/useCardFontSizes";
 
 interface TaskCardProps {
   task: DesignTask;
   onClick: () => void;
+  fontSizes?: CardFontSizes;
   showAcceptButton?: boolean;
   currentUserId?: string;
   onTaskAccepted?: () => void;
@@ -32,7 +34,7 @@ const getPriorityConfig = (priority: string) => {
   return configs[priority as keyof typeof configs] || configs.normal;
 };
 
-export const TaskCard = ({ task, onClick }: TaskCardProps) => {
+export const TaskCard = ({ task, onClick, fontSizes }: TaskCardProps) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task.id,
     data: { task },
@@ -55,7 +57,7 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
       >
         {/* Badge flutuante do tipo de criador */}
         <div className="flex justify-center -mt-3 relative z-10">
-          <Badge className="bg-amber-500 text-white rounded-full px-4 py-1 text-xs font-semibold shadow-md">
+          <Badge className="bg-amber-500 text-white rounded-full px-4 py-1 font-semibold shadow-md" style={{ fontSize: `${fontSizes?.badge || 12}px` }}>
             {getCreatorType(task)}
           </Badge>
         </div>
@@ -63,7 +65,7 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
         <CardContent className="p-3 space-y-2.5">
           {/* Nome do Cliente - largura total */}
           <div className="border-2 border-gray-200 rounded-lg px-3 py-2 bg-white text-center shadow-sm">
-            <span className="text-sm font-bold text-gray-800">{task.customer_name}</span>
+            <span className="font-bold text-gray-800" style={{ fontSize: `${fontSizes?.customerName || 14}px` }}>{task.customer_name}</span>
           </div>
 
           {/* GRID 3 COLUNAS */}
@@ -72,7 +74,7 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
             <div className="space-y-1.5">
               {/* Segmento/Campanha */}
               <div className="border border-gray-200 rounded px-2 py-1.5 bg-white text-center min-h-[36px] flex items-center justify-center">
-                <span className="text-xs font-medium text-gray-700 truncate">
+                <span className="font-medium text-gray-700 truncate" style={{ fontSize: `${fontSizes?.segment || 12}px` }}>
                   {task.campaign_name || task.segment_tag || 'N/A'}
                 </span>
               </div>
@@ -80,7 +82,7 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
               {/* Quantidade */}
               <div className="border border-gray-200 rounded px-2 py-1.5 bg-white flex items-center justify-center gap-1 min-h-[36px]">
                 <Shirt className="h-3.5 w-3.5 text-gray-500" />
-                <span className="text-xs font-medium text-gray-700">{task.quantity} un.</span>
+                <span className="font-medium text-gray-700" style={{ fontSize: `${fontSizes?.quantity || 12}px` }}>{task.quantity} un.</span>
               </div>
 
               {/* Designer */}
@@ -92,21 +94,21 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
                         {task.designer_initials || '?'}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-xs font-medium text-gray-700 truncate flex-1">
+                    <span className="font-medium text-gray-700 truncate flex-1" style={{ fontSize: `${fontSizes?.designer || 12}px` }}>
                       {task.designer_name.split(' ')[0]}
                     </span>
                   </>
                 ) : (
                   <>
                     <User className="h-3.5 w-3.5 text-gray-400" />
-                    <span className="text-xs text-gray-400">N/A</span>
+                    <span className="text-gray-400" style={{ fontSize: `${fontSizes?.designer || 12}px` }}>N/A</span>
                   </>
                 )}
               </div>
 
               {/* Status/Prioridade */}
               <div className={`${priorityConfig.color} text-white rounded px-2 py-1.5 text-center min-h-[36px] flex items-center justify-center`}>
-                <span className="text-xs font-bold">{priorityConfig.label}</span>
+                <span className="font-bold" style={{ fontSize: `${fontSizes?.priority || 12}px` }}>{priorityConfig.label}</span>
               </div>
             </div>
 
@@ -115,7 +117,7 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
               {/* Modelo */}
               <div className="border border-gray-200 rounded px-2 py-1.5 bg-white flex items-center gap-1 w-full justify-center min-h-[32px]">
                 <span className="text-base">🎽</span>
-                <span className="text-[10px] font-medium text-gray-700 truncate">
+                <span className="font-medium text-gray-700 truncate" style={{ fontSize: `${fontSizes?.model || 10}px` }}>
                   {task.model_name || 'N/A'}
                 </span>
               </div>
@@ -140,24 +142,24 @@ export const TaskCard = ({ task, onClick }: TaskCardProps) => {
             <div className="space-y-1.5">
               {/* Nome do Vendedor */}
               <div className="border border-gray-200 rounded px-2 py-1.5 bg-white text-center min-h-[36px] flex items-center justify-center">
-                <span className="text-xs font-bold text-teal-600 truncate">
+                <span className="font-bold text-teal-600 truncate" style={{ fontSize: `${fontSizes?.salesperson || 12}px` }}>
                   {task.creator_name || 'Sistema'}
                 </span>
               </div>
 
               {/* Versão */}
               <div className="border border-gray-200 rounded px-2 py-1.5 bg-gray-50 text-center min-h-[36px] flex items-center justify-center">
-                <span className="text-xs font-bold text-gray-700">v{task.current_version || 1}</span>
+                <span className="font-bold text-gray-700" style={{ fontSize: `${fontSizes?.version || 12}px` }}>v{task.current_version || 1}</span>
               </div>
 
               {/* Timer 1 - Tempo total */}
               <div className="border border-gray-200 rounded px-2 py-1.5 bg-white text-center min-h-[36px] flex items-center justify-center">
-                <ElapsedTimer since={task.created_at} label="Timer 1" />
+                <ElapsedTimer since={task.created_at} label="Timer 1" fontSize={fontSizes?.timer} />
               </div>
 
               {/* Timer 2 - Tempo no container */}
               <div className="border border-gray-200 rounded px-2 py-1.5 bg-white text-center min-h-[36px] flex items-center justify-center">
-                <ElapsedTimer since={task.status_changed_at} label="Timer 2" />
+                <ElapsedTimer since={task.status_changed_at} label="Timer 2" fontSize={fontSizes?.timer} />
               </div>
             </div>
           </div>
