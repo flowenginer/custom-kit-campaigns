@@ -194,6 +194,41 @@ export default function Campaign() {
   const customPageLayout = currentWorkflowStep?.page_layout as PageLayout | undefined;
   const hasCustomLayout = customPageLayout && customPageLayout.components && customPageLayout.components.length > 0;
 
+  // Track page leave event
+  useEffect(() => {
+    if (!sessionId || !campaign?.id) return;
+
+    const handleBeforeUnload = () => {
+      // Use sendBeacon to ensure event is sent even when page is closing
+      const payload = JSON.stringify({
+        event_type: 'page_leave',
+        session_id: sessionId,
+        campaign_id: campaign.id,
+        utm_source: utmParams.utm_source,
+        utm_medium: utmParams.utm_medium,
+        utm_campaign: utmParams.utm_campaign,
+        utm_term: utmParams.utm_term,
+        utm_content: utmParams.utm_content,
+      });
+
+      // Insert directly to supabase using fetch
+      fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/funnel_events`, {
+        method: 'POST',
+        headers: {
+          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          'Content-Type': 'application/json',
+        },
+        body: payload,
+        keepalive: true, // Important for beforeunload
+      }).catch(() => {
+        // Silently fail if beacon doesn't work
+      });
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [sessionId, campaign?.id, utmParams]);
+
   // Carregar campanha
   useEffect(() => {
     const loadCampaign = async () => {

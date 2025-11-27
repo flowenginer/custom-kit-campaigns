@@ -198,6 +198,13 @@ interface DesignMetrics {
   }[];
 }
 
+interface EngagementMetrics {
+  avgTimeToConversion: number; // em segundos
+  avgEngagementTime: number; // em segundos
+  totalSessions: number;
+  convertedSessions: number;
+}
+
 interface DailyVisitsData {
   date: string;
   [campaignName: string]: string | number;
@@ -207,6 +214,21 @@ type DateFilterType = "today" | "yesterday" | "7days" | "15days" | "30days" | "m
 type ComparisonMode = "single" | "comparison";
 
 const CHART_COLORS = ["hsl(var(--chart-purple))", "hsl(var(--chart-green))", "hsl(var(--chart-orange))", "hsl(var(--chart-blue))", "hsl(var(--chart-pink))", "hsl(var(--chart-teal))", "hsl(var(--chart-indigo))", "hsl(var(--chart-cyan))", "hsl(var(--chart-amber))", "hsl(var(--chart-red))"];
+
+// Função para formatar tempo em formato legível
+const formatTime = (seconds: number): string => {
+  if (seconds < 60) {
+    return `${Math.round(seconds)}s`;
+  } else if (seconds < 3600) {
+    const minutes = Math.floor(seconds / 60);
+    const secs = Math.round(seconds % 60);
+    return `${minutes}min ${secs}s`;
+  } else {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return `${hours}h ${minutes}min`;
+  }
+};
 
 const Dashboard = () => {
   const { isDesigner, isLoading: isLoadingRole } = useUserRole();
@@ -228,6 +250,12 @@ const Dashboard = () => {
     tasksByStatus: [],
     avgTimeByStage: [],
     designerPerformance: []
+  });
+  const [engagementMetrics, setEngagementMetrics] = useState<EngagementMetrics>({
+    avgTimeToConversion: 0,
+    avgEngagementTime: 0,
+    totalSessions: 0,
+    convertedSessions: 0,
   });
   const [dailyVisitsData, setDailyVisitsData] = useState<DailyVisitsData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -730,6 +758,60 @@ const Dashboard = () => {
         }).sort((a: any, b: any) => b.efficiency_score - a.efficiency_score);
 
         setDesign({ tasksByStatus, avgTimeByStage, designerPerformance });
+
+        // ✅ Calcular métricas de engajamento
+        const { data: funnelEvents } = await supabase
+          .from("funnel_events")
+          .select("session_id, event_type, created_at")
+          .gte("created_at", dateRange.start.toISOString())
+          .lte("created_at", dateRange.end.toISOString())
+          .order("created_at", { ascending: true });
+
+        if (funnelEvents) {
+          // Agrupar eventos por session_id
+          const sessionEvents = funnelEvents.reduce((acc, event) => {
+            if (!acc[event.session_id]) {
+              acc[event.session_id] = [];
+            }
+            acc[event.session_id].push(event);
+            return acc;
+          }, {} as Record<string, typeof funnelEvents>);
+
+          let totalTimeToConversion = 0;
+          let totalEngagementTime = 0;
+          let convertedCount = 0;
+          let totalSessionsCount = Object.keys(sessionEvents).length;
+
+          Object.values(sessionEvents).forEach((events) => {
+            if (events.length === 0) return;
+
+            // Ordenar eventos por data
+            const sortedEvents = events.sort((a, b) => 
+              new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+            );
+
+            const firstEvent = sortedEvents[0];
+            const lastEvent = sortedEvents[sortedEvents.length - 1];
+            const hasCompleted = sortedEvents.some(e => e.event_type === 'completed');
+
+            // Tempo de engajamento = do primeiro ao último evento
+            const engagementTime = (new Date(lastEvent.created_at).getTime() - new Date(firstEvent.created_at).getTime()) / 1000;
+            totalEngagementTime += engagementTime;
+
+            // Se converteu, adicionar ao tempo de conversão
+            if (hasCompleted) {
+              totalTimeToConversion += engagementTime;
+              convertedCount++;
+            }
+          });
+
+          setEngagementMetrics({
+            avgTimeToConversion: convertedCount > 0 ? totalTimeToConversion / convertedCount : 0,
+            avgEngagementTime: totalSessionsCount > 0 ? totalEngagementTime / totalSessionsCount : 0,
+            totalSessions: totalSessionsCount,
+            convertedSessions: convertedCount,
+          });
+        }
       }
     } catch (error) {
       console.error("Erro ao carregar dados do período:", error);
@@ -2084,6 +2166,71 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Seção 1.5: Métricas de Engajamento */}
+      {comparisonMode === "single" && (
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card className="bg-gradient-to-br from-chart-teal/10 to-chart-cyan/5 border-chart-teal/20 shadow-lg">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  ⏱️ Tempo Médio até Conversão
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-chart-teal">
+                {engagementMetrics.avgTimeToConversion > 0 
+                  ? formatTime(engagementMetrics.avgTimeToConversion)
+                  : "—"}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {engagementMetrics.convertedSessions} conversões registradas
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-chart-indigo/10 to-chart-purple/5 border-chart-indigo/20 shadow-lg">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  ⏱️ Tempo Médio de Engajamento
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-chart-indigo">
+                {engagementMetrics.avgEngagementTime > 0 
+                  ? formatTime(engagementMetrics.avgEngagementTime)
+                  : "—"}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Todas as {engagementMetrics.totalSessions} sessões
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-chart-amber/10 to-chart-orange/5 border-chart-amber/20 shadow-lg">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  📊 Taxa de Engajamento
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-chart-amber">
+                {engagementMetrics.totalSessions > 0 
+                  ? ((engagementMetrics.convertedSessions / engagementMetrics.totalSessions) * 100).toFixed(1)
+                  : "0.0"}%
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {engagementMetrics.convertedSessions} de {engagementMetrics.totalSessions} sessões converteram
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Seção 2: Gráfico de Funil Interativo com Filtro de Campanhas - SEMPRE VISÍVEL */}
       <Card className="shadow-xl">
