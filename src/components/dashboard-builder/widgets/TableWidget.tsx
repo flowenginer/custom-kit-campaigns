@@ -13,10 +13,11 @@ import { Loader2 } from "lucide-react";
 
 interface TableWidgetProps {
   widget: Widget;
+  globalFilters?: any[];
 }
 
-export const TableWidget = ({ widget }: TableWidgetProps) => {
-  const { data, isLoading, error } = useDynamicQuery(widget.query_config);
+export const TableWidget = ({ widget, globalFilters = [] }: TableWidgetProps) => {
+  const { data, isLoading, error } = useDynamicQuery(widget.query_config, true, globalFilters);
 
   if (isLoading) {
     return (

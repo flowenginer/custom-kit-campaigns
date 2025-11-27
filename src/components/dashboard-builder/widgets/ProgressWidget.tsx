@@ -6,10 +6,11 @@ import { Loader2 } from "lucide-react";
 
 interface ProgressWidgetProps {
   widget: Widget;
+  globalFilters?: any[];
 }
 
-export const ProgressWidget = ({ widget }: ProgressWidgetProps) => {
-  const { data, isLoading, error } = useDynamicQuery(widget.query_config);
+export const ProgressWidget = ({ widget, globalFilters = [] }: ProgressWidgetProps) => {
+  const { data, isLoading, error } = useDynamicQuery(widget.query_config, true, globalFilters);
 
   if (isLoading) {
     return (

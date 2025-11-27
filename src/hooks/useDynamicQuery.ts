@@ -1,8 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { QueryConfig } from "@/types/dashboard";
+import { QueryConfig, WidgetFilter } from "@/types/dashboard";
 
-export const useDynamicQuery = (queryConfig: QueryConfig | null, enabled: boolean = true) => {
+export const useDynamicQuery = (
+  queryConfig: QueryConfig | null, 
+  enabled: boolean = true,
+  globalFilters: WidgetFilter[] = []
+) => {
   return useQuery({
     queryKey: ["dynamic-query", queryConfig],
     queryFn: async () => {
@@ -13,9 +17,12 @@ export const useDynamicQuery = (queryConfig: QueryConfig | null, enabled: boolea
       // Construir query base
       let query = (supabase as any).from(table).select(field);
 
+      // Combinar filtros do widget com filtros globais
+      const allFilters = [...(filters || []), ...globalFilters];
+
       // Aplicar filtros
-      if (filters && filters.length > 0) {
-        filters.forEach(filter => {
+      if (allFilters.length > 0) {
+        allFilters.forEach(filter => {
           const { field: filterField, operator, value } = filter;
           
           switch (operator) {
@@ -114,5 +121,7 @@ export const useDynamicQuery = (queryConfig: QueryConfig | null, enabled: boolea
       return { data };
     },
     enabled: enabled && !!queryConfig,
+    refetchInterval: false,
+    staleTime: 0,
   });
 };
