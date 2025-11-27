@@ -20,7 +20,7 @@ export const useUniformTypes = () => {
       const { data, error } = await supabase
         .from('tags')
         .select('tag_value, display_label, icon')
-        .eq('tag_type', 'model')
+        .eq('tag_type', 'model_tag')
         .order('tag_value');
 
       if (error) throw error;
