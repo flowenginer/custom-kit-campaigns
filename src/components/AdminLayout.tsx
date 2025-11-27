@@ -318,25 +318,40 @@ const AdminLayout = () => {
                             onOpenChange={() => toggleMenu(menu.id)}
                           >
                             <SidebarMenuItem>
-                              <CollapsibleTrigger asChild>
+                              <div className="flex items-center w-full gap-1">
+                                {/* Área clicável do menu pai */}
                                 <SidebarMenuButton
+                                  asChild
+                                  isActive={isActive}
                                   className={cn(
-                                    "transition-colors w-full",
+                                    "transition-colors flex-1",
                                     isActive
                                       ? "bg-primary text-primary-foreground hover:bg-primary/90"
                                       : "hover:bg-accent/10 hover:text-primary"
                                   )}
                                 >
-                                  <Icon className="h-5 w-5" />
-                                  <span className="text-base">{menu.label}</span>
-                                  <ChevronRight
-                                    className={cn(
-                                      "ml-auto h-4 w-4 transition-transform",
-                                      isExpanded && "rotate-90"
-                                    )}
-                                  />
+                                  <NavLink to={menu.route} onClick={() => setIsNavigating(true)}>
+                                    <Icon className="h-5 w-5" />
+                                    <span className="text-base">{menu.label}</span>
+                                  </NavLink>
                                 </SidebarMenuButton>
-                              </CollapsibleTrigger>
+                                
+                                {/* Botão para expandir/colapsar submenus */}
+                                <CollapsibleTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 flex-shrink-0"
+                                  >
+                                    <ChevronRight
+                                      className={cn(
+                                        "h-4 w-4 transition-transform",
+                                        isExpanded && "rotate-90"
+                                      )}
+                                    />
+                                  </Button>
+                                </CollapsibleTrigger>
+                              </div>
                             </SidebarMenuItem>
                             <CollapsibleContent>
                               <SidebarMenu className="ml-4 mt-1 space-y-1">
