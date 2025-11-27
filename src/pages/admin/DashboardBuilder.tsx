@@ -377,7 +377,17 @@ const DashboardBuilder = () => {
                 />
               )}
 
-              {!selectedSource ? (
+              {widgets.length > 0 ? (
+                <WidgetGrid 
+                  widgets={widgets} 
+                  onEdit={handleEditWidget}
+                  onDelete={handleDeleteWidget}
+                  onReorder={handleReorderWidgets}
+                  onResize={handleResizeWidget}
+                  previewMode={previewMode}
+                  globalFilters={globalFilters}
+                />
+              ) : !selectedSource ? (
                 <div className="flex items-center justify-center h-full min-h-[400px]">
                   <div className="text-center space-y-3">
                     <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
@@ -389,7 +399,7 @@ const DashboardBuilder = () => {
                     </p>
                   </div>
                 </div>
-              ) : widgets.length === 0 ? (
+              ) : (
                 <Card className="border-dashed border-2">
                   <CardContent className="flex items-center justify-center min-h-[300px]">
                     <div className="text-center space-y-3">
@@ -407,16 +417,6 @@ const DashboardBuilder = () => {
                     </div>
                   </CardContent>
                 </Card>
-              ) : (
-                <WidgetGrid 
-                  widgets={widgets} 
-                  onEdit={handleEditWidget}
-                  onDelete={handleDeleteWidget}
-                  onReorder={handleReorderWidgets}
-                  onResize={handleResizeWidget}
-                  previewMode={previewMode}
-                  globalFilters={globalFilters}
-                />
               )}
             </div>
           </div>
