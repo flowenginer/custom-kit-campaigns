@@ -7,7 +7,7 @@ import { RealtimeChannel } from "@supabase/supabase-js";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
-import { Loader2, TrendingUp, TrendingDown, Users, Target, Activity, Calendar as CalendarIcon } from "lucide-react";
+import { Loader2, TrendingUp, TrendingDown, Users, Target, Activity, Calendar as CalendarIcon, Smartphone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UtmBreakdownDialog } from "@/components/dashboard/UtmBreakdownDialog";
@@ -210,6 +210,13 @@ interface DailyVisitsData {
   [campaignName: string]: string | number;
 }
 
+interface DeviceMetrics {
+  byDeviceType: { type: string; count: number; percentage: number }[];
+  byOS: { os: string; count: number; percentage: number }[];
+  byBrowser: { browser: string; count: number; percentage: number }[];
+  totalWithDeviceData: number;
+}
+
 type DateFilterType = "today" | "yesterday" | "7days" | "15days" | "30days" | "month" | "lastMonth" | "custom";
 type ComparisonMode = "single" | "comparison";
 
@@ -258,6 +265,12 @@ const Dashboard = () => {
     convertedSessions: 0,
   });
   const [dailyVisitsData, setDailyVisitsData] = useState<DailyVisitsData[]>([]);
+  const [deviceMetrics, setDeviceMetrics] = useState<DeviceMetrics>({
+    byDeviceType: [],
+    byOS: [],
+    byBrowser: [],
+    totalWithDeviceData: 0,
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [utmDialogOpen, setUtmDialogOpen] = useState(false);
   const [selectedUtmCampaign, setSelectedUtmCampaign] = useState<{
@@ -375,7 +388,8 @@ const Dashboard = () => {
       await Promise.all([
         loadDashboardData(),
         loadDesignMetrics(),
-        loadDailyVisits()
+        loadDailyVisits(),
+        loadDeviceMetrics()
       ]);
     }
   }, [isDesigner, comparisonMode, dateFilter, customStartDate, customEndDate, period1, period2, customStartDateP1, customEndDateP1, customStartDateP2, customEndDateP2, selectedCampaigns, selectedWorkflowId]);
@@ -402,6 +416,7 @@ const Dashboard = () => {
       loadDashboardData();
       loadDesignMetrics();
       loadDailyVisits();
+      loadDeviceMetrics();
     }
   }, [isDesigner, comparisonMode, dateFilter, customStartDate, customEndDate, period1, period2, customStartDateP1, customEndDateP1, customStartDateP2, customEndDateP2, selectedWorkflowId]);
   
@@ -993,6 +1008,86 @@ const Dashboard = () => {
       console.error("Erro ao carregar dashboard:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadDeviceMetrics = async () => {
+    try {
+      const dateRange = getDateRange();
+      
+      // Buscar leads com dados de dispositivo das campanhas selecionadas
+      let leadsQuery = supabase
+        .from("leads")
+        .select("device_type, device_os, device_browser")
+        .is("deleted_at", null)
+        .not("device_type", "is", null)
+        .gte("created_at", dateRange.start.toISOString())
+        .lte("created_at", dateRange.end.toISOString());
+      
+      if (selectedCampaigns.length > 0) {
+        leadsQuery = leadsQuery.in("campaign_id", selectedCampaigns);
+      }
+      
+      const { data: leadsData } = await leadsQuery;
+      
+      if (leadsData && leadsData.length > 0) {
+        const total = leadsData.length;
+        
+        // Agrupar por tipo de dispositivo
+        const deviceTypeGroups = leadsData.reduce((acc: any, lead) => {
+          const type = lead.device_type || 'Unknown';
+          acc[type] = (acc[type] || 0) + 1;
+          return acc;
+        }, {});
+        
+        const byDeviceType = Object.entries(deviceTypeGroups).map(([type, count]) => ({
+          type,
+          count: count as number,
+          percentage: ((count as number) / total) * 100
+        })).sort((a, b) => b.count - a.count);
+        
+        // Agrupar por sistema operacional
+        const osGroups = leadsData.reduce((acc: any, lead) => {
+          const os = lead.device_os || 'Unknown';
+          acc[os] = (acc[os] || 0) + 1;
+          return acc;
+        }, {});
+        
+        const byOS = Object.entries(osGroups).map(([os, count]) => ({
+          os,
+          count: count as number,
+          percentage: ((count as number) / total) * 100
+        })).sort((a, b) => b.count - a.count);
+        
+        // Agrupar por navegador
+        const browserGroups = leadsData.reduce((acc: any, lead) => {
+          const browser = lead.device_browser || 'Unknown';
+          acc[browser] = (acc[browser] || 0) + 1;
+          return acc;
+        }, {});
+        
+        const byBrowser = Object.entries(browserGroups).map(([browser, count]) => ({
+          browser,
+          count: count as number,
+          percentage: ((count as number) / total) * 100
+        })).sort((a, b) => b.count - a.count);
+        
+        setDeviceMetrics({
+          byDeviceType,
+          byOS,
+          byBrowser,
+          totalWithDeviceData: total,
+        });
+      } else {
+        setDeviceMetrics({
+          byDeviceType: [],
+          byOS: [],
+          byBrowser: [],
+          totalWithDeviceData: 0,
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao carregar métricas de dispositivos:", error);
     }
   };
 
@@ -2285,6 +2380,141 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* Seção: Análise de Dispositivos */}
+      {comparisonMode === "single" && deviceMetrics.totalWithDeviceData > 0 && (
+        <Card className="shadow-xl">
+          <CardHeader>
+            <CardTitle className="text-2xl flex items-center gap-2">
+              <Smartphone className="h-5 w-5" />
+              Análise de Dispositivos
+            </CardTitle>
+            <CardDescription>
+              Entenda de onde seus leads estão acessando suas campanhas ({deviceMetrics.totalWithDeviceData} leads com dados)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-3 gap-6">
+              {/* Gráfico: Tipo de Dispositivo */}
+              <div className="space-y-3">
+                <h3 className="text-center font-semibold text-muted-foreground">Tipo de Dispositivo</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie
+                      data={deviceMetrics.byDeviceType}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ percentage }) => `${percentage.toFixed(0)}%`}
+                      outerRadius={70}
+                      fill="#8884d8"
+                      dataKey="count"
+                      nameKey="type"
+                    >
+                      {deviceMetrics.byDeviceType.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value: any, name: any, props: any) => [value, props.payload.type]} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="space-y-1">
+                  {deviceMetrics.byDeviceType.map((item, idx) => (
+                    <div key={item.type} className="flex justify-between text-sm items-center">
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }}
+                        />
+                        <span className="font-medium capitalize">{item.type}</span>
+                      </div>
+                      <span className="text-muted-foreground">{item.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Gráfico: Sistema Operacional */}
+              <div className="space-y-3">
+                <h3 className="text-center font-semibold text-muted-foreground">Sistema Operacional</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie
+                      data={deviceMetrics.byOS}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ percentage }) => `${percentage.toFixed(0)}%`}
+                      outerRadius={70}
+                      fill="#8884d8"
+                      dataKey="count"
+                      nameKey="os"
+                    >
+                      {deviceMetrics.byOS.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value: any, name: any, props: any) => [value, props.payload.os]} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="space-y-1">
+                  {deviceMetrics.byOS.map((item, idx) => (
+                    <div key={item.os} className="flex justify-between text-sm items-center">
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }}
+                        />
+                        <span className="font-medium">{item.os}</span>
+                      </div>
+                      <span className="text-muted-foreground">{item.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Gráfico: Navegador */}
+              <div className="space-y-3">
+                <h3 className="text-center font-semibold text-muted-foreground">Navegador</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie
+                      data={deviceMetrics.byBrowser}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ percentage }) => `${percentage.toFixed(0)}%`}
+                      outerRadius={70}
+                      fill="#8884d8"
+                      dataKey="count"
+                      nameKey="browser"
+                    >
+                      {deviceMetrics.byBrowser.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value: any, name: any, props: any) => [value, props.payload.browser]} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="space-y-1">
+                  {deviceMetrics.byBrowser.map((item, idx) => (
+                    <div key={item.browser} className="flex justify-between text-sm items-center">
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }}
+                        />
+                        <span className="font-medium">{item.browser}</span>
+                      </div>
+                      <span className="text-muted-foreground">{item.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Seção 2: Gráfico de Funil Interativo com Filtro de Campanhas - SEMPRE VISÍVEL */}
