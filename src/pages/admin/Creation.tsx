@@ -118,6 +118,7 @@ const Creation = () => {
           status_changed_at,
           created_by,
           created_by_salesperson,
+          order_number,
           orders!inner (
             customer_name,
             customer_email,
@@ -203,6 +204,20 @@ const Creation = () => {
     loadTasks();
   };
 
+  const handleOrderNumberUpdate = async (taskId: string, orderNumber: string) => {
+    try {
+      const { error } = await supabase
+        .from("design_tasks")
+        .update({ order_number: orderNumber })
+        .eq("id", taskId);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error updating order number:", error);
+      toast.error("Erro ao atualizar número do pedido");
+    }
+  };
+
   const handleDragStart = (event: DragStartEvent) => {
     const task = event.active.data.current?.task as DesignTask;
     setActiveTask(task);
@@ -275,6 +290,12 @@ const Creation = () => {
     }
 
     if (newStatus === 'completed') {
+      // Validação: Número do pedido obrigatório para ir para Produção
+      if (!task.order_number || task.order_number.trim() === '') {
+        toast.error("É obrigatório preencher o número do pedido antes de enviar para Produção");
+        return;
+      }
+      
       const confirm = window.confirm("Tem certeza que deseja enviar para Produção?");
       if (!confirm) return;
     }
@@ -347,12 +368,13 @@ const Creation = () => {
     return tasks.filter(task => task.created_by === salespersonFilter);
   };
 
-  // Filtrar tarefas por busca de nome do cliente
+  // Filtrar tarefas por busca de nome do cliente ou número do pedido
   const filterBySearch = (tasks: DesignTask[]) => {
     if (!searchQuery.trim()) return tasks;
     const query = searchQuery.toLowerCase();
     return tasks.filter(task => 
-      task.customer_name?.toLowerCase().includes(query)
+      task.customer_name?.toLowerCase().includes(query) ||
+      task.order_number?.toLowerCase().includes(query)
     );
   };
 
@@ -478,14 +500,14 @@ const Creation = () => {
         </div>
 
         <div className="flex gap-2 flex-wrap">
-          {/* Pesquisa por cliente */}
+          {/* Pesquisa por cliente ou número do pedido */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar cliente..."
+              placeholder="Buscar cliente ou nº pedido..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 w-[200px]"
+              className="pl-9 w-[220px]"
             />
           </div>
 
@@ -527,9 +549,7 @@ const Creation = () => {
             <SelectContent>
               <SelectItem value="all">Todas</SelectItem>
               <SelectItem value="urgent">🔴 Urgente</SelectItem>
-              <SelectItem value="high">🟠 Alta</SelectItem>
               <SelectItem value="normal">🟡 Normal</SelectItem>
-              <SelectItem value="low">🟢 Baixa</SelectItem>
             </SelectContent>
           </Select>
 
@@ -586,6 +606,7 @@ const Creation = () => {
                 onToggleCard={toggleCard}
                 onCollapseAll={() => collapseAll(column.tasks.map(t => t.id))}
                 onExpandAll={() => expandAll(column.tasks.map(t => t.id))}
+                onOrderNumberUpdate={handleOrderNumberUpdate}
               />
             ))}
           </div>

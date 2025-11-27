@@ -21,6 +21,7 @@ interface TaskCardProps {
   onSelect?: (taskId: string) => void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  onOrderNumberUpdate?: (taskId: string, orderNumber: string) => void;
 }
 
 const getCreatorType = (task: DesignTask): string => {
@@ -31,14 +32,12 @@ const getCreatorType = (task: DesignTask): string => {
 const getPriorityConfig = (priority: string) => {
   const configs = {
     urgent: { label: 'Urgente', variant: 'destructive' as const, color: 'bg-red-500' },
-    high: { label: 'Alta', variant: 'default' as const, color: 'bg-orange-500' },
     normal: { label: 'Normal', variant: 'secondary' as const, color: 'bg-yellow-500' },
-    low: { label: 'Baixa', variant: 'outline' as const, color: 'bg-green-500' },
   };
   return configs[priority as keyof typeof configs] || configs.normal;
 };
 
-export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onToggleCollapse }: TaskCardProps) => {
+export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onToggleCollapse, onOrderNumberUpdate }: TaskCardProps) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task.id,
     data: { task },
@@ -76,6 +75,20 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
                 onClick={onClick}
               >
                 <span className="font-bold text-gray-800" style={{ fontSize: `${fontSizes?.customerName || 14}px` }}>{task.customer_name}</span>
+                {/* Campo de número do pedido quando status = approved */}
+                {task.status === 'approved' && onOrderNumberUpdate && (
+                  <div className="mt-2 flex items-center justify-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    <span className="text-xs text-gray-600">📝 Pedido:</span>
+                    <input
+                      type="text"
+                      placeholder="Digite nº..."
+                      value={task.order_number || ''}
+                      onChange={(e) => onOrderNumberUpdate(task.id, e.target.value)}
+                      onBlur={(e) => onOrderNumberUpdate(task.id, e.target.value)}
+                      className="border border-gray-300 rounded px-2 py-0.5 text-xs w-24 text-center focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                )}
               </div>
               {onToggleCollapse && (
                 <Button
