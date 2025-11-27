@@ -2383,7 +2383,7 @@ const Dashboard = () => {
       )}
 
       {/* Seção: Análise de Dispositivos */}
-      {comparisonMode === "single" && deviceMetrics.totalWithDeviceData > 0 && (
+      {comparisonMode === "single" && (
         <Card className="shadow-xl">
           <CardHeader>
             <CardTitle className="text-2xl flex items-center gap-2">
@@ -2391,128 +2391,141 @@ const Dashboard = () => {
               Análise de Dispositivos
             </CardTitle>
             <CardDescription>
-              Entenda de onde seus leads estão acessando suas campanhas ({deviceMetrics.totalWithDeviceData} leads com dados)
+              {deviceMetrics.totalWithDeviceData > 0 
+                ? `Entenda de onde seus leads estão acessando suas campanhas (${deviceMetrics.totalWithDeviceData} leads com dados)`
+                : "Os dispositivos dos leads serão detectados automaticamente quando preencherem o nome"
+              }
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid md:grid-cols-3 gap-6">
-              {/* Gráfico: Tipo de Dispositivo */}
-              <div className="space-y-3">
-                <h3 className="text-center font-semibold text-muted-foreground">Tipo de Dispositivo</h3>
-                <ResponsiveContainer width="100%" height={200}>
-                  <PieChart>
-                    <Pie
-                      data={deviceMetrics.byDeviceType}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ percentage }) => `${percentage.toFixed(0)}%`}
-                      outerRadius={70}
-                      fill="#8884d8"
-                      dataKey="count"
-                      nameKey="type"
-                    >
-                      {deviceMetrics.byDeviceType.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value: any, name: any, props: any) => [value, props.payload.type]} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="space-y-1">
-                  {deviceMetrics.byDeviceType.map((item, idx) => (
-                    <div key={item.type} className="flex justify-between text-sm items-center">
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }}
-                        />
-                        <span className="font-medium capitalize">{item.type}</span>
-                      </div>
-                      <span className="text-muted-foreground">{item.count}</span>
-                    </div>
-                  ))}
-                </div>
+            {deviceMetrics.totalWithDeviceData === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Smartphone className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="text-lg font-medium">Aguardando dados de dispositivo</p>
+                <p className="text-sm mt-2">
+                  Os dispositivos dos leads serão detectados automaticamente quando preencherem o nome
+                </p>
               </div>
+            ) : (
+              <div className="grid md:grid-cols-3 gap-6">
+                {/* Gráfico: Tipo de Dispositivo */}
+                <div className="space-y-3">
+                  <h3 className="text-center font-semibold text-muted-foreground">Tipo de Dispositivo</h3>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart>
+                      <Pie
+                        data={deviceMetrics.byDeviceType}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ percentage }) => `${percentage.toFixed(0)}%`}
+                        outerRadius={70}
+                        fill="#8884d8"
+                        dataKey="count"
+                        nameKey="type"
+                      >
+                        {deviceMetrics.byDeviceType.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value: any, name: any, props: any) => [value, props.payload.type]} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="space-y-1">
+                    {deviceMetrics.byDeviceType.map((item, idx) => (
+                      <div key={item.type} className="flex justify-between text-sm items-center">
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }}
+                          />
+                          <span className="font-medium capitalize">{item.type}</span>
+                        </div>
+                        <span className="text-muted-foreground">{item.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
 
-              {/* Gráfico: Sistema Operacional */}
-              <div className="space-y-3">
-                <h3 className="text-center font-semibold text-muted-foreground">Sistema Operacional</h3>
-                <ResponsiveContainer width="100%" height={200}>
-                  <PieChart>
-                    <Pie
-                      data={deviceMetrics.byOS}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ percentage }) => `${percentage.toFixed(0)}%`}
-                      outerRadius={70}
-                      fill="#8884d8"
-                      dataKey="count"
-                      nameKey="os"
-                    >
-                      {deviceMetrics.byOS.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value: any, name: any, props: any) => [value, props.payload.os]} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="space-y-1">
-                  {deviceMetrics.byOS.map((item, idx) => (
-                    <div key={item.os} className="flex justify-between text-sm items-center">
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }}
-                        />
-                        <span className="font-medium">{item.os}</span>
+                {/* Gráfico: Sistema Operacional */}
+                <div className="space-y-3">
+                  <h3 className="text-center font-semibold text-muted-foreground">Sistema Operacional</h3>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart>
+                      <Pie
+                        data={deviceMetrics.byOS}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ percentage }) => `${percentage.toFixed(0)}%`}
+                        outerRadius={70}
+                        fill="#8884d8"
+                        dataKey="count"
+                        nameKey="os"
+                      >
+                        {deviceMetrics.byOS.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value: any, name: any, props: any) => [value, props.payload.os]} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="space-y-1">
+                    {deviceMetrics.byOS.map((item, idx) => (
+                      <div key={item.os} className="flex justify-between text-sm items-center">
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }}
+                          />
+                          <span className="font-medium">{item.os}</span>
+                        </div>
+                        <span className="text-muted-foreground">{item.count}</span>
                       </div>
-                      <span className="text-muted-foreground">{item.count}</span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              {/* Gráfico: Navegador */}
-              <div className="space-y-3">
-                <h3 className="text-center font-semibold text-muted-foreground">Navegador</h3>
-                <ResponsiveContainer width="100%" height={200}>
-                  <PieChart>
-                    <Pie
-                      data={deviceMetrics.byBrowser}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ percentage }) => `${percentage.toFixed(0)}%`}
-                      outerRadius={70}
-                      fill="#8884d8"
-                      dataKey="count"
-                      nameKey="browser"
-                    >
-                      {deviceMetrics.byBrowser.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value: any, name: any, props: any) => [value, props.payload.browser]} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="space-y-1">
-                  {deviceMetrics.byBrowser.map((item, idx) => (
-                    <div key={item.browser} className="flex justify-between text-sm items-center">
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }}
-                        />
-                        <span className="font-medium">{item.browser}</span>
+                {/* Gráfico: Navegador */}
+                <div className="space-y-3">
+                  <h3 className="text-center font-semibold text-muted-foreground">Navegador</h3>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart>
+                      <Pie
+                        data={deviceMetrics.byBrowser}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ percentage }) => `${percentage.toFixed(0)}%`}
+                        outerRadius={70}
+                        fill="#8884d8"
+                        dataKey="count"
+                        nameKey="browser"
+                      >
+                        {deviceMetrics.byBrowser.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value: any, name: any, props: any) => [value, props.payload.browser]} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="space-y-1">
+                    {deviceMetrics.byBrowser.map((item, idx) => (
+                      <div key={item.browser} className="flex justify-between text-sm items-center">
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }}
+                          />
+                          <span className="font-medium">{item.browser}</span>
+                        </div>
+                        <span className="text-muted-foreground">{item.count}</span>
                       </div>
-                      <span className="text-muted-foreground">{item.count}</span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       )}
