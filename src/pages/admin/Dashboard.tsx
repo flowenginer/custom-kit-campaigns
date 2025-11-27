@@ -792,7 +792,9 @@ const Dashboard = () => {
 
             const firstEvent = sortedEvents[0];
             const lastEvent = sortedEvents[sortedEvents.length - 1];
-            const hasCompleted = sortedEvents.some(e => e.event_type === 'completed');
+            const hasCompleted = sortedEvents.some(e => 
+              e.event_type === 'completed' || e.event_type === 'order_completed'
+            );
 
             // Tempo de engajamento = do primeiro ao último evento
             const engagementTime = (new Date(lastEvent.created_at).getTime() - new Date(firstEvent.created_at).getTime()) / 1000;
