@@ -18,7 +18,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Save, FolderOpen, LayoutDashboard, Database, Table2, Trash2, Eye, Edit3, Share2, Copy, FileDown, Sparkles } from "lucide-react";
+import { Plus, Save, FolderOpen, LayoutDashboard, Database, Table2, Trash2, Eye, Edit3, Share2, Copy, FileDown, Sparkles, Grid3x3 } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -243,12 +243,12 @@ const DashboardBuilder = () => {
             
             <Button 
               size="sm" 
-              variant="secondary" 
-              className="w-full"
+              variant="default" 
+              className="w-full gap-2"
               onClick={() => setTemplateGalleryOpen(true)}
             >
-              <Sparkles className="h-4 w-4 mr-2" />
-              Ver Templates
+              <Grid3x3 className="h-4 w-4" />
+              Explorar Templates
             </Button>
           </div>
 
@@ -389,14 +389,29 @@ const DashboardBuilder = () => {
                 />
               ) : !selectedSource ? (
                 <div className="flex items-center justify-center h-full min-h-[400px]">
-                  <div className="text-center space-y-3">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-                      <Database className="h-8 w-8 text-primary" />
+                  <div className="text-center space-y-6 max-w-2xl mx-auto p-8">
+                    <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 mb-2">
+                      <Grid3x3 className="h-10 w-10 text-primary" />
                     </div>
-                    <h3 className="text-lg font-medium">Selecione uma fonte de dados</h3>
-                    <p className="text-sm text-muted-foreground max-w-md">
-                      Escolha uma tabela do painel lateral para começar a criar widgets para seu dashboard personalizado.
-                    </p>
+                    <div className="space-y-2">
+                      <h3 className="text-2xl font-bold">Comece com um Template</h3>
+                      <p className="text-muted-foreground text-base">
+                        Dashboards profissionais prontos para usar. Escolha um template e personalize conforme necessário.
+                      </p>
+                    </div>
+                    <Button 
+                      size="lg" 
+                      onClick={() => setTemplateGalleryOpen(true)}
+                      className="gap-2"
+                    >
+                      <Grid3x3 className="h-5 w-5" />
+                      Explorar Templates
+                    </Button>
+                    <div className="pt-6 border-t max-w-md mx-auto">
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Ou selecione uma fonte de dados no painel lateral para criar do zero
+                      </p>
+                    </div>
                   </div>
                 </div>
               ) : (

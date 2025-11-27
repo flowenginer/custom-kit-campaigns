@@ -126,11 +126,31 @@ export const ChartWidget = ({ widget, globalFilters = [] }: ChartWidgetProps) =>
     }
   };
 
+  const { description, gradient, color } = widget.display_config;
+
   return (
-    <Card className="p-6 h-full flex flex-col">
-      <h3 className="text-sm font-medium text-muted-foreground mb-4">
-        {widget.display_config.title}
-      </h3>
+    <Card 
+      className={`p-6 h-full flex flex-col transition-all hover:shadow-md ${
+        gradient ? 'bg-gradient-to-br from-background to-muted/10' : ''
+      }`}
+      style={
+        gradient && color
+          ? {
+              background: `linear-gradient(135deg, hsl(var(--background)) 0%, ${color}10 100%)`,
+            }
+          : undefined
+      }
+    >
+      <div className="mb-4">
+        <h3 className="text-base font-semibold text-foreground">
+          {widget.display_config.title}
+        </h3>
+        {description && (
+          <p className="text-xs text-muted-foreground mt-1">
+            {description}
+          </p>
+        )}
+      </div>
       <div className="flex-1 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
           {renderChart()}
