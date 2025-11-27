@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.check-offline-leads]
 verify_jwt = false
+
+[functions.export-database]
+verify_jwt = false
