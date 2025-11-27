@@ -162,6 +162,12 @@ export default function Campaign() {
   const [abTestId, setAbTestId] = useState<string | null>(null);
   const [abVariantId, setAbVariantId] = useState<string | null>(null);
 
+  // Global Scripts
+  const [globalScripts, setGlobalScripts] = useState<{
+    headScripts: string | null;
+    bodyScripts: string | null;
+  }>({ headScripts: null, bodyScripts: null });
+
   // Load campaign theme (applies CSS variables automatically)
   useCampaignTheme(campaign?.id);
 
@@ -268,8 +274,15 @@ export default function Campaign() {
         // Load global scripts
         const { data: globalSettings } = await supabase
           .from('global_settings')
-          .select('*')
+          .select('global_head_scripts, global_body_scripts')
           .single();
+
+        if (globalSettings) {
+          setGlobalScripts({
+            headScripts: globalSettings.global_head_scripts,
+            bodyScripts: globalSettings.global_body_scripts
+          });
+        }
       } catch (error) {
         console.error("Erro ao carregar campanha:", error);
         navigate("/404");
@@ -765,8 +778,8 @@ export default function Campaign() {
   return (
     <div className="min-h-screen campaign-themed">
       <CustomScriptManager 
-        headScripts={campaign.custom_head_scripts}
-        bodyScripts={campaign.custom_body_scripts}
+        headScripts={globalScripts.headScripts || campaign.custom_head_scripts}
+        bodyScripts={globalScripts.bodyScripts || campaign.custom_body_scripts}
       />
 
       {/* Header */}
