@@ -4,6 +4,9 @@ import { TextEditPopover, ColorEditPopover, ImageEditPopover } from "./EditPopov
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { DndContext, DragEndEvent, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
+import { SortableUniformCard } from "./SortableUniformCard";
 
 // Import uniform images and logo
 import mangaCurtaImg from "@/assets/uniforms/manga-curta.png";
@@ -128,6 +131,39 @@ export const CampaignPreviewInteractive = ({
     const heading = overrides.heading?.text || "Escolha o tipo de uniforme";
     const subheading = overrides.subheading?.text || "Selecione o modelo que melhor atende sua necessidade";
     
+    const sensors = useSensors(
+      useSensor(PointerSensor, {
+        activationConstraint: {
+          distance: 8,
+        },
+      })
+    );
+
+    const uniformTypes = Object.keys(DEFAULT_UNIFORM_IMAGES);
+    const sortedTypes = overrides.cardOrder || uniformTypes;
+
+    const handleDragEnd = (event: DragEndEvent) => {
+      const { active, over } = event;
+      
+      if (over && active.id !== over.id) {
+        const oldIndex = sortedTypes.indexOf(active.id as string);
+        const newIndex = sortedTypes.indexOf(over.id as string);
+        
+        const newOrder = [...sortedTypes];
+        newOrder.splice(oldIndex, 1);
+        newOrder.splice(newIndex, 0, active.id as string);
+        
+        updateOverride(['cardOrder'], newOrder);
+      }
+    };
+
+    const UNIFORM_LABELS: Record<string, string> = {
+      'manga-curta': 'Manga Curta',
+      'manga-longa': 'Manga Longa',
+      'regata': 'Regata',
+      'ziper-manga-longa': 'Zíper Manga Longa',
+    };
+    
     return (
       <div className="max-w-4xl mx-auto bg-card rounded-lg shadow-lg overflow-hidden">
         {renderHeader()}
@@ -165,37 +201,40 @@ export const CampaignPreviewInteractive = ({
             </TextEditPopover>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {Object.entries(DEFAULT_UNIFORM_IMAGES).map(([type, defaultImg]) => {
-              const imageUrl = overrides.cardImages?.[type] || defaultImg;
-              const label = type.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-              
-              return (
-                <ImageEditPopover
-                  key={type}
-                  value={imageUrl}
-                  onChange={(value) => {
-                    const newCardImages = { ...overrides.cardImages, [type]: value };
-                    updateOverride(['cardImages'], newCardImages);
-                  }}
-                  label={`Imagem ${label}`}
-                >
-                  <EditableElement>
-                    <Card className="p-4 text-center hover:shadow-lg transition-shadow cursor-pointer">
-                      <div className="h-32 flex items-center justify-center bg-muted rounded mb-3">
-                        <img 
-                          src={imageUrl} 
-                          alt={label}
-                          className="h-full object-contain"
-                        />
-                      </div>
-                      <p className="text-sm font-medium">{label}</p>
-                    </Card>
-                  </EditableElement>
-                </ImageEditPopover>
-              );
-            })}
+          <div className="mb-4 text-center">
+            <p className="text-sm text-muted-foreground">
+              Arraste os cards para reordenar • Clique para editar imagens
+            </p>
           </div>
+
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext items={sortedTypes} strategy={horizontalListSortingStrategy}>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {sortedTypes.map((type) => {
+                  const imageUrl = overrides.cardImages?.[type] || DEFAULT_UNIFORM_IMAGES[type];
+                  const label = UNIFORM_LABELS[type] || type;
+                  
+                  return (
+                    <SortableUniformCard
+                      key={type}
+                      type={type}
+                      imageUrl={imageUrl}
+                      label={label}
+                      onImageChange={(value) => {
+                        const newCardImages = { ...overrides.cardImages, [type]: value };
+                        updateOverride(['cardImages'], newCardImages);
+                      }}
+                      isDraggable
+                    />
+                  );
+                })}
+              </div>
+            </SortableContext>
+          </DndContext>
         </div>
       </div>
     );
