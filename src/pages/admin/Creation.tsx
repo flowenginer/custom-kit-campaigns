@@ -7,8 +7,10 @@ import { KanbanColumn } from "@/components/creation/KanbanColumn";
 import { TaskDetailsDialog } from "@/components/creation/TaskDetailsDialog";
 import { TaskCardSkeleton } from "@/components/creation/TaskCardSkeleton";
 import { ColorThemePanel } from "@/components/creation/ColorThemePanel";
+import { CardFontEditor } from "@/components/creation/CardFontEditor";
 import { DesignTask } from "@/types/design-task";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useCardFontSizes } from "@/hooks/useCardFontSizes";
 import { toast } from "sonner";
 import { 
   Inbox, 
@@ -50,6 +52,7 @@ const Creation = () => {
   const [searchQuery, setSearchQuery] = useState<string>("");
   
   const { allowedKanbanColumns, isSuperAdmin, isAdmin, isDesigner, isSalesperson, isLoading } = useUserRole();
+  const { sizes: fontSizes, updateSize, resetToDefaults } = useCardFontSizes();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -536,6 +539,12 @@ const Creation = () => {
             </Button>
           )}
 
+          <CardFontEditor 
+            sizes={fontSizes}
+            updateSize={updateSize}
+            resetToDefaults={resetToDefaults}
+          />
+
           <RefreshIndicator 
             lastUpdated={lastUpdated}
             isRefreshing={isRefreshing}
@@ -567,6 +576,7 @@ const Creation = () => {
                 tasks={column.tasks}
                 onTaskClick={handleTaskClick}
                 backgroundColor={columnColors[index]}
+                fontSizes={fontSizes}
                 showAcceptButton={isDesigner}
                 currentUserId={currentUserId || undefined}
                 onTaskAccepted={loadTasks}

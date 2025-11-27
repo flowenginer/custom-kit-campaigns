@@ -4,6 +4,8 @@ import { DesignTask, TaskStatus } from "@/types/design-task";
 import { LucideIcon } from "lucide-react";
 import { useDroppable } from '@dnd-kit/core';
 import { cn } from "@/lib/utils";
+import { CardFontSizes } from "@/hooks/useCardFontSizes";
+
 interface KanbanColumnProps {
   title: string;
   status: TaskStatus;
@@ -11,6 +13,7 @@ interface KanbanColumnProps {
   tasks: DesignTask[];
   onTaskClick: (task: DesignTask) => void;
   backgroundColor?: string;
+  fontSizes?: CardFontSizes;
   showAcceptButton?: boolean;
   currentUserId?: string;
   onTaskAccepted?: () => void;
@@ -22,6 +25,7 @@ export const KanbanColumn = ({
   tasks,
   onTaskClick,
   backgroundColor,
+  fontSizes,
   showAcceptButton,
   currentUserId,
   onTaskAccepted
@@ -70,6 +74,7 @@ export const KanbanColumn = ({
               key={task.id} 
               task={task} 
               onClick={() => onTaskClick(task)}
+              fontSizes={fontSizes}
               showAcceptButton={showAcceptButton}
               currentUserId={currentUserId}
               onTaskAccepted={onTaskAccepted}
