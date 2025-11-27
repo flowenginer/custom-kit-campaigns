@@ -53,30 +53,42 @@ export const CampaignPreviewInteractive = ({
 
   // Render persistent header (appears on all steps)
   const renderHeader = () => (
-    <div 
-      className="py-6 flex justify-center border-b"
-      style={{ backgroundColor: primaryColor }}
-    >
+    <div className="border-b">
       <ColorEditPopover
         value={primaryColor}
         onChange={(value) => updateOverride(['primaryColor'], value)}
         label="Cor Primária do Header"
       >
+        <EditableElement>
+          <div 
+            className="py-6 flex justify-center"
+            style={{ backgroundColor: primaryColor }}
+          >
+            <div className="pointer-events-none">
+              <img 
+                src={logoUrl} 
+                alt="Logo" 
+                style={{ height: logoHeight }}
+                className="object-contain"
+              />
+            </div>
+          </div>
+        </EditableElement>
+      </ColorEditPopover>
+      
+      <div className="flex justify-center py-2 bg-muted/30">
         <ImageEditPopover
           value={logoUrl}
           onChange={(value) => updateOverride(['logo', 'url'], value)}
           label="Logo da Campanha"
         >
           <EditableElement>
-            <img 
-              src={logoUrl} 
-              alt="Logo" 
-              style={{ height: logoHeight }}
-              className="object-contain cursor-pointer"
-            />
+            <div className="text-sm text-muted-foreground px-4 py-2">
+              Clique aqui para editar o logo
+            </div>
           </EditableElement>
         </ImageEditPopover>
-      </ColorEditPopover>
+      </div>
     </div>
   );
 
