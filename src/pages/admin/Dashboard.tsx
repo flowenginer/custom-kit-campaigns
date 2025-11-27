@@ -935,6 +935,59 @@ const Dashboard = () => {
           conversionRate: item.total > 0 ? item.completed / item.total * 100 : 0
         }));
         setUtmData(utmArray.sort((a, b) => b.total - a.total));
+
+        // Calcular métricas de engajamento
+        const { data: funnelEvents } = await supabase
+          .from("funnel_events")
+          .select("session_id, event_type, created_at")
+          .gte("created_at", dateRange.start.toISOString())
+          .lte("created_at", dateRange.end.toISOString())
+          .order("created_at", { ascending: true });
+
+        if (funnelEvents) {
+          const sessionEvents = funnelEvents.reduce((acc, event) => {
+            if (!acc[event.session_id]) {
+              acc[event.session_id] = [];
+            }
+            acc[event.session_id].push(event);
+            return acc;
+          }, {} as Record<string, typeof funnelEvents>);
+
+          let totalTimeToConversion = 0;
+          let totalEngagementTime = 0;
+          let convertedCount = 0;
+          let totalSessionsCount = Object.keys(sessionEvents).length;
+
+          Object.values(sessionEvents).forEach((events) => {
+            if (events.length === 0) return;
+
+            const sortedEvents = events.sort((a, b) => 
+              new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+            );
+
+            const firstEvent = sortedEvents[0];
+            const lastEvent = sortedEvents[sortedEvents.length - 1];
+            const hasCompleted = sortedEvents.some(e => 
+              e.event_type === 'completed' || e.event_type === 'order_completed'
+            );
+
+            const engagementTime = (new Date(lastEvent.created_at).getTime() - 
+              new Date(firstEvent.created_at).getTime()) / 1000;
+            totalEngagementTime += engagementTime;
+
+            if (hasCompleted) {
+              totalTimeToConversion += engagementTime;
+              convertedCount++;
+            }
+          });
+
+          setEngagementMetrics({
+            avgTimeToConversion: convertedCount > 0 ? totalTimeToConversion / convertedCount : 0,
+            avgEngagementTime: totalSessionsCount > 0 ? totalEngagementTime / totalSessionsCount : 0,
+            totalSessions: totalSessionsCount,
+            convertedSessions: convertedCount,
+          });
+        }
       }
     } catch (error) {
       console.error("Erro ao carregar dashboard:", error);
