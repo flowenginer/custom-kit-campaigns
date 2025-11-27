@@ -575,54 +575,60 @@ const Creation = () => {
         </div>
       </div>
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCorners}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
+      {/* Container com altura fixa para manter scroll horizontal sempre visível */}
+      <div 
+        className="border rounded-lg bg-muted/30" 
+        style={{ height: 'calc(100vh - 280px)' }}
       >
-        {loading ? (
-          <div className="flex gap-4 overflow-x-auto pb-4">
-            {[...Array(6)].map((_, i) => (
-              <TaskCardSkeleton key={i} />
-            ))}
-          </div>
-        ) : (
-          <div className="flex gap-4 overflow-x-auto pb-4">
-            {visibleColumns.map((column, index) => (
-              <KanbanColumn
-                key={column.status}
-                title={column.title}
-                status={column.status}
-                icon={column.icon}
-                tasks={column.tasks}
-                onTaskClick={handleTaskClick}
-                backgroundColor={columnColors[index]}
-                fontSizes={fontSizes}
-                showAcceptButton={isDesigner}
-                currentUserId={currentUserId || undefined}
-                onTaskAccepted={loadTasks}
-                collapsedCards={collapsedCards}
-                onToggleCard={toggleCard}
-                onCollapseAll={() => collapseAll(column.tasks.map(t => t.id))}
-                onExpandAll={() => expandAll(column.tasks.map(t => t.id))}
-                onOrderNumberUpdate={handleOrderNumberUpdate}
-              />
-            ))}
-          </div>
-        )}
-        
-        <DragOverlay>
-          {activeTask ? (
-            <div className="opacity-50 rotate-3 cursor-grabbing">
-              <div className="bg-card border rounded-lg p-4 shadow-lg">
-                <p className="font-semibold text-sm">{activeTask.customer_name}</p>
-                <p className="text-xs text-muted-foreground">{activeTask.campaign_name}</p>
-              </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          {loading ? (
+            <div className="flex gap-4 overflow-x-auto h-full p-4">
+              {[...Array(6)].map((_, i) => (
+                <TaskCardSkeleton key={i} />
+              ))}
             </div>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+          ) : (
+            <div className="flex gap-4 overflow-x-auto overflow-y-hidden h-full p-4">
+              {visibleColumns.map((column, index) => (
+                <KanbanColumn
+                  key={column.status}
+                  title={column.title}
+                  status={column.status}
+                  icon={column.icon}
+                  tasks={column.tasks}
+                  onTaskClick={handleTaskClick}
+                  backgroundColor={columnColors[index]}
+                  fontSizes={fontSizes}
+                  showAcceptButton={isDesigner}
+                  currentUserId={currentUserId || undefined}
+                  onTaskAccepted={loadTasks}
+                  collapsedCards={collapsedCards}
+                  onToggleCard={toggleCard}
+                  onCollapseAll={() => collapseAll(column.tasks.map(t => t.id))}
+                  onExpandAll={() => expandAll(column.tasks.map(t => t.id))}
+                  onOrderNumberUpdate={handleOrderNumberUpdate}
+                />
+              ))}
+            </div>
+          )}
+          
+          <DragOverlay>
+            {activeTask ? (
+              <div className="opacity-50 rotate-3 cursor-grabbing">
+                <div className="bg-card border rounded-lg p-4 shadow-lg">
+                  <p className="font-semibold text-sm">{activeTask.customer_name}</p>
+                  <p className="text-xs text-muted-foreground">{activeTask.campaign_name}</p>
+                </div>
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      </div>
 
       <TaskDetailsDialog
         task={selectedTask}

@@ -6,6 +6,7 @@ import { LucideIcon, ChevronsUp, ChevronsDown } from "lucide-react";
 import { useDroppable } from '@dnd-kit/core';
 import { cn } from "@/lib/utils";
 import { CardFontSizes } from "@/hooks/useCardFontSizes";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface KanbanColumnProps {
   title: string;
@@ -63,13 +64,20 @@ export const KanbanColumn = ({
   const borderClass = hasCustomColor ? "border-white/20" : "border-border";
   const emptyTextClass = hasCustomColor ? "text-white/70" : "text-muted-foreground";
   
-  return <div className="min-w-[320px] flex-shrink-0">
-      <div ref={setNodeRef} className={cn("rounded-lg border p-4 min-h-[560px]", isOver && "border-primary ring-2 ring-primary/20")} style={{
-      backgroundColor: backgroundColor || 'hsl(var(--card))',
-      transition: 'background-color 0.3s ease, border-color 0.2s ease'
-    }}>
-        {/* Cabeçalho dentro do container */}
-        <div className={cn("flex items-center justify-between mb-4 pb-3 border-b", borderClass)}>
+  return <div className="min-w-[320px] flex-shrink-0 h-full flex flex-col">
+      <div 
+        ref={setNodeRef} 
+        className={cn(
+          "rounded-lg border h-full flex flex-col", 
+          isOver && "border-primary ring-2 ring-primary/20"
+        )} 
+        style={{
+          backgroundColor: backgroundColor || 'hsl(var(--card))',
+          transition: 'background-color 0.3s ease, border-color 0.2s ease'
+        }}
+      >
+        {/* Cabeçalho fixo dentro do container */}
+        <div className={cn("flex items-center justify-between p-4 pb-3 border-b flex-shrink-0", borderClass)}>
           <div className="flex items-center gap-2">
             <Icon className={cn("h-4 w-4", iconClass)} />
             <h3 className={cn("font-semibold text-xl", headerTextClass)}>{title}</h3>
@@ -99,26 +107,31 @@ export const KanbanColumn = ({
           </div>
         </div>
 
-        <div className="space-y-3">
-          {tasks.map(task => (
-            <TaskCard 
-              key={task.id} 
-              task={task} 
-              onClick={() => onTaskClick(task)}
-              fontSizes={fontSizes}
-              showAcceptButton={showAcceptButton}
-              currentUserId={currentUserId}
-              onTaskAccepted={onTaskAccepted}
-              isCollapsed={collapsedCards.has(task.id)}
-              onToggleCollapse={() => onToggleCard(task.id)}
-              onOrderNumberUpdate={onOrderNumberUpdate}
-            />
-          ))}
-          
-          {tasks.length === 0 && <div className={cn("text-center py-8 text-sm", emptyTextClass)}>
-              Nenhuma tarefa
-            </div>}
-        </div>
+        {/* Área de scroll vertical para os cards */}
+        <ScrollArea className="flex-1 px-4">
+          <div className="space-y-3 py-4">
+            {tasks.map(task => (
+              <TaskCard 
+                key={task.id} 
+                task={task} 
+                onClick={() => onTaskClick(task)}
+                fontSizes={fontSizes}
+                showAcceptButton={showAcceptButton}
+                currentUserId={currentUserId}
+                onTaskAccepted={onTaskAccepted}
+                isCollapsed={collapsedCards.has(task.id)}
+                onToggleCollapse={() => onToggleCard(task.id)}
+                onOrderNumberUpdate={onOrderNumberUpdate}
+              />
+            ))}
+            
+            {tasks.length === 0 && (
+              <div className={cn("text-center py-8 text-sm", emptyTextClass)}>
+                Nenhuma tarefa
+              </div>
+            )}
+          </div>
+        </ScrollArea>
       </div>
     </div>;
 };
