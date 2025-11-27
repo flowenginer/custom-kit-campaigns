@@ -2,13 +2,14 @@ import { useNavigate, Outlet, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "./ui/button";
-import { LogOut, LayoutDashboard, Tag, Megaphone, Users, Workflow, FlaskConical, Palette, Code, Settings, ShoppingBag, PaintBucket, FileEdit, Trophy, Sun, Cloud, Moon, CheckCircle } from "lucide-react";
+import { LogOut, Sun, Cloud, Moon, ChevronRight } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { Session } from "@supabase/supabase-js";
 import { NotificationsDropdown } from "./NotificationsDropdown";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useGlobalTheme } from "@/hooks/useGlobalTheme";
 import { usePendingApprovalsCount } from "@/hooks/usePendingApprovalsCount";
+import { useMenuStructure } from "@/hooks/useMenuStructure";
 import { cn } from "@/lib/utils";
 import logoSS from "@/assets/logo-ss.png";
 import {
@@ -25,8 +26,10 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 
 const SidebarLogo = () => {
   const { open } = useSidebar();
@@ -99,9 +102,9 @@ const SidebarThemeButtons = ({ currentTheme, changeTheme }: { currentTheme: any,
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
-              variant={currentTheme?.id === 'gray' ? 'default' : 'outline'}
+              variant={currentTheme?.id === 'medium' ? 'default' : 'outline'}
               size="icon"
-              onClick={() => changeTheme('gray')}
+              onClick={() => changeTheme('medium')}
               className="h-8 w-8"
             >
               <Cloud className="h-4 w-4" />
@@ -128,88 +131,33 @@ const SidebarThemeButtons = ({ currentTheme, changeTheme }: { currentTheme: any,
   );
 };
 
-const SidebarLogoutButton = ({ onSignOut, userName }: { onSignOut: () => void; userName?: string | null }) => {
+const SidebarLogoutButton = ({ onSignOut, userName }: { onSignOut: () => void; userName: string | null }) => {
   const { open } = useSidebar();
   
   return (
-    <div className="p-3">
-      <div className={cn(
-        "flex items-center",
-        open ? "gap-2" : "justify-center"
-      )}>
-        {open && userName && (
-          <div className="flex items-center gap-2">
-            <Avatar className="h-8 w-8">
-              <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
-                {userName.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <span className="text-sm font-medium">{userName}</span>
-          </div>
-        )}
-        
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onSignOut}
-              className="h-8 w-8 hover:bg-accent hover:text-accent-foreground flex-shrink-0"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="right">Sair</TooltipContent>
-        </Tooltip>
-      </div>
-    </div>
-  );
-};
-
-const ApprovalsMenuItem = ({ 
-  isActive, 
-  isNavigating, 
-  setIsNavigating,
-  pendingCount 
-}: { 
-  isActive: boolean; 
-  isNavigating: boolean; 
-  setIsNavigating: (val: boolean) => void;
-  pendingCount: number;
-}) => {
-  const { open } = useSidebar();
-  
-  return (
-    <SidebarMenuItem>
-      <SidebarMenuButton 
-        asChild 
-        isActive={isActive}
-        disabled={isNavigating}
+    <div className="p-3 space-y-2">
+      {open && userName && (
+        <div className="flex items-center gap-2 px-2">
+          <Avatar className="h-8 w-8">
+            <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+              {userName.substring(0, 2).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <span className="text-sm font-medium">{userName}</span>
+        </div>
+      )}
+      <Button
+        variant="ghost"
+        onClick={onSignOut}
         className={cn(
-          "transition-colors",
-          isActive 
-            ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-            : "hover:bg-accent/10 hover:text-primary"
+          "w-full justify-start gap-2",
+          !open && "justify-center px-2"
         )}
       >
-        <NavLink to="/admin/approvals" onClick={() => setIsNavigating(true)}>
-          <div className="relative">
-            <CheckCircle className="h-5 w-5" />
-            {pendingCount > 0 && !open && (
-              <span className="absolute -top-1 -right-1 h-4 w-4 bg-destructive text-destructive-foreground text-[10px] rounded-full flex items-center justify-center font-semibold">
-                {pendingCount}
-              </span>
-            )}
-          </div>
-          <span className="text-base">Aprovações</span>
-          {pendingCount > 0 && open && (
-            <span className="ml-auto bg-destructive text-destructive-foreground text-xs rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center font-semibold">
-              {pendingCount}
-            </span>
-          )}
-        </NavLink>
-      </SidebarMenuButton>
-    </SidebarMenuItem>
+        <LogOut className="h-4 w-4" />
+        {open && <span>Sair</span>}
+      </Button>
+    </div>
   );
 };
 
@@ -219,18 +167,23 @@ const AdminLayout = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [isNavigating, setIsNavigating] = useState(false);
   const [userFirstName, setUserFirstName] = useState<string | null>(null);
+  const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
+  
   const {
     isSuperAdmin,
     isAdmin,
     isDesigner,
     isSalesperson,
     isLoading,
-    allowedMenuItems, // 🆕 NOVO
+    allowedMenuItems,
   } = useUserRole();
   
   const { currentTheme, changeTheme } = useGlobalTheme();
   const { count: pendingCount } = usePendingApprovalsCount();
+  const { getMenuTree, getIcon, isLoading: menusLoading } = useMenuStructure();
   
+  const menuTree = getMenuTree();
+
   useEffect(() => {
     setIsNavigating(false);
   }, [location]);
@@ -288,26 +241,43 @@ const AdminLayout = () => {
     fetchUserProfile();
   }, [session?.user?.id]);
 
+  // Auto-expand menu que contém rota ativa
+  useEffect(() => {
+    menuTree.forEach(menu => {
+      if (menu.children && menu.children.length > 0) {
+        const hasActiveChild = menu.children.some(child => location.pathname === child.route);
+        if (hasActiveChild) {
+          setExpandedMenus(prev => new Set([...prev, menu.id]));
+        }
+      }
+    });
+  }, [location.pathname, menuTree]);
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     navigate("/auth");
   };
 
+  const isMenuItemAllowed = (slug: string): boolean => {
+    return allowedMenuItems.includes(slug);
+  };
+
+  const toggleMenu = (menuId: string) => {
+    setExpandedMenus(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(menuId)) {
+        newSet.delete(menuId);
+      } else {
+        newSet.add(menuId);
+      }
+      return newSet;
+    });
+  };
+
   if (!session) return null;
-  if (isLoading) {
+  if (isLoading || menusLoading) {
     return <div className="flex items-center justify-center min-h-screen">Carregando...</div>;
   }
-
-  const showAll = isSuperAdmin;
-  const showAdminLinks = showAll || isAdmin;
-  const showDesignerLinks = showAll || isDesigner || isSalesperson;
-  const showSalespersonLinks = showAll || isSalesperson;
-  const showDashboard = showAll || isAdmin || isDesigner; // Exclui vendedor
-
-  // 🆕 Helper function para verificar se item está permitido
-  const isMenuItemAllowed = (itemId: string): boolean => {
-    return allowedMenuItems.includes(itemId);
-  };
 
   return (
     <TooltipProvider>
@@ -323,312 +293,112 @@ const AdminLayout = () => {
             <SidebarGroup>
               <SidebarGroupContent>
                 <SidebarMenu className="space-y-1">
-                  {showDashboard && !isDesigner && isMenuItemAllowed('dashboard') && (
-                    <>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton 
-                          asChild 
-                          isActive={location.pathname === "/admin/dashboard"}
-                          className={cn(
-                            "transition-colors",
-                            location.pathname === "/admin/dashboard" 
-                              ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                              : "hover:bg-accent/10 hover:text-primary"
-                          )}
-                        >
-                          <NavLink to="/admin/dashboard">
-                            <LayoutDashboard className="h-5 w-5" />
-                            <span className="text-base">Dashboard</span>
-                          </NavLink>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
+                  {menuTree
+                    .filter(menu => menu.is_active && isMenuItemAllowed(menu.slug))
+                    .map(menu => {
+                      const Icon = getIcon(menu.icon);
+                      const hasChildren = menu.children && menu.children.length > 0;
+                      const isExpanded = expandedMenus.has(menu.id);
+                      const isActive = location.pathname === menu.route;
 
-                      {/* Data Cross - Apenas para Super Admin e Admin */}
-                      {isMenuItemAllowed('data_cross') && (
-                        <SidebarMenuItem>
-                          <SidebarMenuButton 
-                            asChild 
-                            isActive={location.pathname === "/admin/advanced-dashboard"}
+                      // Se tem submenus
+                      if (hasChildren) {
+                        return (
+                          <Collapsible
+                            key={menu.id}
+                            open={isExpanded}
+                            onOpenChange={() => toggleMenu(menu.id)}
+                          >
+                            <SidebarMenuItem>
+                              <CollapsibleTrigger asChild>
+                                <SidebarMenuButton
+                                  className={cn(
+                                    "transition-colors w-full",
+                                    isActive
+                                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                                      : "hover:bg-accent/10 hover:text-primary"
+                                  )}
+                                >
+                                  <Icon className="h-5 w-5" />
+                                  <span className="text-base">{menu.label}</span>
+                                  <ChevronRight
+                                    className={cn(
+                                      "ml-auto h-4 w-4 transition-transform",
+                                      isExpanded && "rotate-90"
+                                    )}
+                                  />
+                                </SidebarMenuButton>
+                              </CollapsibleTrigger>
+                            </SidebarMenuItem>
+                            <CollapsibleContent>
+                              <SidebarMenu className="ml-4 mt-1 space-y-1">
+                                {menu.children
+                                  ?.filter(child => child.is_active && isMenuItemAllowed(child.slug))
+                                  .map(child => {
+                                    const ChildIcon = getIcon(child.icon);
+                                    const isChildActive = location.pathname === child.route;
+                                    const showBadge = child.slug === 'approvals' && pendingCount > 0;
+
+                                    return (
+                                      <SidebarMenuItem key={child.id}>
+                                        <SidebarMenuButton
+                                          asChild
+                                          isActive={isChildActive}
+                                          className={cn(
+                                            "transition-colors",
+                                            isChildActive
+                                              ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                                              : "hover:bg-accent/10 hover:text-primary"
+                                          )}
+                                        >
+                                          <NavLink to={child.route} onClick={() => setIsNavigating(true)}>
+                                            <ChildIcon className="h-4 w-4" />
+                                            <span className="text-sm">{child.label}</span>
+                                            {showBadge && (
+                                              <Badge className="ml-auto bg-destructive text-destructive-foreground text-xs">
+                                                {pendingCount}
+                                              </Badge>
+                                            )}
+                                          </NavLink>
+                                        </SidebarMenuButton>
+                                      </SidebarMenuItem>
+                                    );
+                                  })}
+                              </SidebarMenu>
+                            </CollapsibleContent>
+                          </Collapsible>
+                        );
+                      }
+
+                      // Menu sem submenus
+                      const showBadge = menu.slug === 'approvals' && pendingCount > 0;
+                      
+                      return (
+                        <SidebarMenuItem key={menu.id}>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={isActive}
+                            disabled={isNavigating}
                             className={cn(
                               "transition-colors",
-                              location.pathname === "/admin/advanced-dashboard" 
-                                ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                              isActive
+                                ? "bg-primary text-primary-foreground hover:bg-primary/90"
                                 : "hover:bg-accent/10 hover:text-primary"
                             )}
                           >
-                            <NavLink to="/admin/advanced-dashboard">
-                              <LayoutDashboard className="h-5 w-5" />
-                              <span className="text-base">Data Cross</span>
+                            <NavLink to={menu.route} onClick={() => setIsNavigating(true)}>
+                              <Icon className="h-5 w-5" />
+                              <span className="text-base">{menu.label}</span>
+                              {showBadge && (
+                                <Badge className="ml-auto bg-destructive text-destructive-foreground text-xs">
+                                  {pendingCount}
+                                </Badge>
+                              )}
                             </NavLink>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
-                      )}
-                    </>
-                  )}
-
-                  {/* Ranking - Para Designer, Vendedor, Admin e Super Admin */}
-                  {(showAll || isAdmin || isDesigner || isSalesperson) && isMenuItemAllowed('ranking') && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton 
-                        asChild 
-                        isActive={location.pathname === "/admin/production-ranking"}
-                        className={cn(
-                          "transition-colors",
-                          location.pathname === "/admin/production-ranking" 
-                            ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                            : "hover:bg-accent/10 hover:text-primary"
-                        )}
-                      >
-                        <NavLink to="/admin/production-ranking">
-                          <Trophy className="h-5 w-5" />
-                          <span className="text-base">Ranking</span>
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-
-                  {showAdminLinks && isMenuItemAllowed('segments') && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton 
-                        asChild 
-                        isActive={location.pathname === "/admin/segments"}
-                        disabled={isNavigating}
-                        className={cn(
-                          "transition-colors",
-                          location.pathname === "/admin/segments" 
-                            ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                            : "hover:bg-accent/10 hover:text-primary"
-                        )}
-                      >
-                        <NavLink to="/admin/segments" onClick={() => setIsNavigating(true)}>
-                          <Tag className="h-5 w-5" />
-                          <span className="text-base">Segmentos</span>
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-
-                  {showAdminLinks && isMenuItemAllowed('models') && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton 
-                        asChild 
-                        isActive={location.pathname === "/admin/models"}
-                        disabled={isNavigating}
-                        className={cn(
-                          "transition-colors",
-                          location.pathname === "/admin/models" 
-                            ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                            : "hover:bg-accent/10 hover:text-primary"
-                        )}
-                      >
-                        <NavLink to="/admin/models" onClick={() => setIsNavigating(true)}>
-                          <Tag className="h-5 w-5" />
-                          <span className="text-base">Modelos</span>
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-
-                  {showAdminLinks && isMenuItemAllowed('campaigns') && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton 
-                        asChild 
-                        isActive={location.pathname === "/admin/campaigns"}
-                        disabled={isNavigating}
-                        className={cn(
-                          "transition-colors",
-                          location.pathname === "/admin/campaigns" 
-                            ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                            : "hover:bg-accent/10 hover:text-primary"
-                        )}
-                      >
-                        <NavLink to="/admin/campaigns" onClick={() => setIsNavigating(true)}>
-                          <Megaphone className="h-5 w-5" />
-                          <span className="text-base">Campanhas</span>
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-
-                  {showAdminLinks && isMenuItemAllowed('leads') && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton 
-                        asChild 
-                        isActive={location.pathname === "/admin/leads"}
-                        disabled={isNavigating}
-                        className={cn(
-                          "transition-colors",
-                          location.pathname === "/admin/leads" 
-                            ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                            : "hover:bg-accent/10 hover:text-primary"
-                        )}
-                      >
-                        <NavLink to="/admin/leads" onClick={() => setIsNavigating(true)}>
-                          <Users className="h-5 w-5" />
-                          <span className="text-base">Leads</span>
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-
-                  {showAdminLinks && isMenuItemAllowed('workflows') && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton 
-                        asChild 
-                        isActive={location.pathname === "/admin/workflows"}
-                        disabled={isNavigating}
-                        className={cn(
-                          "transition-colors",
-                          location.pathname === "/admin/workflows" 
-                            ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                            : "hover:bg-accent/10 hover:text-primary"
-                        )}
-                      >
-                        <NavLink to="/admin/workflows" onClick={() => setIsNavigating(true)}>
-                          <Workflow className="h-5 w-5" />
-                          <span className="text-base">Workflows</span>
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-
-                  {showAdminLinks && isMenuItemAllowed('ab_tests') && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton 
-                        asChild 
-                        isActive={location.pathname === "/admin/ab-tests"}
-                        disabled={isNavigating}
-                        className={cn(
-                          "transition-colors",
-                          location.pathname === "/admin/ab-tests" 
-                            ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                            : "hover:bg-accent/10 hover:text-primary"
-                        )}
-                      >
-                        <NavLink to="/admin/ab-tests" onClick={() => setIsNavigating(true)}>
-                          <FlaskConical className="h-5 w-5" />
-                          <span className="text-base">Testes A/B</span>
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-
-                  {/* Criação - Para Designer, Vendedor, Admin e Super Admin */}
-                  {(showAll || isAdmin || isSalesperson || isDesigner) && isMenuItemAllowed('creation') && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton 
-                        asChild 
-                        isActive={location.pathname === "/admin/creation"}
-                        disabled={isNavigating}
-                        className={cn(
-                          "transition-colors",
-                          location.pathname === "/admin/creation" 
-                            ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                            : "hover:bg-accent/10 hover:text-primary"
-                        )}
-                      >
-                        <NavLink to="/admin/creation" onClick={() => setIsNavigating(true)}>
-                          <Palette className="h-5 w-5" />
-                          <span className="text-base">Criação</span>
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-
-                  {/* Pedidos - Para Vendedor, Admin e Super Admin (não para Designer) */}
-                  {(showAll || isAdmin || isSalesperson) && !isDesigner && isMenuItemAllowed('orders') && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton 
-                        asChild 
-                        isActive={location.pathname === "/admin/orders"}
-                        disabled={isNavigating}
-                        className={cn(
-                          "transition-colors",
-                          location.pathname === "/admin/orders" 
-                            ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                            : "hover:bg-accent/10 hover:text-primary"
-                        )}
-                      >
-                        <NavLink to="/admin/orders" onClick={() => setIsNavigating(true)}>
-                          <ShoppingBag className="h-5 w-5" />
-                          <span className="text-base">Pedidos</span>
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-
-                  {/* Aprovações - Apenas para Admins */}
-                  {showAdminLinks && isMenuItemAllowed('approvals') && (
-                    <ApprovalsMenuItem 
-                      isActive={location.pathname === "/admin/approvals"}
-                      isNavigating={isNavigating}
-                      setIsNavigating={setIsNavigating}
-                      pendingCount={pendingCount}
-                    />
-                  )}
-
-                  {showAdminLinks && isMenuItemAllowed('api') && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton 
-                        asChild 
-                        isActive={location.pathname === "/admin/api"}
-                        disabled={isNavigating}
-                        className={cn(
-                          "transition-colors",
-                          location.pathname === "/admin/api" 
-                            ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                            : "hover:bg-accent/10 hover:text-primary"
-                        )}
-                      >
-                        <NavLink to="/admin/api" onClick={() => setIsNavigating(true)}>
-                          <Code className="h-5 w-5" />
-                          <span className="text-base">API</span>
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-
-                  {showAll && isMenuItemAllowed('settings') && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton 
-                        asChild 
-                        isActive={location.pathname === "/admin/settings"}
-                        disabled={isNavigating}
-                        className={cn(
-                          "transition-colors",
-                          location.pathname === "/admin/settings" 
-                            ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                            : "hover:bg-accent/10 hover:text-primary"
-                        )}
-                      >
-                        <NavLink to="/admin/settings" onClick={() => setIsNavigating(true)}>
-                          <Settings className="h-5 w-5" />
-                          <span className="text-base">Configurações</span>
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-
-                  {(showAll || isSalesperson) && isMenuItemAllowed('themes') && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton 
-                        asChild 
-                        isActive={location.pathname === "/admin/temas"}
-                        disabled={isNavigating}
-                        className={cn(
-                          "transition-colors",
-                          location.pathname === "/admin/temas" 
-                            ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                            : "hover:bg-accent/10 hover:text-primary"
-                        )}
-                      >
-                        <NavLink to="/admin/temas" onClick={() => setIsNavigating(true)}>
-                          <PaintBucket className="h-5 w-5" />
-                          <span className="text-base">Temas</span>
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
+                      );
+                    })}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>

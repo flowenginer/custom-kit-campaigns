@@ -15,6 +15,7 @@ import { UrgentReasonsManager } from "@/components/admin/UrgentReasonsManager";
 import { KanbanVisibilityManager } from "@/components/admin/KanbanVisibilityManager";
 import { MenuVisibilityManager } from "@/components/admin/MenuVisibilityManager";
 import { UniformTypesManager } from "@/components/admin/UniformTypesManager";
+import { MenuStructureManager } from "@/components/admin/MenuStructureManager";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AppRole } from "@/hooks/useUserRole";
@@ -419,11 +420,12 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="users" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="users">Usuários</TabsTrigger>
           <TabsTrigger value="uniform-types">Tipos de Uniforme</TabsTrigger>
           <TabsTrigger value="kanban">Visibilidade Kanban</TabsTrigger>
           <TabsTrigger value="menu">Visibilidade Menu</TabsTrigger>
+          <TabsTrigger value="menu-structure">Estrutura Menu</TabsTrigger>
           <TabsTrigger value="password">Senha</TabsTrigger>
           <TabsTrigger value="scripts"><Code2 className="w-4 h-4 mr-2 inline" />Scripts</TabsTrigger>
           <TabsTrigger value="urgent-reasons"><AlertCircle className="w-4 h-4 mr-2 inline" />Motivos Urgência</TabsTrigger>
@@ -768,6 +770,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         {/* TAB: VISIBILIDADE MENU */}
         <TabsContent value="menu" className="space-y-4">
           <MenuVisibilityManager />
+        </TabsContent>
+        
+        {/* TAB: ESTRUTURA DE MENU */}
+        <TabsContent value="menu-structure" className="space-y-4">
+          <MenuStructureManager />
         </TabsContent>
         
         {/* TAB: MOTIVOS DE URGÊNCIA */}
