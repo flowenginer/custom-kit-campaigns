@@ -10,6 +10,7 @@ interface UserRoleRow {
 export const useUserRole = () => {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [allowedKanbanColumns, setAllowedKanbanColumns] = useState<string[]>([]);
+  const [allowedMenuItems, setAllowedMenuItems] = useState<string[]>([]); // 🆕 NOVO
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -39,21 +40,29 @@ export const useUserRole = () => {
                           userRoles.includes('designer') ? 'designer' :
                           userRoles.includes('salesperson') ? 'salesperson' : 'viewer';
 
-        // Buscar configuração padrão do papel
+        // Buscar configuração padrão do papel (Kanban)
         const { data: roleDefaults } = await supabase
           .from('role_kanban_defaults')
           .select('allowed_columns')
           .eq('role', primaryRole)
           .maybeSingle();
 
+        // 🆕 Buscar configuração padrão de menu
+        const { data: menuDefaults } = await supabase
+          .from('role_menu_defaults')
+          .select('allowed_menu_items')
+          .eq('role', primaryRole)
+          .maybeSingle();
+
         // Verificar se o usuário tem configuração personalizada
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('allowed_kanban_columns')
+          .select('allowed_kanban_columns, allowed_menu_items')
           .eq('id', user.id)
           .maybeSingle();
 
         let columns: string[];
+        let menuItems: string[];
 
         // Se o usuário tem configuração personalizada (não null e não vazia), usar ela
         // Caso contrário, usar o padrão do papel
@@ -67,8 +76,21 @@ export const useUserRole = () => {
           // Fallback completo
           columns = ['pending', 'in_progress', 'awaiting_approval', 'changes_requested', 'approved', 'completed'];
         }
+
+        // 🆕 Configurar itens de menu
+        if (profileData?.allowed_menu_items && 
+            Array.isArray(profileData.allowed_menu_items) && 
+            profileData.allowed_menu_items.length > 0) {
+          menuItems = profileData.allowed_menu_items as string[];
+        } else if (menuDefaults?.allowed_menu_items) {
+          menuItems = menuDefaults.allowed_menu_items as string[];
+        } else {
+          // Fallback completo
+          menuItems = ['dashboard', 'creation', 'ranking'];
+        }
         
         setAllowedKanbanColumns(columns);
+        setAllowedMenuItems(menuItems); // 🆕 NOVO
       } else if (error) {
         console.error('Error fetching roles:', error);
       }
@@ -81,7 +103,8 @@ export const useUserRole = () => {
 
   return {
     roles,
-    allowedKanbanColumns, // 🆕 NOVO RETORNO
+    allowedKanbanColumns,
+    allowedMenuItems, // 🆕 NOVO RETORNO
     isLoading,
     isSuperAdmin: roles.includes('super_admin'),
     isAdmin: roles.includes('admin') || roles.includes('super_admin'),

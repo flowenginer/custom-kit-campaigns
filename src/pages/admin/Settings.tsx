@@ -13,6 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { UserPlus, Trash2, Edit, KeyRound, Loader2, Code2, AlertCircle } from "lucide-react";
 import { UrgentReasonsManager } from "@/components/admin/UrgentReasonsManager";
 import { KanbanVisibilityManager } from "@/components/admin/KanbanVisibilityManager";
+import { MenuVisibilityManager } from "@/components/admin/MenuVisibilityManager";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AppRole } from "@/hooks/useUserRole";
@@ -417,9 +418,10 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="users" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="users">Usuários</TabsTrigger>
           <TabsTrigger value="kanban">Visibilidade Kanban</TabsTrigger>
+          <TabsTrigger value="menu">Visibilidade Menu</TabsTrigger>
           <TabsTrigger value="password">Senha</TabsTrigger>
           <TabsTrigger value="scripts"><Code2 className="w-4 h-4 mr-2 inline" />Scripts</TabsTrigger>
           <TabsTrigger value="urgent-reasons"><AlertCircle className="w-4 h-4 mr-2 inline" />Motivos Urgência</TabsTrigger>
@@ -754,6 +756,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+        
+        {/* TAB: VISIBILIDADE MENU */}
+        <TabsContent value="menu" className="space-y-4">
+          <MenuVisibilityManager />
         </TabsContent>
         
         {/* TAB: MOTIVOS DE URGÊNCIA */}

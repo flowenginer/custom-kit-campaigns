@@ -121,7 +121,7 @@ serve(async (req) => {
 
     // ATUALIZAR ROLES
     if (action === 'update_roles' && req.method === 'PATCH') {
-      const { user_id, roles, allowed_kanban_columns, full_name } = await req.json();
+      const { user_id, roles, allowed_kanban_columns, allowed_menu_items, full_name } = await req.json();
 
       if (!user_id || !roles) {
         throw new Error('user_id e roles são obrigatórios');
@@ -146,11 +146,15 @@ serve(async (req) => {
         .from('user_roles')
         .insert(roleInserts);
 
-      // 🆕 ATUALIZAR PERFIL (nome + colunas permitidas)
+      // 🆕 ATUALIZAR PERFIL (nome + colunas permitidas + itens de menu)
       const profileUpdate: Record<string, any> = {};
       
       if (allowed_kanban_columns !== undefined) {
         profileUpdate.allowed_kanban_columns = allowed_kanban_columns;
+      }
+
+      if (allowed_menu_items !== undefined) {
+        profileUpdate.allowed_menu_items = allowed_menu_items;
       }
       
       if (full_name !== undefined) {
