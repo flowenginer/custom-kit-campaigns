@@ -19,6 +19,7 @@ import { ComponentRenderer } from "@/components/page-builder/ComponentRenderer";
 import { PageLayout } from "@/types/page-builder";
 import { WorkflowStep } from "@/types/workflow";
 import { useGlobalCampaignOverrides, useCampaignVisualOverrides } from "@/hooks/useCampaignVisualOverrides";
+import { detectDevice } from "@/lib/deviceDetection";
 
 // Importar imagens dos uniformes
 import mangaCurtaImg from "@/assets/uniforms/manga-curta.png";
@@ -553,6 +554,7 @@ export default function Campaign() {
     try {
       const leadGroupId = generateLeadGroupId();
       const attemptNumber = await getAttemptNumber(leadGroupId);
+      const deviceInfo = detectDevice();
 
       const leadData = {
         campaign_id: campaign.id,
@@ -583,6 +585,10 @@ export default function Campaign() {
         utm_content: utmParams.utm_content,
         is_online: true,
         last_seen: new Date().toISOString(),
+        device_type: deviceInfo.deviceType,
+        device_os: deviceInfo.deviceOS,
+        device_browser: deviceInfo.deviceBrowser,
+        user_agent: deviceInfo.userAgent,
         // Definir needs_logo e logo_action baseado na escolha de upload quando pedido completo
         ...(completed && {
           needs_logo: uploadChoice === 'depois',
