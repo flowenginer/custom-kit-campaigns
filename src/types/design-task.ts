@@ -47,6 +47,7 @@ export interface DesignTask {
   customer_email?: string;
   customer_phone?: string;
   campaign_name?: string;
+  segment_tag?: string;
   quantity?: number;
   customization_data?: any;
   designer_name?: string;
