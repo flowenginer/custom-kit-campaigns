@@ -74,7 +74,7 @@ export function UtmBreakdownDialog({
         .from("funnel_events")
         .select("session_id, utm_source, utm_medium, utm_campaign")
         .eq("campaign_id", campaignId)
-        .eq("event_type", "visit");
+        .in("event_type", ["visit", "campaign_visit"]);
 
       if (visitsError) throw visitsError;
 
