@@ -76,6 +76,8 @@ export default function CampaignVisualEditor() {
           campaign_id: id!,
           step_id: selectedStep,
           overrides: overrides as any,
+        }, {
+          onConflict: 'campaign_id,step_id'
         });
 
       if (error) throw error;
