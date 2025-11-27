@@ -1,7 +1,8 @@
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { TaskCard } from "./TaskCard";
 import { DesignTask, TaskStatus } from "@/types/design-task";
-import { LucideIcon } from "lucide-react";
+import { LucideIcon, ChevronsUp, ChevronsDown } from "lucide-react";
 import { useDroppable } from '@dnd-kit/core';
 import { cn } from "@/lib/utils";
 import { CardFontSizes } from "@/hooks/useCardFontSizes";
@@ -17,6 +18,10 @@ interface KanbanColumnProps {
   showAcceptButton?: boolean;
   currentUserId?: string;
   onTaskAccepted?: () => void;
+  collapsedCards: Set<string>;
+  onToggleCard: (cardId: string) => void;
+  onCollapseAll: () => void;
+  onExpandAll: () => void;
 }
 export const KanbanColumn = ({
   title,
@@ -28,7 +33,11 @@ export const KanbanColumn = ({
   fontSizes,
   showAcceptButton,
   currentUserId,
-  onTaskAccepted
+  onTaskAccepted,
+  collapsedCards,
+  onToggleCard,
+  onCollapseAll,
+  onExpandAll
 }: KanbanColumnProps) => {
   const {
     setNodeRef,
@@ -63,9 +72,29 @@ export const KanbanColumn = ({
             <Icon className={cn("h-4 w-4", iconClass)} />
             <h3 className={cn("font-semibold text-xl", headerTextClass)}>{title}</h3>
           </div>
-          <Badge variant="secondary" className={badgeClass}>
-            {tasks.length}
-          </Badge>
+          <div className="flex items-center gap-1">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-7 w-7"
+              onClick={onCollapseAll}
+              title="Recolher todos"
+            >
+              <ChevronsUp className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-7 w-7"
+              onClick={onExpandAll}
+              title="Expandir todos"
+            >
+              <ChevronsDown className="h-4 w-4" />
+            </Button>
+            <Badge variant="secondary" className={badgeClass}>
+              {tasks.length}
+            </Badge>
+          </div>
         </div>
 
         <div className="space-y-3">
@@ -78,6 +107,8 @@ export const KanbanColumn = ({
               showAcceptButton={showAcceptButton}
               currentUserId={currentUserId}
               onTaskAccepted={onTaskAccepted}
+              isCollapsed={collapsedCards.has(task.id)}
+              onToggleCollapse={() => onToggleCard(task.id)}
             />
           ))}
           
