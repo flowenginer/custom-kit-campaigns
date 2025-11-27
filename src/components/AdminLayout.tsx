@@ -224,7 +224,8 @@ const AdminLayout = () => {
     isAdmin,
     isDesigner,
     isSalesperson,
-    isLoading
+    isLoading,
+    allowedMenuItems, // 🆕 NOVO
   } = useUserRole();
   
   const { currentTheme, changeTheme } = useGlobalTheme();
@@ -303,6 +304,11 @@ const AdminLayout = () => {
   const showSalespersonLinks = showAll || isSalesperson;
   const showDashboard = showAll || isAdmin || isDesigner; // Exclui vendedor
 
+  // 🆕 Helper function para verificar se item está permitido
+  const isMenuItemAllowed = (itemId: string): boolean => {
+    return allowedMenuItems.includes(itemId);
+  };
+
   return (
     <TooltipProvider>
       <SidebarProvider defaultOpen={true}>
@@ -317,7 +323,7 @@ const AdminLayout = () => {
             <SidebarGroup>
               <SidebarGroupContent>
                 <SidebarMenu className="space-y-1">
-                  {showDashboard && !isDesigner && (
+                  {showDashboard && !isDesigner && isMenuItemAllowed('dashboard') && (
                     <>
                       <SidebarMenuItem>
                         <SidebarMenuButton 
@@ -338,28 +344,30 @@ const AdminLayout = () => {
                       </SidebarMenuItem>
 
                       {/* Data Cross - Apenas para Super Admin e Admin */}
-                      <SidebarMenuItem>
-                        <SidebarMenuButton 
-                          asChild 
-                          isActive={location.pathname === "/admin/advanced-dashboard"}
-                          className={cn(
-                            "transition-colors",
-                            location.pathname === "/admin/advanced-dashboard" 
-                              ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                              : "hover:bg-accent/10 hover:text-primary"
-                          )}
-                        >
-                          <NavLink to="/admin/advanced-dashboard">
-                            <LayoutDashboard className="h-5 w-5" />
-                            <span className="text-base">Data Cross</span>
-                          </NavLink>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
+                      {isMenuItemAllowed('data_cross') && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton 
+                            asChild 
+                            isActive={location.pathname === "/admin/advanced-dashboard"}
+                            className={cn(
+                              "transition-colors",
+                              location.pathname === "/admin/advanced-dashboard" 
+                                ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                                : "hover:bg-accent/10 hover:text-primary"
+                            )}
+                          >
+                            <NavLink to="/admin/advanced-dashboard">
+                              <LayoutDashboard className="h-5 w-5" />
+                              <span className="text-base">Data Cross</span>
+                            </NavLink>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
                     </>
                   )}
 
                   {/* Ranking - Para Designer, Vendedor, Admin e Super Admin */}
-                  {(showAll || isAdmin || isDesigner || isSalesperson) && (
+                  {(showAll || isAdmin || isDesigner || isSalesperson) && isMenuItemAllowed('ranking') && (
                     <SidebarMenuItem>
                       <SidebarMenuButton 
                         asChild 
@@ -379,126 +387,134 @@ const AdminLayout = () => {
                     </SidebarMenuItem>
                   )}
 
-                  {showAdminLinks && (
-                    <>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton 
-                          asChild 
-                          isActive={location.pathname === "/admin/segments"}
-                          disabled={isNavigating}
-                          className={cn(
-                            "transition-colors",
-                            location.pathname === "/admin/segments" 
-                              ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                              : "hover:bg-accent/10 hover:text-primary"
-                          )}
-                        >
-                          <NavLink to="/admin/segments" onClick={() => setIsNavigating(true)}>
-                            <Tag className="h-5 w-5" />
-                            <span className="text-base">Segmentos</span>
-                          </NavLink>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
+                  {showAdminLinks && isMenuItemAllowed('segments') && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton 
+                        asChild 
+                        isActive={location.pathname === "/admin/segments"}
+                        disabled={isNavigating}
+                        className={cn(
+                          "transition-colors",
+                          location.pathname === "/admin/segments" 
+                            ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                            : "hover:bg-accent/10 hover:text-primary"
+                        )}
+                      >
+                        <NavLink to="/admin/segments" onClick={() => setIsNavigating(true)}>
+                          <Tag className="h-5 w-5" />
+                          <span className="text-base">Segmentos</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
 
-                      <SidebarMenuItem>
-                        <SidebarMenuButton 
-                          asChild 
-                          isActive={location.pathname === "/admin/models"}
-                          disabled={isNavigating}
-                          className={cn(
-                            "transition-colors",
-                            location.pathname === "/admin/models" 
-                              ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                              : "hover:bg-accent/10 hover:text-primary"
-                          )}
-                        >
-                          <NavLink to="/admin/models" onClick={() => setIsNavigating(true)}>
-                            <Tag className="h-5 w-5" />
-                            <span className="text-base">Modelos</span>
-                          </NavLink>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
+                  {showAdminLinks && isMenuItemAllowed('models') && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton 
+                        asChild 
+                        isActive={location.pathname === "/admin/models"}
+                        disabled={isNavigating}
+                        className={cn(
+                          "transition-colors",
+                          location.pathname === "/admin/models" 
+                            ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                            : "hover:bg-accent/10 hover:text-primary"
+                        )}
+                      >
+                        <NavLink to="/admin/models" onClick={() => setIsNavigating(true)}>
+                          <Tag className="h-5 w-5" />
+                          <span className="text-base">Modelos</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
 
-                      <SidebarMenuItem>
-                        <SidebarMenuButton 
-                          asChild 
-                          isActive={location.pathname === "/admin/campaigns"}
-                          disabled={isNavigating}
-                          className={cn(
-                            "transition-colors",
-                            location.pathname === "/admin/campaigns" 
-                              ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                              : "hover:bg-accent/10 hover:text-primary"
-                          )}
-                        >
-                          <NavLink to="/admin/campaigns" onClick={() => setIsNavigating(true)}>
-                            <Megaphone className="h-5 w-5" />
-                            <span className="text-base">Campanhas</span>
-                          </NavLink>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
+                  {showAdminLinks && isMenuItemAllowed('campaigns') && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton 
+                        asChild 
+                        isActive={location.pathname === "/admin/campaigns"}
+                        disabled={isNavigating}
+                        className={cn(
+                          "transition-colors",
+                          location.pathname === "/admin/campaigns" 
+                            ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                            : "hover:bg-accent/10 hover:text-primary"
+                        )}
+                      >
+                        <NavLink to="/admin/campaigns" onClick={() => setIsNavigating(true)}>
+                          <Megaphone className="h-5 w-5" />
+                          <span className="text-base">Campanhas</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
 
-                      <SidebarMenuItem>
-                        <SidebarMenuButton 
-                          asChild 
-                          isActive={location.pathname === "/admin/leads"}
-                          disabled={isNavigating}
-                          className={cn(
-                            "transition-colors",
-                            location.pathname === "/admin/leads" 
-                              ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                              : "hover:bg-accent/10 hover:text-primary"
-                          )}
-                        >
-                          <NavLink to="/admin/leads" onClick={() => setIsNavigating(true)}>
-                            <Users className="h-5 w-5" />
-                            <span className="text-base">Leads</span>
-                          </NavLink>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
+                  {showAdminLinks && isMenuItemAllowed('leads') && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton 
+                        asChild 
+                        isActive={location.pathname === "/admin/leads"}
+                        disabled={isNavigating}
+                        className={cn(
+                          "transition-colors",
+                          location.pathname === "/admin/leads" 
+                            ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                            : "hover:bg-accent/10 hover:text-primary"
+                        )}
+                      >
+                        <NavLink to="/admin/leads" onClick={() => setIsNavigating(true)}>
+                          <Users className="h-5 w-5" />
+                          <span className="text-base">Leads</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
 
-                      <SidebarMenuItem>
-                        <SidebarMenuButton 
-                          asChild 
-                          isActive={location.pathname === "/admin/workflows"}
-                          disabled={isNavigating}
-                          className={cn(
-                            "transition-colors",
-                            location.pathname === "/admin/workflows" 
-                              ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                              : "hover:bg-accent/10 hover:text-primary"
-                          )}
-                        >
-                          <NavLink to="/admin/workflows" onClick={() => setIsNavigating(true)}>
-                            <Workflow className="h-5 w-5" />
-                            <span className="text-base">Workflows</span>
-                          </NavLink>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
+                  {showAdminLinks && isMenuItemAllowed('workflows') && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton 
+                        asChild 
+                        isActive={location.pathname === "/admin/workflows"}
+                        disabled={isNavigating}
+                        className={cn(
+                          "transition-colors",
+                          location.pathname === "/admin/workflows" 
+                            ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                            : "hover:bg-accent/10 hover:text-primary"
+                        )}
+                      >
+                        <NavLink to="/admin/workflows" onClick={() => setIsNavigating(true)}>
+                          <Workflow className="h-5 w-5" />
+                          <span className="text-base">Workflows</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
 
-                      <SidebarMenuItem>
-                        <SidebarMenuButton 
-                          asChild 
-                          isActive={location.pathname === "/admin/ab-tests"}
-                          disabled={isNavigating}
-                          className={cn(
-                            "transition-colors",
-                            location.pathname === "/admin/ab-tests" 
-                              ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                              : "hover:bg-accent/10 hover:text-primary"
-                          )}
-                        >
-                          <NavLink to="/admin/ab-tests" onClick={() => setIsNavigating(true)}>
-                            <FlaskConical className="h-5 w-5" />
-                            <span className="text-base">Testes A/B</span>
-                          </NavLink>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    </>
+                  {showAdminLinks && isMenuItemAllowed('ab_tests') && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton 
+                        asChild 
+                        isActive={location.pathname === "/admin/ab-tests"}
+                        disabled={isNavigating}
+                        className={cn(
+                          "transition-colors",
+                          location.pathname === "/admin/ab-tests" 
+                            ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                            : "hover:bg-accent/10 hover:text-primary"
+                        )}
+                      >
+                        <NavLink to="/admin/ab-tests" onClick={() => setIsNavigating(true)}>
+                          <FlaskConical className="h-5 w-5" />
+                          <span className="text-base">Testes A/B</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
                   )}
 
                   {/* Criação - Para Designer, Vendedor, Admin e Super Admin */}
-                  {(showAll || isAdmin || isSalesperson || isDesigner) && (
+                  {(showAll || isAdmin || isSalesperson || isDesigner) && isMenuItemAllowed('creation') && (
                     <SidebarMenuItem>
                       <SidebarMenuButton 
                         asChild 
@@ -520,7 +536,7 @@ const AdminLayout = () => {
                   )}
 
                   {/* Pedidos - Para Vendedor, Admin e Super Admin (não para Designer) */}
-                  {(showAll || isAdmin || isSalesperson) && !isDesigner && (
+                  {(showAll || isAdmin || isSalesperson) && !isDesigner && isMenuItemAllowed('orders') && (
                     <SidebarMenuItem>
                       <SidebarMenuButton 
                         asChild 
@@ -542,7 +558,7 @@ const AdminLayout = () => {
                   )}
 
                   {/* Aprovações - Apenas para Admins */}
-                  {showAdminLinks && (
+                  {showAdminLinks && isMenuItemAllowed('approvals') && (
                     <ApprovalsMenuItem 
                       isActive={location.pathname === "/admin/approvals"}
                       isNavigating={isNavigating}
@@ -551,7 +567,7 @@ const AdminLayout = () => {
                     />
                   )}
 
-                  {showAdminLinks && (
+                  {showAdminLinks && isMenuItemAllowed('api') && (
                     <SidebarMenuItem>
                       <SidebarMenuButton 
                         asChild 
@@ -572,7 +588,7 @@ const AdminLayout = () => {
                     </SidebarMenuItem>
                   )}
 
-                  {showAll && (
+                  {showAll && isMenuItemAllowed('settings') && (
                     <SidebarMenuItem>
                       <SidebarMenuButton 
                         asChild 
@@ -593,7 +609,7 @@ const AdminLayout = () => {
                     </SidebarMenuItem>
                   )}
 
-                  {(showAll || isSalesperson) && (
+                  {(showAll || isSalesperson) && isMenuItemAllowed('themes') && (
                     <SidebarMenuItem>
                       <SidebarMenuButton 
                         asChild 

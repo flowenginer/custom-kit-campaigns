@@ -901,6 +901,7 @@ export type Database = {
       profiles: {
         Row: {
           allowed_kanban_columns: Json | null
+          allowed_menu_items: string[] | null
           avatar_url: string | null
           created_at: string | null
           full_name: string | null
@@ -909,6 +910,7 @@ export type Database = {
         }
         Insert: {
           allowed_kanban_columns?: Json | null
+          allowed_menu_items?: string[] | null
           avatar_url?: string | null
           created_at?: string | null
           full_name?: string | null
@@ -917,6 +919,7 @@ export type Database = {
         }
         Update: {
           allowed_kanban_columns?: Json | null
+          allowed_menu_items?: string[] | null
           avatar_url?: string | null
           created_at?: string | null
           full_name?: string | null
@@ -942,6 +945,30 @@ export type Database = {
         }
         Update: {
           allowed_columns?: string[]
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      role_menu_defaults: {
+        Row: {
+          allowed_menu_items: string[] | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          allowed_menu_items?: string[] | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          allowed_menu_items?: string[] | null
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string | null
