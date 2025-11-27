@@ -8,6 +8,7 @@ import { Shirt, User, ChevronDown, ChevronUp } from "lucide-react";
 import { ElapsedTimer } from "./ElapsedTimer";
 import { CardFontSizes } from "@/hooks/useCardFontSizes";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
+import { useState } from "react";
 
 interface TaskCardProps {
   task: DesignTask;
@@ -38,6 +39,8 @@ const getPriorityConfig = (priority: string) => {
 };
 
 export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onToggleCollapse, onOrderNumberUpdate }: TaskCardProps) => {
+  const [localOrderNumber, setLocalOrderNumber] = useState(task.order_number || '');
+  
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task.id,
     data: { task },
@@ -51,6 +54,12 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
     : undefined;
 
   const priorityConfig = getPriorityConfig(task.priority);
+
+  const handleOrderNumberBlur = () => {
+    if (onOrderNumberUpdate && localOrderNumber !== task.order_number) {
+      onOrderNumberUpdate(task.id, localOrderNumber);
+    }
+  };
 
   return (
     <div ref={setNodeRef} style={style} {...listeners} {...attributes}>
@@ -82,9 +91,9 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
                     <input
                       type="text"
                       placeholder="Digite nº..."
-                      value={task.order_number || ''}
-                      onChange={(e) => onOrderNumberUpdate(task.id, e.target.value)}
-                      onBlur={(e) => onOrderNumberUpdate(task.id, e.target.value)}
+                      value={localOrderNumber}
+                      onChange={(e) => setLocalOrderNumber(e.target.value)}
+                      onBlur={handleOrderNumberBlur}
                       className="border border-gray-300 rounded px-2 py-0.5 text-xs w-24 text-center focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                   </div>
