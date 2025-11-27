@@ -230,10 +230,19 @@ export default function Campaign() {
         // Silently fail if beacon doesn't work
       });
 
-      // Trigger webhook for lead abandoned (fire-and-forget)
-      triggerWebhooks('lead_abandoned').catch(() => {
-        // Silently fail
-      });
+      // Trigger webhook for lead abandoned using fetch with keepalive
+      fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-event-webhooks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({
+          event_type: 'lead_abandoned',
+          session_id: sessionId,
+        }),
+        keepalive: true,
+      }).catch(() => {});
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
@@ -349,7 +358,7 @@ export default function Campaign() {
     setSessionId(sid);
   }, []);
 
-  // Heartbeat para manter status online
+  // Heartbeat para manter status online e detectar leads offline
   useEffect(() => {
     if (!leadId) return;
 
@@ -371,6 +380,22 @@ export default function Campaign() {
 
     return () => clearInterval(interval);
   }, [leadId]);
+
+  // Criar lead assim que nome E telefone são preenchidos
+  useEffect(() => {
+    if (!campaign || !sessionId) return;
+    
+    const phoneDigits = customerData.phone.replace(/\D/g, '');
+    const hasValidNameAndPhone = 
+      customerData.name.trim() && 
+      phoneDigits.length >= 10 && 
+      phoneDigits.length <= 11;
+
+    if (hasValidNameAndPhone && !leadId) {
+      // Criar lead imediatamente
+      createOrUpdateLead(currentStep, false);
+    }
+  }, [customerData.name, customerData.phone, campaign, sessionId, leadId, currentStep]);
 
   // Restaurar progresso salvo
   useEffect(() => {
