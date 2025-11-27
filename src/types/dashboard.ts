@@ -59,3 +59,16 @@ export interface Dashboard {
   created_at: string;
   updated_at: string;
 }
+
+export interface DashboardTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  category: string;
+  thumbnail?: string;
+  layout: Widget[];
+  is_system: boolean;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
