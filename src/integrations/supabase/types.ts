@@ -180,6 +180,41 @@ export type Database = {
           },
         ]
       }
+      campaign_visual_overrides: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          id: string
+          overrides: Json
+          step_id: string
+          updated_at: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          id?: string
+          overrides?: Json
+          step_id: string
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          overrides?: Json
+          step_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_visual_overrides_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaigns: {
         Row: {
           created_at: string | null

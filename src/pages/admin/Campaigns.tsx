@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ExternalLink, Copy, Plus, Trash2, Settings, FlaskConical, Palette, Edit } from "lucide-react";
+import { ExternalLink, Copy, Plus, Trash2, Settings, FlaskConical, Palette, Edit, Brush } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CreateABTestDialog } from "@/components/abtest/CreateABTestDialog";
@@ -798,6 +798,15 @@ export default function Campaigns() {
                       variant="outline"
                       size="sm"
                       className="text-xs"
+                      onClick={() => window.open(`/admin/campaigns/${campaign.id}/visual-editor`, "_blank")}
+                    >
+                      <Brush className="w-3.5 h-3.5" />
+                      Visual
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
                       onClick={() => {
                         setSelectedCampaignId(campaign.id);
                         setShowThemeDialog(true);
@@ -821,7 +830,7 @@ export default function Campaigns() {
                     <Button
                       variant="destructive"
                       size="sm"
-                      className="text-xs"
+                      className="text-xs col-span-2"
                       onClick={() => handleDelete(campaign.id)}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
