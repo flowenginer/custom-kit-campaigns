@@ -18,6 +18,7 @@ import { CustomizationSummary } from "@/components/creation/CustomizationSummary
 import { ComponentRenderer } from "@/components/page-builder/ComponentRenderer";
 import { PageLayout } from "@/types/page-builder";
 import { WorkflowStep } from "@/types/workflow";
+import { useGlobalCampaignOverrides, useCampaignVisualOverrides } from "@/hooks/useCampaignVisualOverrides";
 
 // Importar imagens dos uniformes
 import mangaCurtaImg from "@/assets/uniforms/manga-curta.png";
@@ -182,6 +183,10 @@ export default function Campaign() {
 
   const currentStepId = enabledSteps[currentStep]?.id;
   const progress = ((currentStep + 1) / enabledSteps.length) * 100;
+
+  // Load visual overrides
+  const { data: globalOverrides } = useGlobalCampaignOverrides(campaign?.id);
+  const { data: stepOverrides } = useCampaignVisualOverrides(campaign?.id, currentStepId || "");
 
   // Buscar workflow step atual e verificar se tem page_layout customizado
   const workflowConfig = campaign?.workflow_config as unknown as WorkflowStep[] | undefined;
@@ -732,10 +737,14 @@ export default function Campaign() {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
         {/* Faixa com cor primária do tema e logo */}
-        <div className="py-3" style={{ backgroundColor: `hsl(var(--campaign-primary))` }}>
+        <div className="py-3" style={{ backgroundColor: globalOverrides?.primaryColor || `hsl(var(--campaign-primary))` }}>
           <div className="container mx-auto px-4">
             <div className="flex justify-center">
-              <img src={logoImg} alt="Logo" className="h-12" />
+              <img 
+                src={globalOverrides?.logo?.url || logoImg} 
+                alt="Logo" 
+                style={{ height: globalOverrides?.logo?.height || "48px" }}
+              />
             </div>
           </div>
         </div>
@@ -790,11 +799,17 @@ export default function Campaign() {
             {/* Step 1: Select Uniform Type */}
             {currentStepId === 'select_type' && (
           <div className="max-w-6xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
-              Escolha o tipo de uniforme
+            <h2 
+              className="text-3xl md:text-4xl font-bold text-center mb-4"
+              style={{ 
+                color: stepOverrides?.heading?.color,
+                fontSize: stepOverrides?.heading?.fontSize
+              }}
+            >
+              {stepOverrides?.heading?.text || "Escolha o tipo de uniforme"}
             </h2>
             <h3 className="text-xl md:text-2xl text-center mb-12 text-muted-foreground">
-              Selecione o modelo que melhor se adapta às suas necessidades
+              {stepOverrides?.subheading?.text || "Selecione o modelo que melhor se adapta às suas necessidades"}
             </h3>
 
             <div className="flex flex-wrap justify-center items-center gap-4 md:gap-6">
@@ -812,7 +827,7 @@ export default function Campaign() {
                   <CardContent className="p-4">
                     <div className="aspect-square mb-4 flex items-center justify-center bg-muted/30 rounded-lg overflow-hidden">
                       <img
-                        src={UNIFORM_IMAGES[type] || mangaCurtaImg}
+                        src={stepOverrides?.cardImages?.[type] || UNIFORM_IMAGES[type] || mangaCurtaImg}
                         alt={UNIFORM_LABELS[type] || type}
                         className="w-full h-full object-contain"
                       />
@@ -831,13 +846,16 @@ export default function Campaign() {
         {currentStepId === 'enter_name' && (
           <Card className="themed-card max-w-lg mx-auto shadow-lg">
             <CardContent className="p-8">
-              <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">
-                Me informa o seu nome
+              <h2 
+                className="text-2xl md:text-3xl font-bold text-center mb-8"
+                style={{ color: stepOverrides?.heading?.color }}
+              >
+                {stepOverrides?.heading?.text || "Me informa o seu nome"}
               </h2>
 
               <Input
                 type="text"
-                placeholder="Digite seu nome completo"
+                placeholder={stepOverrides?.placeholder || "Digite seu nome completo"}
                 value={customerData.name}
                 onChange={(e) => setCustomerData({ ...customerData, name: e.target.value })}
                 className="min-h-[56px] text-lg text-center"
@@ -856,13 +874,16 @@ export default function Campaign() {
         {currentStepId === 'enter_phone' && (
           <Card className="themed-card max-w-lg mx-auto shadow-lg">
             <CardContent className="p-8">
-              <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">
-                Digite seu WhatsApp abaixo
+              <h2 
+                className="text-2xl md:text-3xl font-bold text-center mb-8"
+                style={{ color: stepOverrides?.heading?.color }}
+              >
+                {stepOverrides?.heading?.text || "Digite seu WhatsApp abaixo"}
               </h2>
 
               <Input
                 type="tel"
-                placeholder="(DDD) 00000-0000"
+                placeholder={stepOverrides?.placeholder || "(DDD) 00000-0000"}
                 value={customerData.phone}
                 onChange={(e) => handlePhoneChange(e.target.value)}
                 className="min-h-[56px] text-lg text-center"
@@ -875,7 +896,7 @@ export default function Campaign() {
               />
 
               <p className="text-sm text-muted-foreground text-center mt-4">
-                Formato: <span className="font-semibold">(DDD)</span> 00000-0000
+                {stepOverrides?.helpText || "Formato: (DDD) 00000-0000"}
               </p>
             </CardContent>
           </Card>

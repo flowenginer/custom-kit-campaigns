@@ -30,6 +30,7 @@ import TrafficDashboard from "./pages/admin/TrafficDashboard";
 import ThemeSelector from "./pages/admin/ThemeSelector";
 import CampaignPageBuilder from "./pages/admin/CampaignPageBuilder";
 import CampaignStepBuilder from "./pages/admin/CampaignStepBuilder";
+import CampaignVisualEditor from "./pages/admin/CampaignVisualEditor";
 import ProductionRanking from "./pages/admin/ProductionRanking";
 
 // Componente para rastrear mudanças de rota em SPAs
@@ -81,6 +82,7 @@ const App = () => (
             <Route path="workflows/:workflowId/step/:stepId/builder" element={<PageBuilder />} />
             <Route path="campaign-pages" element={<CampaignPageBuilder />} />
             <Route path="campaigns/:campaignId/step/:stepId/builder" element={<CampaignStepBuilder />} />
+            <Route path="campaigns/:id/visual-editor" element={<CampaignVisualEditor />} />
             <Route path="ab-tests" element={<ABTests />} />
             <Route path="creation" element={<Creation />} />
             <Route path="orders" element={<Orders />} />
