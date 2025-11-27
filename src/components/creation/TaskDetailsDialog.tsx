@@ -519,14 +519,12 @@ export const TaskDetailsDialog = ({
   const getPriorityBadge = (priority: string) => {
     const variants: Record<string, any> = {
       urgent: { variant: "destructive", label: "🔴 Urgente" },
-      high: { variant: "default", label: "🟠 Alta" },
-      normal: { variant: "secondary", label: "🟡 Normal" },
-      low: { variant: "outline", label: "🟢 Baixa" }
+      normal: { variant: "secondary", label: "🟡 Normal" }
     };
     return variants[priority] || variants.normal;
   };
 
-  const handlePriorityChange = async (newPriority: "low" | "normal" | "high" | "urgent") => {
+  const handlePriorityChange = async (newPriority: "normal" | "urgent") => {
     if (!task) return;
 
     const { error } = await supabase

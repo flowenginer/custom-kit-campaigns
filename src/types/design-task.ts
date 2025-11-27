@@ -10,7 +10,7 @@ export type DbTaskStatus =
 // Status da UI (inclui filtros virtuais)
 export type TaskStatus = DbTaskStatus | 'logo_needed';
 
-export type TaskPriority = 'low' | 'normal' | 'high' | 'urgent';
+export type TaskPriority = 'normal' | 'urgent';
 
 export interface DesignFile {
   version: number;
@@ -43,6 +43,7 @@ export interface DesignTask {
   deleted_at?: string | null;
   created_by_salesperson?: boolean;
   created_by?: string | null;
+  order_number?: string | null;
   // Joined data
   customer_name?: string;
   customer_email?: string;

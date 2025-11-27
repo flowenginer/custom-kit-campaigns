@@ -414,6 +414,7 @@ export type Database = {
           id: string
           lead_id: string | null
           order_id: string
+          order_number: string | null
           priority: Database["public"]["Enums"]["task_priority"] | null
           status: Database["public"]["Enums"]["task_status"]
           status_changed_at: string | null
@@ -437,6 +438,7 @@ export type Database = {
           id?: string
           lead_id?: string | null
           order_id: string
+          order_number?: string | null
           priority?: Database["public"]["Enums"]["task_priority"] | null
           status?: Database["public"]["Enums"]["task_status"]
           status_changed_at?: string | null
@@ -460,6 +462,7 @@ export type Database = {
           id?: string
           lead_id?: string | null
           order_id?: string
+          order_number?: string | null
           priority?: Database["public"]["Enums"]["task_priority"] | null
           status?: Database["public"]["Enums"]["task_status"]
           status_changed_at?: string | null
@@ -1350,7 +1353,7 @@ export type Database = {
     }
     Enums: {
       app_role: "super_admin" | "admin" | "designer" | "viewer" | "salesperson"
-      task_priority: "low" | "normal" | "high" | "urgent"
+      task_priority: "normal" | "urgent"
       task_status:
         | "pending"
         | "in_progress"
@@ -1486,7 +1489,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["super_admin", "admin", "designer", "viewer", "salesperson"],
-      task_priority: ["low", "normal", "high", "urgent"],
+      task_priority: ["normal", "urgent"],
       task_status: [
         "pending",
         "in_progress",

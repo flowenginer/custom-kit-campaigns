@@ -22,6 +22,7 @@ interface KanbanColumnProps {
   onToggleCard: (cardId: string) => void;
   onCollapseAll: () => void;
   onExpandAll: () => void;
+  onOrderNumberUpdate?: (taskId: string, orderNumber: string) => void;
 }
 export const KanbanColumn = ({
   title,
@@ -37,7 +38,8 @@ export const KanbanColumn = ({
   collapsedCards,
   onToggleCard,
   onCollapseAll,
-  onExpandAll
+  onExpandAll,
+  onOrderNumberUpdate
 }: KanbanColumnProps) => {
   const {
     setNodeRef,
@@ -109,6 +111,7 @@ export const KanbanColumn = ({
               onTaskAccepted={onTaskAccepted}
               isCollapsed={collapsedCards.has(task.id)}
               onToggleCollapse={() => onToggleCard(task.id)}
+              onOrderNumberUpdate={onOrderNumberUpdate}
             />
           ))}
           
