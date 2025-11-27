@@ -547,13 +547,20 @@ const Dashboard = () => {
         const funnelResults = await Promise.all(funnelPromises);
         setFunnel(funnelResults);
 
-        // Carregar métricas de leads
-        const { data: leadsData } = await supabase
+      // Carregar métricas de leads (filtradas pelas campanhas selecionadas)
+        let leadsQuery = supabase
           .from("leads")
           .select("completed, utm_source, utm_medium, utm_campaign, utm_term, utm_content, campaign_id")
           .is("deleted_at", null)
           .gte("created_at", dateRange.start.toISOString())
           .lte("created_at", dateRange.end.toISOString());
+        
+        // Filtrar por campanhas selecionadas
+        if (selectedCampaigns.length > 0) {
+          leadsQuery = leadsQuery.in("campaign_id", selectedCampaigns);
+        }
+        
+        const { data: leadsData } = await leadsQuery;
 
         if (leadsData) {
           const total = leadsData.length;
@@ -785,15 +792,20 @@ const Dashboard = () => {
         setFunnelData(funnelResults);
       }
 
-      // Carregar métricas de leads com UTMs
-      const {
-        data: leadsData
-      } = await supabase
+      // Carregar métricas de leads com UTMs (filtradas pelas campanhas selecionadas)
+      let leadsQuery = supabase
         .from("leads")
-        .select("completed, utm_source, utm_medium, utm_campaign, utm_term, utm_content, campaign_id")
+        .select("completed, utm_source, utm_medium, utm_campaign, utm_term, utm_content, campaign_id, session_id")
         .is("deleted_at", null)
         .gte("created_at", dateRange.start.toISOString())
         .lte("created_at", dateRange.end.toISOString());
+      
+      // Filtrar por campanhas selecionadas
+      if (selectedCampaigns.length > 0) {
+        leadsQuery = leadsQuery.in("campaign_id", selectedCampaigns);
+      }
+      
+      const { data: leadsData } = await leadsQuery;
       if (leadsData) {
         const total = leadsData.length;
         const converted = leadsData.filter(l => l.completed).length;
