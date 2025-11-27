@@ -14,6 +14,7 @@ import { UserPlus, Trash2, Edit, KeyRound, Loader2, Code2, AlertCircle } from "l
 import { UrgentReasonsManager } from "@/components/admin/UrgentReasonsManager";
 import { KanbanVisibilityManager } from "@/components/admin/KanbanVisibilityManager";
 import { MenuVisibilityManager } from "@/components/admin/MenuVisibilityManager";
+import { UniformTypesManager } from "@/components/admin/UniformTypesManager";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AppRole } from "@/hooks/useUserRole";
@@ -418,8 +419,9 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="users" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="users">Usuários</TabsTrigger>
+          <TabsTrigger value="uniform-types">Tipos de Uniforme</TabsTrigger>
           <TabsTrigger value="kanban">Visibilidade Kanban</TabsTrigger>
           <TabsTrigger value="menu">Visibilidade Menu</TabsTrigger>
           <TabsTrigger value="password">Senha</TabsTrigger>
@@ -583,6 +585,11 @@ const Settings = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* TAB: TIPOS DE UNIFORME */}
+        <TabsContent value="uniform-types" className="space-y-4">
+          <UniformTypesManager />
         </TabsContent>
 
         {/* TAB: VISIBILIDADE KANBAN */}

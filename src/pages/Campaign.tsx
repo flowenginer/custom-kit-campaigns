@@ -40,6 +40,7 @@ const UNIFORM_LABELS: Record<string, string> = {
   'manga_longa': 'Manga Longa',
   'manga_curta': 'Manga Curta',
   'regata': 'Regata',
+  'short': 'Short',
 };
 
 // Mapeamento de IDs do workflow_config para IDs usados no código

@@ -52,6 +52,7 @@ const UNIFORM_LABELS: Record<string, string> = {
   'manga_longa': '👔 Manga Longa',
   'manga_curta': '👕 Manga Curta',
   'regata': '🎽 Regata',
+  'short': '🩳 Short',
 };
 
 interface NewLayoutRequestDialogProps {

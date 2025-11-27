@@ -292,6 +292,7 @@ const Segments = () => {
                   {segment.model_tag === 'manga_longa' && '👕 '}
                   {segment.model_tag === 'manga_curta' && '👔 '}
                   {segment.model_tag === 'regata' && '🎽 '}
+                  {segment.model_tag === 'short' && '🩳 '}
                   {segment.model_tag}
                 </Badge>
               )}
@@ -334,6 +335,7 @@ const Segments = () => {
                   {segment.model_tag === 'manga_longa' && '👕'}
                   {segment.model_tag === 'manga_curta' && '👔'}
                   {segment.model_tag === 'regata' && '🎽'}
+                  {segment.model_tag === 'short' && '🩳'}
                 </Badge>
               )}
               <span className="text-xs text-muted-foreground">
@@ -360,6 +362,7 @@ const Segments = () => {
                     {segment.model_tag === 'manga_longa' && '👕 '}
                     {segment.model_tag === 'manga_curta' && '👔 '}
                     {segment.model_tag === 'regata' && '🎽 '}
+                    {segment.model_tag === 'short' && '🩳 '}
                     {segment.model_tag}
                   </Badge>
                 )}
@@ -407,6 +410,7 @@ const Segments = () => {
                     {segment.model_tag === 'manga_longa' && '👕 '}
                     {segment.model_tag === 'manga_curta' && '👔 '}
                     {segment.model_tag === 'regata' && '🎽 '}
+                    {segment.model_tag === 'short' && '🩳 '}
                     {segment.model_tag}
                   </Badge>
                 )}
