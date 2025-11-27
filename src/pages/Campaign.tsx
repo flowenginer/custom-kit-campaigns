@@ -813,7 +813,9 @@ export default function Campaign() {
             </h3>
 
             <div className="flex flex-wrap justify-center items-center gap-4 md:gap-6">
-              {availableUniformTypes.map((type) => (
+              {(stepOverrides?.cardOrder || availableUniformTypes)
+                .filter((type: string) => availableUniformTypes.includes(type))
+                .map((type: string) => (
                 <Card
                   key={type}
                   className={`themed-card cursor-pointer hover:shadow-xl transition-all border-2 hover:border-primary w-[calc(50%-8px)] md:w-[200px] ${

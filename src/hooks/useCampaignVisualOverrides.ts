@@ -18,6 +18,7 @@ export interface VisualOverrides {
   primaryColor?: string;
   backgroundColor?: string;
   cardImages?: Record<string, string>;
+  cardOrder?: string[];
   placeholder?: string;
   helpText?: string;
 }
