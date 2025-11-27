@@ -268,7 +268,7 @@ export default function Workflows() {
           {workflows.map((workflow) => (
             <div key={workflow.id} className="relative">
               {isSuperAdmin && (
-                <div className="absolute top-4 left-4 z-10">
+                <div className="absolute top-4 right-4 z-10">
                   <Checkbox
                     checked={selectedWorkflows.includes(workflow.id)}
                     onCheckedChange={() => handleSelectWorkflow(workflow.id)}
