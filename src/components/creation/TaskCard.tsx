@@ -153,33 +153,34 @@ export const TaskCard = ({ task, onClick, showAcceptButton, currentUserId, onTas
         </div>
       )}
       
-      <CardContent className="p-4 space-y-3">
-        <div className="flex items-start gap-2">
-          <Avatar className="h-8 w-8 flex-shrink-0">
-            <AvatarFallback className="text-xs bg-primary/10">
-              {task.customer_name?.[0] || '?'}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm truncate">{task.customer_name}</p>
-            <p className="text-xs text-muted-foreground truncate">{task.campaign_name}</p>
-            {task.creator_name && (
-              <p className="text-xs font-medium text-amber-600 truncate">
-                🧑‍💼 {task.creator_name}
-              </p>
-            )}
-            {task.needs_logo && task.logo_action === 'waiting_client' && (
-              <Badge variant="destructive" className="text-[10px] w-fit">
-                ⏳ Aguard. Logo
-              </Badge>
-            )}
-          </div>
-        </div>
-        
-        {/* Layout com informações à esquerda e imagem à direita */}
-        <div className="flex gap-3">
-          {/* Coluna esquerda: todas as informações */}
-          <div className="flex-1 space-y-2">
+      <CardContent className="p-0">
+        <div className="flex h-full">
+          {/* Coluna Esquerda: Todas as informações */}
+          <div className="flex-1 p-4 space-y-2">
+            {/* Cabeçalho: Avatar + Cliente */}
+            <div className="flex items-start gap-2">
+              <Avatar className="h-8 w-8 flex-shrink-0">
+                <AvatarFallback className="text-xs bg-primary/10">
+                  {task.customer_name?.[0] || '?'}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm truncate">{task.customer_name}</p>
+                <p className="text-xs text-muted-foreground truncate">{task.campaign_name}</p>
+                {task.creator_name && (
+                  <p className="text-xs font-medium text-amber-600 truncate">
+                    🧑‍💼 {task.creator_name}
+                  </p>
+                )}
+                {task.needs_logo && task.logo_action === 'waiting_client' && (
+                  <Badge variant="destructive" className="text-[10px] w-fit mt-1">
+                    ⏳ Aguard. Logo
+                  </Badge>
+                )}
+              </div>
+            </div>
+            
+            {/* Métricas: Quantidade + Prazo */}
             <div className="flex items-center justify-between text-xs">
               <span className="flex items-center gap-1 text-muted-foreground">
                 <Shirt className="h-3 w-3" />
@@ -196,16 +197,19 @@ export const TaskCard = ({ task, onClick, showAcceptButton, currentUserId, onTas
               )}
             </div>
             
-            {task.model_name && (
-              <div className="text-xs text-muted-foreground truncate">
-                🎽 {task.model_name}
-              </div>
-            )}
+            {/* Modelo + Prioridade */}
+            <div className="flex items-center justify-between gap-2">
+              {task.model_name && (
+                <span className="text-xs text-muted-foreground truncate">
+                  🎽 {task.model_name}
+                </span>
+              )}
+              <Badge variant={getPriorityConfig(task.priority).variant} className="text-[10px] flex-shrink-0">
+                {getPriorityConfig(task.priority).label}
+              </Badge>
+            </div>
             
-            <Badge variant={getPriorityConfig(task.priority).variant} className="text-xs w-fit">
-              {getPriorityConfig(task.priority).label}
-            </Badge>
-            
+            {/* Tempo de produção (se aplicável) */}
             {productionTime && (
               <div className="flex items-center gap-1 text-xs text-primary">
                 <Package className="h-3 w-3" />
@@ -213,7 +217,8 @@ export const TaskCard = ({ task, onClick, showAcceptButton, currentUserId, onTas
               </div>
             )}
             
-            <div className="flex items-center justify-between">
+            {/* Designer + Versão */}
+            <div className="flex items-center justify-between pt-1 border-t border-muted/30">
               {task.assigned_to && task.designer_name ? (
                 <div className="flex items-center gap-1.5">
                   <Avatar className="h-5 w-5">
@@ -221,7 +226,7 @@ export const TaskCard = ({ task, onClick, showAcceptButton, currentUserId, onTas
                       {task.designer_initials}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="text-xs text-muted-foreground truncate max-w-[100px]">
+                  <span className="text-xs text-muted-foreground truncate max-w-[80px]">
                     {task.designer_name}
                   </span>
                 </div>
@@ -237,31 +242,32 @@ export const TaskCard = ({ task, onClick, showAcceptButton, currentUserId, onTas
                 </Badge>
               )}
             </div>
+            
+            {/* Botão de Aceitar Tarefa */}
+            {showAcceptButton && !task.assigned_to && (
+              <Button 
+                size="sm" 
+                variant="secondary"
+                className="w-full"
+                onClick={handleAcceptTask}
+              >
+                <UserPlus className="h-3 w-3 mr-1" />
+                Aceitar Tarefa
+              </Button>
+            )}
           </div>
           
-          {/* Coluna direita: imagem da camisa */}
+          {/* Coluna Direita: Imagem da Camisa (Full Height) */}
           {task.model_image_front && (
-            <div className="w-16 flex-shrink-0">
+            <div className="w-20 flex-shrink-0 bg-muted/10 rounded-r-lg overflow-hidden">
               <img 
                 src={task.model_image_front} 
                 alt="Modelo" 
-                className="w-full h-auto object-contain rounded"
+                className="w-full h-full object-cover"
               />
             </div>
           )}
         </div>
-        
-        {showAcceptButton && !task.assigned_to && (
-          <Button 
-            size="sm" 
-            variant="secondary"
-            className="w-full mt-3"
-            onClick={handleAcceptTask}
-          >
-            <UserPlus className="h-3 w-3 mr-1" />
-            Aceitar Tarefa
-          </Button>
-        )}
       </CardContent>
     </Card>
   );
