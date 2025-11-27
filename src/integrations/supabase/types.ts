@@ -588,6 +588,9 @@ export type Database = {
           custom_quantity: number | null
           customization_summary: Json | null
           deleted_at: string | null
+          device_browser: string | null
+          device_os: string | null
+          device_type: string | null
           email: string | null
           id: string
           is_online: boolean | null
@@ -603,6 +606,7 @@ export type Database = {
           session_id: string
           updated_at: string | null
           uploaded_logo_url: string | null
+          user_agent: string | null
           utm_campaign: string | null
           utm_content: string | null
           utm_medium: string | null
@@ -622,6 +626,9 @@ export type Database = {
           custom_quantity?: number | null
           customization_summary?: Json | null
           deleted_at?: string | null
+          device_browser?: string | null
+          device_os?: string | null
+          device_type?: string | null
           email?: string | null
           id?: string
           is_online?: boolean | null
@@ -637,6 +644,7 @@ export type Database = {
           session_id: string
           updated_at?: string | null
           uploaded_logo_url?: string | null
+          user_agent?: string | null
           utm_campaign?: string | null
           utm_content?: string | null
           utm_medium?: string | null
@@ -656,6 +664,9 @@ export type Database = {
           custom_quantity?: number | null
           customization_summary?: Json | null
           deleted_at?: string | null
+          device_browser?: string | null
+          device_os?: string | null
+          device_type?: string | null
           email?: string | null
           id?: string
           is_online?: boolean | null
@@ -671,6 +682,7 @@ export type Database = {
           session_id?: string
           updated_at?: string | null
           uploaded_logo_url?: string | null
+          user_agent?: string | null
           utm_campaign?: string | null
           utm_content?: string | null
           utm_medium?: string | null

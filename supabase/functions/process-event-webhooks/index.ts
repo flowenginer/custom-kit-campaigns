@@ -134,6 +134,11 @@ serve(async (req) => {
         first_visit: firstVisit,
         last_event: lastEvent,
       },
+      device: {
+        type: (lead as any).device_type || 'unknown',
+        os: (lead as any).device_os || 'unknown',
+        browser: (lead as any).device_browser || 'unknown',
+      },
       utm: {
         source: lead.utm_source,
         medium: lead.utm_medium,
