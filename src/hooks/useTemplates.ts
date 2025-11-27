@@ -9,11 +9,18 @@ export const useTemplates = () => {
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       
-      const { data, error } = await supabase
+      let query = supabase
         .from("dashboard_templates")
-        .select("*")
-        .or(`is_system.eq.true,created_by.eq.${user?.id}`)
-        .order("created_at", { ascending: false });
+        .select("*");
+      
+      // Construir filtro correto baseado na autenticação
+      if (user?.id) {
+        query = query.or(`is_system.eq.true,created_by.eq.${user.id}`);
+      } else {
+        query = query.eq("is_system", true);
+      }
+      
+      const { data, error } = await query.order("created_at", { ascending: false });
 
       if (error) throw error;
       return data.map(t => ({
