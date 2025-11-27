@@ -120,7 +120,8 @@ const Creation = () => {
             )
           ),
           campaigns (
-            name
+            name,
+            segment_tag
           ),
           creator:profiles!design_tasks_created_by_fkey (
             full_name
@@ -148,6 +149,7 @@ const Creation = () => {
         quantity: task.orders?.quantity,
         customization_data: task.orders?.customization_data,
         campaign_name: task.campaigns?.name,
+        segment_tag: task.campaigns?.segment_tag,
         model_name: task.orders?.shirt_models?.name,
         model_code: task.orders?.shirt_models?.sku,
         model_image_front: task.orders?.shirt_models?.image_front,

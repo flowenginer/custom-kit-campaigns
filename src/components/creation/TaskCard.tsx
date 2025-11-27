@@ -121,25 +121,14 @@ export const TaskCard = ({ task, onClick, showAcceptButton, currentUserId, onTas
       {...listeners}
       className={cn(
         "cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow relative",
-        isDragging && "opacity-50",
-        isSalespersonOrigin && "border-2 border-amber-500 bg-amber-50/50"
+        isDragging && "opacity-50"
       )}
       onClick={onClick}
     >
-      {/* Badge de urgente removida - agora a prioridade está sempre visível no corpo do card */}
-      
       {unresolvedChangesCount > 0 && (
         <div className="absolute -top-2 -right-2 z-10">
           <Badge className="gap-1 bg-red-500 hover:bg-red-600 text-white">
             🔄 {unresolvedChangesCount}
-          </Badge>
-        </div>
-      )}
-      
-      {isSalespersonOrigin && (
-        <div className="absolute -top-2 -left-2 z-10">
-          <Badge className="gap-1 bg-amber-500 hover:bg-amber-600 text-white">
-            👤 Vendedor
           </Badge>
         </div>
       )}
@@ -153,95 +142,118 @@ export const TaskCard = ({ task, onClick, showAcceptButton, currentUserId, onTas
         </div>
       )}
       
-      <CardContent className="p-4 space-y-3">
-        <div className="flex items-start gap-2">
-          <Avatar className="h-8 w-8 flex-shrink-0">
-            <AvatarFallback className="text-xs bg-primary/10">
-              {task.customer_name?.[0] || '?'}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm truncate">{task.customer_name}</p>
-            <p className="text-xs text-muted-foreground truncate">{task.campaign_name}</p>
-            {task.creator_name && (
-              <p className="text-xs font-medium text-amber-600 truncate">
-                🧑‍💼 {task.creator_name}
-              </p>
+      <CardContent className="p-3 space-y-2">
+        {/* Cabeçalho: Badge Vendedor + Nome do Criador */}
+        {(isSalespersonOrigin || task.creator_name) && (
+          <div className="flex items-center justify-between">
+            {isSalespersonOrigin && (
+              <Badge className="bg-amber-500 text-white rounded-full px-3 text-xs">
+                Vendedor
+              </Badge>
             )}
+            {task.creator_name && (
+              <span className="text-sm font-semibold text-amber-600 truncate">
+                {task.creator_name}
+              </span>
+            )}
+          </div>
+        )}
+        
+        {/* Corpo: Duas colunas */}
+        <div className="flex gap-3">
+          {/* Coluna esquerda: Informações empilhadas */}
+          <div className="flex-1 space-y-1.5">
+            {/* Nome do Cliente - caixa com borda */}
+            <div className="border rounded px-2 py-1 bg-white">
+              <span className="text-sm font-medium truncate block">
+                {task.customer_name}
+              </span>
+            </div>
+            
+            {/* Segmento - caixa cinza */}
+            {task.segment_tag && (
+              <div className="bg-gray-100 rounded px-2 py-1">
+                <span className="text-xs text-gray-700">{task.segment_tag}</span>
+              </div>
+            )}
+            
+            {/* Quantidade - caixa cinza com ícone */}
+            <div className="bg-gray-100 rounded px-2 py-1 flex items-center gap-1">
+              <Shirt className="h-3 w-3 text-gray-500" />
+              <span className="text-xs text-gray-700">{task.quantity} un.</span>
+            </div>
+            
+            {/* Modelo - caixa cinza com ícone */}
+            {task.model_name && (
+              <div className="bg-gray-100 rounded px-2 py-1 flex items-center gap-1">
+                <span className="text-xs">🎽</span>
+                <span className="text-xs text-gray-700 truncate">{task.model_name}</span>
+              </div>
+            )}
+            
+            {/* Designer - caixa cinza com avatar */}
+            {task.assigned_to && task.designer_name ? (
+              <div className="bg-gray-100 rounded px-2 py-1 flex items-center gap-1.5">
+                <Avatar className="h-4 w-4">
+                  <AvatarFallback className="text-[8px] bg-secondary">
+                    {task.designer_initials}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-xs text-gray-700 truncate">{task.designer_name}</span>
+              </div>
+            ) : (
+              <div className="bg-gray-100 rounded px-2 py-1">
+                <span className="text-xs text-gray-400">Não atribuído</span>
+              </div>
+            )}
+            
+            {/* Prioridade + Versão - lado a lado */}
+            <div className="flex items-center gap-2">
+              <Badge variant={getPriorityConfig(task.priority).variant} className="text-[10px]">
+                {getPriorityConfig(task.priority).label}
+              </Badge>
+              {task.current_version > 0 && (
+                <Badge variant="outline" className="text-[10px]">
+                  v{task.current_version}
+                </Badge>
+              )}
+            </div>
+
+            {/* Deadline */}
+            {task.deadline && (
+              <div className={cn(
+                "bg-gray-100 rounded px-2 py-1 flex items-center gap-1",
+                isOverdue && "bg-red-100"
+              )}>
+                <Clock className="h-3 w-3 text-gray-500" />
+                <span className={cn(
+                  "text-xs",
+                  isOverdue ? "text-red-600 font-semibold" : "text-gray-700"
+                )}>
+                  {formatDeadline(task.deadline)}
+                </span>
+              </div>
+            )}
+
+            {/* Badge para leads sem logo */}
             {task.needs_logo && task.logo_action === 'waiting_client' && (
               <Badge variant="destructive" className="text-[10px] w-fit">
                 ⏳ Aguard. Logo
               </Badge>
             )}
-          </div>
-        </div>
-        
-        {/* Layout com informações à esquerda e imagem à direita */}
-        <div className="flex gap-3">
-          {/* Coluna esquerda: todas as informações */}
-          <div className="flex-1 space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="flex items-center gap-1 text-muted-foreground">
-                <Shirt className="h-3 w-3" />
-                {task.quantity} un.
-              </span>
-              {task.deadline && (
-                <span className={cn(
-                  "flex items-center gap-1",
-                  isOverdue ? "text-destructive font-semibold" : "text-muted-foreground"
-                )}>
-                  <Clock className="h-3 w-3" />
-                  {formatDeadline(task.deadline)}
-                </span>
-              )}
-            </div>
-            
-            {task.model_name && (
-              <div className="text-xs text-muted-foreground truncate">
-                🎽 {task.model_name}
-              </div>
-            )}
-            
-            <Badge variant={getPriorityConfig(task.priority).variant} className="text-xs w-fit">
-              {getPriorityConfig(task.priority).label}
-            </Badge>
-            
+
+            {/* Tempo de produção */}
             {productionTime && (
-              <div className="flex items-center gap-1 text-xs text-primary">
-                <Package className="h-3 w-3" />
-                {productionTime}
+              <div className="bg-green-100 rounded px-2 py-1 flex items-center gap-1">
+                <Package className="h-3 w-3 text-green-600" />
+                <span className="text-xs text-green-700">{productionTime}</span>
               </div>
             )}
-            
-            <div className="flex items-center justify-between">
-              {task.assigned_to && task.designer_name ? (
-                <div className="flex items-center gap-1.5">
-                  <Avatar className="h-5 w-5">
-                    <AvatarFallback className="text-[10px] bg-secondary">
-                      {task.designer_initials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-xs text-muted-foreground truncate max-w-[100px]">
-                    {task.designer_name}
-                  </span>
-                </div>
-              ) : (
-                <Badge variant="outline" className="text-[10px]">
-                  Não atribuído
-                </Badge>
-              )}
-              
-              {task.current_version > 0 && (
-                <Badge variant="secondary" className="text-[10px]">
-                  v{task.current_version}
-                </Badge>
-              )}
-            </div>
           </div>
           
-          {/* Coluna direita: imagem da camisa */}
+          {/* Coluna direita: Imagem grande */}
           {task.model_image_front && (
-            <div className="w-16 flex-shrink-0">
+            <div className="w-24 flex-shrink-0">
               <img 
                 src={task.model_image_front} 
                 alt="Modelo" 
@@ -251,11 +263,12 @@ export const TaskCard = ({ task, onClick, showAcceptButton, currentUserId, onTas
           )}
         </div>
         
+        {/* Botão aceitar tarefa */}
         {showAcceptButton && !task.assigned_to && (
           <Button 
             size="sm" 
             variant="secondary"
-            className="w-full mt-3"
+            className="w-full"
             onClick={handleAcceptTask}
           >
             <UserPlus className="h-3 w-3 mr-1" />
