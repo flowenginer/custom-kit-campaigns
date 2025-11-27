@@ -14,23 +14,16 @@ interface UniformType {
   tag_value: string;
   id: string;
   created_at: string;
+  display_label: string | null;
+  icon: string | null;
 }
 
-const UNIFORM_ICONS: Record<string, string> = {
-  'ziper': '🧥',
-  'manga_longa': '👕',
-  'manga_curta': '👔',
-  'regata': '🎽',
-  'short': '🩳',
-};
-
-const UNIFORM_LABELS: Record<string, string> = {
-  'ziper': 'Zíper',
-  'manga_longa': 'Manga Longa',
-  'manga_curta': 'Manga Curta',
-  'regata': 'Regata',
-  'short': 'Short',
-};
+// Emoji options for selection
+const EMOJI_OPTIONS = [
+  '👕', '🧥', '🎽', '📦', '🩳', 
+  '👔', '🥼', '🧤', '👗', '👘',
+  '⚽', '🏀', '🏈', '⚾', '🎾'
+];
 
 export const UniformTypesManager = () => {
   const [uniformTypes, setUniformTypes] = useState<UniformType[]>([]);
@@ -41,6 +34,8 @@ export const UniformTypesManager = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedType, setSelectedType] = useState<UniformType | null>(null);
   const [formValue, setFormValue] = useState("");
+  const [formLabel, setFormLabel] = useState("");
+  const [formIcon, setFormIcon] = useState("👕");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -52,8 +47,8 @@ export const UniformTypesManager = () => {
     try {
       const { data, error } = await supabase
         .from("tags")
-        .select("*")
-        .eq("tag_type", "model_tag")
+        .select("tag_value, id, created_at, display_label, icon")
+        .eq("tag_type", "model")
         .order("tag_value");
 
       if (error) throw error;
@@ -86,8 +81,8 @@ export const UniformTypesManager = () => {
   };
 
   const handleCreate = async () => {
-    if (!formValue.trim()) {
-      toast.error("Digite o nome do tipo de uniforme");
+    if (!formValue.trim() || !formLabel.trim()) {
+      toast.error("Por favor, preencha o valor da tag e o nome de exibição");
       return;
     }
 
@@ -103,7 +98,12 @@ export const UniformTypesManager = () => {
 
       const { error } = await supabase
         .from("tags")
-        .insert({ tag_value: formattedTag, tag_type: "model_tag" });
+        .insert({ 
+          tag_value: formattedTag, 
+          tag_type: "model",
+          display_label: formLabel.trim(),
+          icon: formIcon
+        });
 
       if (error) {
         if (error.code === "23505") {
@@ -117,6 +117,8 @@ export const UniformTypesManager = () => {
       toast.success("Tipo de uniforme criado com sucesso!");
       setIsCreateDialogOpen(false);
       setFormValue("");
+      setFormLabel("");
+      setFormIcon("👕");
       loadUniformTypes();
     } catch (error: any) {
       console.error("Erro ao criar tipo:", error);
@@ -127,8 +129,8 @@ export const UniformTypesManager = () => {
   };
 
   const handleEdit = async () => {
-    if (!selectedType || !formValue.trim()) {
-      toast.error("Digite o novo nome do tipo de uniforme");
+    if (!selectedType || !formValue.trim() || !formLabel.trim()) {
+      toast.error("Por favor, preencha o valor da tag e o nome de exibição");
       return;
     }
 
@@ -144,7 +146,11 @@ export const UniformTypesManager = () => {
 
       const { error } = await supabase
         .from("tags")
-        .update({ tag_value: formattedTag })
+        .update({ 
+          tag_value: formattedTag,
+          display_label: formLabel.trim(),
+          icon: formIcon
+        })
         .eq("id", selectedType.id);
 
       if (error) {
@@ -160,6 +166,8 @@ export const UniformTypesManager = () => {
       setIsEditDialogOpen(false);
       setSelectedType(null);
       setFormValue("");
+      setFormLabel("");
+      setFormIcon("👕");
       loadUniformTypes();
     } catch (error: any) {
       console.error("Erro ao editar tipo:", error);
@@ -203,6 +211,8 @@ export const UniformTypesManager = () => {
   const openEditDialog = (type: UniformType) => {
     setSelectedType(type);
     setFormValue(type.tag_value);
+    setFormLabel(type.display_label || type.tag_value);
+    setFormIcon(type.icon || "👕");
     setIsEditDialogOpen(true);
   };
 
@@ -257,7 +267,7 @@ export const UniformTypesManager = () => {
                 <CardContent className="p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="text-3xl">
-                      {UNIFORM_ICONS[type.tag_value] || '👕'}
+                      {type.icon || '👕'}
                     </div>
                     <div className="flex gap-1">
                       <Button
@@ -281,7 +291,7 @@ export const UniformTypesManager = () => {
                   
                   <div>
                     <div className="font-medium text-sm">
-                      {UNIFORM_LABELS[type.tag_value] || type.tag_value}
+                      {type.display_label || type.tag_value}
                     </div>
                     <Badge variant="secondary" className="text-xs mt-1">
                       {type.tag_value}
@@ -306,28 +316,61 @@ export const UniformTypesManager = () => {
 
       {/* CREATE DIALOG */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Criar Novo Tipo de Uniforme</DialogTitle>
             <DialogDescription>
-              Digite o nome do tipo (ex: short, bermuda, calca). O sistema irá formatar automaticamente.
+              Digite o slug, nome de exibição e selecione um emoji para o novo tipo.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="type-name">Nome do Tipo</Label>
+              <Label htmlFor="type-value">Valor da Tag (slug)</Label>
               <Input
-                id="type-name"
+                id="type-value"
                 value={formValue}
                 onChange={(e) => setFormValue(e.target.value)}
-                placeholder="Ex: short, bermuda, calca"
+                placeholder="ex: manga_curta, regata"
                 disabled={isSubmitting}
               />
-              {formValue && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Será salvo como: <code className="bg-muted px-1 py-0.5 rounded">{formValue.toLowerCase().replace(/[^a-z0-9]/g, "_")}</code>
-                </p>
-              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                Use apenas letras minúsculas, números e underscore (_)
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="display-label">Nome de Exibição</Label>
+              <Input
+                id="display-label"
+                value={formLabel}
+                onChange={(e) => setFormLabel(e.target.value)}
+                placeholder="ex: Manga Curta, Regata"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div>
+              <Label>Emoji/Ícone</Label>
+              <div className="grid grid-cols-5 gap-2 mt-2">
+                {EMOJI_OPTIONS.map((emoji) => (
+                  <Button
+                    key={emoji}
+                    type="button"
+                    variant={formIcon === emoji ? "default" : "outline"}
+                    className="h-12 text-2xl"
+                    onClick={() => setFormIcon(emoji)}
+                  >
+                    {emoji}
+                  </Button>
+                ))}
+              </div>
+              <Input
+                value={formIcon}
+                onChange={(e) => setFormIcon(e.target.value)}
+                placeholder="ou digite um emoji"
+                className="mt-2"
+                disabled={isSubmitting}
+              />
             </div>
           </div>
           <DialogFooter>
@@ -344,28 +387,61 @@ export const UniformTypesManager = () => {
 
       {/* EDIT DIALOG */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Editar Tipo de Uniforme</DialogTitle>
             <DialogDescription>
-              Altere o nome do tipo de uniforme.
+              Altere o slug, nome de exibição ou emoji do tipo de uniforme.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="edit-type-name">Nome do Tipo</Label>
+              <Label htmlFor="edit-type-value">Valor da Tag (slug)</Label>
               <Input
-                id="edit-type-name"
+                id="edit-type-value"
                 value={formValue}
                 onChange={(e) => setFormValue(e.target.value)}
-                placeholder="Ex: short, bermuda, calca"
+                placeholder="ex: manga_curta, regata"
                 disabled={isSubmitting}
               />
-              {formValue && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Será salvo como: <code className="bg-muted px-1 py-0.5 rounded">{formValue.toLowerCase().replace(/[^a-z0-9]/g, "_")}</code>
-                </p>
-              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                Use apenas letras minúsculas, números e underscore (_)
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="edit-display-label">Nome de Exibição</Label>
+              <Input
+                id="edit-display-label"
+                value={formLabel}
+                onChange={(e) => setFormLabel(e.target.value)}
+                placeholder="ex: Manga Curta, Regata"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div>
+              <Label>Emoji/Ícone</Label>
+              <div className="grid grid-cols-5 gap-2 mt-2">
+                {EMOJI_OPTIONS.map((emoji) => (
+                  <Button
+                    key={emoji}
+                    type="button"
+                    variant={formIcon === emoji ? "default" : "outline"}
+                    className="h-12 text-2xl"
+                    onClick={() => setFormIcon(emoji)}
+                  >
+                    {emoji}
+                  </Button>
+                ))}
+              </div>
+              <Input
+                value={formIcon}
+                onChange={(e) => setFormIcon(e.target.value)}
+                placeholder="ou digite um emoji"
+                className="mt-2"
+                disabled={isSubmitting}
+              />
             </div>
           </div>
           <DialogFooter>
@@ -386,7 +462,7 @@ export const UniformTypesManager = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Deletar Tipo de Uniforme?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja deletar o tipo "{selectedType?.tag_value}"?
+              Tem certeza que deseja deletar o tipo "{selectedType?.display_label || selectedType?.tag_value}"?
               {modelCounts[selectedType?.tag_value || ""] > 0 && (
                 <span className="block mt-2 text-destructive font-semibold">
                   ⚠️ Atenção: Este tipo possui {modelCounts[selectedType?.tag_value || ""]} modelo(s) associado(s) e não pode ser deletado.

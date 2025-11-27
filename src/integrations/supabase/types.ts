@@ -1089,18 +1089,24 @@ export type Database = {
       tags: {
         Row: {
           created_at: string | null
+          display_label: string | null
+          icon: string | null
           id: string
           tag_type: string
           tag_value: string
         }
         Insert: {
           created_at?: string | null
+          display_label?: string | null
+          icon?: string | null
           id?: string
           tag_type: string
           tag_value: string
         }
         Update: {
           created_at?: string | null
+          display_label?: string | null
+          icon?: string | null
           id?: string
           tag_type?: string
           tag_value?: string

@@ -20,6 +20,7 @@ import { PageLayout } from "@/types/page-builder";
 import { WorkflowStep } from "@/types/workflow";
 import { useGlobalCampaignOverrides, useCampaignVisualOverrides } from "@/hooks/useCampaignVisualOverrides";
 import { detectDevice } from "@/lib/deviceDetection";
+import { useUniformTypes } from "@/hooks/useUniformTypes";
 
 // Importar imagens dos uniformes
 import mangaCurtaImg from "@/assets/uniforms/manga-curta.png";
@@ -35,13 +36,6 @@ const UNIFORM_IMAGES: Record<string, string> = {
   'regata': regataImg,
 };
 
-const UNIFORM_LABELS: Record<string, string> = {
-  'ziper': 'Zíper',
-  'manga_longa': 'Manga Longa',
-  'manga_curta': 'Manga Curta',
-  'regata': 'Regata',
-  'short': 'Short',
-};
 
 // Mapeamento de IDs do workflow_config para IDs usados no código
 const ID_MAP: Record<string, string> = {
@@ -71,6 +65,7 @@ export default function Campaign() {
   const { uniqueLink } = useParams<{ uniqueLink: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const { getLabel } = useUniformTypes();
   
   const [campaign, setCampaign] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -1001,12 +996,12 @@ export default function Campaign() {
                     <div className="aspect-square mb-4 flex items-center justify-center bg-muted/30 rounded-lg overflow-hidden">
                       <img
                         src={stepOverrides?.cardImages?.[type] || UNIFORM_IMAGES[type] || mangaCurtaImg}
-                        alt={UNIFORM_LABELS[type] || type}
+                        alt={getLabel(type)}
                         className="w-full h-full object-contain"
                       />
                     </div>
                     <h4 className="text-center font-semibold text-sm">
-                      {UNIFORM_LABELS[type] || type}
+                      {getLabel(type)}
                     </h4>
                   </CardContent>
                 </Card>
@@ -1170,7 +1165,7 @@ export default function Campaign() {
               Escolha o modelo
             </h2>
             <h3 className="text-xl md:text-2xl text-center mb-12 text-muted-foreground">
-              {UNIFORM_LABELS[selectedUniformType]}
+              {getLabel(selectedUniformType)}
             </h3>
 
             {availableModels.filter(m => m.model_tag === selectedUniformType).length === 0 ? (
