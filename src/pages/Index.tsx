@@ -4,6 +4,8 @@ import { Shirt, TrendingUp, Palette, BarChart3 } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
+  
+  console.log("Index page rendering...");
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-accent/10">
