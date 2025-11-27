@@ -104,6 +104,7 @@ const Creation = () => {
           created_at,
           updated_at,
           completed_at,
+          status_changed_at,
           created_by,
           created_by_salesperson,
           orders!inner (
@@ -162,6 +163,7 @@ const Creation = () => {
         designer_initials: task.designer?.full_name 
           ? task.designer.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
           : null,
+        status_changed_at: task.status_changed_at,
       }));
 
       setTasks(formattedTasks);

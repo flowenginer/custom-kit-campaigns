@@ -39,6 +39,7 @@ export interface DesignTask {
   created_at: string;
   updated_at: string;
   completed_at: string | null;
+  status_changed_at: string;
   deleted_at?: string | null;
   created_by_salesperson?: boolean;
   created_by?: string | null;
