@@ -47,7 +47,7 @@ export const useSaveDashboard = () => {
       const dashboardData = {
         name,
         description,
-        layout: widgets,
+        layout: widgets as any,
         is_public: isPublic,
       };
 
@@ -69,7 +69,7 @@ export const useSaveDashboard = () => {
 
         const { data, error } = await supabase
           .from("dashboard_configs")
-          .insert({ ...dashboardData, created_by: user.id })
+          .insert([{ ...dashboardData, created_by: user.id }])
           .select()
           .single();
 

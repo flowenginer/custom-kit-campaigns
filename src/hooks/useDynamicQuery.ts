@@ -8,7 +8,7 @@ export const useDynamicQuery = (config: QueryConfig | null) => {
     queryFn: async () => {
       if (!config) return null;
 
-      let query = supabase.from(config.tableName).select(config.fields.join(", "));
+      let query: any = supabase.from(config.tableName).select(config.fields.join(", "));
 
       // Apply filters
       if (config.filters) {
