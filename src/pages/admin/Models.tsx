@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -8,13 +8,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Trash2, Upload, ImageIcon, X, Pencil, LayoutGrid, LayoutList, Grid3x3, Grid2x2 } from "lucide-react";
+import { Plus, Trash2, Upload, ImageIcon, X, Pencil, LayoutGrid, LayoutList, Grid3x3, Grid2x2, Folder, FolderOpen, ChevronDown, ChevronRight } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface Segment {
   id: string;
@@ -57,6 +58,7 @@ const Models = () => {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>('medium');
+  const [expandedFolders, setExpandedFolders] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     segment_id: "",
@@ -958,14 +960,44 @@ const Models = () => {
 
   const filteredSegment = segments.find((s) => s.id === segmentFilter);
 
-  const renderListView = () => (
+  const groupedModels = useMemo(() => {
+    const groups: Record<string, ShirtModel[]> = {};
+    
+    filteredModels.forEach(model => {
+      const folder = model.segment_tag || 'sem_categoria';
+      if (!groups[folder]) {
+        groups[folder] = [];
+      }
+      groups[folder].push(model);
+    });
+    
+    return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [filteredModels]);
+
+  const toggleFolder = (folderId: string) => {
+    setExpandedFolders(prev => 
+      prev.includes(folderId) 
+        ? prev.filter(f => f !== folderId)
+        : [...prev, folderId]
+    );
+  };
+
+  const expandAllFolders = () => {
+    setExpandedFolders(groupedModels.map(([folder]) => folder));
+  };
+
+  const collapseAllFolders = () => {
+    setExpandedFolders([]);
+  };
+
+  const renderListView = (modelsToRender: ShirtModel[]) => (
     <Card>
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead className="w-[50px]">
               <Checkbox
-                checked={selectedModels.length === filteredModels.length && filteredModels.length > 0}
+                checked={selectedModels.length === modelsToRender.length && modelsToRender.length > 0}
                 onCheckedChange={toggleSelectAll}
               />
             </TableHead>
@@ -977,7 +1009,7 @@ const Models = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredModels.map((model) => (
+          {modelsToRender.map((model) => (
             <TableRow 
               key={model.id}
               className={selectedModels.includes(model.id) ? "bg-blue-50" : ""}
@@ -1038,9 +1070,9 @@ const Models = () => {
     </Card>
   );
 
-  const renderSmallView = () => (
+  const renderSmallView = (modelsToRender: ShirtModel[]) => (
     <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-      {filteredModels.map((model) => (
+      {modelsToRender.map((model) => (
         <Card 
           key={model.id} 
           className={`overflow-hidden hover:shadow-md transition-shadow ${
@@ -1093,9 +1125,9 @@ const Models = () => {
     </div>
   );
 
-  const renderMediumView = () => (
+  const renderMediumView = (modelsToRender: ShirtModel[]) => (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-      {filteredModels.map((model) => (
+      {modelsToRender.map((model) => (
         <Card 
           key={model.id} 
           className={`overflow-hidden ${
@@ -1162,9 +1194,9 @@ const Models = () => {
     </div>
   );
 
-  const renderLargeView = () => (
+  const renderLargeView = (modelsToRender: ShirtModel[]) => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {filteredModels.map((model) => (
+      {modelsToRender.map((model) => (
         <Card 
           key={model.id} 
           className={`overflow-hidden ${
@@ -1310,6 +1342,15 @@ const Models = () => {
             </Button>
           </div>
 
+          <Button onClick={expandAllFolders} variant="outline" size="sm">
+            <FolderOpen className="mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Expandir Tudo</span>
+          </Button>
+          <Button onClick={collapseAllFolders} variant="outline" size="sm">
+            <Folder className="mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Fechar Tudo</span>
+          </Button>
+
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -1443,12 +1484,44 @@ const Models = () => {
           </div>
         </Card>
       ) : (
-        <>
-          {viewMode === 'list' && renderListView()}
-          {viewMode === 'small' && renderSmallView()}
-          {viewMode === 'medium' && renderMediumView()}
-          {viewMode === 'large' && renderLargeView()}
-        </>
+        <div className="space-y-4">
+          {groupedModels.map(([folderName, folderModels]) => (
+            <Collapsible
+              key={folderName}
+              open={expandedFolders.includes(folderName)}
+              onOpenChange={() => toggleFolder(folderName)}
+            >
+              <CollapsibleTrigger className="w-full">
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                  {expandedFolders.includes(folderName) ? (
+                    <>
+                      <FolderOpen className="h-5 w-5 text-primary" />
+                      <ChevronDown className="h-4 w-4" />
+                    </>
+                  ) : (
+                    <>
+                      <Folder className="h-5 w-5 text-muted-foreground" />
+                      <ChevronRight className="h-4 w-4" />
+                    </>
+                  )}
+                  <span className="font-medium capitalize">
+                    {folderName.replace(/_/g, ' ')}
+                  </span>
+                  <Badge variant="secondary" className="ml-auto">
+                    {folderModels.length} modelo{folderModels.length !== 1 ? 's' : ''}
+                  </Badge>
+                </div>
+              </CollapsibleTrigger>
+              
+              <CollapsibleContent className="mt-3 ml-4">
+                {viewMode === 'list' && renderListView(folderModels)}
+                {viewMode === 'small' && renderSmallView(folderModels)}
+                {viewMode === 'medium' && renderMediumView(folderModels)}
+                {viewMode === 'large' && renderLargeView(folderModels)}
+              </CollapsibleContent>
+            </Collapsible>
+          ))}
+        </div>
       )}
 
       {/* Dialog: Novo Modelo */}
