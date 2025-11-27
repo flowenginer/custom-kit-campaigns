@@ -291,7 +291,8 @@ const Leads = () => {
       'ziper': { label: 'Zíper', icon: '🧥', color: 'bg-blue-100 text-blue-700' },
       'manga_longa': { label: 'Manga Longa', icon: '👕', color: 'bg-green-100 text-green-700' },
       'manga_curta': { label: 'Manga Curta', icon: '👔', color: 'bg-purple-100 text-purple-700' },
-      'regata': { label: 'Regata', icon: '🎽', color: 'bg-orange-100 text-orange-700' }
+      'regata': { label: 'Regata', icon: '🎽', color: 'bg-orange-100 text-orange-700' },
+      'short': { label: 'Short', icon: '🩳', color: 'bg-yellow-100 text-yellow-700' }
     };
     
     const type = customizationSummary.uniformType;
