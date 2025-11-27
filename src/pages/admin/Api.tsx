@@ -3,15 +3,174 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { Copy, CheckCircle2, FileText, Zap, MessageSquare, Code2, Workflow, Webhook } from "lucide-react";
-import { useState } from "react";
+import { Copy, CheckCircle2, FileText, Zap, MessageSquare, Code2, Workflow, Webhook, Plus, Edit, Trash2, Power, PowerOff } from "lucide-react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { supabase } from "@/integrations/supabase/client";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
+interface WebhookConfig {
+  id: string;
+  name: string;
+  webhook_url: string;
+  event_type: string;
+  is_active: boolean;
+  include_customization: boolean;
+  created_at: string;
+}
 
 const Api = () => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [webhooks, setWebhooks] = useState<WebhookConfig[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingWebhook, setEditingWebhook] = useState<WebhookConfig | null>(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    webhook_url: '',
+    event_type: 'lead_abandoned',
+    is_active: true,
+    include_customization: true,
+  });
   
   const BASE_URL = "https://sjznikaxsivaoytefagi.supabase.co/functions/v1";
+
+  const eventTypes = [
+    { value: 'lead_abandoned', label: 'Lead Abandonou (saiu sem completar)' },
+    { value: 'lead_completed', label: 'Lead Completou (finalizou pedido)' },
+    { value: 'lead_returning', label: 'Lead Retornou (segunda visita)' },
+    { value: 'step_reached:1', label: 'Chegou no Step 1' },
+    { value: 'step_reached:2', label: 'Chegou no Step 2' },
+    { value: 'step_reached:3', label: 'Chegou no Step 3' },
+    { value: 'step_reached:4', label: 'Chegou no Step 4' },
+    { value: 'step_reached:5', label: 'Chegou no Step 5' },
+  ];
+
+  useEffect(() => {
+    loadWebhooks();
+  }, []);
+
+  const loadWebhooks = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('webhook_configs')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setWebhooks(data || []);
+    } catch (error) {
+      console.error('Error loading webhooks:', error);
+      toast.error('Erro ao carregar webhooks');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleOpenDialog = (webhook?: WebhookConfig) => {
+    if (webhook) {
+      setEditingWebhook(webhook);
+      setFormData({
+        name: webhook.name,
+        webhook_url: webhook.webhook_url,
+        event_type: webhook.event_type,
+        is_active: webhook.is_active,
+        include_customization: webhook.include_customization,
+      });
+    } else {
+      setEditingWebhook(null);
+      setFormData({
+        name: '',
+        webhook_url: '',
+        event_type: 'lead_abandoned',
+        is_active: true,
+        include_customization: true,
+      });
+    }
+    setIsDialogOpen(true);
+  };
+
+  const handleSaveWebhook = async () => {
+    if (!formData.name || !formData.webhook_url) {
+      toast.error('Preencha todos os campos obrigatórios');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      if (editingWebhook) {
+        const { error } = await supabase
+          .from('webhook_configs')
+          .update(formData)
+          .eq('id', editingWebhook.id);
+
+        if (error) throw error;
+        toast.success('Webhook atualizado com sucesso!');
+      } else {
+        const { error } = await supabase
+          .from('webhook_configs')
+          .insert([formData]);
+
+        if (error) throw error;
+        toast.success('Webhook criado com sucesso!');
+      }
+
+      setIsDialogOpen(false);
+      loadWebhooks();
+    } catch (error) {
+      console.error('Error saving webhook:', error);
+      toast.error('Erro ao salvar webhook');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteWebhook = async (id: string) => {
+    if (!confirm('Deseja realmente excluir este webhook?')) return;
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from('webhook_configs')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      toast.success('Webhook excluído com sucesso!');
+      loadWebhooks();
+    } catch (error) {
+      console.error('Error deleting webhook:', error);
+      toast.error('Erro ao excluir webhook');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleToggleActive = async (webhook: WebhookConfig) => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from('webhook_configs')
+        .update({ is_active: !webhook.is_active })
+        .eq('id', webhook.id);
+
+      if (error) throw error;
+      toast.success(`Webhook ${!webhook.is_active ? 'ativado' : 'desativado'}!`);
+      loadWebhooks();
+    } catch (error) {
+      console.error('Error toggling webhook:', error);
+      toast.error('Erro ao alterar status do webhook');
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -1656,26 +1815,120 @@ curl -X GET "${BASE_URL}/task-operations?action=get&phone={{$json.from}}" \\
 
         {/* TAB 3: WEBHOOK */}
         <TabsContent value="webhook" className="space-y-4">
+          {/* Card de Configuração de Webhooks */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Webhook className="h-5 w-5" />
+                    Webhooks Configuráveis por Evento
+                  </CardTitle>
+                  <CardDescription>
+                    Configure webhooks para disparar automaticamente em eventos específicos do sistema
+                  </CardDescription>
+                </div>
+                <Button onClick={() => handleOpenDialog()}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar Webhook
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {webhooks.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Webhook className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Nenhum webhook configurado ainda.</p>
+                  <p className="text-sm">Clique em "Adicionar Webhook" para começar.</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Evento</TableHead>
+                      <TableHead>URL</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {webhooks.map((webhook) => (
+                      <TableRow key={webhook.id}>
+                        <TableCell className="font-medium">{webhook.name}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {eventTypes.find(e => e.value === webhook.event_type)?.label || webhook.event_type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="max-w-xs truncate text-sm text-muted-foreground">
+                          {webhook.webhook_url}
+                        </TableCell>
+                        <TableCell>
+                          {webhook.is_active ? (
+                            <Badge variant="default" className="bg-green-500">Ativo</Badge>
+                          ) : (
+                            <Badge variant="secondary">Inativo</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleToggleActive(webhook)}
+                              disabled={isLoading}
+                            >
+                              {webhook.is_active ? (
+                                <PowerOff className="h-4 w-4" />
+                              ) : (
+                                <Power className="h-4 w-4" />
+                              )}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleOpenDialog(webhook)}
+                              disabled={isLoading}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleDeleteWebhook(webhook.id)}
+                              disabled={isLoading}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Card de Documentação */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MessageSquare className="h-5 w-5" />
-                Webhook de Aprovação
+                Documentação dos Eventos
               </CardTitle>
               <CardDescription>
-                Como configurar e processar webhooks de tarefas enviadas para aprovação
+                Entenda cada tipo de evento e o payload enviado ao seu webhook
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               
               <div>
-                <h3 className="font-semibold mb-2">📌 O que é o Webhook?</h3>
+                <h3 className="font-semibold mb-2">📌 Como Funciona?</h3>
                 <p className="text-sm">
-                  Quando uma tarefa é enviada para aprovação do cliente (status = <code>awaiting_approval</code>), 
-                  o sistema dispara um webhook HTTP POST para a URL configurada no N8n.
-                </p>
-                <p className="text-sm mt-2">
-                  Isso permite enviar o mockup para o cliente automaticamente via WhatsApp, Email, SMS ou qualquer outro canal.
+                  Configure webhooks para disparar automaticamente quando eventos específicos acontecem no sistema.
+                  O sistema enviará um HTTP POST para a URL configurada com todas as informações do lead.
                 </p>
               </div>
 
@@ -1684,18 +1937,48 @@ curl -X GET "${BASE_URL}/task-operations?action=get&phone={{$json.from}}" \\
                 <div className="bg-muted p-4 rounded-lg">
                   <pre className="text-xs overflow-x-auto">
 {`{
-  "event": "task_approval_needed",
-  "task_id": "7d274d4a-3f52-4e85-b594-ed927ca9f6c1",
-  "customer_name": "João Silva",
-  "customer_phone": "(11) 98765-4321",
-  "customer_email": "joao@example.com",
-  "mockup_url": "https://storage.supabase.co/...",
-  "campaign_name": "Campanha Futebol 2025",
-  "model_name": "Camisa Pro",
-  "quantity": 50,
-  "created_at": "2025-11-11T19:23:55Z"
+  "event": "lead_abandoned",
+  "timestamp": "2025-11-27T14:30:00Z",
+  "lead": {
+    "id": "uuid",
+    "name": "João Silva",
+    "phone": "(11) 98765-4321",
+    "email": "joao@email.com",
+    "current_step": 4,
+    "quantity": "50",
+    "customization_summary": {...}
+  },
+  "campaign": {
+    "id": "uuid",
+    "name": "Campanha Futebol 2025"
+  },
+  "session": {
+    "id": "session_xxx",
+    "visit_count": 1,
+    "first_visit": "2025-11-27T14:00:00Z",
+    "last_event": "step_4"
+  },
+  "utm": {
+    "source": "google",
+    "medium": "cpc",
+    "campaign": "blackfriday",
+    "content": "ad1",
+    "term": "uniforme"
+  }
 }`}
                   </pre>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-3">🎯 Tipos de Eventos Disponíveis</h3>
+                <div className="space-y-3">
+                  {eventTypes.map((event) => (
+                    <div key={event.value} className="border rounded-lg p-3">
+                      <Badge variant="outline" className="mb-2">{event.value}</Badge>
+                      <p className="text-sm">{event.label}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -1830,6 +2113,101 @@ return {
         </TabsContent>
 
       </Tabs>
+
+      {/* Dialog para Criar/Editar Webhook */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {editingWebhook ? 'Editar Webhook' : 'Adicionar Webhook'}
+            </DialogTitle>
+            <DialogDescription>
+              Configure um webhook para disparar automaticamente em eventos específicos
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Nome do Webhook *</Label>
+              <Input
+                id="name"
+                placeholder="Ex: Notificar Lead Abandonado"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="webhook_url">URL do Webhook *</Label>
+              <Input
+                id="webhook_url"
+                placeholder="https://n8n.example.com/webhook/..."
+                value={formData.webhook_url}
+                onChange={(e) => setFormData({ ...formData, webhook_url: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">
+                Cole aqui a URL do seu webhook (N8n, Zapier, Make, etc.)
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="event_type">Tipo de Evento *</Label>
+              <Select
+                value={formData.event_type}
+                onValueChange={(value) => setFormData({ ...formData, event_type: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {eventTypes.map((event) => (
+                    <SelectItem key={event.value} value={event.value}>
+                      {event.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center justify-between border rounded-lg p-3">
+              <div className="space-y-0.5">
+                <Label htmlFor="is_active">Webhook Ativo</Label>
+                <p className="text-xs text-muted-foreground">
+                  Desative para pausar temporariamente sem excluir
+                </p>
+              </div>
+              <Switch
+                id="is_active"
+                checked={formData.is_active}
+                onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between border rounded-lg p-3">
+              <div className="space-y-0.5">
+                <Label htmlFor="include_customization">Incluir Dados de Customização</Label>
+                <p className="text-xs text-muted-foreground">
+                  Enviar customization_summary no payload
+                </p>
+              </div>
+              <Switch
+                id="include_customization"
+                checked={formData.include_customization}
+                onCheckedChange={(checked) => setFormData({ ...formData, include_customization: checked })}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveWebhook} disabled={isLoading}>
+              {isLoading ? 'Salvando...' : 'Salvar Webhook'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

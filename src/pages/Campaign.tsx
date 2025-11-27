@@ -229,6 +229,11 @@ export default function Campaign() {
       }).catch(() => {
         // Silently fail if beacon doesn't work
       });
+
+      // Trigger webhook for lead abandoned (fire-and-forget)
+      triggerWebhooks('lead_abandoned').catch(() => {
+        // Silently fail
+      });
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
@@ -396,10 +401,47 @@ export default function Campaign() {
     }
   };
 
+  // Trigger webhooks for event
+  const triggerWebhooks = async (eventType: string) => {
+    if (!sessionId) return;
+
+    try {
+      await supabase.functions.invoke('process-event-webhooks', {
+        body: {
+          event_type: eventType,
+          session_id: sessionId,
+        },
+      });
+    } catch (error) {
+      console.error('Error triggering webhooks:', error);
+      // Não interrompe o fluxo se webhook falhar
+    }
+  };
+
   // Track campaign visit
   useEffect(() => {
     if (campaign && sessionId) {
       trackEvent('campaign_visit');
+      
+      // Check if this is a returning visitor
+      const checkReturningVisitor = async () => {
+        try {
+          const { count } = await supabase
+            .from('funnel_events')
+            .select('*', { count: 'exact', head: true })
+            .eq('session_id', sessionId)
+            .in('event_type', ['visit', 'campaign_visit']);
+
+          // Se count > 1, é uma segunda visita ou mais
+          if (count && count > 1) {
+            await triggerWebhooks('lead_returning');
+          }
+        } catch (error) {
+          console.error('Error checking returning visitor:', error);
+        }
+      };
+
+      checkReturningVisitor();
     }
   }, [campaign, sessionId]);
 
@@ -727,6 +769,7 @@ export default function Campaign() {
       }
       
       await trackEvent('order_completed');
+      await triggerWebhooks('lead_completed');
 
       // Clear session storage
       sessionStorage.removeItem(STORAGE_KEY);
