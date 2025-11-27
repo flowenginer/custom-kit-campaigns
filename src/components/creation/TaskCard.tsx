@@ -98,6 +98,14 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
                     />
                   </div>
                 )}
+                {/* Exibir número do pedido quando preenchido (fora do status approved) */}
+                {task.order_number && task.status !== 'approved' && (
+                  <div className="mt-2 flex items-center justify-center">
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 font-medium">
+                      📝 Pedido: {task.order_number}
+                    </Badge>
+                  </div>
+                )}
               </div>
               {onToggleCollapse && (
                 <Button
