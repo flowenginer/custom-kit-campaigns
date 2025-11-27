@@ -132,18 +132,15 @@ const SidebarLogoutButton = ({ onSignOut, userName }: { onSignOut: () => void; u
   const { open } = useSidebar();
   
   return (
-    <div className="p-3 space-y-2">
-      {userName && (
-        <div className={cn(
-          "flex items-center gap-2",
-          !open && "justify-center"
-        )}>
+    <div className="p-3">
+      <div className={cn(
+        "flex items-center gap-2",
+        !open && "justify-center"
+      )}>
+        {userName && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className={cn(
-                "flex items-center gap-2",
-                !open && "justify-center"
-              )}>
+              <div className="flex items-center gap-2">
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
                     {userName.charAt(0).toUpperCase()}
@@ -154,29 +151,20 @@ const SidebarLogoutButton = ({ onSignOut, userName }: { onSignOut: () => void; u
             </TooltipTrigger>
             {!open && <TooltipContent side="right">{userName}</TooltipContent>}
           </Tooltip>
-        </div>
-      )}
-      
-      <div className={cn(
-        "flex",
-        !open && "justify-center"
-      )}>
+        )}
+        
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
               variant="ghost"
-              size={open ? "default" : "icon"}
+              size="icon"
               onClick={onSignOut}
-              className={cn(
-                "hover:bg-accent hover:text-accent-foreground",
-                open ? "w-full justify-start gap-2" : "h-8 w-8"
-              )}
+              className="h-8 w-8 hover:bg-accent hover:text-accent-foreground flex-shrink-0"
             >
-              <LogOut className={cn(open ? "h-5 w-5" : "h-4 w-4")} />
-              {open && <span className="text-base">Sair</span>}
+              <LogOut className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
-          {!open && <TooltipContent side="right">Sair</TooltipContent>}
+          <TooltipContent side="right">Sair</TooltipContent>
         </Tooltip>
       </div>
     </div>
