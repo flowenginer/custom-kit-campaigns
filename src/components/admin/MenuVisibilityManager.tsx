@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useMenuStructure } from "@/hooks/useMenuStructure";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -24,25 +25,6 @@ interface UserWithCustomSettings {
   allowed_menu_items: string[];
 }
 
-// Lista completa de todos os itens de menu disponíveis
-const allMenuItems = [
-  { id: 'dashboard', label: 'Dashboard', description: 'Painel principal com métricas' },
-  { id: 'data_cross', label: 'Data Cross', description: 'Análises avançadas de dados' },
-  { id: 'ranking', label: 'Ranking', description: 'Ranking de produção' },
-  { id: 'segments', label: 'Segmentos', description: 'Gerenciar segmentos' },
-  { id: 'models', label: 'Modelos', description: 'Gerenciar modelos de uniforme' },
-  { id: 'campaigns', label: 'Campanhas', description: 'Gerenciar campanhas' },
-  { id: 'leads', label: 'Leads', description: 'Visualizar leads' },
-  { id: 'workflows', label: 'Workflows', description: 'Gerenciar fluxos de trabalho' },
-  { id: 'ab_tests', label: 'Testes A/B', description: 'Gerenciar testes A/B' },
-  { id: 'creation', label: 'Criação', description: 'Kanban de tarefas de design' },
-  { id: 'orders', label: 'Pedidos', description: 'Visualizar pedidos' },
-  { id: 'approvals', label: 'Aprovações', description: 'Aprovar solicitações urgentes' },
-  { id: 'api', label: 'API', description: 'Configurar webhooks e integrações' },
-  { id: 'settings', label: 'Configurações', description: 'Configurações do sistema' },
-  { id: 'themes', label: 'Temas', description: 'Gerenciar temas visuais' },
-];
-
 const roleInfo: Record<AppRole, { label: string; description: string }> = {
   super_admin: { label: 'Super Admin', description: 'Acesso total ao sistema' },
   admin: { label: 'Admin', description: 'Acesso administrativo' },
@@ -52,6 +34,13 @@ const roleInfo: Record<AppRole, { label: string; description: string }> = {
 };
 
 export const MenuVisibilityManager = () => {
+  const { getAllMenus } = useMenuStructure();
+  const allMenuItems = getAllMenus().map(menu => ({
+    id: menu.slug,
+    label: menu.label,
+    description: menu.description || `Menu ${menu.label}`,
+  }));
+  
   const [roleDefaults, setRoleDefaults] = useState<RoleDefaults[]>([]);
   const [usersWithCustom, setUsersWithCustom] = useState<UserWithCustomSettings[]>([]);
   const [loading, setLoading] = useState(true);
