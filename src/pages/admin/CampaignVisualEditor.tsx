@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { VisualOverridePanel } from "@/components/campaign/VisualOverridePanel";
 import { VisualOverrides } from "@/hooks/useCampaignVisualOverrides";
 import { toast } from "sonner";
-import { ArrowLeft, Save, Eye } from "lucide-react";
+import { ArrowLeft, Save, Eye, RefreshCw } from "lucide-react";
 
 const STEP_OPTIONS = [
   { value: "global", label: "🌐 Global (Logo, Cores)" },
@@ -26,6 +26,9 @@ export default function CampaignVisualEditor() {
   const queryClient = useQueryClient();
   const [selectedStep, setSelectedStep] = useState("global");
   const [localOverrides, setLocalOverrides] = useState<VisualOverrides>({});
+  const [previewKey, setPreviewKey] = useState(0);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const { data: campaign } = useQuery({
     queryKey: ["campaign", id],
@@ -53,9 +56,19 @@ export default function CampaignVisualEditor() {
       if (error) throw error;
       const result = (data?.overrides as VisualOverrides) || {};
       setLocalOverrides(result);
+      setHasUnsavedChanges(false);
       return result;
     },
   });
+
+  // Auto-save draft to localStorage for preview
+  useEffect(() => {
+    if (campaign && Object.keys(localOverrides).length > 0) {
+      const draftKey = `visual_draft_${id}_${selectedStep}`;
+      localStorage.setItem(draftKey, JSON.stringify(localOverrides));
+      setHasUnsavedChanges(true);
+    }
+  }, [localOverrides, id, selectedStep, campaign]);
 
   const saveMutation = useMutation({
     mutationFn: async (overrides: VisualOverrides) => {
@@ -70,7 +83,13 @@ export default function CampaignVisualEditor() {
       if (error) throw error;
     },
     onSuccess: () => {
+      // Clear draft from localStorage
+      const draftKey = `visual_draft_${id}_${selectedStep}`;
+      localStorage.removeItem(draftKey);
+      
       queryClient.invalidateQueries({ queryKey: ["campaign-visual-overrides"] });
+      setHasUnsavedChanges(false);
+      setPreviewKey(prev => prev + 1);
       toast.success("Alterações salvas com sucesso!");
     },
     onError: (error) => {
@@ -89,6 +108,13 @@ export default function CampaignVisualEditor() {
     }
   };
 
+  const handleRefreshPreview = () => {
+    setPreviewKey(prev => prev + 1);
+    if (iframeRef.current) {
+      iframeRef.current.src = iframeRef.current.src;
+    }
+  };
+
   return (
     <div className="p-8 space-y-6">
       <div className="flex items-center justify-between">
@@ -102,16 +128,20 @@ export default function CampaignVisualEditor() {
             <p className="text-muted-foreground">{campaign?.name}</p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handlePreview}>
-            <Eye className="h-4 w-4 mr-2" />
-            Preview
-          </Button>
-          <Button onClick={handleSave} disabled={saveMutation.isPending}>
-            <Save className="h-4 w-4 mr-2" />
-            {saveMutation.isPending ? "Salvando..." : "Salvar"}
-          </Button>
-        </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleRefreshPreview}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Atualizar Preview
+            </Button>
+            <Button variant="outline" onClick={handlePreview}>
+              <Eye className="h-4 w-4 mr-2" />
+              Abrir em Nova Aba
+            </Button>
+            <Button onClick={handleSave} disabled={saveMutation.isPending || !hasUnsavedChanges}>
+              <Save className="h-4 w-4 mr-2" />
+              {saveMutation.isPending ? "Salvando..." : hasUnsavedChanges ? "Salvar Alterações" : "Salvo"}
+            </Button>
+          </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -147,31 +177,45 @@ export default function CampaignVisualEditor() {
           )}
         </div>
 
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Preview</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-                <p className="text-muted-foreground">
-                  O preview completo pode ser visualizado clicando no botão "Preview" acima
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Preview em Tempo Real</span>
+                  {hasUnsavedChanges && (
+                    <span className="text-xs text-muted-foreground font-normal">
+                      Alterações não salvas
+                    </span>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="relative w-full" style={{ height: "calc(100vh - 300px)", minHeight: "600px" }}>
+                  {campaign && (
+                    <iframe
+                      ref={iframeRef}
+                      key={previewKey}
+                      src={`/c/${campaign.unique_link}`}
+                      className="w-full h-full border-0 rounded-b-lg"
+                      title="Preview da Campanha"
+                    />
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Dicas</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm text-muted-foreground">
-              <p>• As alterações só serão aplicadas após clicar em "Salvar"</p>
-              <p>• Use "Preview" para visualizar as mudanças em tempo real</p>
-              <p>• A seção "Global" afeta todas as páginas da campanha</p>
-              <p>• Campos vazios usarão os valores padrão da campanha</p>
-            </CardContent>
-          </Card>
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Como Funciona</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm text-muted-foreground">
+                <p>• 🔄 O preview é atualizado automaticamente conforme você edita</p>
+                <p>• 💾 Clique em "Salvar" para aplicar as mudanças permanentemente</p>
+                <p>• 🌐 A seção "Global" (logo e cores) afeta todas as páginas</p>
+                <p>• 🎨 Cada seção permite customizar textos, cores e imagens</p>
+                <p>• ↩️ Use "Atualizar Preview" se o iframe não carregar</p>
+              </CardContent>
+            </Card>
         </div>
       </div>
     </div>
