@@ -299,6 +299,27 @@ export default function Campaign() {
     loadCampaign();
   }, [uniqueLink, navigate]);
 
+  // Buscar lead existente para essa sessão e campanha
+  useEffect(() => {
+    if (campaign && sessionId && !leadId) {
+      const checkExistingLead = async () => {
+        const { data } = await supabase
+          .from('leads')
+          .select('id, current_step, customization_summary')
+          .eq('session_id', sessionId)
+          .eq('campaign_id', campaign.id)
+          .is('deleted_at', null)
+          .maybeSingle();
+        
+        if (data) {
+          console.log('Lead existente encontrado:', data.id);
+          setLeadId(data.id);
+        }
+      };
+      checkExistingLead();
+    }
+  }, [campaign, sessionId, leadId]);
+
   // Ler parâmetros UTM e A/B testing
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
@@ -327,6 +348,29 @@ export default function Campaign() {
     }
     setSessionId(sid);
   }, []);
+
+  // Heartbeat para manter status online
+  useEffect(() => {
+    if (!leadId) return;
+
+    const updateLastSeen = async () => {
+      await supabase
+        .from('leads')
+        .update({ 
+          last_seen: new Date().toISOString(),
+          is_online: true 
+        })
+        .eq('id', leadId);
+    };
+
+    // Atualizar imediatamente
+    updateLastSeen();
+    
+    // Atualizar a cada 10 segundos
+    const interval = setInterval(updateLastSeen, 10000);
+
+    return () => clearInterval(interval);
+  }, [leadId]);
 
   // Restaurar progresso salvo
   useEffect(() => {
@@ -530,9 +574,13 @@ export default function Campaign() {
 
         if (error) throw error;
       } else {
+        // Usar upsert para evitar conflitos de constraint
         const { data, error } = await supabase
           .from('leads')
-          .insert(leadData)
+          .upsert(leadData, {
+            onConflict: 'session_id,campaign_id',
+            ignoreDuplicates: false
+          })
           .select()
           .single();
 
