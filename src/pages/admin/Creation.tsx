@@ -220,6 +220,17 @@ const Creation = () => {
         .eq("id", taskId);
 
       if (error) throw error;
+
+      // ✅ Atualizar estado local imediatamente
+      setTasks(prevTasks => 
+        prevTasks.map(task => 
+          task.id === taskId 
+            ? { ...task, order_number: orderNumber }
+            : task
+        )
+      );
+
+      toast.success("Número do pedido salvo!");
     } catch (error) {
       console.error("Error updating order number:", error);
       toast.error("Erro ao atualizar número do pedido");
