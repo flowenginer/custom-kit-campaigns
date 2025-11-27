@@ -33,6 +33,7 @@ import { BackEditor } from "@/components/customization/BackEditor";
 import { SleeveEditor } from "@/components/customization/SleeveEditor";
 import { UrgentReasonDialog } from "@/components/orders/UrgentReasonDialog";
 import { TaskPriority } from "@/types/design-task";
+import { useUniformTypes } from "@/hooks/useUniformTypes";
 
 // Importar imagens dos uniformes
 import mangaCurtaImg from "@/assets/uniforms/manga-curta.png";
@@ -47,13 +48,6 @@ const UNIFORM_IMAGES: Record<string, string> = {
   'regata': regataImg,
 };
 
-const UNIFORM_LABELS: Record<string, string> = {
-  'ziper': '🧥 Zíper',
-  'manga_longa': '👔 Manga Longa',
-  'manga_curta': '👕 Manga Curta',
-  'regata': '🎽 Regata',
-  'short': '🩳 Short',
-};
 
 interface NewLayoutRequestDialogProps {
   open: boolean;
@@ -66,6 +60,7 @@ export const NewLayoutRequestDialog = ({
   onOpenChange,
   onSuccess,
 }: NewLayoutRequestDialogProps) => {
+  const { types: uniformTypes, getIcon, getLabel } = useUniformTypes();
   const [loading, setLoading] = useState(false);
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [models, setModels] = useState<any[]>([]);
@@ -572,23 +567,25 @@ export const NewLayoutRequestDialog = ({
             <div className="space-y-2">
               <Label>Tipo de Uniforme *</Label>
               <div className="grid grid-cols-2 gap-3">
-                {Object.entries(UNIFORM_LABELS).map(([key, label]) => (
+                {uniformTypes.map((type) => (
                   <Card
-                    key={key}
+                    key={type.tag_value}
                     className={`p-4 cursor-pointer transition-all hover:border-primary ${
-                      selectedUniformType === key
+                      selectedUniformType === type.tag_value
                         ? "border-primary ring-2 ring-primary"
                         : ""
                     }`}
-                    onClick={() => setSelectedUniformType(key)}
+                    onClick={() => setSelectedUniformType(type.tag_value)}
                   >
                     <div className="flex flex-col items-center gap-2">
                       <img
-                        src={UNIFORM_IMAGES[key]}
-                        alt={label}
+                        src={UNIFORM_IMAGES[type.tag_value] || mangaCurtaImg}
+                        alt={getLabel(type.tag_value)}
                         className="w-20 h-20 object-contain"
                       />
-                      <span className="text-sm font-medium text-center">{label}</span>
+                      <span className="text-sm font-medium text-center">
+                        {getIcon(type.tag_value)} {getLabel(type.tag_value)}
+                      </span>
                     </div>
                   </Card>
                 ))}

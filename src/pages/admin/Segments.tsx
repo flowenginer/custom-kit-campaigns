@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Eye, LayoutGrid, LayoutList, Grid3x3, Grid2x2, Folder, FolderOpen, ChevronDown, ChevronRight } from "lucide-react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
+import { useUniformTypes } from "@/hooks/useUniformTypes";
 
 interface Segment {
   id: string;
@@ -29,6 +30,7 @@ type ViewMode = 'list' | 'small' | 'medium' | 'large';
 
 const Segments = () => {
   const navigate = useNavigate();
+  const { types: uniformTypes, getIcon, getLabel } = useUniformTypes();
   const [segments, setSegments] = useState<Segment[]>([]);
   const [modelCounts, setModelCounts] = useState<Record<string, number>>({});
   const [isDialogOpen, setIsDialogOpen] = useState(false);

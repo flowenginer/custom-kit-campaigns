@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
+import { useUniformTypes } from "@/hooks/useUniformTypes";
 
 interface Lead {
   id: string;
@@ -44,6 +45,7 @@ interface Lead {
 
 const Leads = () => {
   const { isSuperAdmin } = useUserRole();
+  const { getIcon, getLabel } = useUniformTypes();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -287,21 +289,24 @@ const Leads = () => {
       return '—';
     }
     
-    const typeLabels: Record<string, { label: string; icon: string; color: string }> = {
-      'ziper': { label: 'Zíper', icon: '🧥', color: 'bg-blue-100 text-blue-700' },
-      'manga_longa': { label: 'Manga Longa', icon: '👕', color: 'bg-green-100 text-green-700' },
-      'manga_curta': { label: 'Manga Curta', icon: '👔', color: 'bg-purple-100 text-purple-700' },
-      'regata': { label: 'Regata', icon: '🎽', color: 'bg-orange-100 text-orange-700' },
-      'short': { label: 'Short', icon: '🩳', color: 'bg-yellow-100 text-yellow-700' }
+    const type = customizationSummary.uniformType;
+    const icon = getIcon(type);
+    const label = getLabel(type);
+    
+    const colorMap: Record<string, string> = {
+      'ziper': 'bg-blue-100 text-blue-700',
+      'manga_longa': 'bg-green-100 text-green-700',
+      'manga_curta': 'bg-purple-100 text-purple-700',
+      'regata': 'bg-orange-100 text-orange-700',
+      'short': 'bg-yellow-100 text-yellow-700'
     };
     
-    const type = customizationSummary.uniformType;
-    const config = typeLabels[type] || { label: type, icon: '👕', color: 'bg-gray-100 text-gray-700' };
+    const color = colorMap[type] || 'bg-gray-100 text-gray-700';
     
     return (
-      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${config.color}`}>
-        <span>{config.icon}</span>
-        <span>{config.label}</span>
+      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${color}`}>
+        <span>{icon}</span>
+        <span>{label}</span>
       </span>
     );
   };
