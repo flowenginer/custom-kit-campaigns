@@ -135,28 +135,36 @@ const SidebarLogoutButton = ({ onSignOut, userName }: { onSignOut: () => void; u
   const { open } = useSidebar();
   
   return (
-    <div className="p-3 space-y-2">
+    <div className={cn(
+      "p-3",
+      open ? "flex items-center gap-2" : "flex justify-center"
+    )}>
       {open && userName && (
-        <div className="flex items-center gap-2 px-2">
-          <Avatar className="h-8 w-8">
+        <>
+          <Avatar className="h-8 w-8 flex-shrink-0">
             <AvatarFallback className="bg-primary text-primary-foreground text-xs">
               {userName.substring(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <span className="text-sm font-medium">{userName}</span>
-        </div>
+          <span className="text-sm font-medium flex-1 truncate">{userName}</span>
+        </>
       )}
-      <Button
-        variant="ghost"
-        onClick={onSignOut}
-        className={cn(
-          "w-full justify-start gap-2",
-          !open && "justify-center px-2"
-        )}
-      >
-        <LogOut className="h-4 w-4" />
-        {open && <span>Sair</span>}
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant={open ? "default" : "ghost"}
+            size={open ? "default" : "icon"}
+            onClick={onSignOut}
+            className={cn(
+              open ? "px-4" : "h-9 w-9"
+            )}
+          >
+            <LogOut className="h-4 w-4" />
+            {open && <span className="ml-2">Sair</span>}
+          </Button>
+        </TooltipTrigger>
+        {!open && <TooltipContent side="right">Sair</TooltipContent>}
+      </Tooltip>
     </div>
   );
 };
