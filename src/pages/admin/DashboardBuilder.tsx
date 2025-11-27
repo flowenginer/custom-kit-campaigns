@@ -1,27 +1,76 @@
 import { useState } from "react";
-import { useDataSources } from "@/hooks/useDataSources";
+import { useDataSources, DataSource } from "@/hooks/useDataSources";
+import { useDashboards, useSaveDashboard, useDeleteDashboard, useLoadDashboard } from "@/hooks/useDashboards";
+import { Widget } from "@/types/dashboard";
+import { WidgetConfigDialog } from "@/components/dashboard-builder/WidgetConfigDialog";
+import { WidgetGrid } from "@/components/dashboard-builder/WidgetGrid";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Save, FolderOpen, LayoutDashboard, Database, Table2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Plus, Save, FolderOpen, LayoutDashboard, Database, Table2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 const DashboardBuilder = () => {
   const { dataSources, groupedSources, categoryLabels, isLoading } = useDataSources();
-  const [selectedSource, setSelectedSource] = useState<string | null>(null);
+  const { data: dashboards } = useDashboards();
+  const saveDashboard = useSaveDashboard();
+  const deleteDashboard = useDeleteDashboard();
+  
+  const [selectedSource, setSelectedSource] = useState<DataSource | null>(null);
+  const [widgets, setWidgets] = useState<Widget[]>([]);
+  const [dashboardName, setDashboardName] = useState("");
+  const [currentDashboardId, setCurrentDashboardId] = useState<string | null>(null);
+  const [showWidgetDialog, setShowWidgetDialog] = useState(false);
+
+  const { data: loadedDashboard } = useLoadDashboard(currentDashboardId);
 
   const handleSaveDashboard = () => {
-    toast.success("Dashboard salvo com sucesso!");
+    if (!dashboardName.trim()) {
+      toast.error("Digite um nome para o dashboard");
+      return;
+    }
+
+    saveDashboard.mutate({
+      id: currentDashboardId || undefined,
+      name: dashboardName,
+      is_public: false,
+      widgets: widgets,
+    });
   };
 
-  const handleLoadDashboard = () => {
-    toast.info("Carregar dashboard (em desenvolvimento)");
+  const handleLoadDashboard = (dashboardId: string) => {
+    setCurrentDashboardId(dashboardId);
   };
 
-  const handleAddWidget = () => {
-    toast.info("Adicionar widget (em desenvolvimento)");
+  if (loadedDashboard && currentDashboardId && widgets.length === 0) {
+    setWidgets(loadedDashboard.widgets || []);
+    setDashboardName(loadedDashboard.name);
+  }
+
+  const handleAddWidget = (widget: Partial<Widget>) => {
+    setWidgets([...widgets, widget as Widget]);
+  };
+
+  const handleDeleteWidget = (widgetId: string) => {
+    setWidgets(widgets.filter(w => w.id !== widgetId));
+  };
+
+  const handleNewDashboard = () => {
+    setWidgets([]);
+    setDashboardName("");
+    setCurrentDashboardId(null);
+    setSelectedSource(null);
+  };
+
+  const handleSelectSource = (sourceId: string) => {
+    const source = dataSources.find(s => s.id === sourceId);
+    if (source) {
+      setSelectedSource(source);
+    }
   };
 
   return (
@@ -32,12 +81,20 @@ const DashboardBuilder = () => {
           <LayoutDashboard className="h-5 w-5 text-primary" />
           <h1 className="text-lg font-semibold">Dashboard Builder</h1>
           
-          <div className="ml-auto flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleLoadDashboard}>
-              <FolderOpen className="h-4 w-4 mr-2" />
-              Carregar
+          <div className="ml-auto flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Label className="text-sm">Nome:</Label>
+              <Input
+                value={dashboardName}
+                onChange={(e) => setDashboardName(e.target.value)}
+                placeholder="Digite o nome"
+                className="w-48"
+              />
+            </div>
+            <Button variant="outline" size="sm" onClick={handleNewDashboard}>
+              Novo
             </Button>
-            <Button size="sm" onClick={handleSaveDashboard}>
+            <Button size="sm" onClick={handleSaveDashboard} disabled={saveDashboard.isPending}>
               <Save className="h-4 w-4 mr-2" />
               Salvar
             </Button>
@@ -87,11 +144,11 @@ const DashboardBuilder = () => {
                             <Card
                               key={source.id}
                               className={`cursor-pointer transition-all hover:shadow-md ${
-                                selectedSource === source.id 
+                                selectedSource?.id === source.id 
                                   ? 'ring-2 ring-primary bg-primary/5' 
                                   : 'hover:bg-accent'
                               }`}
-                              onClick={() => setSelectedSource(source.id)}
+                              onClick={() => handleSelectSource(source.id)}
                             >
                               <CardHeader className="p-3 pb-2">
                                 <div className="flex items-start gap-2">
@@ -136,7 +193,7 @@ const DashboardBuilder = () => {
           {/* Canvas Toolbar */}
           <div className="border-b bg-background p-3">
             <div className="flex items-center gap-2">
-              <Button size="sm" onClick={handleAddWidget} disabled={!selectedSource}>
+              <Button size="sm" onClick={() => setShowWidgetDialog(true)} disabled={!selectedSource}>
                 <Plus className="h-4 w-4 mr-2" />
                 Adicionar Widget
               </Button>
@@ -145,7 +202,7 @@ const DashboardBuilder = () => {
                 <div className="ml-auto flex items-center gap-2 text-sm text-muted-foreground">
                   <span>Fonte selecionada:</span>
                   <Badge variant="secondary">
-                    {dataSources.find(s => s.id === selectedSource)?.display_name}
+                    {selectedSource.display_name}
                   </Badge>
                 </div>
               )}
@@ -167,27 +224,29 @@ const DashboardBuilder = () => {
                     </p>
                   </div>
                 </div>
-              ) : (
-                <div className="grid gap-4">
-                  {/* Placeholder para widgets */}
-                  <Card className="border-dashed border-2">
-                    <CardContent className="flex items-center justify-center min-h-[300px]">
-                      <div className="text-center space-y-3">
-                        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10">
-                          <Plus className="h-6 w-6 text-primary" />
-                        </div>
-                        <h3 className="font-medium">Área de Widgets</h3>
-                        <p className="text-sm text-muted-foreground max-w-sm">
-                          Clique em "Adicionar Widget" para criar gráficos, tabelas e métricas usando a fonte selecionada.
-                        </p>
-                        <Button size="sm" variant="outline" onClick={handleAddWidget}>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Criar Primeiro Widget
-                        </Button>
+              ) : widgets.length === 0 ? (
+                <Card className="border-dashed border-2">
+                  <CardContent className="flex items-center justify-center min-h-[300px]">
+                    <div className="text-center space-y-3">
+                      <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10">
+                        <Plus className="h-6 w-6 text-primary" />
                       </div>
-                    </CardContent>
-                  </Card>
-                </div>
+                      <h3 className="font-medium">Área de Widgets</h3>
+                      <p className="text-sm text-muted-foreground max-w-sm">
+                        Clique em "Adicionar Widget" para criar gráficos, tabelas e métricas usando a fonte selecionada.
+                      </p>
+                      <Button size="sm" variant="outline" onClick={() => setShowWidgetDialog(true)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Criar Primeiro Widget
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <WidgetGrid 
+                  widgets={widgets} 
+                  onDelete={handleDeleteWidget}
+                />
               )}
             </div>
           </div>
@@ -204,14 +263,59 @@ const DashboardBuilder = () => {
           
           <ScrollArea className="h-[calc(100vh-16rem)]">
             <div className="p-4">
-              <div className="text-center py-8 text-sm text-muted-foreground">
-                <p>Nenhum dashboard salvo ainda</p>
-                <p className="text-xs mt-2">Crie e salve seu primeiro dashboard</p>
-              </div>
+              {dashboards && dashboards.length > 0 ? (
+                <div className="space-y-2">
+                  {dashboards.map((dashboard) => (
+                    <Card 
+                      key={dashboard.id} 
+                      className={`cursor-pointer hover:bg-accent transition-colors ${
+                        currentDashboardId === dashboard.id ? 'bg-accent' : ''
+                      }`}
+                    >
+                      <CardHeader className="p-3">
+                        <div className="flex items-start justify-between">
+                          <div 
+                            className="flex-1"
+                            onClick={() => handleLoadDashboard(dashboard.id)}
+                          >
+                            <CardTitle className="text-sm">{dashboard.name}</CardTitle>
+                            <CardDescription className="text-xs mt-1">
+                              {dashboard.widgets?.length || 0} widgets
+                            </CardDescription>
+                          </div>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteDashboard.mutate(dashboard.id);
+                            }}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </CardHeader>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-sm text-muted-foreground">
+                  <p>Nenhum dashboard salvo ainda</p>
+                  <p className="text-xs mt-2">Crie e salve seu primeiro dashboard</p>
+                </div>
+              )}
             </div>
           </ScrollArea>
         </div>
       </div>
+
+      <WidgetConfigDialog
+        open={showWidgetDialog}
+        onOpenChange={setShowWidgetDialog}
+        dataSource={selectedSource}
+        onSave={handleAddWidget}
+      />
     </div>
   );
 };
