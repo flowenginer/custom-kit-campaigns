@@ -11,6 +11,7 @@ import { CardFontEditor } from "@/components/creation/CardFontEditor";
 import { DesignTask } from "@/types/design-task";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useCardFontSizes } from "@/hooks/useCardFontSizes";
+import { useCardCollapse } from "@/hooks/useCardCollapse";
 import { toast } from "sonner";
 import { 
   Inbox, 
@@ -53,6 +54,7 @@ const Creation = () => {
   
   const { allowedKanbanColumns, isSuperAdmin, isAdmin, isDesigner, isSalesperson, isLoading } = useUserRole();
   const { sizes: fontSizes, updateSize, resetToDefaults } = useCardFontSizes();
+  const { collapsedCards, toggleCard, collapseAll, expandAll } = useCardCollapse();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -580,6 +582,10 @@ const Creation = () => {
                 showAcceptButton={isDesigner}
                 currentUserId={currentUserId || undefined}
                 onTaskAccepted={loadTasks}
+                collapsedCards={collapsedCards}
+                onToggleCard={toggleCard}
+                onCollapseAll={() => collapseAll(column.tasks.map(t => t.id))}
+                onExpandAll={() => expandAll(column.tasks.map(t => t.id))}
               />
             ))}
           </div>
