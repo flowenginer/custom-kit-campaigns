@@ -21,7 +21,8 @@ import {
   AlertCircle,
   Package,
   Search,
-  X
+  X,
+  ArrowUpDown
 } from "lucide-react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
@@ -51,6 +52,9 @@ const Creation = () => {
   const [designerFilter, setDesignerFilter] = useState<string>("all");
   const [salespersonFilter, setSalespersonFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [sortOption, setSortOption] = useState<string>(() => {
+    return localStorage.getItem('kanban-sort-option') || 'updated_at_desc';
+  });
   
   const { allowedKanbanColumns, isSuperAdmin, isAdmin, isDesigner, isSalesperson, isLoading } = useUserRole();
   const { sizes: fontSizes, updateSize, resetToDefaults } = useCardFontSizes();
@@ -90,6 +94,10 @@ const Creation = () => {
       localStorage.removeItem('kanban-column-colors');
     }
   }, [columnColors]);
+
+  useEffect(() => {
+    localStorage.setItem('kanban-sort-option', sortOption);
+  }, [sortOption]);
 
   const handleColorsChange = (colors: string[]) => {
     setColumnColors(colors);
@@ -378,9 +386,81 @@ const Creation = () => {
     );
   };
 
-  // Aplicar todos os filtros
+  // Ordenar tarefas
+  const sortTasks = (tasks: DesignTask[]) => {
+    const sorted = [...tasks];
+    
+    switch (sortOption) {
+      case 'timer1_asc':
+        // Timer 1 - mais antigo primeiro (created_at ASC)
+        return sorted.sort((a, b) => 
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+      
+      case 'timer1_desc':
+        // Timer 1 - mais recente primeiro (created_at DESC)
+        return sorted.sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+      
+      case 'timer2_asc':
+        // Timer 2 - mais antigo no container (status_changed_at ASC)
+        return sorted.sort((a, b) => 
+          new Date(a.status_changed_at).getTime() - new Date(b.status_changed_at).getTime()
+        );
+      
+      case 'timer2_desc':
+        // Timer 2 - mais recente no container (status_changed_at DESC)
+        return sorted.sort((a, b) => 
+          new Date(b.status_changed_at).getTime() - new Date(a.status_changed_at).getTime()
+        );
+      
+      case 'quantity_desc':
+        // Mais unidades primeiro
+        return sorted.sort((a, b) => (b.quantity || 0) - (a.quantity || 0));
+      
+      case 'quantity_asc':
+        // Menos unidades primeiro
+        return sorted.sort((a, b) => (a.quantity || 0) - (b.quantity || 0));
+      
+      case 'version_desc':
+        // Mais atualizações/versões primeiro
+        return sorted.sort((a, b) => (b.current_version || 0) - (a.current_version || 0));
+      
+      case 'version_asc':
+        // Menos atualizações/versões primeiro
+        return sorted.sort((a, b) => (a.current_version || 0) - (b.current_version || 0));
+      
+      case 'alphabetical':
+        // Ordem alfabética A-Z por nome do cliente
+        return sorted.sort((a, b) => 
+          (a.customer_name || '').localeCompare(b.customer_name || '', 'pt-BR')
+        );
+      
+      case 'order_number_asc':
+        // Número do pedido crescente
+        return sorted.sort((a, b) => 
+          (a.order_number || '').localeCompare(b.order_number || '', 'pt-BR', { numeric: true })
+        );
+      
+      case 'order_number_desc':
+        // Número do pedido decrescente
+        return sorted.sort((a, b) => 
+          (b.order_number || '').localeCompare(a.order_number || '', 'pt-BR', { numeric: true })
+        );
+      
+      case 'updated_at_desc':
+      default:
+        // Padrão - última atualização (mais recente primeiro)
+        return sorted.sort((a, b) => 
+          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+        );
+    }
+  };
+
+  // Aplicar todos os filtros e ordenação
   const applyAllFilters = (tasks: DesignTask[]) => {
-    return filterBySearch(
+    const filtered = filterBySearch(
       filterByDesigner(
         filterBySalesperson(
           filterByPriority(
@@ -391,6 +471,7 @@ const Creation = () => {
         )
       )
     );
+    return sortTasks(filtered);
   };
 
   // Limpar todos os filtros
@@ -399,6 +480,7 @@ const Creation = () => {
     setDesignerFilter("all");
     setSalespersonFilter("all");
     setPriorityFilter("all");
+    setSortOption("updated_at_desc");
   };
 
   // Extrair listas únicas de designers e vendedores
@@ -553,8 +635,30 @@ const Creation = () => {
             </SelectContent>
           </Select>
 
+          {/* Filtro de Ordenação */}
+          <Select value={sortOption} onValueChange={setSortOption}>
+            <SelectTrigger className="w-[220px]">
+              <ArrowUpDown className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Ordenar por" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="updated_at_desc">Última atualização</SelectItem>
+              <SelectItem value="timer1_asc">⏱️ Mais antigo (criação)</SelectItem>
+              <SelectItem value="timer1_desc">🕐 Mais recente (criação)</SelectItem>
+              <SelectItem value="timer2_asc">⏱️ Mais tempo no status</SelectItem>
+              <SelectItem value="timer2_desc">🕐 Menos tempo no status</SelectItem>
+              <SelectItem value="quantity_desc">📦 Mais unidades</SelectItem>
+              <SelectItem value="quantity_asc">📦 Menos unidades</SelectItem>
+              <SelectItem value="version_desc">🔄 Mais atualizações</SelectItem>
+              <SelectItem value="version_asc">🔄 Menos atualizações</SelectItem>
+              <SelectItem value="alphabetical">🔤 A-Z (cliente)</SelectItem>
+              <SelectItem value="order_number_asc">🔢 Nº pedido ↑</SelectItem>
+              <SelectItem value="order_number_desc">🔢 Nº pedido ↓</SelectItem>
+            </SelectContent>
+          </Select>
+
           {/* Botão para limpar filtros */}
-          {(searchQuery || designerFilter !== "all" || salespersonFilter !== "all" || priorityFilter !== "all") && (
+          {(searchQuery || designerFilter !== "all" || salespersonFilter !== "all" || priorityFilter !== "all" || sortOption !== "updated_at_desc") && (
             <Button variant="ghost" size="sm" onClick={clearAllFilters}>
               <X className="h-4 w-4 mr-1" />
               Limpar
