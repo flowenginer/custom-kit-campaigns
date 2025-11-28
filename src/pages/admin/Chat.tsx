@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, MessageSquarePlus } from "lucide-react";
+import { MessageSquarePlus } from "lucide-react";
 import { ConversationList } from "@/components/chat/ConversationList";
 import { ChatWindow } from "@/components/chat/ChatWindow";
 import { NewConversationDialog } from "@/components/chat/NewConversationDialog";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SelectedConversation {
   id: string;
@@ -18,16 +18,38 @@ interface SelectedConversation {
 const Chat = () => {
   const [selectedConversation, setSelectedConversation] = useState<SelectedConversation | null>(null);
   const [isNewConversationOpen, setIsNewConversationOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
 
   const handleSelectConversation = (conversation: any) => {
     setSelectedConversation({
       id: conversation.id,
       otherUser: {
-        id: conversation.otherUser.id,
-        full_name: conversation.otherUser.name,
+        id: conversation.other_user.id,
+        full_name: conversation.other_user.name,
       },
     });
+  };
+
+  const handleNewConversationCreated = async (conversationId: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: otherParticipant } = await supabase
+      .from("chat_participants")
+      .select("user_id, profiles!inner(id, full_name)")
+      .eq("conversation_id", conversationId)
+      .neq("user_id", user.id)
+      .single();
+
+    if (otherParticipant) {
+      setSelectedConversation({
+        id: conversationId,
+        otherUser: {
+          id: (otherParticipant as any).profiles.id,
+          full_name: (otherParticipant as any).profiles.full_name,
+        },
+      });
+      setIsNewConversationOpen(false);
+    }
   };
 
   const handleBack = () => {
@@ -39,7 +61,7 @@ const Chat = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
         {/* Lista de Conversas */}
         <Card className={`lg:col-span-1 ${selectedConversation ? 'hidden lg:flex' : 'flex'} flex-col`}>
-          <CardHeader className="space-y-4">
+          <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-xl font-semibold">Conversas</CardTitle>
               <Button
@@ -50,15 +72,6 @@ const Chat = () => {
               >
                 <MessageSquarePlus className="h-4 w-4" />
               </Button>
-            </div>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar conversas..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
             </div>
           </CardHeader>
           <CardContent className="flex-1 overflow-hidden p-0">
@@ -92,7 +105,7 @@ const Chat = () => {
       <NewConversationDialog
         open={isNewConversationOpen}
         onOpenChange={setIsNewConversationOpen}
-        onConversationCreated={handleSelectConversation}
+        onConversationCreated={handleNewConversationCreated}
       />
     </div>
   );
