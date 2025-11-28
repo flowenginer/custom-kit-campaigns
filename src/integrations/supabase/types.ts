@@ -1638,6 +1638,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_sound_preferences: {
+        Row: {
+          created_at: string | null
+          enabled: boolean | null
+          id: string
+          new_approval_sound: string | null
+          new_card_sound: string | null
+          status_change_sound: string | null
+          updated_at: string | null
+          user_id: string
+          volume: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          enabled?: boolean | null
+          id?: string
+          new_approval_sound?: string | null
+          new_card_sound?: string | null
+          status_change_sound?: string | null
+          updated_at?: string | null
+          user_id: string
+          volume?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          enabled?: boolean | null
+          id?: string
+          new_approval_sound?: string | null
+          new_card_sound?: string | null
+          status_change_sound?: string | null
+          updated_at?: string | null
+          user_id?: string
+          volume?: number | null
+        }
+        Relationships: []
+      }
       webhook_configs: {
         Row: {
           created_at: string | null

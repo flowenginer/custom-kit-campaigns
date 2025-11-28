@@ -8,7 +8,7 @@ import { Session } from "@supabase/supabase-js";
 import { NotificationsDropdown } from "./NotificationsDropdown";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useGlobalTheme } from "@/hooks/useGlobalTheme";
-import { usePendingApprovalsCount } from "@/hooks/usePendingApprovalsCount";
+import { useTotalPendingApprovalsCount } from "@/hooks/useTotalPendingApprovalsCount";
 import { useMenuStructure } from "@/hooks/useMenuStructure";
 import { cn } from "@/lib/utils";
 import logoSS from "@/assets/logo-ss.png";
@@ -187,7 +187,7 @@ const AdminLayout = () => {
   } = useUserRole();
   
   const { currentTheme, changeTheme } = useGlobalTheme();
-  const { count: pendingCount } = usePendingApprovalsCount();
+  const { count: pendingCount } = useTotalPendingApprovalsCount();
   const { getMenuTree, getIcon, isLoading: menusLoading } = useMenuStructure();
   
   const menuTree = getMenuTree();

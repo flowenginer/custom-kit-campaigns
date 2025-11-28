@@ -24,6 +24,8 @@ interface KanbanColumnProps {
   onCollapseAll: () => void;
   onExpandAll: () => void;
   onOrderNumberUpdate?: (taskId: string, orderNumber: string) => void;
+  isCollapsed?: boolean;
+  autoCollapseEmpty?: boolean;
 }
 export const KanbanColumn = ({
   title,
@@ -40,7 +42,9 @@ export const KanbanColumn = ({
   onToggleCard,
   onCollapseAll,
   onExpandAll,
-  onOrderNumberUpdate
+  onOrderNumberUpdate,
+  isCollapsed = false,
+  autoCollapseEmpty = false
 }: KanbanColumnProps) => {
   const {
     setNodeRef,
@@ -64,7 +68,13 @@ export const KanbanColumn = ({
   const borderClass = hasCustomColor ? "border-white/20" : "border-border";
   const emptyTextClass = hasCustomColor ? "text-white/70" : "text-muted-foreground";
   
-  return <div className="min-w-[320px] flex-shrink-0 h-full flex flex-col">
+  // Se deve mostrar versão colapsada
+  const shouldCollapse = isCollapsed && tasks.length === 0 && autoCollapseEmpty;
+  
+  return <div className={cn(
+    "flex-shrink-0 h-full flex flex-col transition-all duration-300",
+    shouldCollapse ? "min-w-[60px] max-w-[60px]" : "min-w-[320px]"
+  )}>
       <div 
         ref={setNodeRef} 
         className={cn(
@@ -80,58 +90,67 @@ export const KanbanColumn = ({
         <div className={cn("flex items-center justify-between p-4 pb-3 border-b flex-shrink-0", borderClass)}>
           <div className="flex items-center gap-2">
             <Icon className={cn("h-4 w-4", iconClass)} />
-            <h3 className={cn("font-semibold text-xl", headerTextClass)}>{title}</h3>
+            {!shouldCollapse && <h3 className={cn("font-semibold text-xl", headerTextClass)}>{title}</h3>}
           </div>
-          <div className="flex items-center gap-1">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-7 w-7"
-              onClick={onCollapseAll}
-              title="Recolher todos"
-            >
-              <ChevronsUp className="h-4 w-4" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-7 w-7"
-              onClick={onExpandAll}
-              title="Expandir todos"
-            >
-              <ChevronsDown className="h-4 w-4" />
-            </Button>
+          {!shouldCollapse && (
+            <div className="flex items-center gap-1">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7"
+                onClick={onCollapseAll}
+                title="Recolher todos"
+              >
+                <ChevronsUp className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7"
+                onClick={onExpandAll}
+                title="Expandir todos"
+              >
+                <ChevronsDown className="h-4 w-4" />
+              </Button>
+              <Badge variant="secondary" className={badgeClass}>
+                {tasks.length}
+              </Badge>
+            </div>
+          )}
+          {shouldCollapse && (
             <Badge variant="secondary" className={badgeClass}>
-              {tasks.length}
+              0
             </Badge>
-          </div>
+          )}
         </div>
 
         {/* Área de scroll vertical para os cards */}
-        <ScrollArea className="flex-1 px-4">
-          <div className="space-y-3 py-4">
-            {tasks.map(task => (
-              <TaskCard 
-                key={task.id} 
-                task={task} 
-                onClick={() => onTaskClick(task)}
-                fontSizes={fontSizes}
-                showAcceptButton={showAcceptButton}
-                currentUserId={currentUserId}
-                onTaskAccepted={onTaskAccepted}
-                isCollapsed={collapsedCards.has(task.id)}
-                onToggleCollapse={() => onToggleCard(task.id)}
-                onOrderNumberUpdate={onOrderNumberUpdate}
-              />
-            ))}
-            
-            {tasks.length === 0 && (
-              <div className={cn("text-center py-8 text-sm", emptyTextClass)}>
-                Nenhuma tarefa
-              </div>
-            )}
-          </div>
-        </ScrollArea>
+        {!shouldCollapse && (
+          <ScrollArea className="flex-1 px-4">
+            <div className="space-y-3 py-4">
+              {tasks.map(task => (
+                <TaskCard 
+                  key={task.id} 
+                  task={task} 
+                  onClick={() => onTaskClick(task)}
+                  fontSizes={fontSizes}
+                  showAcceptButton={showAcceptButton}
+                  currentUserId={currentUserId}
+                  onTaskAccepted={onTaskAccepted}
+                  isCollapsed={collapsedCards.has(task.id)}
+                  onToggleCollapse={() => onToggleCard(task.id)}
+                  onOrderNumberUpdate={onOrderNumberUpdate}
+                />
+              ))}
+              
+              {tasks.length === 0 && (
+                <div className={cn("text-center py-8 text-sm", emptyTextClass)}>
+                  Nenhuma tarefa
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        )}
       </div>
     </div>;
 };
