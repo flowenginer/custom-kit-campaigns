@@ -16,7 +16,6 @@ import { KanbanVisibilityManager } from "@/components/admin/KanbanVisibilityMana
 import { MenuVisibilityManager } from "@/components/admin/MenuVisibilityManager";
 import { UniformTypesManager } from "@/components/admin/UniformTypesManager";
 import { MenuStructureManager } from "@/components/admin/MenuStructureManager";
-import { SoundPreferencesPanel } from "@/components/creation/SoundPreferencesPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AppRole } from "@/hooks/useUserRole";
@@ -421,7 +420,7 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="users" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-9">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="users">Usuários</TabsTrigger>
           <TabsTrigger value="uniform-types">Tipos de Uniforme</TabsTrigger>
           <TabsTrigger value="kanban">Visibilidade Kanban</TabsTrigger>
@@ -430,7 +429,6 @@ const Settings = () => {
           <TabsTrigger value="password">Senha</TabsTrigger>
           <TabsTrigger value="scripts"><Code2 className="w-4 h-4 mr-2 inline" />Scripts</TabsTrigger>
           <TabsTrigger value="urgent-reasons"><AlertCircle className="w-4 h-4 mr-2 inline" />Motivos Urgência</TabsTrigger>
-          <TabsTrigger value="sounds">🔊 Sons</TabsTrigger>
         </TabsList>
 
         {/* TAB: USUÁRIOS */}
@@ -782,11 +780,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         {/* TAB: MOTIVOS DE URGÊNCIA */}
         <TabsContent value="urgent-reasons" className="space-y-4">
           <UrgentReasonsManager />
-        </TabsContent>
-        
-        {/* TAB: SONS */}
-        <TabsContent value="sounds" className="space-y-4">
-          <SoundPreferencesPanel />
         </TabsContent>
       </Tabs>
 
