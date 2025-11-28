@@ -405,8 +405,8 @@ export const UrgentApprovalsList = () => {
               <Label>Prioridade Final</Label>
               <RadioGroup value={finalPriority} onValueChange={(value) => setFinalPriority(value as TaskPriority)}>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="high" id="final-high" />
-                  <Label htmlFor="final-high" className="cursor-pointer">🟠 Alta</Label>
+                  <RadioGroupItem value="normal" id="final-normal" />
+                  <Label htmlFor="final-normal" className="cursor-pointer">🟡 Normal</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="urgent" id="final-urgent" />
