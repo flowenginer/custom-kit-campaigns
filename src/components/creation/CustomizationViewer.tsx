@@ -1,21 +1,57 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Download, Copy } from "lucide-react";
+import { Download, Copy, ArrowRightLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { CustomizationSummary } from "./CustomizationSummary";
 import { ShirtPreviewAnnotated } from "./ShirtPreviewAnnotated";
 import { AssetGallery } from "./AssetGallery";
 import { ImageZoomModal } from "@/components/ui/image-zoom-modal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import { useUniformTypes } from "@/hooks/useUniformTypes";
+import { cn } from "@/lib/utils";
 
 interface CustomizationViewerProps {
   data: any;
+  campaignName?: string;
+  modelName?: string;
+  modelCode?: string;
+  modelImageFront?: string | null;
+  taskId?: string;
+  createdBy?: string | null;
+  currentUserId?: string | null;
+  isSalesperson?: boolean;
+  onModelChange?: () => void;
 }
 
-export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
+export const CustomizationViewer = ({ 
+  data,
+  campaignName,
+  modelName,
+  modelCode,
+  modelImageFront,
+  taskId,
+  createdBy,
+  currentUserId,
+  isSalesperson,
+  onModelChange
+}: CustomizationViewerProps) => {
   const [zoomImage, setZoomImage] = useState<{ url: string; alt: string } | null>(null);
+  const [changeModelDialogOpen, setChangeModelDialogOpen] = useState(false);
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [models, setModels] = useState<any[]>([]);
+  const [newCampaignId, setNewCampaignId] = useState<string>("");
+  const [newUniformType, setNewUniformType] = useState<string>("");
+  const [newModel, setNewModel] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const { types: uniformTypes, isLoading: uniformTypesLoading } = useUniformTypes();
+
+  // Verificar se usuário pode mudar modelo
+  const canChangeModel = isSalesperson && currentUserId && createdBy && currentUserId === createdBy;
 
   const transformCustomizationData = (rawData: any) => {
     if (!rawData) return null;
@@ -216,6 +252,156 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
     ...(transformedData.rightSleeve?.logo ? [{ url: transformedData.rightSleeve.logo, label: 'Logo Manga Direita' }] : [])
   ];
 
+  // Carregar campanhas ao abrir modal
+  useEffect(() => {
+    if (changeModelDialogOpen) {
+      loadCampaigns();
+    }
+  }, [changeModelDialogOpen]);
+
+  // Carregar modelos quando campanha ou tipo de uniforme mudar
+  useEffect(() => {
+    if (newCampaignId && newUniformType) {
+      loadModels();
+    } else {
+      setModels([]);
+      setNewModel(null);
+    }
+  }, [newCampaignId, newUniformType]);
+
+  const loadCampaigns = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("campaigns")
+        .select("id, name")
+        .is("deleted_at", null)
+        .order("name");
+
+      if (error) throw error;
+      setCampaigns(data || []);
+    } catch (error) {
+      console.error("Erro ao carregar campanhas:", error);
+      toast.error("Erro ao carregar campanhas");
+    }
+  };
+
+  const loadModels = async () => {
+    try {
+      // Buscar segment_tag da campanha selecionada
+      const { data: campaignData, error: campaignError } = await supabase
+        .from("campaigns")
+        .select("segment_tag")
+        .eq("id", newCampaignId)
+        .single();
+
+      if (campaignError) throw campaignError;
+
+      // Buscar modelos que combinam com segment_tag e model_tag (uniform type)
+      const { data, error } = await supabase
+        .from("shirt_models")
+        .select("*")
+        .eq("segment_tag", campaignData.segment_tag)
+        .eq("model_tag", newUniformType)
+        .order("name");
+
+      if (error) throw error;
+      setModels(data || []);
+    } catch (error) {
+      console.error("Erro ao carregar modelos:", error);
+      toast.error("Erro ao carregar modelos");
+      setModels([]);
+    }
+  };
+
+  const handleCampaignChange = (campaignId: string) => {
+    setNewCampaignId(campaignId);
+    setNewUniformType("");
+    setNewModel(null);
+    setModels([]);
+  };
+
+  const handleModelChange = async () => {
+    if (!taskId || !newModel) return;
+
+    setLoading(true);
+    try {
+      // 1. Buscar order_id da task
+      const { data: taskData, error: taskError } = await supabase
+        .from("design_tasks")
+        .select("order_id")
+        .eq("id", taskId)
+        .single();
+
+      if (taskError) throw taskError;
+
+      // 2. Buscar customization_data atual
+      const { data: orderData, error: orderError } = await supabase
+        .from("orders")
+        .select("customization_data")
+        .eq("id", taskData.order_id)
+        .single();
+
+      if (orderError) throw orderError;
+
+      // 3. Atualizar order com novo model_id, campaign_id e customization_data
+      const currentCustomizationData = orderData.customization_data as any || {};
+      const updatedCustomizationData = {
+        ...currentCustomizationData,
+        model: newModel.name,
+        uniformType: newUniformType,
+        modelImages: {
+          front: newModel.image_front,
+          back: newModel.image_back,
+          left: newModel.image_left,
+          right: newModel.image_right,
+        }
+      };
+
+      const { error: updateOrderError } = await supabase
+        .from("orders")
+        .update({
+          model_id: newModel.id,
+          campaign_id: newCampaignId,
+          customization_data: updatedCustomizationData
+        })
+        .eq("id", taskData.order_id);
+
+      if (updateOrderError) throw updateOrderError;
+
+      // 4. Atualizar task com nova campaign_id
+      const { error: updateTaskError } = await supabase
+        .from("design_tasks")
+        .update({ campaign_id: newCampaignId })
+        .eq("id", taskId);
+
+      if (updateTaskError) throw updateTaskError;
+
+      // 5. Registrar no histórico
+      const { error: historyError } = await supabase
+        .from("design_task_history")
+        .insert({
+          task_id: taskId,
+          user_id: currentUserId,
+          action: "model_changed",
+          notes: `Modelo alterado de "${modelName}" para "${newModel.name}"`
+        });
+
+      if (historyError) throw historyError;
+
+      toast.success("Modelo alterado com sucesso!");
+      setChangeModelDialogOpen(false);
+      onModelChange?.();
+
+    } catch (error) {
+      console.error("Erro ao mudar modelo:", error);
+      toast.error("Erro ao alterar modelo");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredModels = models;
+
   return (
     <div className="space-y-6">
       {/* RESUMO NO TOPO */}
@@ -234,6 +420,72 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
           Baixar Todos os Assets ({totalAssets})
         </Button>
       </div>
+
+      {/* SEÇÃO: INFORMAÇÕES DO PEDIDO */}
+      {(campaignName || modelName) && (
+        <Card>
+          <CardContent className="p-6">
+            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <Badge variant="outline">INFORMAÇÕES DO PEDIDO</Badge>
+            </h3>
+            <div className="grid grid-cols-2 gap-6">
+              {/* Coluna Esquerda: Detalhes */}
+              <div className="space-y-4">
+                {campaignName && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Campanha</Label>
+                    <p className="text-sm font-medium bg-muted p-2 rounded">{campaignName}</p>
+                  </div>
+                )}
+                {modelName && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Modelo</Label>
+                    <p className="text-sm font-medium bg-muted p-2 rounded">
+                      {modelCode && <span className="text-muted-foreground mr-2">[{modelCode}]</span>}
+                      {modelName}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Coluna Direita: Miniatura + Botão */}
+              <div className="flex flex-col items-center gap-4">
+                {modelImageFront ? (
+                  <div 
+                    className="relative cursor-pointer group"
+                    onClick={() => setZoomImage({ url: modelImageFront, alt: 'Frente do Modelo' })}
+                  >
+                    <img 
+                      src={modelImageFront} 
+                      alt="Frente do Modelo" 
+                      className="max-h-40 w-auto object-contain rounded border bg-gray-50"
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded">
+                      <span className="text-white text-xs">Clique para ampliar</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-40 w-32 bg-muted rounded flex items-center justify-center">
+                    <span className="text-xs text-muted-foreground">Sem imagem</span>
+                  </div>
+                )}
+                
+                {/* BOTÃO MUDAR MODELO - Apenas para criador do card */}
+                {canChangeModel && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setChangeModelDialogOpen(true)}
+                  >
+                    <ArrowRightLeft className="h-4 w-4 mr-2" />
+                    Mudar Modelo
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* SEÇÃO: OBSERVAÇÕES INTERNAS */}
       {transformedData.internalNotes && (
@@ -584,6 +836,95 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
           onClose={() => setZoomImage(null)}
         />
       )}
+
+      {/* MODAL DE MUDAR MODELO */}
+      <Dialog open={changeModelDialogOpen} onOpenChange={setChangeModelDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Mudar Modelo</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Seletor de Campanha */}
+            <div>
+              <Label>Campanha</Label>
+              <Select value={newCampaignId} onValueChange={handleCampaignChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a campanha" />
+                </SelectTrigger>
+                <SelectContent>
+                  {campaigns.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Seletor de Tipo de Uniforme */}
+            {newCampaignId && (
+              <div>
+                <Label>Tipo de Uniforme</Label>
+                <Select value={newUniformType} onValueChange={setNewUniformType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {uniformTypes.map(type => (
+                      <SelectItem key={type.tag_value} value={type.tag_value}>
+                        {type.icon} {type.display_label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            
+            {/* Grid de Modelos */}
+            {filteredModels.length > 0 && (
+              <div>
+                <Label>Modelo</Label>
+                <div className="grid grid-cols-3 gap-3 mt-2">
+                  {filteredModels.map(model => (
+                    <div 
+                      key={model.id}
+                      onClick={() => setNewModel(model)}
+                      className={cn(
+                        "p-3 border rounded-lg cursor-pointer hover:border-primary transition-colors",
+                        newModel?.id === model.id && "border-primary ring-2 ring-primary bg-primary/5"
+                      )}
+                    >
+                      <img src={model.image_front} alt={model.name} className="w-full h-32 object-contain mb-2" />
+                      <p className="text-xs text-center font-medium truncate">{model.name}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {newCampaignId && newUniformType && filteredModels.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                <p className="text-sm">Nenhum modelo encontrado para esta combinação.</p>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setChangeModelDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleModelChange} disabled={!newModel || loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Alterando...
+                </>
+              ) : (
+                "Confirmar Mudança"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
