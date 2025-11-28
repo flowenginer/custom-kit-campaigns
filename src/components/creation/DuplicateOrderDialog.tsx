@@ -26,28 +26,31 @@ export const DuplicateOrderDialog = ({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-orange-100 rounded-full">
-              <AlertTriangle className="h-6 w-6 text-orange-600" />
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-full">
+              <AlertTriangle className="h-6 w-6 text-orange-600 dark:text-orange-400" />
             </div>
-            <AlertDialogTitle>Número de Pedido Duplicado</AlertDialogTitle>
+            <AlertDialogTitle className="text-xl">
+              Número de Pedido Duplicado
+            </AlertDialogTitle>
           </div>
           <AlertDialogDescription asChild>
             <div className="space-y-4 pt-2">
-              <p>
+              <p className="text-base">
                 Não é possível enviar para Produção porque já existe um pedido
                 com este número na coluna de Produção.
               </p>
 
-              <div className="bg-muted p-3 rounded-lg space-y-1">
+              <div className="bg-muted/50 p-4 rounded-lg space-y-2 border border-border">
                 <div className="flex items-center gap-2 text-sm">
-                  <Hash className="h-4 w-4" />
-                  <span className="font-medium">Pedido:</span> #{orderNumber}
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium text-foreground">Cliente existente:</span>
+                  <span className="text-foreground">{existingCustomerName}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
-                  <User className="h-4 w-4" />
-                  <span className="font-medium">Cliente existente:</span>{" "}
-                  {existingCustomerName}
+                  <Hash className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium text-foreground">Pedido:</span>
+                  <span className="text-foreground">#{orderNumber}</span>
                 </div>
               </div>
 
@@ -59,7 +62,7 @@ export const DuplicateOrderDialog = ({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogAction onClick={() => onOpenChange(false)}>
-            Entendi
+            Ok
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
