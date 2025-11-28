@@ -9,6 +9,7 @@ import { TaskCardSkeleton } from "@/components/creation/TaskCardSkeleton";
 import { ColorThemePanel } from "@/components/creation/ColorThemePanel";
 import { CardFontEditor } from "@/components/creation/CardFontEditor";
 import { ProductionConfirmDialog } from "@/components/creation/ProductionConfirmDialog";
+import { DuplicateOrderDialog } from "@/components/creation/DuplicateOrderDialog";
 import { DesignTask } from "@/types/design-task";
 import type { DbTaskStatus } from "@/types/design-task";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -49,6 +50,11 @@ const Creation = () => {
   const [pendingProductionTask, setPendingProductionTask] = useState<{
     task: DesignTask;
     newStatus: DbTaskStatus;
+  } | null>(null);
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
+  const [duplicateInfo, setDuplicateInfo] = useState<{
+    orderNumber: string;
+    existingCustomerName: string;
   } | null>(null);
   const [columnColors, setColumnColors] = useState<string[]>(() => {
     const saved = localStorage.getItem('kanban-column-colors');
@@ -361,7 +367,13 @@ const Creation = () => {
       
       if (duplicates && duplicates.length > 0) {
         const customerName = (duplicates[0] as any).orders?.customer_name || "Desconhecido";
-        toast.error(`Não é possível enviar para Produção. Já existe um pedido com o número "${task.order_number}" do cliente: ${customerName}`);
+        
+        // Abrir dialog elegante ao invés de toast
+        setDuplicateInfo({
+          orderNumber: task.order_number,
+          existingCustomerName: customerName
+        });
+        setDuplicateDialogOpen(true);
         return;
       }
       
@@ -819,6 +831,13 @@ const Creation = () => {
           order_number: pendingProductionTask.task.order_number || ''
         } : null}
         onConfirm={handleProductionConfirm}
+      />
+
+      <DuplicateOrderDialog
+        open={duplicateDialogOpen}
+        onOpenChange={setDuplicateDialogOpen}
+        orderNumber={duplicateInfo?.orderNumber || ''}
+        existingCustomerName={duplicateInfo?.existingCustomerName || ''}
       />
     </div>
   );
