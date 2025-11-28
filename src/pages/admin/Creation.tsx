@@ -16,6 +16,7 @@ import type { DbTaskStatus } from "@/types/design-task";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useCardFontSizes } from "@/hooks/useCardFontSizes";
 import { useCardCollapse } from "@/hooks/useCardCollapse";
+import { useSoundNotifications } from "@/hooks/useSoundNotifications";
 import { toast } from "sonner";
 import { 
   Inbox, 
@@ -59,6 +60,10 @@ const Creation = () => {
   } | null>(null);
   const [missingOrderDialogOpen, setMissingOrderDialogOpen] = useState(false);
   const [missingOrderCustomerName, setMissingOrderCustomerName] = useState("");
+  const [autoCollapseEmpty, setAutoCollapseEmpty] = useState<boolean>(() => {
+    const saved = localStorage.getItem('kanban-auto-collapse-empty');
+    return saved ? JSON.parse(saved) : false;
+  });
   const [columnColors, setColumnColors] = useState<string[]>(() => {
     const saved = localStorage.getItem('kanban-column-colors');
     return saved ? JSON.parse(saved) : [];
@@ -75,6 +80,7 @@ const Creation = () => {
   const { allowedKanbanColumns, isSuperAdmin, isAdmin, isDesigner, isSalesperson, isLoading } = useUserRole();
   const { sizes: fontSizes, updateSize, resetToDefaults } = useCardFontSizes();
   const { collapsedCards, toggleCard, collapseAll, expandAll } = useCardCollapse();
+  const { playNewCard, playStatusChange } = useSoundNotifications();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -96,7 +102,28 @@ const Creation = () => {
   useEffect(() => {
     loadTasks();
     getCurrentUser();
-  }, []);
+    
+    // Subscribe to realtime changes for new cards
+    const channel = supabase
+      .channel("design_tasks_changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "design_tasks",
+        },
+        () => {
+          playNewCard();
+          loadTasks();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [playNewCard]);
 
   const getCurrentUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -112,8 +139,8 @@ const Creation = () => {
   }, [columnColors]);
 
   useEffect(() => {
-    localStorage.setItem('kanban-sort-option', sortOption);
-  }, [sortOption]);
+    localStorage.setItem('kanban-auto-collapse-empty', JSON.stringify(autoCollapseEmpty));
+  }, [autoCollapseEmpty]);
 
   const handleColorsChange = (colors: string[]) => {
     setColumnColors(colors);
@@ -391,6 +418,9 @@ const Creation = () => {
     const validStatus = newStatus as Exclude<DbTaskStatus, 'completed'>;
     
     try {
+      // Tocar som de mudança de status
+      playStatusChange();
+      
       const { error } = await supabase
         .from("design_tasks")
         .update({ 
@@ -753,6 +783,16 @@ const Creation = () => {
             resetToDefaults={resetToDefaults}
           />
 
+          {/* Toggle para recolher colunas vazias */}
+          <Button
+            variant={autoCollapseEmpty ? "default" : "outline"}
+            size="sm"
+            onClick={() => setAutoCollapseEmpty(!autoCollapseEmpty)}
+            title="Recolher colunas vazias automaticamente"
+          >
+            {autoCollapseEmpty ? "Colunas: Auto-recolher ✓" : "Colunas: Normal"}
+          </Button>
+
           <RefreshIndicator 
             lastUpdated={lastUpdated}
             isRefreshing={isRefreshing}
@@ -798,6 +838,8 @@ const Creation = () => {
                   onCollapseAll={() => collapseAll(column.tasks.map(t => t.id))}
                   onExpandAll={() => expandAll(column.tasks.map(t => t.id))}
                   onOrderNumberUpdate={handleOrderNumberUpdate}
+                  isCollapsed={autoCollapseEmpty && column.tasks.length === 0}
+                  autoCollapseEmpty={autoCollapseEmpty}
                 />
               ))}
             </div>
