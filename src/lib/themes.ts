@@ -13,6 +13,7 @@ export interface GlobalTheme {
     text: string;
     textMuted: string;
     border: string;
+    muted: string;
   };
 }
 
@@ -32,6 +33,7 @@ export const GLOBAL_THEMES: GlobalTheme[] = [
       text: '#1F2937',
       textMuted: '#6B7280',
       border: '#E5E7EB',
+      muted: '#F3F4F6',
     },
   },
   {
@@ -49,6 +51,7 @@ export const GLOBAL_THEMES: GlobalTheme[] = [
       text: '#1F2937',
       textMuted: '#374151',
       border: '#D1D5DB',
+      muted: '#E5E7EB',
     },
   },
   {
@@ -66,6 +69,7 @@ export const GLOBAL_THEMES: GlobalTheme[] = [
       text: '#F9FAFB',
       textMuted: '#D1D5DB',
       border: '#4B5563',
+      muted: '#4B5563',
     },
   },
   {
@@ -83,6 +87,7 @@ export const GLOBAL_THEMES: GlobalTheme[] = [
       text: '#1F2937',
       textMuted: '#374151',
       border: '#BAE6FD',
+      muted: '#E0F2FE',
     },
   },
   {
@@ -100,6 +105,7 @@ export const GLOBAL_THEMES: GlobalTheme[] = [
       text: '#1F2937',
       textMuted: '#374151',
       border: '#BBF7D0',
+      muted: '#DCFCE7',
     },
   },
   {
@@ -117,6 +123,7 @@ export const GLOBAL_THEMES: GlobalTheme[] = [
       text: '#1F2937',
       textMuted: '#374151',
       border: '#E9D5FF',
+      muted: '#F3E8FF',
     },
   },
   {
@@ -134,6 +141,7 @@ export const GLOBAL_THEMES: GlobalTheme[] = [
       text: '#1F2937',
       textMuted: '#374151',
       border: '#FECACA',
+      muted: '#FEE2E2',
     },
   },
   {
@@ -151,6 +159,7 @@ export const GLOBAL_THEMES: GlobalTheme[] = [
       text: '#1F2937',
       textMuted: '#374151',
       border: '#FEF08A',
+      muted: '#FEF9C3',
     },
   },
   {
@@ -168,6 +177,7 @@ export const GLOBAL_THEMES: GlobalTheme[] = [
       text: '#1F2937',
       textMuted: '#374151',
       border: '#FBCFE8',
+      muted: '#FCE7F3',
     },
   },
   {
@@ -185,6 +195,7 @@ export const GLOBAL_THEMES: GlobalTheme[] = [
       text: '#1F2937',
       textMuted: '#374151',
       border: '#99F6E4',
+      muted: '#CCFBF1',
     },
   },
   {
@@ -202,6 +213,7 @@ export const GLOBAL_THEMES: GlobalTheme[] = [
       text: '#1F2937',
       textMuted: '#374151',
       border: '#E5E7EB',
+      muted: '#F3F4F6',
     },
   },
   {
@@ -219,6 +231,7 @@ export const GLOBAL_THEMES: GlobalTheme[] = [
       text: '#1F2937',
       textMuted: '#374151',
       border: '#FED7AA',
+      muted: '#FFEDD5',
     },
   },
   {
@@ -236,6 +249,7 @@ export const GLOBAL_THEMES: GlobalTheme[] = [
       text: '#1F2937',
       textMuted: '#374151',
       border: '#BFDBFE',
+      muted: '#DBEAFE',
     },
   },
 ];
