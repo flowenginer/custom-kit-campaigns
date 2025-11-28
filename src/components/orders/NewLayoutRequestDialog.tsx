@@ -76,7 +76,7 @@ export const NewLayoutRequestDialog = ({
   const [quantity, setQuantity] = useState<string>("");
   const [customQuantity, setCustomQuantity] = useState<string>("");
   const [hasLogo, setHasLogo] = useState<"sim" | "nao" | null>(null);
-  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoFiles, setLogoFiles] = useState<File[]>([]);
   const [internalNotes, setInternalNotes] = useState("");
   const [selectedPriority, setSelectedPriority] = useState<TaskPriority>("normal");
   const [urgentReasonId, setUrgentReasonId] = useState<string>("");
@@ -302,22 +302,25 @@ export const NewLayoutRequestDialog = ({
       return;
     }
 
-    if (hasLogo === "sim" && !logoFile) {
-      toast.error("Faça upload da logo do cliente");
+    if (hasLogo === "sim" && logoFiles.length === 0) {
+      toast.error("Faça upload de pelo menos uma logo do cliente");
       return;
     }
 
     setLoading(true);
 
     try {
-      // Upload logo se fornecida
-      let uploadedLogoUrl: string | null = null;
-      if (hasLogo === "sim" && logoFile) {
-        uploadedLogoUrl = await uploadLogoToStorage(logoFile);
-        if (!uploadedLogoUrl) {
-          toast.error("Erro ao fazer upload da logo");
-          setLoading(false);
-          return;
+      // Upload de logos se fornecidas
+      let uploadedLogoUrls: string[] = [];
+      if (hasLogo === "sim" && logoFiles.length > 0) {
+        for (const file of logoFiles) {
+          const url = await uploadLogoToStorage(file);
+          if (!url) {
+            toast.error("Erro ao fazer upload de uma das logos");
+            setLoading(false);
+            return;
+          }
+          uploadedLogoUrls.push(url);
         }
       }
 
@@ -364,6 +367,7 @@ export const NewLayoutRequestDialog = ({
           },
         },
         uploadChoice: hasLogo === "sim" ? "agora" : "depois",
+        logoUrls: uploadedLogoUrls,
         internalNotes,
       };
 
@@ -386,7 +390,7 @@ export const NewLayoutRequestDialog = ({
           quantity: finalQuantity,
           customization: customizationData,
           hasLogo: hasLogo === "nao",
-          logoUrl: uploadedLogoUrl,
+          logoUrls: uploadedLogoUrls,
           internalNotes,
         };
 
@@ -463,7 +467,7 @@ export const NewLayoutRequestDialog = ({
           created_by_salesperson: true,
           needs_logo: hasLogo === "nao",
           logo_action: hasLogo === "nao" ? "waiting_client" : null,
-          uploaded_logo_url: uploadedLogoUrl,
+          uploaded_logo_url: uploadedLogoUrls.length > 0 ? uploadedLogoUrls[0] : null,
           customization_summary: customizationData,
           completed: true,
         }])
@@ -509,7 +513,7 @@ export const NewLayoutRequestDialog = ({
     setQuantity("");
     setCustomQuantity("");
     setHasLogo(null);
-    setLogoFile(null);
+    setLogoFiles([]);
     setInternalNotes("");
     setSelectedPriority("normal");
     setUrgentReasonId("");
@@ -861,19 +865,39 @@ export const NewLayoutRequestDialog = ({
                 </div>
               </RadioGroup>
               {hasLogo === "sim" && (
-                <div className="mt-4">
-                  <Label>Upload da Logo *</Label>
+                <div className="mt-4 space-y-3">
+                  <Label>Upload das Logos *</Label>
+                  {logoFiles.map((file, index) => (
+                    <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded">
+                      <span className="text-sm flex-1 truncate">{file.name}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const newFiles = logoFiles.filter((_, i) => i !== index);
+                          setLogoFiles(newFiles);
+                        }}
+                      >
+                        ✕
+                      </Button>
+                    </div>
+                  ))}
                   <Input
                     type="file"
                     accept="image/*"
-                    onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setLogoFiles([...logoFiles, file]);
+                        e.target.value = '';
+                      }
+                    }}
                     className="mt-2"
                   />
-                  {logoFile && (
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Arquivo selecionado: {logoFile.name}
-                    </p>
-                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Adicione uma logo por vez. Cada logo adicionada abre um novo campo.
+                  </p>
                 </div>
               )}
             </div>
@@ -883,7 +907,7 @@ export const NewLayoutRequestDialog = ({
               </Button>
               <Button
                 onClick={() => setCurrentStep("notes")}
-                disabled={hasLogo === null || (hasLogo === "sim" && !logoFile)}
+                disabled={hasLogo === null || (hasLogo === "sim" && logoFiles.length === 0)}
                 className="flex-1"
               >
                 Continuar
@@ -908,16 +932,8 @@ export const NewLayoutRequestDialog = ({
                 }}
               >
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="low" id="priority-low" />
-                  <Label htmlFor="priority-low" className="cursor-pointer">🟢 Baixa</Label>
-                </div>
-                <div className="flex items-center space-x-2">
                   <RadioGroupItem value="normal" id="priority-normal" />
                   <Label htmlFor="priority-normal" className="cursor-pointer">🟡 Normal</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="high" id="priority-high" />
-                  <Label htmlFor="priority-high" className="cursor-pointer">🟠 Alta</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="urgent" id="priority-urgent" />
