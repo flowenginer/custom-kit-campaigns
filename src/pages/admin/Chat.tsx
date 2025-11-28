@@ -24,7 +24,7 @@ const Chat = () => {
       id: conversation.id,
       otherUser: {
         id: conversation.other_user.id,
-        full_name: conversation.other_user.name,
+        full_name: conversation.other_user.full_name,
       },
     });
   };
