@@ -2,11 +2,14 @@ import { UrgentApprovalsList } from "@/components/admin/UrgentApprovalsList";
 import { ApprovalsHistory } from "@/components/admin/ApprovalsHistory";
 import { DeleteApprovalsList } from "@/components/admin/DeleteApprovalsList";
 import { DeleteApprovalsHistory } from "@/components/admin/DeleteApprovalsHistory";
+import { ModificationApprovalsList } from "@/components/admin/ModificationApprovalsList";
+import { ModificationApprovalsHistory } from "@/components/admin/ModificationApprovalsHistory";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, Trash2 } from "lucide-react";
+import { AlertCircle, Trash2, Edit } from "lucide-react";
 import { usePendingApprovalsCount } from "@/hooks/usePendingApprovalsCount";
 import { usePendingDeletesCount } from "@/hooks/usePendingDeletesCount";
+import { usePendingModificationsCount } from "@/hooks/usePendingModificationsCount";
 import { useCallback } from "react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
@@ -14,6 +17,7 @@ import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
 const Approvals = () => {
   const { count: urgentCount } = usePendingApprovalsCount();
   const { count: deleteCount } = usePendingDeletesCount();
+  const { count: modificationsCount } = usePendingModificationsCount();
 
   const refreshData = useCallback(async () => {
     // Forçar re-render (os componentes têm seus próprios refetch)
@@ -48,6 +52,9 @@ const Approvals = () => {
           </TabsTrigger>
           <TabsTrigger value="delete">
             🗑️ Exclusões {deleteCount > 0 && `(${deleteCount})`}
+          </TabsTrigger>
+          <TabsTrigger value="modifications">
+            ✏️ Alterações {modificationsCount > 0 && `(${modificationsCount})`}
           </TabsTrigger>
         </TabsList>
 
@@ -109,6 +116,37 @@ const Approvals = () => {
             </TabsContent>
             <TabsContent value="history" className="mt-6">
               <DeleteApprovalsHistory />
+            </TabsContent>
+          </Tabs>
+        </TabsContent>
+
+        {/* ABA ALTERAÇÕES */}
+        <TabsContent value="modifications" className="mt-6">
+          <Card className="border-blue-200 bg-blue-50/50 mb-6">
+            <CardHeader>
+              <div className="flex items-start gap-3">
+                <Edit className="h-5 w-5 text-blue-600 mt-0.5" />
+                <div>
+                  <CardTitle className="text-blue-900">Solicitações de Alteração</CardTitle>
+                  <CardDescription className="text-blue-700">
+                    Vendedores solicitaram alterações em tarefas já aprovadas ou em produção.
+                    Revise cada solicitação e aprove para retornar a tarefa para revisão ou rejeite.
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+
+          <Tabs defaultValue="pending" className="w-full">
+            <TabsList>
+              <TabsTrigger value="pending">Pendentes</TabsTrigger>
+              <TabsTrigger value="history">Histórico</TabsTrigger>
+            </TabsList>
+            <TabsContent value="pending" className="mt-6">
+              <ModificationApprovalsList />
+            </TabsContent>
+            <TabsContent value="history" className="mt-6">
+              <ModificationApprovalsHistory />
             </TabsContent>
           </Tabs>
         </TabsContent>

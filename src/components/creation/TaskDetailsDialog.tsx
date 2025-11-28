@@ -69,8 +69,10 @@ import {
   AlertCircle,
   ChevronDown,
   Eye,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Edit
 } from "lucide-react";
+import { ModificationRequestDialog } from "@/components/orders/ModificationRequestDialog";
 
 interface TaskDetailsDialogProps {
   task: DesignTask | null;
@@ -103,6 +105,7 @@ export const TaskDetailsDialog = ({
   const [selectedDesigner, setSelectedDesigner] = useState<string>("");
   const [transferring, setTransferring] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showModificationDialog, setShowModificationDialog] = useState(false);
   
   const { roles, isSalesperson, isDesigner, isSuperAdmin, isAdmin } = useUserRole();
 
