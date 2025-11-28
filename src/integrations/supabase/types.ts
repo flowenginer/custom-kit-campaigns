@@ -1804,6 +1804,7 @@ export type Database = {
         Returns: undefined
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      user_created_conversation: { Args: { conv_id: string }; Returns: boolean }
       user_is_participant: { Args: { conv_id: string }; Returns: boolean }
     }
     Enums: {
