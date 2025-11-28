@@ -2,7 +2,7 @@ import { useNavigate, Outlet, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "./ui/button";
-import { LogOut, Sun, Cloud, Moon, ChevronRight } from "lucide-react";
+import { LogOut, Sun, Cloud, Moon, ChevronRight, Volume2 } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { Session } from "@supabase/supabase-js";
 import { NotificationsDropdown } from "./NotificationsDropdown";
@@ -30,6 +30,8 @@ import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/component
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { SoundPreferencesPanel } from "@/components/creation/SoundPreferencesPanel";
 
 const SidebarLogo = () => {
   const { open } = useSidebar();
@@ -77,57 +79,85 @@ const SidebarControls = () => {
 
 const SidebarThemeButtons = ({ currentTheme, changeTheme }: { currentTheme: any, changeTheme: (id: string) => void }) => {
   const { open } = useSidebar();
+  const [soundDialogOpen, setSoundDialogOpen] = useState(false);
   
   return (
-    <div className="p-3 border-b border-border/50">
-      {open && <span className="text-xs text-muted-foreground mb-2 block">Tema</span>}
-      <div className={cn(
-        "flex gap-2",
-        open ? "items-center justify-center" : "flex-col items-center"
-      )}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant={currentTheme?.id === 'light' ? 'default' : 'outline'}
-              size="icon"
-              onClick={() => changeTheme('light')}
-              className="h-8 w-8"
-            >
-              <Sun className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Tema Claro</TooltipContent>
-        </Tooltip>
+    <>
+      <div className="p-3 border-b border-border/50">
+        {open && <span className="text-xs text-muted-foreground mb-2 block">Tema</span>}
+        <div className={cn(
+          "flex gap-2",
+          open ? "items-center justify-center" : "flex-col items-center"
+        )}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={currentTheme?.id === 'light' ? 'default' : 'outline'}
+                size="icon"
+                onClick={() => changeTheme('light')}
+                className="h-8 w-8"
+              >
+                <Sun className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side={open ? "top" : "right"}>Tema Claro</TooltipContent>
+          </Tooltip>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant={currentTheme?.id === 'gray' ? 'default' : 'outline'}
-              size="icon"
-              onClick={() => changeTheme('gray')}
-              className="h-8 w-8"
-            >
-              <Cloud className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Tema Médio</TooltipContent>
-        </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={currentTheme?.id === 'gray' ? 'default' : 'outline'}
+                size="icon"
+                onClick={() => changeTheme('gray')}
+                className="h-8 w-8"
+              >
+                <Cloud className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side={open ? "top" : "right"}>Tema Médio</TooltipContent>
+          </Tooltip>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant={currentTheme?.id === 'dark' ? 'default' : 'outline'}
-              size="icon"
-              onClick={() => changeTheme('dark')}
-              className="h-8 w-8"
-            >
-              <Moon className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Tema Escuro</TooltipContent>
-        </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={currentTheme?.id === 'dark' ? 'default' : 'outline'}
+                size="icon"
+                onClick={() => changeTheme('dark')}
+                className="h-8 w-8"
+              >
+                <Moon className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side={open ? "top" : "right"}>Tema Escuro</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setSoundDialogOpen(true)}
+                className="h-8 w-8"
+              >
+                <Volume2 className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side={open ? "top" : "right"}>Configurações de Sons</TooltipContent>
+          </Tooltip>
+        </div>
       </div>
-    </div>
+
+      <Sheet open={soundDialogOpen} onOpenChange={setSoundDialogOpen}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>Notificações Sonoras</SheetTitle>
+          </SheetHeader>
+          <div className="mt-6">
+            <SoundPreferencesPanel />
+          </div>
+        </SheetContent>
+      </Sheet>
+    </>
   );
 };
 
