@@ -33,6 +33,7 @@ import CampaignStepBuilder from "./pages/admin/CampaignStepBuilder";
 import CampaignVisualEditor from "./pages/admin/CampaignVisualEditor";
 import ProductionRanking from "./pages/admin/ProductionRanking";
 import DashboardBuilder from "./pages/admin/DashboardBuilder";
+import Chat from "./pages/admin/Chat";
 
 // Componente para rastrear mudanças de rota em SPAs
 const AnalyticsTracker = () => {
@@ -92,6 +93,7 @@ const App = () => (
             <Route path="settings" element={<Settings />} />
             <Route path="temas" element={<ThemeSelector />} />
             <Route path="dashboard-builder" element={<DashboardBuilder />} />
+            <Route path="chat" element={<Chat />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
