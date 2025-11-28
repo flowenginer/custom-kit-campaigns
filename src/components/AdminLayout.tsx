@@ -102,9 +102,9 @@ const SidebarThemeButtons = ({ currentTheme, changeTheme }: { currentTheme: any,
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
-              variant={currentTheme?.id === 'medium' ? 'default' : 'outline'}
+              variant={currentTheme?.id === 'gray' ? 'default' : 'outline'}
               size="icon"
-              onClick={() => changeTheme('medium')}
+              onClick={() => changeTheme('gray')}
               className="h-8 w-8"
             >
               <Cloud className="h-4 w-4" />
