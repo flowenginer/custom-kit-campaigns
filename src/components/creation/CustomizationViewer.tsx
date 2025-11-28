@@ -27,6 +27,7 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
         text: rawData.front.text || undefined,
         customDescription: rawData.front.customDescription || undefined,
         customFileName: rawData.front.customFileName || undefined,
+        customFileUrl: rawData.front.customFileUrl || undefined,
       } : undefined,
       
       back: rawData.back ? {
@@ -59,6 +60,8 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
         text: rawData.sleeves.right.text ? rawData.sleeves.right.textContent : undefined
       } : undefined,
       
+      clientLogos: rawData.logoUrls || [],
+      
       internalNotes: rawData.internalNotes || undefined,
       
       modelImages: {
@@ -79,10 +82,21 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
   const collectAllImages = () => {
     const images: Array<{ url: string; label: string }> = [];
     if (transformedData?.front?.logoFile) images.push({ url: transformedData.front.logoFile, label: 'Logo Frente' });
+    if (transformedData?.front?.customFileUrl) images.push({ url: transformedData.front.customFileUrl, label: 'Arquivo Anexado Frente' });
     if (transformedData?.back?.logo) images.push({ url: transformedData.back.logo, label: 'Logo Costas' });
     if (transformedData?.back?.sponsors) {
       transformedData.back.sponsors.forEach((sponsor: any, idx: number) => {
         if (sponsor.logo) images.push({ url: sponsor.logo, label: `Patrocinador ${idx + 1}` });
+      });
+    }
+    if (transformedData?.back?.sponsorsLogosUrls) {
+      transformedData.back.sponsorsLogosUrls.forEach((url: string, idx: number) => {
+        if (url) images.push({ url, label: `Logo Patrocinador ${idx + 1}` });
+      });
+    }
+    if (transformedData?.clientLogos) {
+      transformedData.clientLogos.forEach((url: string, idx: number) => {
+        if (url) images.push({ url, label: `Logo Cliente ${idx + 1}` });
       });
     }
     if (transformedData?.leftSleeve?.flag) images.push({ url: transformedData.leftSleeve.flag, label: 'Bandeira Manga Esquerda' });
@@ -173,17 +187,27 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
     return transformedData.modelImages?.back || '';
   };
 
-  const frontAssets = transformedData.front?.logoFile 
-    ? [{ url: transformedData.front.logoFile, label: 'Logo Frente' }]
-    : [];
+  const frontAssets = [
+    ...(transformedData.front?.logoFile ? [{ url: transformedData.front.logoFile, label: 'Logo Frente' }] : []),
+    ...(transformedData.front?.customFileUrl ? [{ url: transformedData.front.customFileUrl, label: 'Arquivo Anexado' }] : [])
+  ];
 
   const backAssets = [
     ...(transformedData.back?.logo ? [{ url: transformedData.back.logo, label: 'Logo Costas' }] : []),
     ...(transformedData.back?.sponsors?.map((s: any, idx: number) => ({ 
       url: s.logo, 
       label: `Patrocinador ${idx + 1}` 
+    })) || []),
+    ...(transformedData.back?.sponsorsLogosUrls?.filter((url: string) => url).map((url: string, idx: number) => ({
+      url,
+      label: `Logo Patrocinador ${idx + 1}`
     })) || [])
   ];
+
+  const clientLogosAssets = transformedData.clientLogos?.filter((url: string) => url).map((url: string, idx: number) => ({
+    url,
+    label: `Logo Cliente ${idx + 1}`
+  })) || [];
 
   const sleeveAssets = [
     ...(transformedData.leftSleeve?.flag ? [{ url: transformedData.leftSleeve.flag, label: 'Bandeira Manga Esquerda' }] : []),
@@ -407,6 +431,18 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
                     })}
                   />
                 )}
+                
+                {clientLogosAssets.length > 0 && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-2 block">Logos do Cliente</Label>
+                    <AssetGallery
+                      assets={clientLogosAssets}
+                      columns={2}
+                      imageHeight="h-48"
+                    />
+                  </div>
+                )}
+                
                 {backAssets.length > 0 && (
                   <div>
                     <Label className="text-xs text-muted-foreground mb-2 block">Assets</Label>
