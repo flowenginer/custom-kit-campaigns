@@ -8,7 +8,9 @@ import { TaskDetailsDialog } from "@/components/creation/TaskDetailsDialog";
 import { TaskCardSkeleton } from "@/components/creation/TaskCardSkeleton";
 import { ColorThemePanel } from "@/components/creation/ColorThemePanel";
 import { CardFontEditor } from "@/components/creation/CardFontEditor";
+import { ProductionConfirmDialog } from "@/components/creation/ProductionConfirmDialog";
 import { DesignTask } from "@/types/design-task";
+import type { DbTaskStatus } from "@/types/design-task";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useCardFontSizes } from "@/hooks/useCardFontSizes";
 import { useCardCollapse } from "@/hooks/useCardCollapse";
@@ -43,6 +45,11 @@ const Creation = () => {
   const [selectedTask, setSelectedTask] = useState<DesignTask | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTask, setActiveTask] = useState<DesignTask | null>(null);
+  const [productionConfirmOpen, setProductionConfirmOpen] = useState(false);
+  const [pendingProductionTask, setPendingProductionTask] = useState<{
+    task: DesignTask;
+    newStatus: DbTaskStatus;
+  } | null>(null);
   const [columnColors, setColumnColors] = useState<string[]>(() => {
     const saved = localStorage.getItem('kanban-column-colors');
     return saved ? JSON.parse(saved) : [];
@@ -237,6 +244,33 @@ const Creation = () => {
     }
   };
 
+  const handleProductionConfirm = async () => {
+    if (!pendingProductionTask) return;
+    
+    const { task, newStatus } = pendingProductionTask;
+    
+    try {
+      const { error } = await supabase
+        .from("design_tasks")
+        .update({ 
+          status: newStatus,
+          completed_at: newStatus === 'completed' ? new Date().toISOString() : null
+        })
+        .eq("id", task.id);
+
+      if (error) throw error;
+
+      toast.success("Pedido enviado para Produção com sucesso!");
+      loadTasks();
+    } catch (error) {
+      console.error("Error updating task status:", error);
+      toast.error("Erro ao enviar para Produção");
+    } finally {
+      setProductionConfirmOpen(false);
+      setPendingProductionTask(null);
+    }
+  };
+
   const handleDragStart = (event: DragStartEvent) => {
     const task = event.active.data.current?.task as DesignTask;
     setActiveTask(task);
@@ -331,16 +365,21 @@ const Creation = () => {
         return;
       }
       
-      const confirm = window.confirm("Tem certeza que deseja enviar para Produção?");
-      if (!confirm) return;
+      // Abrir dialog de confirmação ao invés de window.confirm
+      setPendingProductionTask({ task, newStatus });
+      setProductionConfirmOpen(true);
+      return;
     }
 
+    // Aqui, newStatus é garantido não ser 'completed' ou 'logo_needed'
+    const validStatus = newStatus as Exclude<DbTaskStatus, 'completed'>;
+    
     try {
       const { error } = await supabase
         .from("design_tasks")
         .update({ 
-          status: newStatus,
-          completed_at: newStatus === 'completed' ? new Date().toISOString() : null
+          status: validStatus,
+          completed_at: null
         })
         .eq("id", task.id);
 
@@ -767,6 +806,19 @@ const Creation = () => {
         onOpenChange={setDialogOpen}
         onTaskUpdated={handleTaskUpdated}
         context="creation"
+      />
+
+      <ProductionConfirmDialog
+        open={productionConfirmOpen}
+        onOpenChange={(open) => {
+          setProductionConfirmOpen(open);
+          if (!open) setPendingProductionTask(null);
+        }}
+        task={pendingProductionTask?.task ? {
+          customer_name: pendingProductionTask.task.customer_name || '',
+          order_number: pendingProductionTask.task.order_number || ''
+        } : null}
+        onConfirm={handleProductionConfirm}
       />
     </div>
   );
