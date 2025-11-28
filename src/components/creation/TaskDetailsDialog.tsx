@@ -49,6 +49,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useUserRole } from "@/hooks/useUserRole";
 import { LogoSectionUploader } from "@/components/orders/LogoSectionUploader";
 import { ChangeRequestsTab } from "./ChangeRequestsTab";
+import { DeleteReasonDialog } from "../orders/DeleteReasonDialog";
 import { 
   Download, 
   ExternalLink, 
@@ -101,6 +102,7 @@ export const TaskDetailsDialog = ({
   const [designers, setDesigners] = useState<Array<{id: string, full_name: string}>>([]);
   const [selectedDesigner, setSelectedDesigner] = useState<string>("");
   const [transferring, setTransferring] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
   const { roles, isSalesperson, isDesigner, isSuperAdmin, isAdmin } = useUserRole();
 
@@ -394,29 +396,8 @@ export const TaskDetailsDialog = ({
     }
   };
 
-  const handleDeleteTask = async () => {
-    if (!task) return;
-
-    const confirmed = window.confirm(
-      `Tem certeza que deseja excluir a tarefa de ${task.customer_name}? Esta ação não pode ser desfeita.`
-    );
-    
-    if (!confirmed) return;
-
-    const { error } = await supabase
-      .from('design_tasks')
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('id', task.id);
-
-    if (error) {
-      toast.error('Erro ao excluir tarefa');
-      console.error(error);
-      return;
-    }
-
-    toast.success('Tarefa excluída com sucesso');
-    onOpenChange(false);
-    onTaskUpdated(); // ✅ Garante ordem correta
+  const handleDeleteTask = () => {
+    setShowDeleteDialog(true);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -954,31 +935,6 @@ export const TaskDetailsDialog = ({
                   </CardContent>
                 </Card>
 
-                {/* 🆕 FASE 6: Logo do Cliente (se enviada) */}
-                {task.uploaded_logo_url && (
-                  <Card className="col-span-2">
-                    <CardContent className="p-4 space-y-2">
-                      <Label className="text-xs text-muted-foreground font-semibold">Logo do Cliente</Label>
-                      <div className="relative w-full h-32 bg-muted rounded-lg overflow-hidden border flex items-center justify-center">
-                        <img 
-                          src={task.uploaded_logo_url} 
-                          alt="Logo enviado"
-                          className="max-w-full max-h-full object-contain p-2"
-                        />
-                      </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="w-full"
-                        onClick={() => window.open(task.uploaded_logo_url!, '_blank')}
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Baixar Logo Original
-                      </Button>
-                    </CardContent>
-                  </Card>
-                )}
-
                 {/* COLUNA 3: Designer Responsável (largura total) */}
                 <Card className="col-span-2">
                   <CardContent className="p-4">
@@ -1386,14 +1342,14 @@ export const TaskDetailsDialog = ({
             // DESIGNER - Footer com todos os botões
             <div className="flex justify-between w-full">
               <div>
-                {(isSuperAdmin || isAdmin || isDesigner) && (
+                {isSalesperson && isTaskCreator && (
                   <Button 
                     variant="destructive" 
                     onClick={handleDeleteTask}
                     disabled={uploading || logoUploading}
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
-                    Excluir Tarefa
+                    Solicitar Exclusão
                   </Button>
                 )}
               </div>
@@ -1612,6 +1568,13 @@ export const TaskDetailsDialog = ({
           )}
         </div>
       </DialogContent>
+
+      <DeleteReasonDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        taskId={task.id}
+        onSuccess={onTaskUpdated}
+      />
     </Dialog>
   );
 };

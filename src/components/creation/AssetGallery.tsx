@@ -21,8 +21,22 @@ export const AssetGallery = ({
 }: AssetGalleryProps) => {
   const [zoomImage, setZoomImage] = useState<Asset | null>(null);
 
-  const handleDownload = (url: string, label: string) => {
-    window.open(url, '_blank');
+  const handleDownload = async (url: string, label: string) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `${label.replace(/\s+/g, '_')}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error('Erro ao baixar imagem:', error);
+      window.open(url, '_blank');
+    }
   };
 
   return (

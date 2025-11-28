@@ -1035,6 +1035,70 @@ export type Database = {
           },
         ]
       }
+      pending_delete_requests: {
+        Row: {
+          created_at: string | null
+          id: string
+          reason: string
+          rejection_reason: string | null
+          requested_at: string | null
+          requested_by: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          task_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          reason: string
+          rejection_reason?: string | null
+          requested_at?: string | null
+          requested_by?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          task_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          reason?: string
+          rejection_reason?: string | null
+          requested_at?: string | null
+          requested_by?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          task_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_delete_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_delete_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_delete_requests_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "design_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pending_urgent_requests: {
         Row: {
           created_at: string | null

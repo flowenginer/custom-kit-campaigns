@@ -100,13 +100,27 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
       toast.error("Não há imagens para baixar");
       return;
     }
+    
     for (const img of allImages) {
-      const link = document.createElement('a');
-      link.href = img.url;
-      link.download = img.label;
-      link.click();
-      await new Promise(r => setTimeout(r, 500));
+      try {
+        const response = await fetch(img.url);
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = `${img.label.replace(/\s+/g, '_')}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
+        
+        // Delay between downloads
+        await new Promise(r => setTimeout(r, 500));
+      } catch (error) {
+        console.error(`Erro ao baixar ${img.label}:`, error);
+      }
     }
+    
     toast.success(`${allImages.length} imagens baixadas!`);
   };
 
@@ -197,6 +211,20 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
         </Button>
       </div>
 
+      {/* SEÇÃO: OBSERVAÇÕES INTERNAS */}
+      {transformedData.internalNotes && (
+        <Card>
+          <CardContent className="p-6">
+            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <Badge variant="secondary">OBSERVAÇÕES INTERNAS</Badge>
+            </h3>
+            <div className="bg-muted p-4 rounded">
+              <p className="text-sm whitespace-pre-wrap">{transformedData.internalNotes}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* SEÇÃO: FRENTE */}
       {transformedData.front && (
         <Card>
@@ -205,22 +233,7 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
               <Badge variant="default">FRENTE</Badge>
             </h3>
             <div className="grid grid-cols-2 gap-6">
-              {/* Coluna Esquerda: Preview Visual */}
-              <div>
-                {transformedData.modelImages?.front && (
-                  <ShirtPreviewAnnotated
-                    imageUrl={getModelImageForSection('front', transformedData.front)}
-                    annotations={getFrontAnnotations(transformedData.front)}
-                    alt="Preview da Frente"
-                    onImageClick={() => setZoomImage({ 
-                      url: getModelImageForSection('front', transformedData.front),
-                      alt: 'Preview da Frente'
-                    })}
-                  />
-                )}
-              </div>
-
-              {/* Coluna Direita: Detalhes */}
+              {/* Coluna Esquerda: Detalhes */}
               <div className="space-y-4">
                 <div>
                   <Label className="text-xs text-muted-foreground">
@@ -256,6 +269,21 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Coluna Direita: Preview Visual e Assets */}
+              <div className="space-y-4">
+                {transformedData.modelImages?.front && (
+                  <ShirtPreviewAnnotated
+                    imageUrl={getModelImageForSection('front', transformedData.front)}
+                    annotations={getFrontAnnotations(transformedData.front)}
+                    alt="Preview da Frente"
+                    onImageClick={() => setZoomImage({ 
+                      url: getModelImageForSection('front', transformedData.front),
+                      alt: 'Preview da Frente'
+                    })}
+                  />
+                )}
                 {frontAssets.length > 0 && (
                   <div>
                     <Label className="text-xs text-muted-foreground mb-2 block">Assets</Label>
@@ -280,22 +308,7 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
               <Badge variant="default">COSTAS</Badge>
             </h3>
             <div className="grid grid-cols-2 gap-6">
-              {/* Coluna Esquerda: Preview Visual */}
-              <div>
-                {transformedData.modelImages?.back && (
-                  <ShirtPreviewAnnotated
-                    imageUrl={transformedData.modelImages.back}
-                    annotations={getBackAnnotations(transformedData.back)}
-                    alt="Preview das Costas"
-                    onImageClick={() => setZoomImage({ 
-                      url: transformedData.modelImages.back,
-                      alt: 'Preview das Costas'
-                    })}
-                  />
-                )}
-              </div>
-
-              {/* Coluna Direita: Detalhes */}
+              {/* Coluna Esquerda: Detalhes */}
               <div className="space-y-4">
                 {transformedData.back.logoLarge && (
                   <div>
@@ -378,6 +391,21 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
                     <Label className="text-xs text-muted-foreground">Localização dos Patrocinadores</Label>
                     <p className="text-sm bg-muted p-2 rounded">{transformedData.back.sponsorsLocation}</p>
                   </div>
+                )}
+              </div>
+
+              {/* Coluna Direita: Preview Visual e Assets */}
+              <div className="space-y-4">
+                {transformedData.modelImages?.back && (
+                  <ShirtPreviewAnnotated
+                    imageUrl={transformedData.modelImages.back}
+                    annotations={getBackAnnotations(transformedData.back)}
+                    alt="Preview das Costas"
+                    onImageClick={() => setZoomImage({ 
+                      url: transformedData.modelImages.back,
+                      alt: 'Preview das Costas'
+                    })}
+                  />
                 )}
                 {backAssets.length > 0 && (
                   <div>
@@ -492,20 +520,6 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
                   </div>
                 </div>
               )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* SEÇÃO: OBSERVAÇÕES INTERNAS */}
-      {transformedData.internalNotes && (
-        <Card>
-          <CardContent className="p-6">
-            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <Badge variant="secondary">OBSERVAÇÕES INTERNAS</Badge>
-            </h3>
-            <div className="bg-muted p-4 rounded">
-              <p className="text-sm whitespace-pre-wrap">{transformedData.internalNotes}</p>
             </div>
           </CardContent>
         </Card>
