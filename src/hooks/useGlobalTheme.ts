@@ -33,6 +33,7 @@ export const useGlobalTheme = () => {
     const textHSL = hexToHSL(theme.colors.text);
     const textMutedHSL = hexToHSL(theme.colors.textMuted);
     const borderHSL = hexToHSL(theme.colors.border);
+    const mutedHSL = hexToHSL(theme.colors.muted);
     
     // Aplicar variáveis CSS
     root.style.setProperty('--background', `${bgHSL.h} ${bgHSL.s}% ${bgHSL.l}%`);
@@ -43,8 +44,13 @@ export const useGlobalTheme = () => {
     root.style.setProperty('--accent', `${accentHSL.h} ${accentHSL.s}% ${accentHSL.l}%`);
     root.style.setProperty('--accent-foreground', `${accentFgHSL.h} ${accentFgHSL.s}% ${accentFgHSL.l}%`);
     root.style.setProperty('--foreground', `${textHSL.h} ${textHSL.s}% ${textHSL.l}%`);
+    root.style.setProperty('--muted', `${mutedHSL.h} ${mutedHSL.s}% ${mutedHSL.l}%`);
     root.style.setProperty('--muted-foreground', `${textMutedHSL.h} ${textMutedHSL.s}% ${textMutedHSL.l}%`);
     root.style.setProperty('--border', `${borderHSL.h} ${borderHSL.s}% ${borderHSL.l}%`);
+    root.style.setProperty('--secondary', `${mutedHSL.h} ${mutedHSL.s}% ${mutedHSL.l}%`);
+    root.style.setProperty('--secondary-foreground', `${textHSL.h} ${textHSL.s}% ${textHSL.l}%`);
+    root.style.setProperty('--popover', `${cardHSL.h} ${cardHSL.s}% ${cardHSL.l}%`);
+    root.style.setProperty('--popover-foreground', `${textHSL.h} ${textHSL.s}% ${textHSL.l}%`);
   };
 
   const changeTheme = (themeId: string) => {
