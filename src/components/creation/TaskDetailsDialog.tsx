@@ -834,8 +834,8 @@ export const TaskDetailsDialog = ({
               currentSections={logoSections}
             />
 
-            {/* Botão de Excluir para Vendedor Criador */}
-            {isSalesperson && isTaskCreator && (
+            {/* Botão de Excluir para Vendedor Criador, Admins e Super Admins */}
+            {((isSalesperson && isTaskCreator) || isSuperAdmin || isAdmin) && (
               <div className="pt-4 border-t">
                 <Button 
                   variant="destructive" 
@@ -1403,7 +1403,7 @@ export const TaskDetailsDialog = ({
             // DESIGNER - Footer com todos os botões
             <div className="flex justify-between w-full">
               <div>
-                {isSalesperson && isTaskCreator && (
+                {((isSalesperson && isTaskCreator) || isSuperAdmin || isAdmin) && (
                   <Button 
                     variant="destructive" 
                     onClick={handleDeleteTask}
