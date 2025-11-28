@@ -25,6 +25,8 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
         logoType: rawData.front.logoType,
         logoFile: rawData.front.logoUrl || undefined,
         text: rawData.front.text || undefined,
+        customDescription: rawData.front.customDescription || undefined,
+        customFileName: rawData.front.customFileName || undefined,
       } : undefined,
       
       back: rawData.back ? {
@@ -34,20 +36,30 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
         email: { enabled: rawData.back.email, value: rawData.back.emailText },
         whatsapp: { enabled: rawData.back.whatsapp, value: rawData.back.whatsappText },
         logo: rawData.back.logoUrl || undefined,
-        sponsors: rawData.back.sponsorsLogosUrls?.map((url: string) => ({ logo: url })) || []
+        logoLarge: rawData.back.logoLarge || false,
+        hasSponsors: rawData.back.hasSponsors || false,
+        sponsorsLocation: rawData.back.sponsorsLocation || undefined,
+        sponsors: rawData.back.sponsors || [],
+        sponsorsLogosUrls: rawData.back.sponsorsLogosUrls || []
       } : undefined,
       
       leftSleeve: rawData.sleeves?.left ? {
         flag: rawData.sleeves.left.flagUrl || undefined,
+        flagState: rawData.sleeves.left.flagState || undefined,
         logo: rawData.sleeves.left.logoUrl || undefined,
+        logoFileName: rawData.sleeves.left.logoFileName || undefined,
         text: rawData.sleeves.left.text ? rawData.sleeves.left.textContent : undefined
       } : undefined,
       
       rightSleeve: rawData.sleeves?.right ? {
         flag: rawData.sleeves.right.flagUrl || undefined,
+        flagState: rawData.sleeves.right.flagState || undefined,
         logo: rawData.sleeves.right.logoUrl || undefined,
+        logoFileName: rawData.sleeves.right.logoFileName || undefined,
         text: rawData.sleeves.right.text ? rawData.sleeves.right.textContent : undefined
       } : undefined,
+      
+      internalNotes: rawData.internalNotes || undefined,
       
       modelImages: {
         front: rawData.modelImages?.front,
@@ -211,9 +223,28 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
               {/* Coluna Direita: Detalhes */}
               <div className="space-y-4">
                 <div>
-                  <Label className="text-xs text-muted-foreground">Posicionamento do Logo</Label>
+                  <Label className="text-xs text-muted-foreground">
+                    {transformedData.front.logoType === 'custom' ? 'Outras personalizações' : 'Posicionamento do Logo'}
+                  </Label>
                   <p className="text-sm font-medium">{formatLogoType(transformedData.front.logoType)}</p>
                 </div>
+                {transformedData.front.customDescription && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Descrição da Personalização</Label>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm bg-muted p-2 rounded flex-1">{transformedData.front.customDescription}</p>
+                      <Button size="sm" variant="ghost" onClick={() => copyToClipboard(transformedData.front.customDescription!)}>
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                {transformedData.front.customFileName && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Arquivo Anexado</Label>
+                    <p className="text-sm bg-muted p-2 rounded">{transformedData.front.customFileName}</p>
+                  </div>
+                )}
                 {transformedData.front.text && (
                   <div>
                     <Label className="text-xs text-muted-foreground">Texto</Label>
@@ -266,6 +297,12 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
 
               {/* Coluna Direita: Detalhes */}
               <div className="space-y-4">
+                {transformedData.back.logoLarge && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Logo Grande</Label>
+                    <p className="text-sm bg-muted p-2 rounded">✓ Logo grande no centro das costas</p>
+                  </div>
+                )}
                 {transformedData.back.name?.enabled && (
                   <div>
                     <Label className="text-xs text-muted-foreground">Nome</Label>
@@ -321,6 +358,27 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
                     </div>
                   </div>
                 )}
+                {transformedData.back.hasSponsors && transformedData.back.sponsors && transformedData.back.sponsors.length > 0 && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Patrocinadores</Label>
+                    <div className="space-y-2 mt-2">
+                      {transformedData.back.sponsors.map((sponsor: any, idx: number) => (
+                        <div key={idx} className="bg-muted p-2 rounded text-sm">
+                          <p className="font-medium">{sponsor.name}</p>
+                          {sponsor.logoFileName && (
+                            <p className="text-xs text-muted-foreground">Arquivo: {sponsor.logoFileName}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {transformedData.back.sponsorsLocation && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Localização dos Patrocinadores</Label>
+                    <p className="text-sm bg-muted p-2 rounded">{transformedData.back.sponsorsLocation}</p>
+                  </div>
+                )}
                 {backAssets.length > 0 && (
                   <div>
                     <Label className="text-xs text-muted-foreground mb-2 block">Assets</Label>
@@ -350,6 +408,18 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
                 <div>
                   <h4 className="text-sm font-semibold mb-3">Manga Esquerda</h4>
                   <div className="space-y-3">
+                    {transformedData.leftSleeve.flagState && (
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Bandeira</Label>
+                        <p className="text-sm bg-muted p-2 rounded">{transformedData.leftSleeve.flagState}</p>
+                      </div>
+                    )}
+                    {transformedData.leftSleeve.logoFileName && (
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Logo Pequena</Label>
+                        <p className="text-sm bg-muted p-2 rounded">✓ {transformedData.leftSleeve.logoFileName}</p>
+                      </div>
+                    )}
                     {transformedData.leftSleeve.text && (
                       <div>
                         <Label className="text-xs text-muted-foreground">Texto</Label>
@@ -383,6 +453,18 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
                 <div>
                   <h4 className="text-sm font-semibold mb-3">Manga Direita</h4>
                   <div className="space-y-3">
+                    {transformedData.rightSleeve.flagState && (
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Bandeira</Label>
+                        <p className="text-sm bg-muted p-2 rounded">{transformedData.rightSleeve.flagState}</p>
+                      </div>
+                    )}
+                    {transformedData.rightSleeve.logoFileName && (
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Logo Pequena</Label>
+                        <p className="text-sm bg-muted p-2 rounded">✓ {transformedData.rightSleeve.logoFileName}</p>
+                      </div>
+                    )}
                     {transformedData.rightSleeve.text && (
                       <div>
                         <Label className="text-xs text-muted-foreground">Texto</Label>
@@ -410,6 +492,20 @@ export const CustomizationViewer = ({ data }: CustomizationViewerProps) => {
                   </div>
                 </div>
               )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* SEÇÃO: OBSERVAÇÕES INTERNAS */}
+      {transformedData.internalNotes && (
+        <Card>
+          <CardContent className="p-6">
+            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <Badge variant="secondary">OBSERVAÇÕES INTERNAS</Badge>
+            </h3>
+            <div className="bg-muted p-4 rounded">
+              <p className="text-sm whitespace-pre-wrap">{transformedData.internalNotes}</p>
             </div>
           </CardContent>
         </Card>
