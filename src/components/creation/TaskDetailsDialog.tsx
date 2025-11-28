@@ -830,6 +830,21 @@ export const TaskDetailsDialog = ({
               }}
               currentSections={logoSections}
             />
+
+            {/* Botão de Excluir para Vendedor Criador */}
+            {isSalesperson && isTaskCreator && (
+              <div className="pt-4 border-t">
+                <Button 
+                  variant="destructive" 
+                  onClick={handleDeleteTask}
+                  disabled={logoUploading}
+                  size="sm"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Solicitar Exclusão desta Tarefa
+                </Button>
+              </div>
+            )}
           </div>
         ) : (
           // INTERFACE COMPLETA DO DESIGNER
