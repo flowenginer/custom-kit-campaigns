@@ -10,6 +10,7 @@ import { ColorThemePanel } from "@/components/creation/ColorThemePanel";
 import { CardFontEditor } from "@/components/creation/CardFontEditor";
 import { ProductionConfirmDialog } from "@/components/creation/ProductionConfirmDialog";
 import { DuplicateOrderDialog } from "@/components/creation/DuplicateOrderDialog";
+import { MissingOrderNumberDialog } from "@/components/creation/MissingOrderNumberDialog";
 import { DesignTask } from "@/types/design-task";
 import type { DbTaskStatus } from "@/types/design-task";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -56,6 +57,8 @@ const Creation = () => {
     orderNumber: string;
     existingCustomerName: string;
   } | null>(null);
+  const [missingOrderDialogOpen, setMissingOrderDialogOpen] = useState(false);
+  const [missingOrderCustomerName, setMissingOrderCustomerName] = useState("");
   const [columnColors, setColumnColors] = useState<string[]>(() => {
     const saved = localStorage.getItem('kanban-column-colors');
     return saved ? JSON.parse(saved) : [];
@@ -351,7 +354,8 @@ const Creation = () => {
     if (newStatus === 'completed') {
       // Validação: Número do pedido obrigatório para ir para Produção
       if (!task.order_number || task.order_number.trim() === '') {
-        toast.error("É obrigatório preencher o número do pedido antes de enviar para Produção");
+        setMissingOrderCustomerName(task.customer_name || "Desconhecido");
+        setMissingOrderDialogOpen(true);
         return;
       }
       
@@ -838,6 +842,12 @@ const Creation = () => {
         onOpenChange={setDuplicateDialogOpen}
         orderNumber={duplicateInfo?.orderNumber || ''}
         existingCustomerName={duplicateInfo?.existingCustomerName || ''}
+      />
+
+      <MissingOrderNumberDialog
+        open={missingOrderDialogOpen}
+        onOpenChange={setMissingOrderDialogOpen}
+        customerName={missingOrderCustomerName}
       />
     </div>
   );
