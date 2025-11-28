@@ -32,7 +32,11 @@ export const CustomizationSummary = ({
     const textFields = [back.name, back.instagram, back.website, back.email, back.whatsapp]
       .filter(field => field?.enabled).length;
     if (textFields > 0) parts.push(`${textFields} texto${textFields > 1 ? 's' : ''}`);
-    if (back.sponsors?.length > 0) parts.push(`${back.sponsors.length} patroc.`);
+    
+    // Contar patrocinadores a partir de sponsors array ou sponsorsLogosUrls
+    const sponsorsCount = back.sponsors?.length || back.sponsorsLogosUrls?.length || 0;
+    if (sponsorsCount > 0) parts.push(`${sponsorsCount} patroc.`);
+    
     return parts.join(" + ") || "Personalizado";
   };
 
@@ -55,9 +59,10 @@ export const CustomizationSummary = ({
     return parts.join(" + ") || "Personalizado";
   };
 
-  const frontAssetCount = (front?.logoFile ? 1 : 0) + (front?.text ? 1 : 0);
+  const frontAssetCount = (front?.logoFile ? 1 : 0) + (front?.text ? 1 : 0) + (front?.customFileName ? 1 : 0);
+  const sponsorsCount = back?.sponsors?.length || back?.sponsorsLogosUrls?.length || 0;
   const backAssetCount = (back?.logo || back?.logoLarge ? 1 : 0) + 
-    (back?.sponsors?.length || 0) +
+    sponsorsCount +
     [back?.name, back?.instagram, back?.website, back?.email, back?.whatsapp]
       .filter(f => f?.enabled).length;
   const sleeveAssetCount = 

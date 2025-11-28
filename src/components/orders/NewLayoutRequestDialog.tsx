@@ -324,6 +324,46 @@ export const NewLayoutRequestDialog = ({
         }
       }
 
+      // Upload do arquivo customFile da frente (se houver)
+      let frontLogoUrl = "";
+      if (frontCustomization.customFile) {
+        const url = await uploadLogoToStorage(frontCustomization.customFile);
+        if (url) {
+          frontLogoUrl = url;
+        }
+      }
+
+      // Upload dos logos dos patrocinadores (se houver)
+      let sponsorsLogosUrls: string[] = [];
+      if (backCustomization.sponsors && backCustomization.sponsors.length > 0) {
+        for (const sponsor of backCustomization.sponsors) {
+          if (sponsor.logoFile) {
+            const url = await uploadLogoToStorage(sponsor.logoFile);
+            if (url) {
+              sponsorsLogosUrls.push(url);
+            }
+          }
+        }
+      }
+
+      // Upload do logo da manga esquerda (se houver)
+      let leftSleeveLogoUrl = "";
+      if (leftSleeveCustomization.logoFile) {
+        const url = await uploadLogoToStorage(leftSleeveCustomization.logoFile);
+        if (url) {
+          leftSleeveLogoUrl = url;
+        }
+      }
+
+      // Upload do logo da manga direita (se houver)
+      let rightSleeveLogoUrl = "";
+      if (rightSleeveCustomization.logoFile) {
+        const url = await uploadLogoToStorage(rightSleeveCustomization.logoFile);
+        if (url) {
+          rightSleeveLogoUrl = url;
+        }
+      }
+
       // Obter user ID atual
       const {
         data: { user },
@@ -344,11 +384,13 @@ export const NewLayoutRequestDialog = ({
         model: selectedModel.name,
         front: {
           ...frontCustomization,
+          logoUrl: frontLogoUrl || frontCustomization.logoUrl, // URL do upload
           customFile: undefined, // Remove File object
           customFileName: frontCustomization.customFile?.name, // Salva apenas o nome
         },
         back: {
           ...backCustomization,
+          sponsorsLogosUrls, // URLs dos uploads dos patrocinadores
           sponsors: backCustomization.sponsors.map(s => ({
             name: s.name,
             logoFileName: s.logoFile?.name, // Salva apenas o nome do arquivo
@@ -357,11 +399,13 @@ export const NewLayoutRequestDialog = ({
         sleeves: {
           left: {
             ...leftSleeveCustomization,
+            logoUrl: leftSleeveLogoUrl || leftSleeveCustomization.logoUrl, // URL do upload
             logoFile: undefined, // Remove File object
             logoFileName: leftSleeveCustomization.logoFile?.name, // Salva apenas o nome
           },
           right: {
             ...rightSleeveCustomization,
+            logoUrl: rightSleeveLogoUrl || rightSleeveCustomization.logoUrl, // URL do upload
             logoFile: undefined, // Remove File object
             logoFileName: rightSleeveCustomization.logoFile?.name, // Salva apenas o nome
           },
