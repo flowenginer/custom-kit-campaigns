@@ -101,11 +101,15 @@ export const NewLayoutRequestDialog = ({
     textColor: string;
     text: string;
     logoUrl: string;
+    customDescription?: string;
+    customFile?: File | null;
   }>({
     logoType: "none",
     textColor: "#000000",
     text: "",
     logoUrl: "",
+    customDescription: "",
+    customFile: null,
   });
 
   const [backCustomization, setBackCustomization] = useState<{
@@ -123,7 +127,7 @@ export const NewLayoutRequestDialog = ({
     websiteText: string;
     hasSponsors?: boolean;
     sponsorsLocation?: string;
-    sponsors: string[];
+    sponsors: { name: string; logoFile?: File | null; logoUrl?: string }[];
     sponsorsLogosUrls?: string[];
   }>({
     logoLarge: false,
@@ -146,8 +150,10 @@ export const NewLayoutRequestDialog = ({
 
   const [leftSleeveCustomization, setLeftSleeveCustomization] = useState({
     flag: false,
+    flagState: undefined as string | undefined,
     flagUrl: "",
     logoSmall: false,
+    logoFile: null as File | null,
     logoUrl: "",
     text: false,
     textContent: "",
@@ -155,8 +161,10 @@ export const NewLayoutRequestDialog = ({
 
   const [rightSleeveCustomization, setRightSleeveCustomization] = useState({
     flag: false,
+    flagState: undefined as string | undefined,
     flagUrl: "",
     logoSmall: false,
+    logoFile: null as File | null,
     logoUrl: "",
     text: false,
     textContent: "",
@@ -327,15 +335,33 @@ export const NewLayoutRequestDialog = ({
       const finalQuantity =
         quantity === "custom" ? parseInt(customQuantity) : parseInt(quantity);
 
-      // Preparar dados de customização
+      // Preparar dados de customização (remover File objects que não podem ser serializados)
       const customizationData = {
         uniformType: selectedUniformType,
         model: selectedModel.name,
-        front: frontCustomization,
-        back: backCustomization,
+        front: {
+          ...frontCustomization,
+          customFile: undefined, // Remove File object
+          customFileName: frontCustomization.customFile?.name, // Salva apenas o nome
+        },
+        back: {
+          ...backCustomization,
+          sponsors: backCustomization.sponsors.map(s => ({
+            name: s.name,
+            logoFileName: s.logoFile?.name, // Salva apenas o nome do arquivo
+          })),
+        },
         sleeves: {
-          left: leftSleeveCustomization,
-          right: rightSleeveCustomization,
+          left: {
+            ...leftSleeveCustomization,
+            logoFile: undefined, // Remove File object
+            logoFileName: leftSleeveCustomization.logoFile?.name, // Salva apenas o nome
+          },
+          right: {
+            ...rightSleeveCustomization,
+            logoFile: undefined, // Remove File object
+            logoFileName: rightSleeveCustomization.logoFile?.name, // Salva apenas o nome
+          },
         },
         uploadChoice: hasLogo === "sim" ? "agora" : "depois",
         internalNotes,
@@ -366,13 +392,13 @@ export const NewLayoutRequestDialog = ({
 
         const { error: pendingError } = await supabase
           .from("pending_urgent_requests")
-          .insert({
+          .insert([{
             request_data: requestData,
-            requested_priority: "urgent",
+            requested_priority: "urgent" as const,
             requested_by: user.id,
             urgent_reason_id: urgentReasonId,
             urgent_reason_text: urgentReasonText || null,
-          });
+          }]);
 
         if (pendingError) throw pendingError;
 
@@ -407,7 +433,7 @@ export const NewLayoutRequestDialog = ({
       // 1. Criar ORDER primeiro
       const { data: orderData, error: orderError } = await supabase
         .from("orders")
-        .insert({
+        .insert([{
           campaign_id: selectedCampaignId,
           session_id: sessionId,
           customer_name: customerName,
@@ -416,7 +442,7 @@ export const NewLayoutRequestDialog = ({
           quantity: finalQuantity,
           model_id: selectedModel.id,
           customization_data: customizationData,
-        })
+        }])
         .select()
         .single();
 
@@ -425,7 +451,7 @@ export const NewLayoutRequestDialog = ({
       // 2. Criar LEAD com order_id
       const { data: leadData, error: leadError } = await supabase
         .from("leads")
-        .insert({
+        .insert([{
           campaign_id: selectedCampaignId,
           session_id: sessionId,
           name: customerName,
@@ -440,7 +466,7 @@ export const NewLayoutRequestDialog = ({
           uploaded_logo_url: uploadedLogoUrl,
           customization_summary: customizationData,
           completed: true,
-        })
+        }])
         .select()
         .single();
 
@@ -494,6 +520,8 @@ export const NewLayoutRequestDialog = ({
       textColor: "#000000",
       text: "",
       logoUrl: "",
+      customDescription: "",
+      customFile: null,
     });
     setBackCustomization({
       logoLarge: false,
@@ -515,16 +543,20 @@ export const NewLayoutRequestDialog = ({
     });
     setLeftSleeveCustomization({
       flag: false,
+      flagState: undefined,
       flagUrl: "",
       logoSmall: false,
+      logoFile: null,
       logoUrl: "",
       text: false,
       textContent: "",
     });
     setRightSleeveCustomization({
       flag: false,
+      flagState: undefined,
       flagUrl: "",
       logoSmall: false,
+      logoFile: null,
       logoUrl: "",
       text: false,
       textContent: "",
@@ -778,7 +810,7 @@ export const NewLayoutRequestDialog = ({
                 model={selectedModel}
                 side="left"
                 value={leftSleeveCustomization}
-                onChange={setLeftSleeveCustomization}
+                onChange={(data) => setLeftSleeveCustomization({ ...leftSleeveCustomization, ...data })}
                 onNext={() => setCurrentStep("sleeves_right")}
               />
             )}
@@ -796,7 +828,7 @@ export const NewLayoutRequestDialog = ({
                 model={selectedModel}
                 side="right"
                 value={rightSleeveCustomization}
-                onChange={setRightSleeveCustomization}
+                onChange={(data) => setRightSleeveCustomization({ ...rightSleeveCustomization, ...data })}
                 onNext={() => setCurrentStep("logo")}
               />
             )}

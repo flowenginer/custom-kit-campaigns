@@ -3,7 +3,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { SponsorsList } from "./SponsorsList";
+import { SponsorsList, Sponsor } from "./SponsorsList";
 import { ImageZoomModal } from "@/components/ui/image-zoom-modal";
 import { useState } from "react";
 import { Maximize2 } from "lucide-react";
@@ -37,7 +37,7 @@ interface BackCustomization {
   websiteText: string;
   hasSponsors?: boolean;
   sponsorsLocation?: string;
-  sponsors: string[];
+  sponsors: Sponsor[];
   sponsorsLogosUrls?: string[];
 }
 
