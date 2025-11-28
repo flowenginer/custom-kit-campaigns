@@ -167,7 +167,39 @@ export const TaskDetailsDialog = ({
       return;
     }
 
-    setHistory(data || []);
+    // Buscar nomes dos usuários que têm user_id
+    const userIds = data?.map(item => item.user_id).filter(Boolean) || [];
+    const uniqueUserIds = [...new Set(userIds)];
+    
+    let usersMap: Record<string, any> = {};
+    
+    if (uniqueUserIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", uniqueUserIds);
+      
+      if (profiles) {
+        usersMap = profiles.reduce((acc, profile) => {
+          acc[profile.id] = profile;
+          return acc;
+        }, {} as Record<string, any>);
+      }
+    }
+
+    // Mapear os dados para incluir nome e iniciais do usuário
+    const historyWithNames = data?.map(item => {
+      const userProfile = item.user_id ? usersMap[item.user_id] : null;
+      return {
+        ...item,
+        user_name: userProfile?.full_name || null,
+        user_initials: userProfile?.full_name 
+          ? userProfile.full_name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() 
+          : null
+      };
+    }) || [];
+
+    setHistory(historyWithNames);
   };
 
   const handleAssignSelf = async () => {
