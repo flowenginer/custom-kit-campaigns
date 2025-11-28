@@ -1,7 +1,8 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Upload, X, Check, Palette } from "lucide-react";
+import { Upload, X, Check } from "lucide-react";
 import { useRef } from "react";
+import { Badge } from "@/components/ui/badge";
 
 interface CustomizationData {
   front: {
@@ -19,13 +20,14 @@ interface CustomizationData {
 }
 
 interface UploadedLogos {
-  frontLogo: File | null;
-  backLogo: File | null;
-  sponsorsLogos: File[];
-  rightFlag: File | null;
-  rightLogo: File | null;
-  leftFlag: File | null;
-  leftLogo: File | null;
+  logos: File[];
+  frontLogo?: File | null;
+  backLogo?: File | null;
+  sponsorsLogos?: File[];
+  rightFlag?: File | null;
+  rightLogo?: File | null;
+  leftFlag?: File | null;
+  leftLogo?: File | null;
 }
 
 interface LogoUploaderProps {
@@ -59,15 +61,24 @@ export const LogoUploader = ({
                        needsRightFlag || needsRightLogo || needsLeftFlag || needsLeftLogo;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
-    console.log('Arquivo selecionado:', file?.name);
-    
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-    // Atualiza o estado com a logo selecionada
+    const newFiles = Array.from(files);
+    console.log('Arquivos selecionados:', newFiles.map(f => f.name));
+    
+    // Adiciona novos arquivos aos já existentes
     onLogosUpload({
       ...currentLogos,
-      frontLogo: file,
+      logos: [...(currentLogos.logos || []), ...newFiles],
+    });
+  };
+
+  const removeFile = (index: number) => {
+    const updated = currentLogos.logos.filter((_, i) => i !== index);
+    onLogosUpload({
+      ...currentLogos,
+      logos: updated,
     });
   };
 
@@ -114,11 +125,12 @@ export const LogoUploader = ({
             Adicionar Logo
           </Button>
 
-          {/* Input de arquivo oculto */}
+          {/* Input de arquivo oculto - múltiplos arquivos */}
           <input
             ref={fileInputRef}
             type="file"
             accept="image/*"
+            multiple
             className="hidden"
             onChange={handleFileChange}
           />
@@ -138,19 +150,48 @@ export const LogoUploader = ({
           </Button>
         </div>
 
-        {/* Feedback visual da logo selecionada */}
+        {/* Feedback visual das logos selecionadas */}
         {uploadChoice === 'agora' && (
           <div className="mt-6 p-4 bg-primary/10 rounded-lg border border-primary/20">
-            {currentLogos.frontLogo ? (
-              <div className="flex items-center justify-center gap-2">
-                <Check className="h-5 w-5 text-green-600" />
-                <p className="text-sm font-medium text-green-700">
-                  Logo selecionada: {currentLogos.frontLogo.name}
-                </p>
+            {currentLogos.logos && currentLogos.logos.length > 0 ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Check className="h-5 w-5 text-green-600" />
+                    <p className="text-sm font-medium text-green-700">
+                      {currentLogos.logos.length} arquivo{currentLogos.logos.length > 1 ? 's' : ''} selecionado{currentLogos.logos.length > 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload className="mr-2 h-3 w-3" />
+                    Adicionar mais
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {currentLogos.logos.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between p-2 bg-background rounded border">
+                      <span className="text-sm truncate flex-1">{file.name}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 flex-shrink-0"
+                        onClick={() => removeFile(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : (
               <p className="text-sm text-center">
-                Toque em "Adicionar Logo" para escolher uma imagem da sua galeria.
+                Toque em "Adicionar Logo" para escolher imagens da sua galeria. Você pode selecionar múltiplos arquivos de uma vez.
               </p>
             )}
           </div>

@@ -1,9 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { ImageZoomModal } from "@/components/ui/image-zoom-modal";
-import { useState } from "react";
-import { Maximize2 } from "lucide-react";
+import { useState, useRef } from "react";
+import { Maximize2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 interface ShirtModel {
   id: string;
@@ -19,6 +20,8 @@ interface FrontCustomization {
   textColor: string;
   text: string;
   logoUrl: string;
+  customDescription?: string;
+  customFile?: File | null;
 }
 
 interface FrontEditorProps {
@@ -30,6 +33,7 @@ interface FrontEditorProps {
 
 export const FrontEditor = ({ model, value, onChange, onNext }: FrontEditorProps) => {
   const [isZoomOpen, setIsZoomOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   
   const getImageUrl = () => {
     switch(value.logoType) {
@@ -121,13 +125,71 @@ export const FrontEditor = ({ model, value, onChange, onNext }: FrontEditorProps
                 className="w-full h-14 text-base justify-start"
                 onClick={() => {
                   onChange({ ...value, logoType: 'custom' });
-                  setTimeout(() => onNext(), 300);
                 }}
               >
                 Outras personalizações
               </Button>
             </div>
           </div>
+
+          {/* Campos adicionais para "Outras personalizações" */}
+          {value.logoType === 'custom' && (
+            <div className="space-y-4 p-4 bg-muted/50 rounded-lg border">
+              <div className="space-y-2">
+                <Label htmlFor="customDescription" className="text-base">
+                  Descreva a personalização desejada
+                </Label>
+                <Textarea
+                  id="customDescription"
+                  placeholder="Descreva detalhadamente como você quer a personalização..."
+                  value={value.customDescription || ""}
+                  onChange={(e) => onChange({ ...value, customDescription: e.target.value })}
+                  className="min-h-[100px] text-base"
+                  rows={4}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-base">Anexar arquivo (opcional)</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1 h-12"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    {value.customFile ? value.customFile.name : "Escolher arquivo"}
+                  </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*,.pdf"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      onChange({ ...value, customFile: file });
+                    }}
+                  />
+                </div>
+                {value.customFile && (
+                  <p className="text-xs text-muted-foreground">
+                    Arquivo selecionado: {value.customFile.name}
+                  </p>
+                )}
+              </div>
+
+              <Button
+                onClick={() => {
+                  setTimeout(() => onNext(), 200);
+                }}
+                size="lg"
+                className="w-full h-14 text-lg"
+              >
+                Confirmar e Continuar
+              </Button>
+            </div>
+          )}
 
         </CardContent>
       </Card>

@@ -28,7 +28,7 @@ export const CustomizationSummary = ({
   const getBackSummary = () => {
     if (!back) return null;
     const parts = [];
-    if (back.logo) parts.push("Logo");
+    if (back.logo || back.logoLarge) parts.push("Logo grande");
     const textFields = [back.name, back.instagram, back.website, back.email, back.whatsapp]
       .filter(field => field?.enabled).length;
     if (textFields > 0) parts.push(`${textFields} texto${textFields > 1 ? 's' : ''}`);
@@ -56,7 +56,7 @@ export const CustomizationSummary = ({
   };
 
   const frontAssetCount = (front?.logoFile ? 1 : 0) + (front?.text ? 1 : 0);
-  const backAssetCount = (back?.logo ? 1 : 0) + 
+  const backAssetCount = (back?.logo || back?.logoLarge ? 1 : 0) + 
     (back?.sponsors?.length || 0) +
     [back?.name, back?.instagram, back?.website, back?.email, back?.whatsapp]
       .filter(f => f?.enabled).length;
