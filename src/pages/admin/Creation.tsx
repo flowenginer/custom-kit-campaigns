@@ -315,6 +315,22 @@ const Creation = () => {
         return;
       }
       
+      // NOVA VALIDAÇÃO: Verificar duplicidade
+      const { data: duplicates } = await supabase
+        .from("design_tasks")
+        .select("id, orders(customer_name)")
+        .eq("order_number", task.order_number.trim())
+        .eq("status", "completed")
+        .is("deleted_at", null)
+        .neq("id", task.id)
+        .limit(1);
+      
+      if (duplicates && duplicates.length > 0) {
+        const customerName = (duplicates[0] as any).orders?.customer_name || "Desconhecido";
+        toast.error(`Não é possível enviar para Produção. Já existe um pedido com o número "${task.order_number}" do cliente: ${customerName}`);
+        return;
+      }
+      
       const confirm = window.confirm("Tem certeza que deseja enviar para Produção?");
       if (!confirm) return;
     }

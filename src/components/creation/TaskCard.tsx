@@ -9,6 +9,8 @@ import { ElapsedTimer } from "./ElapsedTimer";
 import { CardFontSizes } from "@/hooks/useCardFontSizes";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface TaskCardProps {
   task: DesignTask;
@@ -55,8 +57,26 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
 
   const priorityConfig = getPriorityConfig(task.priority);
 
-  const handleOrderNumberBlur = () => {
-    if (onOrderNumberUpdate && localOrderNumber !== task.order_number) {
+  const handleOrderNumberBlur = async () => {
+    if (!localOrderNumber.trim() || localOrderNumber === task.order_number) return;
+    
+    // Verificar se já existe outro card com esse número
+    const { data: existingTasks, error } = await supabase
+      .from("design_tasks")
+      .select("id, orders(customer_name)")
+      .eq("order_number", localOrderNumber.trim())
+      .is("deleted_at", null)
+      .neq("id", task.id)
+      .limit(1);
+    
+    if (existingTasks && existingTasks.length > 0) {
+      const customerName = (existingTasks[0] as any).orders?.customer_name || "Desconhecido";
+      toast.error(`Este número de pedido já existe! Pertence ao cliente: ${customerName}`);
+      setLocalOrderNumber(task.order_number || ''); // Reverter
+      return;
+    }
+    
+    if (onOrderNumberUpdate) {
       onOrderNumberUpdate(task.id, localOrderNumber);
     }
   };

@@ -319,6 +319,128 @@ export type Database = {
           },
         ]
       }
+      chat_conversations: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_conversations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_messages: {
+        Row: {
+          audio_duration: number | null
+          content: string | null
+          conversation_id: string
+          created_at: string | null
+          deleted_at: string | null
+          file_name: string | null
+          file_url: string | null
+          id: string
+          message_type: string
+          sender_id: string
+        }
+        Insert: {
+          audio_duration?: number | null
+          content?: string | null
+          conversation_id: string
+          created_at?: string | null
+          deleted_at?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          message_type?: string
+          sender_id: string
+        }
+        Update: {
+          audio_duration?: number | null
+          content?: string | null
+          conversation_id?: string
+          created_at?: string | null
+          deleted_at?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          message_type?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_participants: {
+        Row: {
+          conversation_id: string
+          id: string
+          joined_at: string | null
+          last_read_at: string | null
+          user_id: string
+        }
+        Insert: {
+          conversation_id: string
+          id?: string
+          joined_at?: string | null
+          last_read_at?: string | null
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string
+          id?: string
+          joined_at?: string | null
+          last_read_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_participants_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dashboard_configs: {
         Row: {
           created_at: string | null
@@ -1092,6 +1214,73 @@ export type Database = {
           },
           {
             foreignKeyName: "pending_delete_requests_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "design_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pending_modification_requests: {
+        Row: {
+          attachments: Json | null
+          created_at: string | null
+          description: string
+          id: string
+          rejection_reason: string | null
+          requested_at: string | null
+          requested_by: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          task_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          attachments?: Json | null
+          created_at?: string | null
+          description: string
+          id?: string
+          rejection_reason?: string | null
+          requested_at?: string | null
+          requested_by?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          task_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          attachments?: Json | null
+          created_at?: string | null
+          description?: string
+          id?: string
+          rejection_reason?: string | null
+          requested_at?: string | null
+          requested_by?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          task_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_modification_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_modification_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_modification_requests_task_id_fkey"
             columns: ["task_id"]
             isOneToOne: false
             referencedRelation: "design_tasks"
