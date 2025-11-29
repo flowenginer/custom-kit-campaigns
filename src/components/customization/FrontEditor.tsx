@@ -149,7 +149,7 @@ export const FrontEditor = ({ model, value, onChange, onNext }: FrontEditorProps
 
           {/* Campos adicionais para "Outras personalizações" */}
           {value.logoType === 'custom' && (
-            <div className="space-y-4 p-4 bg-muted/50 rounded-lg border">
+            <div className="space-y-4 pt-4">
               <div className="space-y-2">
                 <Label htmlFor="customDescription" className="text-base">
                   Descreva a personalização desejada

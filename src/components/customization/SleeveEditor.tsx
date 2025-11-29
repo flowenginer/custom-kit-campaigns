@@ -260,7 +260,7 @@ export const SleeveEditor = ({ model, side, value, onChange, onNext }: SleeveEdi
           </div>
           
           {/* Botão para confirmar e continuar */}
-          <div className="pt-6 pb-2 border-t sticky bottom-0 bg-background md:static">
+          <div className="pt-6 pb-2 border-t sticky bottom-0 md:static">
             <Button
               onClick={() => {
                 setTimeout(() => onNext(), 200);
