@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Download, Copy, ArrowRightLeft, Loader2 } from "lucide-react";
+import { Download, Copy, ArrowRightLeft, Loader2, Palette } from "lucide-react";
 import { toast } from "sonner";
 import { CustomizationSummary } from "./CustomizationSummary";
 import { ShirtPreviewAnnotated } from "./ShirtPreviewAnnotated";
@@ -26,6 +26,8 @@ interface CustomizationViewerProps {
   currentUserId?: string | null;
   isSalesperson?: boolean;
   onModelChange?: () => void;
+  logoAction?: 'designer_create' | 'waiting_client' | null;
+  logoDescription?: string | null;
 }
 
 export const CustomizationViewer = ({ 
@@ -38,7 +40,9 @@ export const CustomizationViewer = ({
   createdBy,
   currentUserId,
   isSalesperson,
-  onModelChange
+  onModelChange,
+  logoAction,
+  logoDescription
 }: CustomizationViewerProps) => {
   const [zoomImage, setZoomImage] = useState<{ url: string; alt: string } | null>(null);
   const [changeModelDialogOpen, setChangeModelDialogOpen] = useState(false);
@@ -404,6 +408,38 @@ export const CustomizationViewer = ({
 
   return (
     <div className="space-y-6">
+      {/* Alerta de Criação de Logo */}
+      {logoAction === 'designer_create' && (
+        <Card className="border-2 border-amber-500 bg-amber-50 shadow-lg">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <div className="bg-amber-500 rounded-full p-2 shrink-0">
+                <Palette className="h-5 w-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-amber-800 flex items-center gap-2">
+                  ⚠️ CRIAÇÃO DE LOGO NECESSÁRIA
+                </h3>
+                <p className="text-sm text-amber-700 mt-1">
+                  O cliente não tem logo. O designer precisa criar uma nova.
+                </p>
+                
+                {logoDescription && (
+                  <div className="mt-3 p-3 bg-white rounded-lg border border-amber-300">
+                    <Label className="text-xs text-amber-600 font-medium">
+                      O que o cliente imagina:
+                    </Label>
+                    <p className="text-sm text-gray-800 mt-1 whitespace-pre-wrap">
+                      {logoDescription}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
       {/* RESUMO NO TOPO */}
       <CustomizationSummary
         front={transformedData.front}

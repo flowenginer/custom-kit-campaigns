@@ -90,6 +90,7 @@ export const NewLayoutRequestDialog = ({
   const [urgentReasonId, setUrgentReasonId] = useState<string>("");
   const [urgentReasonText, setUrgentReasonText] = useState<string>("");
   const [urgentReasonDialogOpen, setUrgentReasonDialogOpen] = useState(false);
+  const [logoDescription, setLogoDescription] = useState<string>("");
   const [currentStep, setCurrentStep] = useState<
     | "campaign"
     | "uniform"
@@ -562,6 +563,7 @@ export const NewLayoutRequestDialog = ({
           created_by_salesperson: true,
           needs_logo: hasLogo === "depois" || hasLogo === "sem_logo",
           logo_action: hasLogo === "depois" ? "waiting_client" : (hasLogo === "criar_logo" ? "designer_create" : null),
+          logo_description: hasLogo === "criar_logo" ? logoDescription : null,
           uploaded_logo_url: uploadedLogoUrls.length > 0 ? uploadedLogoUrls[0] : null,
           customization_summary: customizationData,
           completed: true,
@@ -614,6 +616,7 @@ export const NewLayoutRequestDialog = ({
     setSelectedPriority("normal");
     setUrgentReasonId("");
     setUrgentReasonText("");
+    setLogoDescription("");
     setCurrentStep("campaign");
     setCustomerSearchTerm("");
     setCustomerSearchResults([]);
@@ -1145,6 +1148,25 @@ export const NewLayoutRequestDialog = ({
               </div>
             </div>
 
+            {/* Descrição da Logo - apenas quando "criar_logo" */}
+            {hasLogo === 'criar_logo' && (
+              <div className="space-y-4 p-4 border-2 border-purple-500 rounded-lg bg-purple-50">
+                <Label className="text-base font-medium text-purple-700">
+                  🎨 Descreva o que o cliente imagina para a logo *
+                </Label>
+                <Textarea
+                  value={logoDescription}
+                  onChange={(e) => setLogoDescription(e.target.value)}
+                  placeholder="Ex: Logo com cavalo, cores laranja e preto, estilo moderno e esportivo..."
+                  rows={4}
+                  className="border-purple-300 focus:border-purple-500 bg-white"
+                />
+                <p className="text-xs text-purple-600">
+                  Essa descrição será exibida para o designer que vai criar a logo.
+                </p>
+              </div>
+            )}
+
             {/* Upload apenas se "sim" */}
             {hasLogo === "sim" && (
               <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
@@ -1189,7 +1211,11 @@ export const NewLayoutRequestDialog = ({
               </Button>
               <Button
                 onClick={() => setCurrentStep("notes")}
-                disabled={hasLogo === null || (hasLogo === "sim" && logoFiles.length === 0)}
+                disabled={
+                  hasLogo === null || 
+                  (hasLogo === "sim" && logoFiles.length === 0) ||
+                  (hasLogo === "criar_logo" && !logoDescription.trim())
+                }
                 className="flex-1"
               >
                 Continuar

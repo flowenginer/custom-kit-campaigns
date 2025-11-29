@@ -1216,6 +1216,7 @@ export type Database = {
           last_seen: string | null
           lead_group_identifier: string | null
           logo_action: string | null
+          logo_description: string | null
           name: string
           needs_logo: boolean | null
           order_id: string | null
@@ -1254,6 +1255,7 @@ export type Database = {
           last_seen?: string | null
           lead_group_identifier?: string | null
           logo_action?: string | null
+          logo_description?: string | null
           name: string
           needs_logo?: boolean | null
           order_id?: string | null
@@ -1292,6 +1294,7 @@ export type Database = {
           last_seen?: string | null
           lead_group_identifier?: string | null
           logo_action?: string | null
+          logo_description?: string | null
           name?: string
           needs_logo?: boolean | null
           order_id?: string | null

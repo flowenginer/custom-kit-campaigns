@@ -1095,18 +1095,20 @@ export const TaskDetailsDialog = ({
                   )}
                 </div>
               ) : (
-                <CustomizationViewer 
-                  data={task.customization_data}
-                  campaignName={task.campaign_name}
-                  modelName={task.model_name}
-                  modelCode={task.model_code}
-                  modelImageFront={task.model_image_front}
-                  taskId={task.id}
-                  createdBy={task.created_by}
-                  currentUserId={currentUser?.id}
-                  isSalesperson={isSalesperson}
-                  onModelChange={onTaskUpdated}
-                />
+        <CustomizationViewer 
+          data={task.customization_data}
+          campaignName={task.campaign_name}
+          modelName={task.model_name}
+          modelCode={task.model_code}
+          modelImageFront={task.model_image_front}
+          taskId={task.id}
+          createdBy={task.created_by}
+          currentUserId={currentUser?.id}
+          isSalesperson={isSalesperson}
+          onModelChange={onTaskUpdated}
+          logoAction={task.logo_action}
+          logoDescription={task.logo_description}
+        />
               )}
             </TabsContent>
 
