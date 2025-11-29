@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DesignTask } from "@/types/design-task";
 import { useDraggable } from '@dnd-kit/core';
-import { Shirt, User, ChevronDown, ChevronUp, Truck, Package } from "lucide-react";
+import { Shirt, User, ChevronDown, ChevronUp, Truck, Package, UserPlus } from "lucide-react";
 import { ElapsedTimer } from "./ElapsedTimer";
 import { CardFontSizes } from "@/hooks/useCardFontSizes";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
@@ -250,10 +250,10 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
               </div>
             </CollapsibleContent>
 
-            {/* Botões de Ação */}
-            {!isCollapsed && (
+            {/* Botões de Ação - APENAS em status approved */}
+            {!isCollapsed && task.status === 'approved' && (
               <div className="px-3 pb-3 space-y-2">
-                {/* Botão de Solicitar Cadastro - mostrar quando não tem customer_id */}
+                {/* Cliente SEM cadastro: apenas Solicitar Cadastro */}
                 {!task.customer_id && (
                   <RequestCustomerRegistrationButton
                     taskId={task.id}
@@ -261,9 +261,9 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
                   />
                 )}
 
-                {/* Botão Cotar Frete - mostrar quando tem customer_id OU status approved/completed */}
-                {(task.customer_id || task.status === 'approved' || task.status === 'completed') && (
-                  <>
+                {/* Cliente COM cadastro: Cotar Frete + Novo Cadastro lado a lado */}
+                {task.customer_id && (
+                  <div className="flex gap-2">
                     <Button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -271,21 +271,29 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
                       }}
                       variant="outline"
                       size="sm"
-                      className="w-full"
+                      className="flex-1"
                     >
                       <Truck className="mr-2 h-4 w-4" />
                       Cotar Frete
                     </Button>
                     
-                    <BlingExportButton
+                    <RequestCustomerRegistrationButton
                       taskId={task.id}
-                      orderId={task.order_id}
-                      onExportSuccess={() => {
-                        toast.success("Pedido exportado com sucesso!");
-                      }}
+                      leadId={task.lead_id}
+                      variant="outline"
+                      label="Novo Cadastro"
                     />
-                  </>
+                  </div>
                 )}
+
+                {/* Exportar Bling - sempre disponível em approved */}
+                <BlingExportButton
+                  taskId={task.id}
+                  orderId={task.order_id}
+                  onExportSuccess={() => {
+                    toast.success("Pedido exportado com sucesso!");
+                  }}
+                />
               </div>
             )}
           </CardContent>
