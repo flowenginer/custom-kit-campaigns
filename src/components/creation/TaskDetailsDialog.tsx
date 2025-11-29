@@ -1263,6 +1263,13 @@ export const TaskDetailsDialog = ({
                   }
 
                   // Card normal para mockups aprovados ou em processo de aprovação
+                  console.log('🔍 Mockup Debug:', {
+                    version: file.version,
+                    hasNotes: !!file.notes,
+                    notesContent: file.notes,
+                    notesType: typeof file.notes
+                  });
+                  
                   return (
                     <Card 
                       key={`${file.version}-${file.uploaded_at}`}
