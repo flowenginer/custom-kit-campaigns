@@ -24,10 +24,10 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { Loader2, Plus, AlertTriangle } from "lucide-react";
+import { Loader2, Plus, AlertTriangle, Check } from "lucide-react";
 import { FrontEditor } from "@/components/customization/FrontEditor";
 import { BackEditor } from "@/components/customization/BackEditor";
 import { SleeveEditor } from "@/components/customization/SleeveEditor";
@@ -75,7 +75,7 @@ export const NewLayoutRequestDialog = ({
   const [customerEmail, setCustomerEmail] = useState("");
   const [quantity, setQuantity] = useState<string>("");
   const [customQuantity, setCustomQuantity] = useState<string>("");
-  const [hasLogo, setHasLogo] = useState<"sim" | "nao" | null>(null);
+  const [hasLogo, setHasLogo] = useState<"sim" | "depois" | "sem_logo" | "criar_logo" | null>(null);
   const [logoFiles, setLogoFiles] = useState<File[]>([]);
   const [internalNotes, setInternalNotes] = useState("");
   const [selectedPriority, setSelectedPriority] = useState<TaskPriority>("normal");
@@ -115,6 +115,7 @@ export const NewLayoutRequestDialog = ({
   const [backCustomization, setBackCustomization] = useState<{
     logoLarge: boolean;
     logoUrl: string;
+    logoNeck: boolean;
     name: boolean;
     nameText: string;
     whatsapp: boolean;
@@ -129,9 +130,14 @@ export const NewLayoutRequestDialog = ({
     sponsorsLocation?: string;
     sponsors: { name: string; logoFile?: File | null; logoUrl?: string }[];
     sponsorsLogosUrls?: string[];
+    noCustomization: boolean;
+    hasCustomDescription: boolean;
+    customDescription?: string;
+    customFile?: File | null;
   }>({
     logoLarge: false,
     logoUrl: "",
+    logoNeck: false,
     name: false,
     nameText: "",
     whatsapp: false,
@@ -146,6 +152,10 @@ export const NewLayoutRequestDialog = ({
     sponsorsLocation: "",
     sponsors: [],
     sponsorsLogosUrls: [],
+    noCustomization: false,
+    hasCustomDescription: false,
+    customDescription: "",
+    customFile: null,
   });
 
   const [leftSleeveCustomization, setLeftSleeveCustomization] = useState({
@@ -390,6 +400,8 @@ export const NewLayoutRequestDialog = ({
         },
         back: {
           ...backCustomization,
+          customFile: undefined, // Remove File object
+          customFileName: backCustomization.customFile?.name, // Salva apenas o nome
           sponsorsLogosUrls, // URLs dos uploads dos patrocinadores
           sponsors: backCustomization.sponsors.map(s => ({
             name: s.name,
@@ -433,7 +445,7 @@ export const NewLayoutRequestDialog = ({
           },
           quantity: finalQuantity,
           customization: customizationData,
-          hasLogo: hasLogo === "nao",
+          hasLogo: hasLogo !== "sem_logo" && hasLogo !== "depois",
           logoUrls: uploadedLogoUrls,
           internalNotes,
         };
@@ -509,8 +521,8 @@ export const NewLayoutRequestDialog = ({
           order_id: orderData.id,
           created_by: user.id,
           created_by_salesperson: true,
-          needs_logo: hasLogo === "nao",
-          logo_action: hasLogo === "nao" ? "waiting_client" : null,
+          needs_logo: hasLogo === "depois" || hasLogo === "sem_logo",
+          logo_action: hasLogo === "depois" ? "waiting_client" : (hasLogo === "criar_logo" ? "create_new" : null),
           uploaded_logo_url: uploadedLogoUrls.length > 0 ? uploadedLogoUrls[0] : null,
           customization_summary: customizationData,
           completed: true,
@@ -574,6 +586,7 @@ export const NewLayoutRequestDialog = ({
     setBackCustomization({
       logoLarge: false,
       logoUrl: "",
+      logoNeck: false,
       name: false,
       nameText: "",
       whatsapp: false,
@@ -588,6 +601,10 @@ export const NewLayoutRequestDialog = ({
       sponsorsLocation: "",
       sponsors: [],
       sponsorsLogosUrls: [],
+      noCustomization: false,
+      hasCustomDescription: false,
+      customDescription: "",
+      customFile: null,
     });
     setLeftSleeveCustomization({
       flag: false,
@@ -888,63 +905,150 @@ export const NewLayoutRequestDialog = ({
 
       case "logo":
         return (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Cliente tem logo? *</Label>
-              <RadioGroup
-                value={hasLogo || ""}
-                onValueChange={(val) => setHasLogo(val as "sim" | "nao")}
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="sim" id="logo-sim" />
-                  <Label htmlFor="logo-sim" className="cursor-pointer">
-                    ✅ Sim, fazer upload agora
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="nao" id="logo-nao" />
-                  <Label htmlFor="logo-nao" className="cursor-pointer">
-                    ❌ Não, vou enviar depois (email/WhatsApp)
-                  </Label>
-                </div>
-              </RadioGroup>
-              {hasLogo === "sim" && (
-                <div className="mt-4 space-y-3">
-                  <Label>Upload das Logos *</Label>
-                  {logoFiles.map((file, index) => (
-                    <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded">
-                      <span className="text-sm flex-1 truncate">{file.name}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          const newFiles = logoFiles.filter((_, i) => i !== index);
-                          setLogoFiles(newFiles);
-                        }}
-                      >
-                        ✕
-                      </Button>
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <Label className="text-lg font-semibold">Cliente tem logo?</Label>
+              <p className="text-sm text-muted-foreground">
+                Selecione a opção que melhor se aplica
+              </p>
+              
+              <div className="grid grid-cols-1 gap-3">
+                {/* Opção 1: Sim, fazer upload agora */}
+                <Card 
+                  className={`cursor-pointer transition-all hover:border-primary ${
+                    hasLogo === 'sim' ? 'border-primary ring-2 ring-primary bg-primary/5' : ''
+                  }`}
+                  onClick={() => setHasLogo('sim')}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                        hasLogo === 'sim' ? 'border-primary bg-primary' : 'border-muted-foreground'
+                      }`}>
+                        {hasLogo === 'sim' && <Check className="h-3 w-3 text-white" />}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-base font-medium">✅ Sim, fazer upload agora</p>
+                        <p className="text-sm text-muted-foreground mt-0.5">
+                          O cliente já possui logo e vou anexar agora
+                        </p>
+                      </div>
                     </div>
-                  ))}
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        setLogoFiles([...logoFiles, file]);
-                        e.target.value = '';
-                      }
-                    }}
-                    className="mt-2"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Adicione uma logo por vez. Cada logo adicionada abre um novo campo.
-                  </p>
-                </div>
-              )}
+                  </CardContent>
+                </Card>
+
+                {/* Opção 2: Enviar depois */}
+                <Card 
+                  className={`cursor-pointer transition-all hover:border-primary ${
+                    hasLogo === 'depois' ? 'border-primary ring-2 ring-primary bg-primary/5' : ''
+                  }`}
+                  onClick={() => setHasLogo('depois')}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                        hasLogo === 'depois' ? 'border-primary bg-primary' : 'border-muted-foreground'
+                      }`}>
+                        {hasLogo === 'depois' && <Check className="h-3 w-3 text-white" />}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-base font-medium">📩 Vou enviar depois</p>
+                        <p className="text-sm text-muted-foreground mt-0.5">
+                          O cliente vai enviar por email/WhatsApp
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Opção 3: Cliente não quer logo */}
+                <Card 
+                  className={`cursor-pointer transition-all hover:border-orange-500 ${
+                    hasLogo === 'sem_logo' ? 'border-orange-500 ring-2 ring-orange-500 bg-orange-500/5' : ''
+                  }`}
+                  onClick={() => setHasLogo('sem_logo')}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                        hasLogo === 'sem_logo' ? 'border-orange-500 bg-orange-500' : 'border-muted-foreground'
+                      }`}>
+                        {hasLogo === 'sem_logo' && <Check className="h-3 w-3 text-white" />}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-base font-medium text-orange-600">🚫 Cliente não quer logo</p>
+                        <p className="text-sm text-muted-foreground mt-0.5">
+                          A camisa será produzida sem nenhuma logo
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Opção 4: Criar logo para o cliente */}
+                <Card 
+                  className={`cursor-pointer transition-all hover:border-purple-500 ${
+                    hasLogo === 'criar_logo' ? 'border-purple-500 ring-2 ring-purple-500 bg-purple-500/5' : ''
+                  }`}
+                  onClick={() => setHasLogo('criar_logo')}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                        hasLogo === 'criar_logo' ? 'border-purple-500 bg-purple-500' : 'border-muted-foreground'
+                      }`}>
+                        {hasLogo === 'criar_logo' && <Check className="h-3 w-3 text-white" />}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-base font-medium text-purple-600">🎨 Criar logo para o cliente</p>
+                        <p className="text-sm text-muted-foreground mt-0.5">
+                          O designer vai criar uma logo nova
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
+
+            {/* Upload apenas se "sim" */}
+            {hasLogo === "sim" && (
+              <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                <Label className="text-base font-medium">Upload das Logos *</Label>
+                {logoFiles.map((file, index) => (
+                  <div key={index} className="flex items-center gap-2 p-3 bg-background rounded border">
+                    <span className="text-sm flex-1 truncate">{file.name}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const newFiles = logoFiles.filter((_, i) => i !== index);
+                        setLogoFiles(newFiles);
+                      }}
+                    >
+                      ✕
+                    </Button>
+                  </div>
+                ))}
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setLogoFiles([...logoFiles, file]);
+                      e.target.value = '';
+                    }
+                  }}
+                  className="mt-2"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Adicione uma logo por vez. Cada logo adicionada abre um novo campo.
+                </p>
+              </div>
+            )}
+            
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setCurrentStep("sleeves_right")} className="flex-1">
                 Voltar

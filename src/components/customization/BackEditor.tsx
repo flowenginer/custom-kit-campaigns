@@ -5,9 +5,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { SponsorsList, Sponsor } from "./SponsorsList";
 import { ImageZoomModal } from "@/components/ui/image-zoom-modal";
-import { useState } from "react";
-import { Maximize2 } from "lucide-react";
+import { useState, useRef } from "react";
+import { Maximize2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -25,6 +26,7 @@ interface ShirtModel {
 interface BackCustomization {
   logoLarge: boolean;
   logoUrl: string;
+  logoNeck: boolean;
   name: boolean;
   nameText: string;
   whatsapp: boolean;
@@ -39,6 +41,10 @@ interface BackCustomization {
   sponsorsLocation?: string;
   sponsors: Sponsor[];
   sponsorsLogosUrls?: string[];
+  noCustomization: boolean;
+  hasCustomDescription: boolean;
+  customDescription?: string;
+  customFile?: File | null;
 }
 
 interface BackEditorProps {
@@ -50,6 +56,7 @@ interface BackEditorProps {
 
 export const BackEditor = ({ model, value, onChange, onNext }: BackEditorProps) => {
   const [isZoomOpen, setIsZoomOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6 pb-4">
@@ -101,6 +108,7 @@ export const BackEditor = ({ model, value, onChange, onNext }: BackEditorProps) 
               <Checkbox
                 id="logoLarge"
                 checked={value.logoLarge}
+                disabled={value.noCustomization}
                 onCheckedChange={(checked) => 
                   onChange({ ...value, logoLarge: checked as boolean })
                 }
@@ -115,12 +123,34 @@ export const BackEditor = ({ model, value, onChange, onNext }: BackEditorProps) 
             </div>
           </div>
 
+          {/* Logo na Nuca */}
+          <div className="space-y-3">
+            <div className="flex items-center space-x-3">
+              <Checkbox
+                id="logoNeck"
+                checked={value.logoNeck}
+                disabled={value.noCustomization}
+                onCheckedChange={(checked) => 
+                  onChange({ ...value, logoNeck: checked as boolean })
+                }
+                className="h-5 w-5"
+              />
+              <Label 
+                htmlFor="logoNeck" 
+                className="flex-1 py-1 cursor-pointer text-base"
+              >
+                Logo pequena na nuca
+              </Label>
+            </div>
+          </div>
+
           {/* Nome */}
           <div className="space-y-3">
             <div className="flex items-center space-x-3">
               <Checkbox
                 id="name"
                 checked={value.name}
+                disabled={value.noCustomization}
                 onCheckedChange={(checked) => 
                   onChange({ ...value, name: checked as boolean })
                 }
@@ -151,6 +181,7 @@ export const BackEditor = ({ model, value, onChange, onNext }: BackEditorProps) 
               <Checkbox
                 id="whatsapp"
                 checked={value.whatsapp}
+                disabled={value.noCustomization}
                 onCheckedChange={(checked) => 
                   onChange({ ...value, whatsapp: checked as boolean })
                 }
@@ -181,6 +212,7 @@ export const BackEditor = ({ model, value, onChange, onNext }: BackEditorProps) 
               <Checkbox
                 id="instagram"
                 checked={value.instagram}
+                disabled={value.noCustomization}
                 onCheckedChange={(checked) => 
                   onChange({ ...value, instagram: checked as boolean })
                 }
@@ -211,6 +243,7 @@ export const BackEditor = ({ model, value, onChange, onNext }: BackEditorProps) 
               <Checkbox
                 id="email"
                 checked={value.email}
+                disabled={value.noCustomization}
                 onCheckedChange={(checked) => 
                   onChange({ ...value, email: checked as boolean })
                 }
@@ -242,6 +275,7 @@ export const BackEditor = ({ model, value, onChange, onNext }: BackEditorProps) 
               <Checkbox
                 id="website"
                 checked={value.website}
+                disabled={value.noCustomization}
                 onCheckedChange={(checked) => 
                   onChange({ ...value, website: checked as boolean })
                 }
@@ -266,6 +300,74 @@ export const BackEditor = ({ model, value, onChange, onNext }: BackEditorProps) 
             )}
           </div>
 
+          {/* Outras personalizações */}
+          <div className="space-y-3 border-t pt-4">
+            <div className="flex items-center space-x-3">
+              <Checkbox
+                id="hasCustomDescription"
+                checked={value.hasCustomDescription}
+                disabled={value.noCustomization}
+                onCheckedChange={(checked) => 
+                  onChange({ ...value, hasCustomDescription: checked as boolean })
+                }
+                className="h-5 w-5"
+              />
+              <Label 
+                htmlFor="hasCustomDescription" 
+                className="flex-1 py-1 cursor-pointer text-base"
+              >
+                Outras personalizações
+              </Label>
+            </div>
+            {value.hasCustomDescription && (
+              <div className="ml-8 space-y-3 p-4 bg-muted/50 rounded-lg border">
+                <div className="space-y-2">
+                  <Label htmlFor="customDescription" className="text-base">
+                    Descreva a personalização desejada
+                  </Label>
+                  <Textarea
+                    id="customDescription"
+                    placeholder="Descreva detalhadamente como você quer a personalização..."
+                    value={value.customDescription || ""}
+                    onChange={(e) => onChange({ ...value, customDescription: e.target.value })}
+                    className="min-h-[100px] text-base"
+                    rows={4}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-base">Anexar arquivo (opcional)</Label>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1 h-12"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <Upload className="mr-2 h-4 w-4" />
+                      {value.customFile ? value.customFile.name : "Escolher arquivo"}
+                    </Button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*,.pdf"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        onChange({ ...value, customFile: file });
+                      }}
+                    />
+                  </div>
+                  {value.customFile && (
+                    <p className="text-xs text-muted-foreground">
+                      Arquivo selecionado: {value.customFile.name}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Patrocinadores - mantém RadioGroup */}
           <div className="space-y-3 border-t pt-4">
             <Label className="text-base font-semibold">Quer adicionar patrocinadores?</Label>
@@ -278,6 +380,7 @@ export const BackEditor = ({ model, value, onChange, onNext }: BackEditorProps) 
                 sponsorsLocation: val === "nao" ? undefined : value.sponsorsLocation
               })}
               className="flex gap-4"
+              disabled={value.noCustomization}
             >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="sim" id="sponsors-sim" className="h-5 w-5" />
@@ -320,9 +423,44 @@ export const BackEditor = ({ model, value, onChange, onNext }: BackEditorProps) 
               </div>
             )}
           </div>
+
+          {/* Sem personalização */}
+          <div className="space-y-3 border-t pt-4">
+            <div className="flex items-center space-x-3">
+              <Checkbox
+                id="noCustomization"
+                checked={value.noCustomization}
+                onCheckedChange={(checked) => {
+                  // Se marcar "sem personalização", desmarca todas as outras opções
+                  onChange({ 
+                    ...value, 
+                    noCustomization: checked as boolean,
+                    ...(checked ? {
+                      logoLarge: false,
+                      logoNeck: false,
+                      name: false,
+                      whatsapp: false,
+                      instagram: false,
+                      email: false,
+                      website: false,
+                      hasCustomDescription: false,
+                      hasSponsors: false,
+                    } : {})
+                  });
+                }}
+                className="h-5 w-5 border-red-500 data-[state=checked]:bg-red-600"
+              />
+              <Label 
+                htmlFor="noCustomization" 
+                className="flex-1 py-1 cursor-pointer text-base text-red-500 font-semibold"
+              >
+                🚫 Sem personalização
+              </Label>
+            </div>
+          </div>
           
           {/* Botão para confirmar e continuar */}
-          <div className="pt-6 pb-2 border-t sticky bottom-0 bg-background md:static">
+          <div className="pt-6 pb-2 border-t sticky bottom-0 md:static">
             <Button
               onClick={() => {
                 setTimeout(() => onNext(), 200);
