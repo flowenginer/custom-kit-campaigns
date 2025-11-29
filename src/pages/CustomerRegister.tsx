@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { Loader2, CheckCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
@@ -24,10 +23,11 @@ export default function CustomerRegister() {
     name: "",
     phone: "",
     email: "",
-    person_type: "pf",
+    person_type: "",
     cpf: "",
     cnpj: "",
     company_name: "",
+    razao_social: "",
     state_registration: "",
     birth_date: "",
     cep: "",
@@ -117,16 +117,16 @@ export default function CustomerRegister() {
   const validateStep = (step: number) => {
     switch (step) {
       case 1:
-        return formData.person_type !== "";
+        return formData.name.trim() !== "" && 
+               formData.company_name.trim() !== "" && 
+               formData.person_type !== "";
       case 2:
         if (formData.person_type === "pf") {
-          return formData.name.trim() !== "" && formData.cpf.trim() !== "";
+          return formData.cpf.trim() !== "";
         } else {
-          return formData.name.trim() !== "" && formData.cnpj.trim() !== "";
+          return formData.cnpj.trim() !== "" && formData.razao_social.trim() !== "";
         }
       case 3:
-        return formData.phone.replace(/\D/g, "").length >= 10;
-      case 4:
         return (
           formData.cep.trim() !== "" &&
           formData.street.trim() !== "" &&
@@ -135,6 +135,8 @@ export default function CustomerRegister() {
           formData.city.trim() !== "" &&
           formData.state.trim() !== ""
         );
+      case 4:
+        return formData.phone.replace(/\D/g, "").length >= 10;
       default:
         return false;
     }
@@ -167,13 +169,13 @@ export default function CustomerRegister() {
       const { data: customer, error: customerError } = await supabase
         .from("customers")
         .insert({
-          name: formData.name,
+          name: formData.person_type === "pj" ? formData.razao_social : formData.name,
           phone: formData.phone.replace(/\D/g, ""),
           email: formData.email || null,
           person_type: formData.person_type,
           cpf: formData.person_type === "pf" ? formData.cpf : null,
           cnpj: formData.person_type === "pj" ? formData.cnpj : null,
-          company_name: formData.person_type === "pj" ? formData.company_name : null,
+          company_name: formData.company_name,
           state_registration: formData.person_type === "pj" ? formData.state_registration : null,
           birth_date: formData.birth_date || null,
           cep: formData.cep,
@@ -264,53 +266,74 @@ export default function CustomerRegister() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Etapa 1 - Tipo de Pessoa */}
+            {/* Etapa 1 - Nome + Nome Fantasia + Escolha PF/PJ */}
             {currentStep === 1 && (
               <div className="space-y-4">
-                <div className="space-y-3">
-                  <Label>Tipo de Pessoa *</Label>
-                  <RadioGroup
-                    value={formData.person_type}
-                    onValueChange={(value) => setFormData({ ...formData, person_type: value })}
-                  >
-                    <div className="flex items-center space-x-2 border rounded-lg p-4 hover:bg-accent cursor-pointer">
-                      <RadioGroupItem value="pf" id="individual" />
-                      <Label htmlFor="individual" className="cursor-pointer flex-1">
-                        <div className="font-medium">Pessoa Física</div>
-                        <div className="text-sm text-muted-foreground">
-                          Para cadastro com CPF
-                        </div>
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2 border rounded-lg p-4 hover:bg-accent cursor-pointer">
-                      <RadioGroupItem value="pj" id="legal" />
-                      <Label htmlFor="legal" className="cursor-pointer flex-1">
-                        <div className="font-medium">Pessoa Jurídica</div>
-                        <div className="text-sm text-muted-foreground">
-                          Para cadastro com CNPJ
-                        </div>
-                      </Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-              </div>
-            )}
-
-            {/* Etapa 2 - Dados Pessoais/Empresariais */}
-            {currentStep === 2 && (
-              <div className="space-y-4">
                 <div>
-                  <Label htmlFor="name">
-                    {formData.person_type === "pf" ? "Nome Completo" : "Razão Social"} *
-                  </Label>
+                  <Label htmlFor="name">Nome do Cliente / Responsável *</Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder={formData.person_type === "pf" ? "Digite seu nome completo" : "Digite a razão social"}
+                    placeholder="Digite o nome do cliente ou responsável"
                   />
                 </div>
 
+                <div>
+                  <Label htmlFor="company_name">Nome Fantasia / Nome da Equipe *</Label>
+                  <Input
+                    id="company_name"
+                    value={formData.company_name}
+                    onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
+                    placeholder="Como o cliente quer ser chamado"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Nome que será usado para identificar o cliente no sistema
+                  </p>
+                </div>
+
+                <div className="space-y-3 pt-4">
+                  <Label>Tipo de Cadastro *</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Button
+                      type="button"
+                      variant={formData.person_type === "pf" ? "default" : "outline"}
+                      disabled={!formData.name.trim() || !formData.company_name.trim()}
+                      onClick={() => {
+                        setFormData({ ...formData, person_type: "pf" });
+                        setTimeout(handleNext, 100);
+                      }}
+                      className="h-20 flex flex-col"
+                    >
+                      <span className="font-medium">Pessoa Física</span>
+                      <span className="text-xs opacity-70">Cadastro com CPF</span>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={formData.person_type === "pj" ? "default" : "outline"}
+                      disabled={!formData.name.trim() || !formData.company_name.trim()}
+                      onClick={() => {
+                        setFormData({ ...formData, person_type: "pj" });
+                        setTimeout(handleNext, 100);
+                      }}
+                      className="h-20 flex flex-col"
+                    >
+                      <span className="font-medium">Pessoa Jurídica</span>
+                      <span className="text-xs opacity-70">Cadastro com CNPJ</span>
+                    </Button>
+                  </div>
+                  {(!formData.name.trim() || !formData.company_name.trim()) && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400">
+                      Preencha o Nome e Nome Fantasia para continuar
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Etapa 2 - Dados Específicos (CPF/CNPJ) */}
+            {currentStep === 2 && (
+              <div className="space-y-4">
                 {formData.person_type === "pf" ? (
                   <>
                     <div>
@@ -335,21 +358,24 @@ export default function CustomerRegister() {
                 ) : (
                   <>
                     <div>
+                      <Label htmlFor="razao_social">Razão Social *</Label>
+                      <Input
+                        id="razao_social"
+                        value={formData.razao_social}
+                        onChange={(e) => setFormData({ ...formData, razao_social: e.target.value })}
+                        placeholder="Digite a razão social da empresa"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Razão Social oficial da empresa conforme CNPJ
+                      </p>
+                    </div>
+                    <div>
                       <Label htmlFor="cnpj">CNPJ *</Label>
                       <Input
                         id="cnpj"
                         value={formData.cnpj}
                         onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
                         placeholder="00.000.000/0000-00"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="company_name">Nome Fantasia</Label>
-                      <Input
-                        id="company_name"
-                        value={formData.company_name}
-                        onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
-                        placeholder="Digite o nome fantasia"
                       />
                     </div>
                     <div>
@@ -366,38 +392,8 @@ export default function CustomerRegister() {
               </div>
             )}
 
-            {/* Etapa 3 - Contato */}
+            {/* Etapa 3 - Endereço */}
             {currentStep === 3 && (
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="phone">WhatsApp *</Label>
-                  <Input
-                    id="phone"
-                    value={formData.phone}
-                    onChange={handlePhoneChange}
-                    placeholder="(21) 99999-9999"
-                    maxLength={15}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Digite apenas números, a formatação é automática
-                  </p>
-                </div>
-
-                <div>
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="seu@email.com"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Etapa 4 - Endereço */}
-            {currentStep === 4 && (
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="cep">CEP *</Label>
@@ -483,27 +479,77 @@ export default function CustomerRegister() {
               </div>
             )}
 
+            {/* Etapa 4 - Contato */}
+            {currentStep === 4 && (
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="phone">WhatsApp *</Label>
+                  <Input
+                    id="phone"
+                    value={formData.phone}
+                    onChange={handlePhoneChange}
+                    placeholder="(21) 99999-9999"
+                    maxLength={15}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Digite apenas números, a formatação é automática
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="seu@email.com"
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Botões de Navegação */}
             <div className="flex justify-between pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handlePrevious}
-                disabled={currentStep === 1}
-              >
-                <ChevronLeft className="mr-2 h-4 w-4" />
-                Voltar
-              </Button>
-
-              {currentStep < 4 ? (
-                <Button type="button" onClick={handleNext}>
-                  Próximo
-                  <ChevronRight className="ml-2 h-4 w-4" />
+              {currentStep > 1 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handlePrevious}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-2" />
+                  Voltar
                 </Button>
-              ) : (
-                <Button type="submit" disabled={submitting}>
-                  {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Finalizar Cadastro
+              )}
+              
+              {currentStep === 1 && <div />}
+
+              {currentStep > 1 && currentStep < 4 && (
+                <Button
+                  type="button"
+                  onClick={handleNext}
+                  disabled={!validateStep(currentStep)}
+                  className="ml-auto"
+                >
+                  Próximo
+                  <ChevronRight className="h-4 w-4 ml-2" />
+                </Button>
+              )}
+              
+              {currentStep === 4 && (
+                <Button
+                  type="submit"
+                  disabled={submitting || !validateStep(4)}
+                  className="ml-auto"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Cadastrando...
+                    </>
+                  ) : (
+                    "Finalizar Cadastro"
+                  )}
                 </Button>
               )}
             </div>
