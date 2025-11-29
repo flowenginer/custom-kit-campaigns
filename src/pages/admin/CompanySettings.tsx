@@ -62,7 +62,7 @@ export default function CompanySettings() {
         setCity(data.city || "");
         setState(data.state || "");
         setMelhorEnvioToken(data.melhor_envio_token || "");
-        setMelhorEnvioEnvironment(data.melhor_envio_environment || "sandbox");
+        setMelhorEnvioEnvironment((data.melhor_envio_environment as "sandbox" | "production") || "sandbox");
       }
     } catch (error) {
       console.error("Error loading settings:", error);
