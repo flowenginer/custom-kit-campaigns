@@ -670,10 +670,12 @@ export const TaskDetailsDialog = ({
   const isTaskCreator = task?.created_by === currentUser?.id;
   const isAssignedDesigner = task?.assigned_to === currentUser?.id;
   
-  // ✅ PERMITIR assumir tarefas em 'pending' que não têm designer E não precisam de logo
+  // Só bloquear quando está aguardando o cliente enviar a logo ("Vou enviar depois")
+  const isWaitingClientLogo = task?.logo_action === 'waiting_client';
+  
   const canAssign = task?.status === 'pending' && 
                     !task?.assigned_to && 
-                    !task?.needs_logo && // Não permitir assumir tarefas que ainda precisam de logo
+                    !isWaitingClientLogo && // Bloquear APENAS quando aguardando cliente enviar logo
                     isDesigner &&
                     context === 'creation';
   
