@@ -4,7 +4,7 @@ export interface Notification {
   task_id: string;
   title: string;
   message: string;
-  type: 'status_change' | 'assignment' | 'approval' | 'comment';
+  type: 'status_change' | 'assignment' | 'approval' | 'comment' | 'customer_registered';
   read: boolean;
   created_at: string;
   task_status?: string;

@@ -153,6 +153,8 @@ export const NotificationsDropdown = () => {
         return '✅';
       case 'comment':
         return '💬';
+      case 'customer_registered':
+        return '📋';
       default:
         return '📋';
     }

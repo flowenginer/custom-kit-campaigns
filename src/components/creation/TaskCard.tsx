@@ -93,10 +93,16 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
         <Collapsible open={!isCollapsed}>
           {/* Badge flutuante do tipo de criador */}
           <CollapsibleContent>
-            <div className="flex justify-center -mt-3 relative z-10">
+            <div className="flex justify-center -mt-3 relative z-10 gap-2">
               <Badge className="bg-amber-500 text-white rounded-full px-4 py-1 font-semibold shadow-md" style={{ fontSize: `${fontSizes?.badge || 12}px` }}>
                 {getCreatorType(task)}
               </Badge>
+              {/* Badge de Cliente Cadastrado */}
+              {task.customer_id && (
+                <Badge className="bg-green-500 text-white rounded-full px-4 py-1 font-semibold shadow-md" style={{ fontSize: `${fontSizes?.badge || 12}px` }}>
+                  ✓ Cliente Cadastrado
+                </Badge>
+              )}
             </div>
           </CollapsibleContent>
 
@@ -255,8 +261,8 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
                   />
                 )}
 
-                {/* Botões para Approved/Completed */}
-                {(task.status === 'approved' || task.status === 'completed') && (
+                {/* Botão Cotar Frete - mostrar quando tem customer_id OU status approved/completed */}
+                {(task.customer_id || task.status === 'approved' || task.status === 'completed') && (
                   <>
                     <Button
                       onClick={(e) => {
