@@ -561,7 +561,7 @@ export const NewLayoutRequestDialog = ({
           created_by: user.id,
           created_by_salesperson: true,
           needs_logo: hasLogo === "depois" || hasLogo === "sem_logo",
-          logo_action: hasLogo === "depois" ? "waiting_client" : (hasLogo === "criar_logo" ? "create_new" : null),
+          logo_action: hasLogo === "depois" ? "waiting_client" : (hasLogo === "criar_logo" ? "designer_create" : null),
           uploaded_logo_url: uploadedLogoUrls.length > 0 ? uploadedLogoUrls[0] : null,
           customization_summary: customizationData,
           completed: true,
