@@ -728,8 +728,7 @@ export const TaskDetailsDialog = ({
                          task?.status === 'in_progress';
   const canRequestChanges = isAssignedDesigner && 
                            task?.status === 'awaiting_approval';
-  const canApprove = isAssignedDesigner && 
-                    task?.status === 'awaiting_approval';
+  // Designer NÃO pode aprovar - apenas vendedor/admin
   const canSendProduction = isAssignedDesigner && 
                            task?.status === 'approved';
   
@@ -1607,13 +1606,6 @@ export const TaskDetailsDialog = ({
                       )}
                     </Tooltip>
                   </TooltipProvider>
-                )}
-                
-                {canApprove && !canSalespersonApprove && (
-                  <Button onClick={() => handleStatusChange('approved')}>
-                    <Check className="h-4 w-4 mr-2" />
-                    Aprovar
-                  </Button>
                 )}
                 
                 {canSendProduction && (
