@@ -97,17 +97,32 @@ export const FrontEditor = ({ model, value, onChange, onNext }: FrontEditorProps
             <p className="text-sm text-muted-foreground">
               Clique na opção desejada para continuar
             </p>
-            <div className="space-y-3">
-              <Button
-                variant={value.logoType === 'small_left' ? 'default' : 'outline'}
-                className="w-full h-14 text-base justify-start"
-                onClick={() => {
-                  onChange({ ...value, logoType: 'small_left' });
-                  setTimeout(() => onNext(), 300);
-                }}
-              >
-                Logo pequena no peito esquerdo
-              </Button>
+          <div className="space-y-3">
+            <Button
+              variant={value.logoType === 'none' ? 'default' : 'outline'}
+              className={`w-full h-14 text-base justify-start ${
+                value.logoType !== 'none' 
+                  ? 'border-red-500 text-red-500 hover:bg-red-500/10 hover:text-red-600' 
+                  : 'bg-red-600 hover:bg-red-700 text-white'
+              }`}
+              onClick={() => {
+                onChange({ ...value, logoType: 'none' });
+                setTimeout(() => onNext(), 300);
+              }}
+            >
+              🚫 Sem personalização
+            </Button>
+
+            <Button
+              variant={value.logoType === 'small_left' ? 'default' : 'outline'}
+              className="w-full h-14 text-base justify-start"
+              onClick={() => {
+                onChange({ ...value, logoType: 'small_left' });
+                setTimeout(() => onNext(), 300);
+              }}
+            >
+              Logo pequena no peito esquerdo
+            </Button>
               
               <Button
                 variant={value.logoType === 'large_center' ? 'default' : 'outline'}
