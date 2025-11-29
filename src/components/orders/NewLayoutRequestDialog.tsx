@@ -1252,14 +1252,18 @@ export const NewLayoutRequestDialog = ({
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label>Observações Internas (opcional)</Label>
+            <div className="space-y-2 p-4 border-2 border-amber-500 dark:border-amber-600 rounded-lg bg-amber-50 dark:bg-amber-950">
+              <Label className="text-base font-medium text-amber-700 dark:text-amber-300">📝 Observações Internas (opcional)</Label>
               <Textarea
                 value={internalNotes}
                 onChange={(e) => setInternalNotes(e.target.value)}
                 placeholder="Notas ou instruções adicionais para o designer..."
                 rows={4}
+                className="border-amber-300 dark:border-amber-700 focus:border-amber-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-white"
               />
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                Estas observações são visíveis apenas internamente para a equipe.
+              </p>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setCurrentStep("logo")} className="flex-1">

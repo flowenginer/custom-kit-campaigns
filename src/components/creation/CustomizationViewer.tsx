@@ -525,13 +525,13 @@ export const CustomizationViewer = ({
 
       {/* SEÇÃO: OBSERVAÇÕES INTERNAS */}
       {transformedData.internalNotes && (
-        <Card>
+        <Card className="border-2 border-amber-500 dark:border-amber-600">
           <CardContent className="p-6">
             <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <Badge variant="secondary">OBSERVAÇÕES INTERNAS</Badge>
+              <Badge className="bg-amber-600 dark:bg-amber-700 text-white">OBSERVAÇÕES INTERNAS</Badge>
             </h3>
-            <div className="bg-muted p-4 rounded">
-              <p className="text-sm whitespace-pre-wrap">{transformedData.internalNotes}</p>
+            <div className="bg-amber-50 dark:bg-amber-950 p-4 rounded border border-amber-300 dark:border-amber-700">
+              <p className="text-sm whitespace-pre-wrap text-amber-900 dark:text-amber-100">{transformedData.internalNotes}</p>
             </div>
           </CardContent>
         </Card>

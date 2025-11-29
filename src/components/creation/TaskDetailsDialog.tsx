@@ -1146,13 +1146,21 @@ export const TaskDetailsDialog = ({
                       className="cursor-pointer"
                     />
                     
-                    <Textarea 
-                      placeholder="Notas desta versão (opcional)..."
-                      value={uploadNotes}
-                      onChange={(e) => setUploadNotes(e.target.value)}
-                      disabled={uploading}
-                      className="min-h-[80px]"
-                    />
+                    <div className="space-y-2 p-4 border-2 border-amber-500 dark:border-amber-600 rounded-lg bg-amber-50 dark:bg-amber-950">
+                      <Label className="text-base font-medium text-amber-700 dark:text-amber-300">
+                        📝 Notas desta versão (opcional)
+                      </Label>
+                      <Textarea 
+                        placeholder="Adicione observações sobre esta versão do mockup..."
+                        value={uploadNotes}
+                        onChange={(e) => setUploadNotes(e.target.value)}
+                        disabled={uploading}
+                        className="min-h-[80px] border-amber-300 dark:border-amber-700 focus:border-amber-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-white"
+                      />
+                      <p className="text-xs text-amber-600 dark:text-amber-400">
+                        Essas notas serão visíveis junto com os arquivos enviados.
+                      </p>
+                    </div>
                     
                     {uploading && (
                       <div className="flex items-center gap-2 text-sm">
@@ -1212,8 +1220,8 @@ export const TaskDetailsDialog = ({
                           <CollapsibleContent>
                             <CardContent className="p-4 pt-0 space-y-3">
                               {file.notes && (
-                                <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
-                                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                                <div className="p-3 bg-amber-50 dark:bg-amber-950 border-2 border-amber-500 dark:border-amber-600 rounded-lg">
+                                  <p className="text-sm text-amber-900 dark:text-amber-100">
                                     <strong>📝 Observações do Designer:</strong> {file.notes}
                                   </p>
                                 </div>
@@ -1328,8 +1336,8 @@ export const TaskDetailsDialog = ({
 
                         {/* Observações do Designer - Movido para cima */}
                         {file.notes && (
-                          <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
-                            <p className="text-sm text-blue-800 dark:text-blue-200">
+                          <div className="p-3 bg-amber-50 dark:bg-amber-950 border-2 border-amber-500 dark:border-amber-600 rounded-lg">
+                            <p className="text-sm text-amber-900 dark:text-amber-100">
                               <strong>📝 Observações do Designer:</strong> {file.notes}
                             </p>
                           </div>
