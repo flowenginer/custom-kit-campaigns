@@ -6,9 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Building2, Package, Save } from "lucide-react";
+import { Building2, Package, Save, Boxes } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
 export default function CompanySettings() {
   const [loading, setLoading] = useState(true);
@@ -32,6 +33,11 @@ export default function CompanySettings() {
   // Melhor Envio
   const [melhorEnvioToken, setMelhorEnvioToken] = useState("");
   const [melhorEnvioEnvironment, setMelhorEnvioEnvironment] = useState<"sandbox" | "production">("sandbox");
+
+  // Bling
+  const [blingEnabled, setBlingEnabled] = useState(false);
+  const [blingApiKey, setBlingApiKey] = useState("");
+  const [blingEnvironment, setBlingEnvironment] = useState<"sandbox" | "production">("production");
 
   useEffect(() => {
     loadSettings();
@@ -63,6 +69,9 @@ export default function CompanySettings() {
         setState(data.state || "");
         setMelhorEnvioToken(data.melhor_envio_token || "");
         setMelhorEnvioEnvironment((data.melhor_envio_environment as "sandbox" | "production") || "sandbox");
+        setBlingEnabled(data.bling_enabled || false);
+        setBlingApiKey(data.bling_api_key || "");
+        setBlingEnvironment((data.bling_environment as "sandbox" | "production") || "production");
       }
     } catch (error) {
       console.error("Error loading settings:", error);
@@ -115,6 +124,9 @@ export default function CompanySettings() {
         state,
         melhor_envio_token: melhorEnvioToken || null,
         melhor_envio_environment: melhorEnvioEnvironment,
+        bling_enabled: blingEnabled,
+        bling_api_key: blingApiKey || null,
+        bling_environment: blingEnvironment,
       };
 
       const { data: existing } = await supabase
@@ -173,6 +185,10 @@ export default function CompanySettings() {
           <TabsTrigger value="shipping">
             <Package className="w-4 h-4 mr-2" />
             Melhor Envio
+          </TabsTrigger>
+          <TabsTrigger value="bling">
+            <Boxes className="w-4 h-4 mr-2" />
+            Bling
           </TabsTrigger>
         </TabsList>
 
@@ -359,6 +375,64 @@ export default function CompanySettings() {
                   Obtenha seu token em: https://melhorenvio.com.br/painel/gerenciar/tokens
                 </p>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="bling" className="space-y-6 mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>🔌 Integração Bling ERP</CardTitle>
+              <CardDescription>Configure a conexão com seu sistema Bling</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="blingEnabled">Ativar Integração</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Permite exportar pedidos para o Bling ERP
+                  </p>
+                </div>
+                <Switch
+                  id="blingEnabled"
+                  checked={blingEnabled}
+                  onCheckedChange={setBlingEnabled}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="blingEnvironment">Ambiente</Label>
+                <Select value={blingEnvironment} onValueChange={(v: any) => setBlingEnvironment(v)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sandbox">Sandbox (Testes)</SelectItem>
+                    <SelectItem value="production">Produção</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="blingApiKey">Token da API do Bling</Label>
+                <Textarea
+                  id="blingApiKey"
+                  value={blingApiKey}
+                  onChange={(e) => setBlingApiKey(e.target.value)}
+                  placeholder="Cole aqui o token da API do Bling"
+                  rows={3}
+                  disabled={!blingEnabled}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Obtenha seu token em: <a href="https://bling.com.br/configuracoes" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">https://bling.com.br/configuracoes</a>
+                </p>
+              </div>
+
+              {blingEnabled && (
+                <div className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">
+                  ⓘ Quando ativado, você poderá exportar pedidos diretamente do kanban para o Bling
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

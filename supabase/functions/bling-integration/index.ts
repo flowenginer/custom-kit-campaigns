@@ -126,10 +126,26 @@ serve(async (req) => {
     }
 
     const { action, data } = await req.json();
-    const blingApiKey = Deno.env.get('BLING_API_KEY');
+    
+    // Buscar configurações do Bling da tabela company_settings
+    const { data: settings, error: settingsError } = await supabaseClient
+      .from('company_settings')
+      .select('bling_enabled, bling_api_key, bling_environment')
+      .single();
+
+    if (settingsError) {
+      console.error('[Bling] Error fetching settings:', settingsError);
+      throw new Error('Erro ao buscar configurações do Bling');
+    }
+
+    if (!settings?.bling_enabled) {
+      throw new Error('Integração com Bling está desativada. Ative em Configurações da Empresa.');
+    }
+
+    const blingApiKey = settings.bling_api_key;
 
     if (!blingApiKey) {
-      throw new Error('BLING_API_KEY não configurado');
+      throw new Error('Token da API do Bling não configurado. Configure em Configurações da Empresa.');
     }
 
     const blingBaseUrl = 'https://api.bling.com.br/Api/v3';
