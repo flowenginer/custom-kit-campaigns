@@ -27,7 +27,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { Loader2, Plus, AlertTriangle, Check } from "lucide-react";
+import { Loader2, Plus, AlertTriangle, Check, Search, X } from "lucide-react";
+import { useDebounce } from "use-debounce";
 import { FrontEditor } from "@/components/customization/FrontEditor";
 import { BackEditor } from "@/components/customization/BackEditor";
 import { SleeveEditor } from "@/components/customization/SleeveEditor";
@@ -75,6 +76,13 @@ export const NewLayoutRequestDialog = ({
   const [customerEmail, setCustomerEmail] = useState("");
   const [quantity, setQuantity] = useState<string>("");
   const [customQuantity, setCustomQuantity] = useState<string>("");
+  
+  // Customer search states
+  const [customerSearchTerm, setCustomerSearchTerm] = useState("");
+  const [debouncedSearchTerm] = useDebounce(customerSearchTerm, 300);
+  const [customerSearchResults, setCustomerSearchResults] = useState<any[]>([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [isSearchingCustomer, setIsSearchingCustomer] = useState(false);
   const [hasLogo, setHasLogo] = useState<"sim" | "depois" | "sem_logo" | "criar_logo" | null>(null);
   const [logoFiles, setLogoFiles] = useState<File[]>([]);
   const [internalNotes, setInternalNotes] = useState("");
@@ -203,6 +211,34 @@ export const NewLayoutRequestDialog = ({
       setFilteredModels([]);
     }
   }, [selectedUniformType, models]);
+
+  // Search customers
+  useEffect(() => {
+    if (debouncedSearchTerm.trim().length < 2) {
+      setCustomerSearchResults([]);
+      return;
+    }
+
+    const searchCustomers = async () => {
+      setIsSearchingCustomer(true);
+      try {
+        const { data, error } = await supabase
+          .from("customers")
+          .select("*")
+          .or(`name.ilike.%${debouncedSearchTerm}%,cpf.ilike.%${debouncedSearchTerm}%,cnpj.ilike.%${debouncedSearchTerm}%,company_name.ilike.%${debouncedSearchTerm}%,phone.ilike.%${debouncedSearchTerm}%`)
+          .limit(5);
+
+        if (error) throw error;
+        setCustomerSearchResults(data || []);
+      } catch (error) {
+        console.error("Erro ao buscar clientes:", error);
+      } finally {
+        setIsSearchingCustomer(false);
+      }
+    };
+
+    searchCustomers();
+  }, [debouncedSearchTerm]);
 
   const loadCampaigns = async () => {
     try {
@@ -508,6 +544,9 @@ export const NewLayoutRequestDialog = ({
 
       if (orderError) throw orderError;
 
+      // 1.5. Se um cliente existente foi selecionado, vincular ao design_task
+      let finalCustomerId = selectedCustomerId;
+
       // 2. Criar LEAD com order_id
       const { data: leadData, error: leadError } = await supabase
         .from("leads")
@@ -532,11 +571,12 @@ export const NewLayoutRequestDialog = ({
 
       if (leadError) throw leadError;
 
-      // 3. Atualizar lead_id e prioridade no design_task que foi criado pelo trigger
+      // 3. Atualizar lead_id, customer_id e prioridade no design_task que foi criado pelo trigger
       const { error: updateTaskError } = await supabase
         .from('design_tasks')
         .update({ 
           lead_id: leadData.id,
+          customer_id: finalCustomerId,
           priority: selectedPriority,
           created_by: user.id,
           created_by_salesperson: true,
@@ -575,6 +615,9 @@ export const NewLayoutRequestDialog = ({
     setUrgentReasonId("");
     setUrgentReasonText("");
     setCurrentStep("campaign");
+    setCustomerSearchTerm("");
+    setCustomerSearchResults([]);
+    setSelectedCustomerId(null);
     setFrontCustomization({
       logoType: "none",
       textColor: "#000000",
@@ -757,12 +800,101 @@ export const NewLayoutRequestDialog = ({
       case "customer":
         return (
           <div className="space-y-4">
+            {/* Campo de busca */}
+            <div className="space-y-2">
+              <Label>Buscar Cliente Existente</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={customerSearchTerm}
+                  onChange={(e) => setCustomerSearchTerm(e.target.value)}
+                  placeholder="Nome, CPF, CNPJ, telefone..."
+                  className="pl-9"
+                  disabled={!!selectedCustomerId}
+                />
+                {isSearchingCustomer && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                )}
+              </div>
+            </div>
+
+            {/* Resultados da busca */}
+            {customerSearchResults.length > 0 && !selectedCustomerId && (
+              <div className="space-y-2 max-h-60 overflow-y-auto border rounded-lg p-2">
+                <p className="text-xs text-muted-foreground px-2">
+                  {customerSearchResults.length} resultado(s) encontrado(s)
+                </p>
+                {customerSearchResults.map((customer) => (
+                  <Card
+                    key={customer.id}
+                    className="cursor-pointer hover:bg-accent transition-colors"
+                    onClick={() => {
+                      setSelectedCustomerId(customer.id);
+                      setCustomerName(customer.name);
+                      setCustomerPhone(customer.phone);
+                      setCustomerEmail(customer.email || "");
+                      setCustomerSearchTerm("");
+                      setCustomerSearchResults([]);
+                    }}
+                  >
+                    <CardContent className="p-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="font-medium">{customer.name}</p>
+                          <p className="text-sm text-muted-foreground">{customer.phone}</p>
+                          {customer.person_type === "pf" && customer.cpf && (
+                            <p className="text-xs text-muted-foreground">CPF: {customer.cpf}</p>
+                          )}
+                          {customer.person_type === "pj" && customer.cnpj && (
+                            <p className="text-xs text-muted-foreground">CNPJ: {customer.cnpj}</p>
+                          )}
+                          {customer.company_name && (
+                            <p className="text-xs text-muted-foreground">{customer.company_name}</p>
+                          )}
+                        </div>
+                        <Check className="h-4 w-4 text-primary" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {/* Badge de cliente selecionado */}
+            {selectedCustomerId && (
+              <Alert className="bg-primary/5 border-primary">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-primary" />
+                    <AlertDescription className="text-sm font-medium">
+                      Cliente selecionado: {customerName}
+                    </AlertDescription>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedCustomerId(null);
+                      setCustomerName("");
+                      setCustomerPhone("");
+                      setCustomerEmail("");
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                    Limpar
+                  </Button>
+                </div>
+              </Alert>
+            )}
+
+            {/* Campos de dados do cliente */}
             <div className="space-y-2">
               <Label>Nome do Cliente *</Label>
               <Input
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
                 placeholder="Nome completo"
+                disabled={!!selectedCustomerId}
               />
             </div>
             <div className="space-y-2">
@@ -771,6 +903,7 @@ export const NewLayoutRequestDialog = ({
                 value={customerPhone}
                 onChange={(e) => handlePhoneChange(e.target.value)}
                 placeholder="(00) 00000-0000"
+                disabled={!!selectedCustomerId}
               />
             </div>
             <div className="space-y-2">
@@ -780,6 +913,7 @@ export const NewLayoutRequestDialog = ({
                 value={customerEmail}
                 onChange={(e) => setCustomerEmail(e.target.value)}
                 placeholder="email@exemplo.com"
+                disabled={!!selectedCustomerId}
               />
             </div>
             <div className="space-y-2">
