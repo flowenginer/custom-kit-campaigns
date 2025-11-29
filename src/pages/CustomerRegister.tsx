@@ -119,8 +119,7 @@ export default function CustomerRegister() {
     switch (step) {
       case 1:
         return formData.name.trim() !== "" && 
-               formData.company_name.trim() !== "" && 
-               formData.person_type !== "";
+               formData.company_name.trim() !== "";
       case 2:
         if (formData.person_type === "pf") {
           return formData.cpf.trim() !== "";
