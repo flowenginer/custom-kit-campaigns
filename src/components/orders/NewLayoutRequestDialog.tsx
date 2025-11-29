@@ -69,6 +69,7 @@ export const NewLayoutRequestDialog = ({
   const [filteredModels, setFilteredModels] = useState<any[]>([]);
 
   // Form states
+  const [isFromScratch, setIsFromScratch] = useState(false);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
   const [selectedUniformType, setSelectedUniformType] = useState<string>("");
   const [selectedModel, setSelectedModel] = useState<any>(null);
@@ -319,8 +320,13 @@ export const NewLayoutRequestDialog = ({
 
   const handleSubmit = async () => {
     // Validações
-    if (!selectedCampaignId || !selectedUniformType || !selectedModel) {
+    if (!isFromScratch && (!selectedCampaignId || !selectedUniformType || !selectedModel)) {
       toast.error("Selecione campanha, tipo de uniforme e modelo");
+      return;
+    }
+    
+    if (isFromScratch && !selectedUniformType) {
+      toast.error("Selecione o tipo de uniforme");
       return;
     }
 
@@ -428,8 +434,9 @@ export const NewLayoutRequestDialog = ({
 
       // Preparar dados de customização (remover File objects que não podem ser serializados)
       const customizationData = {
+        fromScratch: isFromScratch,
         uniformType: selectedUniformType,
-        model: selectedModel.name,
+        model: isFromScratch ? null : selectedModel.name,
         front: {
           ...frontCustomization,
           logoUrl: frontLogoUrl || frontCustomization.logoUrl, // URL do upload
@@ -532,13 +539,13 @@ export const NewLayoutRequestDialog = ({
       const { data: orderData, error: orderError } = await supabase
         .from("orders")
         .insert([{
-          campaign_id: selectedCampaignId,
+          campaign_id: isFromScratch ? null : selectedCampaignId,
           session_id: sessionId,
           customer_name: customerName,
           customer_phone: customerPhone,
           customer_email: customerEmail || null,
           quantity: finalQuantity,
-          model_id: selectedModel.id,
+          model_id: isFromScratch ? null : selectedModel.id,
           customization_data: customizationData,
         }])
         .select()
@@ -553,7 +560,7 @@ export const NewLayoutRequestDialog = ({
       const { data: leadData, error: leadError } = await supabase
         .from("leads")
         .insert([{
-          campaign_id: selectedCampaignId,
+          campaign_id: isFromScratch ? null : selectedCampaignId,
           session_id: sessionId,
           name: customerName,
           phone: customerPhone,
@@ -603,6 +610,7 @@ export const NewLayoutRequestDialog = ({
   };
 
   const resetForm = () => {
+    setIsFromScratch(false);
     setSelectedCampaignId("");
     setSelectedUniformType("");
     setSelectedModel(null);
@@ -681,7 +689,44 @@ export const NewLayoutRequestDialog = ({
         return (
           <div className="space-y-4">
             <Label>Campanha *</Label>
-            <ScrollArea className="h-[300px]">
+            
+            {/* Botão verde "Criação do Zero" */}
+            <Card
+              className="p-6 cursor-pointer transition-all hover:border-green-500 hover:shadow-lg border-2 border-green-500 bg-green-50 dark:bg-green-950"
+              onClick={() => {
+                setIsFromScratch(true);
+                setSelectedCampaignId("");
+                setSelectedModel(null);
+                setCurrentStep("uniform");
+              }}
+            >
+              <div className="flex flex-col items-center gap-3">
+                <div className="bg-green-500 rounded-full p-3">
+                  <Plus className="h-8 w-8 text-white" />
+                </div>
+                <div className="text-center">
+                  <h3 className="text-lg font-bold text-green-700 dark:text-green-300">
+                    🎨 CRIAÇÃO DO ZERO
+                  </h3>
+                  <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+                    Layout personalizado sem base de campanha
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Ou escolha uma campanha
+                </span>
+              </div>
+            </div>
+            
+            <ScrollArea className="h-[250px]">
               <div className="grid grid-cols-4 gap-3 pr-4">
                 {campaigns.map((campaign) => (
                   <Card
@@ -692,6 +737,7 @@ export const NewLayoutRequestDialog = ({
                         : ""
                     }`}
                     onClick={() => {
+                      setIsFromScratch(false);
                       setSelectedCampaignId(campaign.id);
                       setCurrentStep("uniform");
                     }}
@@ -712,6 +758,16 @@ export const NewLayoutRequestDialog = ({
       case "uniform":
         return (
           <div className="space-y-4">
+            {/* Badge verde se for criação do zero */}
+            {isFromScratch && (
+              <Alert className="bg-green-50 dark:bg-green-950 border-green-500 border-2">
+                <AlertDescription className="text-green-700 dark:text-green-300 font-medium flex items-center gap-2">
+                  <span className="text-lg">🎨</span>
+                  <span>Criação do Zero - Você não precisa escolher modelo</span>
+                </AlertDescription>
+              </Alert>
+            )}
+            
             <div className="space-y-2">
               <Label>Tipo de Uniforme *</Label>
               <div className="grid grid-cols-2 gap-3">
@@ -725,7 +781,8 @@ export const NewLayoutRequestDialog = ({
                     }`}
                     onClick={() => {
                       setSelectedUniformType(type.tag_value);
-                      setCurrentStep("model");
+                      // Se for criação do zero, pula direto para customer
+                      setCurrentStep(isFromScratch ? "customer" : "model");
                     }}
                   >
                     <div className="flex flex-col items-center gap-2">
@@ -742,7 +799,16 @@ export const NewLayoutRequestDialog = ({
                 ))}
               </div>
             </div>
-            <Button variant="outline" onClick={() => setCurrentStep("campaign")} className="w-full">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setCurrentStep("campaign");
+                if (isFromScratch) {
+                  setIsFromScratch(false);
+                }
+              }} 
+              className="w-full"
+            >
               Voltar
             </Button>
           </div>
@@ -944,7 +1010,11 @@ export const NewLayoutRequestDialog = ({
               )}
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setCurrentStep("model")} className="flex-1">
+              <Button 
+                variant="outline" 
+                onClick={() => setCurrentStep(isFromScratch ? "uniform" : "model")} 
+                className="flex-1"
+              >
                 Voltar
               </Button>
               <Button
