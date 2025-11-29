@@ -44,6 +44,11 @@ export interface DesignTask {
   created_by_salesperson?: boolean;
   created_by?: string | null;
   order_number?: string | null;
+  customer_id?: string | null;
+  bling_order_id?: number | null;
+  bling_order_number?: string | null;
+  shipping_option?: any;
+  shipping_value?: number | null;
   // Joined data
   customer_name?: string;
   customer_email?: string;
