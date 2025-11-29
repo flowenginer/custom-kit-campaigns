@@ -718,7 +718,10 @@ export const NewLayoutRequestDialog = ({
                         ? "border-primary ring-2 ring-primary"
                         : ""
                     }`}
-                    onClick={() => setSelectedUniformType(type.tag_value)}
+                    onClick={() => {
+                      setSelectedUniformType(type.tag_value);
+                      setCurrentStep("model");
+                    }}
                   >
                     <div className="flex flex-col items-center gap-2">
                       <img
@@ -734,18 +737,9 @@ export const NewLayoutRequestDialog = ({
                 ))}
               </div>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setCurrentStep("campaign")} className="flex-1">
-                Voltar
-              </Button>
-              <Button
-                onClick={() => setCurrentStep("model")}
-                disabled={!selectedUniformType}
-                className="flex-1"
-              >
-                Continuar
-              </Button>
-            </div>
+            <Button variant="outline" onClick={() => setCurrentStep("campaign")} className="w-full">
+              Voltar
+            </Button>
           </div>
         );
 
@@ -763,7 +757,10 @@ export const NewLayoutRequestDialog = ({
                         ? "border-primary ring-2 ring-primary"
                         : ""
                     }`}
-                    onClick={() => setSelectedModel(model)}
+                    onClick={() => {
+                      setSelectedModel(model);
+                      setCurrentStep("customer");
+                    }}
                   >
                     <div className="flex flex-col items-center gap-2">
                       <img
@@ -785,18 +782,9 @@ export const NewLayoutRequestDialog = ({
                 </p>
               )}
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setCurrentStep("uniform")} className="flex-1">
-                Voltar
-              </Button>
-              <Button
-                onClick={() => setCurrentStep("customer")}
-                disabled={!selectedModel}
-                className="flex-1"
-              >
-                Continuar
-              </Button>
-            </div>
+            <Button variant="outline" onClick={() => setCurrentStep("uniform")} className="w-full">
+              Voltar
+            </Button>
           </div>
         );
 
