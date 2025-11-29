@@ -451,6 +451,7 @@ export type Database = {
           cnpj: string
           complement: string | null
           created_at: string | null
+          custom_domain: string | null
           email: string | null
           id: string
           inscricao_estadual: string | null
@@ -474,6 +475,7 @@ export type Database = {
           cnpj: string
           complement?: string | null
           created_at?: string | null
+          custom_domain?: string | null
           email?: string | null
           id?: string
           inscricao_estadual?: string | null
@@ -497,6 +499,7 @@ export type Database = {
           cnpj?: string
           complement?: string | null
           created_at?: string | null
+          custom_domain?: string | null
           email?: string | null
           id?: string
           inscricao_estadual?: string | null

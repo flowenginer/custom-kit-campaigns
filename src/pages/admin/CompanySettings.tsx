@@ -39,6 +39,9 @@ export default function CompanySettings() {
   const [blingApiKey, setBlingApiKey] = useState("");
   const [blingEnvironment, setBlingEnvironment] = useState<"sandbox" | "production">("production");
 
+  // Custom Domain
+  const [customDomain, setCustomDomain] = useState("");
+
   useEffect(() => {
     loadSettings();
   }, []);
@@ -72,6 +75,7 @@ export default function CompanySettings() {
         setBlingEnabled(data.bling_enabled || false);
         setBlingApiKey(data.bling_api_key || "");
         setBlingEnvironment((data.bling_environment as "sandbox" | "production") || "production");
+        setCustomDomain(data.custom_domain || "");
       }
     } catch (error) {
       console.error("Error loading settings:", error);
@@ -127,6 +131,7 @@ export default function CompanySettings() {
         bling_enabled: blingEnabled,
         bling_api_key: blingApiKey || null,
         bling_environment: blingEnvironment,
+        custom_domain: customDomain || null,
       };
 
       const { data: existing } = await supabase
@@ -256,6 +261,19 @@ export default function CompanySettings() {
                     onChange={(e) => setPhone(e.target.value)}
                   />
                 </div>
+              </div>
+
+              <div>
+                <Label htmlFor="customDomain">Domínio Personalizado</Label>
+                <Input
+                  id="customDomain"
+                  value={customDomain}
+                  onChange={(e) => setCustomDomain(e.target.value)}
+                  placeholder="app.lojaspacesport.com.br"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Este domínio será usado nos links enviados aos clientes (ex: links de cadastro)
+                </p>
               </div>
             </CardContent>
           </Card>
