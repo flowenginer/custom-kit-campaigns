@@ -27,7 +27,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { Loader2, Plus, AlertTriangle, Check, Search, X } from "lucide-react";
+import { Loader2, Plus, AlertTriangle, Check, Search, X, Megaphone } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useDebounce } from "use-debounce";
 import { FrontEditor } from "@/components/customization/FrontEditor";
 import { BackEditor } from "@/components/customization/BackEditor";
@@ -679,28 +680,32 @@ export const NewLayoutRequestDialog = ({
       case "campaign":
         return (
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Campanha *</Label>
-              <Select value={selectedCampaignId} onValueChange={setSelectedCampaignId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a campanha" />
-                </SelectTrigger>
-                <SelectContent>
-                  {campaigns.map((campaign) => (
-                    <SelectItem key={campaign.id} value={campaign.id}>
-                      {campaign.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Button
-              onClick={() => setCurrentStep("uniform")}
-              disabled={!selectedCampaignId}
-              className="w-full"
-            >
-              Continuar
-            </Button>
+            <Label>Campanha *</Label>
+            <ScrollArea className="h-[300px]">
+              <div className="grid grid-cols-2 gap-3 pr-4">
+                {campaigns.map((campaign) => (
+                  <Card
+                    key={campaign.id}
+                    className={`p-4 cursor-pointer transition-all hover:border-primary hover:shadow-md ${
+                      selectedCampaignId === campaign.id
+                        ? "border-primary ring-2 ring-primary"
+                        : ""
+                    }`}
+                    onClick={() => {
+                      setSelectedCampaignId(campaign.id);
+                      setCurrentStep("uniform");
+                    }}
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <Megaphone className="h-8 w-8 text-primary" />
+                      <span className="text-sm font-medium text-center">
+                        {campaign.name}
+                      </span>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </ScrollArea>
           </div>
         );
 
