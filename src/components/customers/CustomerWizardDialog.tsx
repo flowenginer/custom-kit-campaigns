@@ -153,7 +153,7 @@ export const CustomerWizardDialog = ({
 
       const customerData = {
         name,
-        person_type: personType,
+        person_type: personType === "fisica" ? "pf" : "pj",
         cpf: personType === "fisica" ? cpf : null,
         cnpj: personType === "juridica" ? cnpj : null,
         company_name: personType === "juridica" ? companyName : null,
