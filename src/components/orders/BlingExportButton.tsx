@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2, Package } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +12,29 @@ interface BlingExportButtonProps {
 
 export const BlingExportButton = ({ taskId, orderId, onExportSuccess }: BlingExportButtonProps) => {
   const [loading, setLoading] = useState(false);
+  const [blingEnabled, setBlingEnabled] = useState(false);
+  const [checkingSettings, setCheckingSettings] = useState(true);
+
+  useEffect(() => {
+    const checkBlingSettings = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('company_settings')
+          .select('bling_enabled')
+          .single();
+
+        if (!error && data) {
+          setBlingEnabled(data.bling_enabled || false);
+        }
+      } catch (error) {
+        console.error('Error checking Bling settings:', error);
+      } finally {
+        setCheckingSettings(false);
+      }
+    };
+
+    checkBlingSettings();
+  }, []);
 
   const handleExport = async () => {
     setLoading(true);
@@ -69,6 +92,14 @@ export const BlingExportButton = ({ taskId, orderId, onExportSuccess }: BlingExp
       setLoading(false);
     }
   };
+
+  if (checkingSettings) {
+    return null;
+  }
+
+  if (!blingEnabled) {
+    return null;
+  }
 
   return (
     <Button

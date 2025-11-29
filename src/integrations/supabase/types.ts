@@ -443,6 +443,9 @@ export type Database = {
       }
       company_settings: {
         Row: {
+          bling_api_key: string | null
+          bling_enabled: boolean | null
+          bling_environment: string | null
           cep: string
           city: string
           cnpj: string
@@ -463,6 +466,9 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          bling_api_key?: string | null
+          bling_enabled?: boolean | null
+          bling_environment?: string | null
           cep: string
           city: string
           cnpj: string
@@ -483,6 +489,9 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          bling_api_key?: string | null
+          bling_enabled?: boolean | null
+          bling_environment?: string | null
           cep?: string
           city?: string
           cnpj?: string
