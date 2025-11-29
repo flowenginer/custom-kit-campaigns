@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -20,9 +20,26 @@ export const RequestCustomerRegistrationButton = ({
   const [loading, setLoading] = useState(false);
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [customDomain, setCustomDomain] = useState<string | null>(null);
 
   const generateToken = () => {
     return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  };
+
+  const loadCustomDomain = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("company_settings")
+        .select("custom_domain")
+        .single();
+
+      if (error) throw error;
+      if (data?.custom_domain) {
+        setCustomDomain(data.custom_domain);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar domínio personalizado:", error);
+    }
   };
 
   const handleGenerateLink = async () => {
@@ -44,7 +61,12 @@ export const RequestCustomerRegistrationButton = ({
 
       if (error) throw error;
 
-      const link = `${window.location.origin}/customer-register/${token}`;
+      // Usar domínio personalizado se configurado, senão usar origin atual
+      const baseUrl = customDomain 
+        ? `https://${customDomain}` 
+        : window.location.origin;
+      
+      const link = `${baseUrl}/customer-register/${token}`;
       setGeneratedLink(link);
       toast.success("Link gerado com sucesso!");
     } catch (error: any) {
@@ -72,6 +94,10 @@ export const RequestCustomerRegistrationButton = ({
       window.open(`https://wa.me/?text=${message}`, "_blank");
     }
   };
+
+  useEffect(() => {
+    loadCustomDomain();
+  }, []);
 
   return (
     <>
