@@ -93,7 +93,7 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
         <Collapsible open={!isCollapsed}>
           {/* Badge flutuante do tipo de criador */}
           <CollapsibleContent>
-            <div className="flex justify-center -mt-3 relative z-10 gap-2">
+            <div className="flex justify-center -mt-3 relative z-10 gap-2 flex-wrap">
               <Badge className="bg-amber-500 text-white rounded-full px-4 py-1 font-semibold shadow-md" style={{ fontSize: `${fontSizes?.badge || 12}px` }}>
                 {getCreatorType(task)}
               </Badge>
@@ -101,6 +101,12 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
               {task.customer_id && (
                 <Badge className="bg-green-500 text-white rounded-full px-4 py-1 font-semibold shadow-md" style={{ fontSize: `${fontSizes?.badge || 12}px` }}>
                   ✓ Cliente Cadastrado
+                </Badge>
+              )}
+              {/* Badge de Criação do Zero */}
+              {task.customization_data?.fromScratch && (
+                <Badge className="bg-green-600 text-white rounded-full px-4 py-1 font-semibold shadow-md" style={{ fontSize: `${fontSizes?.badge || 12}px` }}>
+                  🎨 Criação do Zero
                 </Badge>
               )}
             </div>

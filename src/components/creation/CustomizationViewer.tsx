@@ -408,28 +408,49 @@ export const CustomizationViewer = ({
 
   return (
     <div className="space-y-6">
+      {/* Alerta de Criação do Zero */}
+      {data?.fromScratch && (
+        <Card className="border-2 border-green-500 bg-green-50 dark:bg-green-950 shadow-lg">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <div className="bg-green-500 rounded-full p-2 shrink-0">
+                <Palette className="h-5 w-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-green-800 dark:text-green-300 flex items-center gap-2">
+                  🎨 CRIAÇÃO DO ZERO
+                </h3>
+                <p className="text-sm text-green-700 dark:text-green-400 mt-1">
+                  Este pedido requer criação de layout do zero, sem base de campanha ou modelo pré-definido.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
       {/* Alerta de Criação de Logo */}
       {logoAction === 'designer_create' && (
-        <Card className="border-2 border-amber-500 bg-amber-50 shadow-lg">
+        <Card className="border-2 border-amber-500 bg-amber-50 dark:bg-amber-950 shadow-lg">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
               <div className="bg-amber-500 rounded-full p-2 shrink-0">
                 <Palette className="h-5 w-5 text-white" />
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-bold text-amber-800 flex items-center gap-2">
+                <h3 className="text-lg font-bold text-amber-800 dark:text-amber-300 flex items-center gap-2">
                   ⚠️ CRIAÇÃO DE LOGO NECESSÁRIA
                 </h3>
-                <p className="text-sm text-amber-700 mt-1">
+                <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
                   O cliente não tem logo. O designer precisa criar uma nova.
                 </p>
                 
                 {logoDescription && (
-                  <div className="mt-3 p-3 bg-white rounded-lg border border-amber-300">
-                    <Label className="text-xs text-amber-600 font-medium">
+                  <div className="mt-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-amber-300 dark:border-amber-700">
+                    <Label className="text-xs text-amber-600 dark:text-amber-400 font-medium">
                       O que o cliente imagina:
                     </Label>
-                    <p className="text-sm text-gray-800 mt-1 whitespace-pre-wrap">
+                    <p className="text-sm text-gray-800 dark:text-gray-200 mt-1 whitespace-pre-wrap">
                       {logoDescription}
                     </p>
                   </div>
