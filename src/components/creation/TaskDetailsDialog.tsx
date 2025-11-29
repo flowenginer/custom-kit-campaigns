@@ -1210,9 +1210,11 @@ export const TaskDetailsDialog = ({
                           <CollapsibleContent>
                             <CardContent className="p-4 pt-0 space-y-3">
                               {file.notes && (
-                                <p className="text-sm text-muted-foreground bg-muted/50 p-2 rounded">
-                                  <strong>Notas:</strong> {file.notes}
-                                </p>
+                                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                  <p className="text-sm text-blue-800">
+                                    <strong>📝 Observações do Designer:</strong> {file.notes}
+                                  </p>
+                                </div>
                               )}
                               
                               <div 
@@ -1315,6 +1317,15 @@ export const TaskDetailsDialog = ({
                           </Button>
                         </div>
 
+                        {/* Observações do Designer - Movido para cima */}
+                        {file.notes && (
+                          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <p className="text-sm text-blue-800">
+                              <strong>📝 Observações do Designer:</strong> {file.notes}
+                            </p>
+                          </div>
+                        )}
+
                         {/* Preview Visual do Mockup */}
                         <div 
                           className="relative w-full h-48 bg-muted rounded-lg overflow-hidden cursor-pointer group"
@@ -1337,12 +1348,6 @@ export const TaskDetailsDialog = ({
                             <ExternalLink className="h-8 w-8 text-white" />
                           </div>
                         </div>
-
-                        {file.notes && (
-                          <p className="text-sm text-muted-foreground bg-muted/50 p-2 rounded">
-                            <strong>Notas:</strong> {file.notes}
-                          </p>
-                        )}
                         
                         {/* Checkbox para vendedor selecionar mockup aprovado */}
                         {canSalespersonApprove && task.status === 'awaiting_approval' && (
