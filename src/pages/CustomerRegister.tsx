@@ -18,6 +18,7 @@ export default function CustomerRegister() {
   const [completed, setCompleted] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [cepLoading, setCepLoading] = useState(false);
+  const [noCompany, setNoCompany] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -274,7 +275,14 @@ export default function CustomerRegister() {
                   <Input
                     id="name"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) => {
+                      const newName = e.target.value;
+                      setFormData({ 
+                        ...formData, 
+                        name: newName,
+                        company_name: noCompany ? newName : formData.company_name
+                      });
+                    }}
                     placeholder="Digite o nome do cliente ou responsável"
                   />
                 </div>
@@ -286,10 +294,30 @@ export default function CustomerRegister() {
                     value={formData.company_name}
                     onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
                     placeholder="Como o cliente quer ser chamado"
+                    disabled={noCompany}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
                     Nome que será usado para identificar o cliente no sistema
                   </p>
+                  
+                  <div className="flex items-center space-x-2 mt-3">
+                    <input
+                      type="checkbox"
+                      id="no_company"
+                      checked={noCompany}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setNoCompany(checked);
+                        if (checked) {
+                          setFormData({ ...formData, company_name: formData.name });
+                        }
+                      }}
+                      className="w-4 h-4 rounded border-input bg-background ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    />
+                    <Label htmlFor="no_company" className="text-sm font-normal cursor-pointer">
+                      Não tenho empresa/equipe
+                    </Label>
+                  </div>
                 </div>
 
                 <div className="space-y-3 pt-4">
