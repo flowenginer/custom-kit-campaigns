@@ -1212,8 +1212,8 @@ export const TaskDetailsDialog = ({
                           <CollapsibleContent>
                             <CardContent className="p-4 pt-0 space-y-3">
                               {file.notes && (
-                                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                  <p className="text-sm text-blue-800">
+                                <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+                                  <p className="text-sm text-blue-800 dark:text-blue-200">
                                     <strong>📝 Observações do Designer:</strong> {file.notes}
                                   </p>
                                 </div>
@@ -1328,8 +1328,8 @@ export const TaskDetailsDialog = ({
 
                         {/* Observações do Designer - Movido para cima */}
                         {file.notes && (
-                          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                            <p className="text-sm text-blue-800">
+                          <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+                            <p className="text-sm text-blue-800 dark:text-blue-200">
                               <strong>📝 Observações do Designer:</strong> {file.notes}
                             </p>
                           </div>
@@ -1360,7 +1360,7 @@ export const TaskDetailsDialog = ({
                         
                         {/* Checkbox para vendedor selecionar mockup aprovado */}
                         {canSalespersonApprove && task.status === 'awaiting_approval' && (
-                          <div className="flex items-center gap-2 p-3 border rounded-lg bg-green-50 border-green-200">
+                          <div className="flex items-center gap-2 p-3 border rounded-lg bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
                             <Checkbox
                               id={`approve-${file.version}`}
                               checked={selectedApprovedMockups.has(file.url)}
