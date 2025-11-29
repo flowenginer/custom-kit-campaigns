@@ -10,11 +10,17 @@ import { UserPlus, Copy, Check, Loader2 } from "lucide-react";
 interface RequestCustomerRegistrationButtonProps {
   taskId: string;
   leadId?: string | null;
+  variant?: "outline" | "default" | "destructive" | "secondary" | "ghost" | "link";
+  label?: string;
+  className?: string;
 }
 
 export const RequestCustomerRegistrationButton = ({
   taskId,
   leadId,
+  variant = "outline",
+  label = "Solicitar Cadastro",
+  className = "w-full",
 }: RequestCustomerRegistrationButtonProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -102,13 +108,13 @@ export const RequestCustomerRegistrationButton = ({
   return (
     <>
       <Button
-        variant="outline"
+        variant={variant}
         size="sm"
         onClick={() => setOpen(true)}
-        className="w-full"
+        className={className}
       >
         <UserPlus className="mr-2 h-4 w-4" />
-        Solicitar Cadastro
+        {label}
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
