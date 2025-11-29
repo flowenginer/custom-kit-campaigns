@@ -441,6 +441,153 @@ export type Database = {
           },
         ]
       }
+      company_settings: {
+        Row: {
+          cep: string
+          city: string
+          cnpj: string
+          complement: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          inscricao_estadual: string | null
+          melhor_envio_environment: string | null
+          melhor_envio_token: string | null
+          neighborhood: string
+          nome_fantasia: string | null
+          number: string
+          phone: string | null
+          razao_social: string
+          state: string
+          street: string
+          updated_at: string | null
+        }
+        Insert: {
+          cep: string
+          city: string
+          cnpj: string
+          complement?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          inscricao_estadual?: string | null
+          melhor_envio_environment?: string | null
+          melhor_envio_token?: string | null
+          neighborhood: string
+          nome_fantasia?: string | null
+          number: string
+          phone?: string | null
+          razao_social: string
+          state: string
+          street: string
+          updated_at?: string | null
+        }
+        Update: {
+          cep?: string
+          city?: string
+          cnpj?: string
+          complement?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          inscricao_estadual?: string | null
+          melhor_envio_environment?: string | null
+          melhor_envio_token?: string | null
+          neighborhood?: string
+          nome_fantasia?: string | null
+          number?: string
+          phone?: string | null
+          razao_social?: string
+          state?: string
+          street?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      customers: {
+        Row: {
+          birth_date: string | null
+          cep: string
+          city: string
+          cnpj: string | null
+          company_name: string | null
+          complement: string | null
+          contact_notes: string | null
+          cpf: string | null
+          created_at: string | null
+          created_by: string | null
+          email: string | null
+          first_order_date: string | null
+          id: string
+          last_order_date: string | null
+          name: string
+          neighborhood: string
+          number: string
+          person_type: string
+          phone: string
+          state: string
+          state_registration: string | null
+          street: string
+          total_orders: number | null
+          total_revenue: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          birth_date?: string | null
+          cep: string
+          city: string
+          cnpj?: string | null
+          company_name?: string | null
+          complement?: string | null
+          contact_notes?: string | null
+          cpf?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          email?: string | null
+          first_order_date?: string | null
+          id?: string
+          last_order_date?: string | null
+          name: string
+          neighborhood: string
+          number: string
+          person_type: string
+          phone: string
+          state: string
+          state_registration?: string | null
+          street: string
+          total_orders?: number | null
+          total_revenue?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          birth_date?: string | null
+          cep?: string
+          city?: string
+          cnpj?: string | null
+          company_name?: string | null
+          complement?: string | null
+          contact_notes?: string | null
+          cpf?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          email?: string | null
+          first_order_date?: string | null
+          id?: string
+          last_order_date?: string | null
+          name?: string
+          neighborhood?: string
+          number?: string
+          person_type?: string
+          phone?: string
+          state?: string
+          state_registration?: string | null
+          street?: string
+          total_orders?: number | null
+          total_revenue?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       dashboard_configs: {
         Row: {
           created_at: string | null
@@ -686,6 +833,8 @@ export type Database = {
         Row: {
           assigned_at: string | null
           assigned_to: string | null
+          bling_order_id: number | null
+          bling_order_number: string | null
           campaign_id: string | null
           changes_notes: string | null
           client_approved_at: string | null
@@ -695,6 +844,7 @@ export type Database = {
           created_by: string | null
           created_by_salesperson: boolean | null
           current_version: number | null
+          customer_id: string | null
           deadline: string | null
           deleted_at: string | null
           design_files: Json | null
@@ -702,7 +852,13 @@ export type Database = {
           lead_id: string | null
           order_id: string
           order_number: string | null
+          order_value: number | null
           priority: Database["public"]["Enums"]["task_priority"] | null
+          registration_completed_at: string | null
+          registration_sent_at: string | null
+          registration_token: string | null
+          shipping_option: Json | null
+          shipping_value: number | null
           status: Database["public"]["Enums"]["task_status"]
           status_changed_at: string | null
           updated_at: string | null
@@ -710,6 +866,8 @@ export type Database = {
         Insert: {
           assigned_at?: string | null
           assigned_to?: string | null
+          bling_order_id?: number | null
+          bling_order_number?: string | null
           campaign_id?: string | null
           changes_notes?: string | null
           client_approved_at?: string | null
@@ -719,6 +877,7 @@ export type Database = {
           created_by?: string | null
           created_by_salesperson?: boolean | null
           current_version?: number | null
+          customer_id?: string | null
           deadline?: string | null
           deleted_at?: string | null
           design_files?: Json | null
@@ -726,7 +885,13 @@ export type Database = {
           lead_id?: string | null
           order_id: string
           order_number?: string | null
+          order_value?: number | null
           priority?: Database["public"]["Enums"]["task_priority"] | null
+          registration_completed_at?: string | null
+          registration_sent_at?: string | null
+          registration_token?: string | null
+          shipping_option?: Json | null
+          shipping_value?: number | null
           status?: Database["public"]["Enums"]["task_status"]
           status_changed_at?: string | null
           updated_at?: string | null
@@ -734,6 +899,8 @@ export type Database = {
         Update: {
           assigned_at?: string | null
           assigned_to?: string | null
+          bling_order_id?: number | null
+          bling_order_number?: string | null
           campaign_id?: string | null
           changes_notes?: string | null
           client_approved_at?: string | null
@@ -743,6 +910,7 @@ export type Database = {
           created_by?: string | null
           created_by_salesperson?: boolean | null
           current_version?: number | null
+          customer_id?: string | null
           deadline?: string | null
           deleted_at?: string | null
           design_files?: Json | null
@@ -750,7 +918,13 @@ export type Database = {
           lead_id?: string | null
           order_id?: string
           order_number?: string | null
+          order_value?: number | null
           priority?: Database["public"]["Enums"]["task_priority"] | null
+          registration_completed_at?: string | null
+          registration_sent_at?: string | null
+          registration_token?: string | null
+          shipping_option?: Json | null
+          shipping_value?: number | null
           status?: Database["public"]["Enums"]["task_status"]
           status_changed_at?: string | null
           updated_at?: string | null
@@ -778,6 +952,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "design_tasks_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "design_tasks_lead_id_fkey"
             columns: ["lead_id"]
             isOneToOne: false
@@ -792,6 +973,84 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      erp_exports: {
+        Row: {
+          created_at: string | null
+          entity_id: string
+          error_message: string | null
+          export_type: string
+          exported_by: string | null
+          external_id: string | null
+          external_number: string | null
+          id: string
+          integration_type: string
+          payload: Json | null
+          response: Json | null
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          entity_id: string
+          error_message?: string | null
+          export_type: string
+          exported_by?: string | null
+          external_id?: string | null
+          external_number?: string | null
+          id?: string
+          integration_type: string
+          payload?: Json | null
+          response?: Json | null
+          status?: string
+        }
+        Update: {
+          created_at?: string | null
+          entity_id?: string
+          error_message?: string | null
+          export_type?: string
+          exported_by?: string | null
+          external_id?: string | null
+          external_number?: string | null
+          id?: string
+          integration_type?: string
+          payload?: Json | null
+          response?: Json | null
+          status?: string
+        }
+        Relationships: []
+      }
+      erp_integrations: {
+        Row: {
+          api_token: string | null
+          config: Json | null
+          created_at: string | null
+          id: string
+          integration_type: string
+          is_active: boolean | null
+          updated_at: string | null
+          webhook_url: string
+        }
+        Insert: {
+          api_token?: string | null
+          config?: Json | null
+          created_at?: string | null
+          id?: string
+          integration_type: string
+          is_active?: boolean | null
+          updated_at?: string | null
+          webhook_url: string
+        }
+        Update: {
+          api_token?: string | null
+          config?: Json | null
+          created_at?: string | null
+          id?: string
+          integration_type?: string
+          is_active?: boolean | null
+          updated_at?: string | null
+          webhook_url?: string
+        }
+        Relationships: []
       }
       funnel_events: {
         Row: {
@@ -1381,6 +1640,39 @@ export type Database = {
           },
         ]
       }
+      product_prices: {
+        Row: {
+          base_price: number
+          created_at: string | null
+          display_name: string
+          id: string
+          is_active: boolean | null
+          model_tag: string
+          sku_prefix: string
+          updated_at: string | null
+        }
+        Insert: {
+          base_price: number
+          created_at?: string | null
+          display_name: string
+          id?: string
+          is_active?: boolean | null
+          model_tag: string
+          sku_prefix: string
+          updated_at?: string | null
+        }
+        Update: {
+          base_price?: number
+          created_at?: string | null
+          display_name?: string
+          id?: string
+          is_active?: boolean | null
+          model_tag?: string
+          sku_prefix?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           allowed_kanban_columns: Json | null
@@ -1491,6 +1783,10 @@ export type Database = {
       }
       shirt_models: {
         Row: {
+          altura: number | null
+          base_price: number | null
+          bling_product_id: number | null
+          bling_synced_at: string | null
           created_at: string | null
           features: string[] | null
           id: string
@@ -1501,15 +1797,24 @@ export type Database = {
           image_front_small_logo: string | null
           image_left: string
           image_right: string
+          largura: number | null
           model_tag: string | null
           name: string
+          peso: number | null
           photo_main: string
+          profundidade: number | null
           segment_id: string | null
           segment_tag: string | null
           sku: string | null
+          unidade: string | null
           updated_at: string | null
+          volumes: number | null
         }
         Insert: {
+          altura?: number | null
+          base_price?: number | null
+          bling_product_id?: number | null
+          bling_synced_at?: string | null
           created_at?: string | null
           features?: string[] | null
           id?: string
@@ -1520,15 +1825,24 @@ export type Database = {
           image_front_small_logo?: string | null
           image_left: string
           image_right: string
+          largura?: number | null
           model_tag?: string | null
           name: string
+          peso?: number | null
           photo_main: string
+          profundidade?: number | null
           segment_id?: string | null
           segment_tag?: string | null
           sku?: string | null
+          unidade?: string | null
           updated_at?: string | null
+          volumes?: number | null
         }
         Update: {
+          altura?: number | null
+          base_price?: number | null
+          bling_product_id?: number | null
+          bling_synced_at?: string | null
           created_at?: string | null
           features?: string[] | null
           id?: string
@@ -1539,13 +1853,18 @@ export type Database = {
           image_front_small_logo?: string | null
           image_left?: string
           image_right?: string
+          largura?: number | null
           model_tag?: string | null
           name?: string
+          peso?: number | null
           photo_main?: string
+          profundidade?: number | null
           segment_id?: string | null
           segment_tag?: string | null
           sku?: string | null
+          unidade?: string | null
           updated_at?: string | null
+          volumes?: number | null
         }
         Relationships: [
           {
