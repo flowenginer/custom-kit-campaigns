@@ -37,6 +37,7 @@ import Chat from "./pages/admin/Chat";
 import CompanySettings from "./pages/admin/CompanySettings";
 import ProductPricing from "./pages/admin/ProductPricing";
 import Customers from "./pages/admin/Customers";
+import CustomerRegister from "./pages/CustomerRegister";
 
 // Componente para rastrear mudanças de rota em SPAs
 const AnalyticsTracker = () => {
@@ -74,6 +75,7 @@ const App = () => (
           <Route path="/t/:testLink" element={<ABTestRedirect />} />
           <Route path="/c/:uniqueLink" element={<Campaign />} />
           <Route path="/c/:uniqueLink/upload-logos" element={<UploadLogos />} />
+          <Route path="/customer-register/:token" element={<CustomerRegister />} />
           <Route path="/admin" element={<GlobalThemeProvider><AdminLayout /></GlobalThemeProvider>}>
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="traffic" element={<TrafficDashboard />} />

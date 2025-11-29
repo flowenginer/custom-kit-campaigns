@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ShippingQuoteDialog } from "../orders/ShippingQuoteDialog";
 import { BlingExportButton } from "../orders/BlingExportButton";
+import { RequestCustomerRegistrationButton } from "../orders/RequestCustomerRegistrationButton";
 
 interface TaskCardProps {
   task: DesignTask;
@@ -87,7 +88,7 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
   return (
     <div ref={setNodeRef} style={style} {...listeners} {...attributes}>
       <Card 
-        className="border-2 border-amber-400 rounded-xl hover:shadow-lg transition-shadow"
+        className="border-2 border-amber-400 rounded-xl hover:shadow-lg transition-shadow bg-card"
       >
         <Collapsible open={!isCollapsed}>
           {/* Badge flutuante do tipo de criador */}
@@ -103,21 +104,21 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
             {/* Nome do Cliente - largura total com botão de toggle */}
             <div className="relative">
               <div 
-                className="border-2 border-gray-200 rounded-lg px-3 py-2 bg-white text-center shadow-sm cursor-pointer"
+                className="border-2 border-border rounded-lg px-3 py-2 bg-card text-center shadow-sm cursor-pointer"
                 onClick={onClick}
               >
-                <span className="font-bold text-gray-800" style={{ fontSize: `${fontSizes?.customerName || 14}px` }}>{task.customer_name}</span>
+                <span className="font-bold text-card-foreground" style={{ fontSize: `${fontSizes?.customerName || 14}px` }}>{task.customer_name}</span>
                 {/* Campo de número do pedido quando status = approved */}
                 {task.status === 'approved' && onOrderNumberUpdate && (
                   <div className="mt-2 flex items-center justify-center gap-2" onClick={(e) => e.stopPropagation()}>
-                    <span className="text-xs text-gray-600">📝 Pedido:</span>
+                    <span className="text-xs text-muted-foreground">📝 Pedido:</span>
                     <input
                       type="text"
                       placeholder="Digite nº..."
                       value={localOrderNumber}
                       onChange={(e) => setLocalOrderNumber(e.target.value)}
                       onBlur={handleOrderNumberBlur}
-                      className="border border-gray-300 rounded px-2 py-0.5 text-xs w-24 text-center focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="border border-border rounded px-2 py-0.5 text-xs w-24 text-center bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                     />
                   </div>
                 )}
@@ -151,35 +152,35 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
                 {/* COLUNA ESQUERDA */}
                 <div className="space-y-1.5">
                   {/* Segmento/Campanha */}
-                  <div className="border border-gray-200 rounded px-2 py-1.5 bg-white text-center min-h-[36px] flex items-center justify-center">
-                    <span className="font-medium text-gray-700 truncate" style={{ fontSize: `${fontSizes?.segment || 12}px` }}>
+                  <div className="border border-border rounded px-2 py-1.5 bg-card text-center min-h-[36px] flex items-center justify-center">
+                    <span className="font-medium text-card-foreground truncate" style={{ fontSize: `${fontSizes?.segment || 12}px` }}>
                       {task.campaign_name || task.segment_tag || 'N/A'}
                     </span>
                   </div>
 
                   {/* Quantidade */}
-                  <div className="border border-gray-200 rounded px-2 py-1.5 bg-white flex items-center justify-center gap-1 min-h-[36px]">
-                    <Shirt className="h-3.5 w-3.5 text-gray-500" />
-                    <span className="font-medium text-gray-700" style={{ fontSize: `${fontSizes?.quantity || 12}px` }}>{task.quantity} un.</span>
+                  <div className="border border-border rounded px-2 py-1.5 bg-card flex items-center justify-center gap-1 min-h-[36px]">
+                    <Shirt className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="font-medium text-card-foreground" style={{ fontSize: `${fontSizes?.quantity || 12}px` }}>{task.quantity} un.</span>
                   </div>
 
                   {/* Designer */}
-                  <div className="border border-gray-200 rounded px-2 py-1.5 bg-white flex items-center justify-center gap-1.5 min-h-[36px]">
+                  <div className="border border-border rounded px-2 py-1.5 bg-card flex items-center justify-center gap-1.5 min-h-[36px]">
                     {task.designer_name ? (
                       <>
                         <Avatar className="h-5 w-5">
-                          <AvatarFallback className="text-[8px] bg-primary text-white">
+                          <AvatarFallback className="text-[8px] bg-primary text-primary-foreground">
                             {task.designer_initials || '?'}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="font-medium text-gray-700 truncate flex-1" style={{ fontSize: `${fontSizes?.designer || 12}px` }}>
+                        <span className="font-medium text-card-foreground truncate flex-1" style={{ fontSize: `${fontSizes?.designer || 12}px` }}>
                           {task.designer_name.split(' ')[0]}
                         </span>
                       </>
                     ) : (
                       <>
-                        <User className="h-3.5 w-3.5 text-gray-400" />
-                        <span className="text-gray-400" style={{ fontSize: `${fontSizes?.designer || 12}px` }}>N/A</span>
+                        <User className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-muted-foreground" style={{ fontSize: `${fontSizes?.designer || 12}px` }}>N/A</span>
                       </>
                     )}
                   </div>
@@ -193,9 +194,9 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
                 {/* COLUNA CENTRAL */}
                 <div className="space-y-1.5 flex flex-col items-center">
                   {/* Modelo */}
-                  <div className="border border-gray-200 rounded px-2 py-1.5 bg-white flex items-center gap-1 w-full justify-center min-h-[32px]">
+                  <div className="border border-border rounded px-2 py-1.5 bg-card flex items-center gap-1 w-full justify-center min-h-[32px]">
                     <span className="text-base">🎽</span>
-                    <span className="font-medium text-gray-700 truncate" style={{ fontSize: `${fontSizes?.model || 10}px` }}>
+                    <span className="font-medium text-card-foreground truncate" style={{ fontSize: `${fontSizes?.model || 10}px` }}>
                       {task.model_name || 'N/A'}
                     </span>
                   </div>
@@ -210,8 +211,8 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
                       />
                     </div>
                   ) : (
-                    <div className="flex-1 flex items-center justify-center bg-gray-100 rounded w-full">
-                      <Shirt className="h-8 w-8 text-gray-300" />
+                    <div className="flex-1 flex items-center justify-center bg-muted rounded w-full">
+                      <Shirt className="h-8 w-8 text-muted-foreground" />
                     </div>
                   )}
                 </div>
@@ -219,53 +220,66 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
                 {/* COLUNA DIREITA */}
                 <div className="space-y-1.5">
                   {/* Nome do Vendedor */}
-                  <div className="border border-gray-200 rounded px-2 py-1.5 bg-white text-center min-h-[36px] flex items-center justify-center">
+                  <div className="border border-border rounded px-2 py-1.5 bg-card text-center min-h-[36px] flex items-center justify-center">
                     <span className="font-bold text-teal-600 truncate" style={{ fontSize: `${fontSizes?.salesperson || 12}px` }}>
                       {task.creator_name || 'Sistema'}
                     </span>
                   </div>
 
                   {/* Versão */}
-                  <div className="border border-gray-200 rounded px-2 py-1.5 bg-gray-50 text-center min-h-[36px] flex items-center justify-center">
-                    <span className="font-bold text-gray-700" style={{ fontSize: `${fontSizes?.version || 12}px` }}>v{task.current_version || 1}</span>
+                  <div className="border border-border rounded px-2 py-1.5 bg-muted text-center min-h-[36px] flex items-center justify-center">
+                    <span className="font-bold text-card-foreground" style={{ fontSize: `${fontSizes?.version || 12}px` }}>v{task.current_version || 1}</span>
                   </div>
 
                   {/* Timer 1 - Tempo total */}
-                  <div className="border border-gray-200 rounded px-2 py-1.5 bg-white text-center min-h-[36px] flex items-center justify-center">
+                  <div className="border border-border rounded px-2 py-1.5 bg-card text-center min-h-[36px] flex items-center justify-center">
                     <ElapsedTimer since={task.created_at} label="Timer 1" fontSize={fontSizes?.timer} />
                   </div>
 
                   {/* Timer 2 - Tempo no container */}
-                  <div className="border border-gray-200 rounded px-2 py-1.5 bg-white text-center min-h-[36px] flex items-center justify-center">
+                  <div className="border border-border rounded px-2 py-1.5 bg-card text-center min-h-[36px] flex items-center justify-center">
                     <ElapsedTimer since={task.status_changed_at} label="Timer 2" fontSize={fontSizes?.timer} />
                   </div>
                 </div>
               </div>
             </CollapsibleContent>
 
-            {/* Botões de Ação para Approved/Completed */}
-            {(task.status === 'approved' || task.status === 'completed') && !isCollapsed && (
+            {/* Botões de Ação */}
+            {!isCollapsed && (
               <div className="px-3 pb-3 space-y-2">
-                <Button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowShippingDialog(true);
-                  }}
-                  variant="outline"
-                  size="sm"
-                  className="w-full"
-                >
-                  <Truck className="mr-2 h-4 w-4" />
-                  Cotar Frete
-                </Button>
-                
-                <BlingExportButton
-                  taskId={task.id}
-                  orderId={task.order_id}
-                  onExportSuccess={() => {
-                    toast.success("Pedido exportado com sucesso!");
-                  }}
-                />
+                {/* Botão de Solicitar Cadastro - mostrar quando não tem customer_id */}
+                {!task.customer_id && (
+                  <RequestCustomerRegistrationButton
+                    taskId={task.id}
+                    leadId={task.lead_id}
+                  />
+                )}
+
+                {/* Botões para Approved/Completed */}
+                {(task.status === 'approved' || task.status === 'completed') && (
+                  <>
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowShippingDialog(true);
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                    >
+                      <Truck className="mr-2 h-4 w-4" />
+                      Cotar Frete
+                    </Button>
+                    
+                    <BlingExportButton
+                      taskId={task.id}
+                      orderId={task.order_id}
+                      onExportSuccess={() => {
+                        toast.success("Pedido exportado com sucesso!");
+                      }}
+                    />
+                  </>
+                )}
               </div>
             )}
           </CardContent>
