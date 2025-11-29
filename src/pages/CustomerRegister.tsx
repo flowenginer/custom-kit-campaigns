@@ -24,7 +24,7 @@ export default function CustomerRegister() {
     name: "",
     phone: "",
     email: "",
-    person_type: "individual",
+    person_type: "pf",
     cpf: "",
     cnpj: "",
     company_name: "",
@@ -119,7 +119,7 @@ export default function CustomerRegister() {
       case 1:
         return formData.person_type !== "";
       case 2:
-        if (formData.person_type === "individual") {
+        if (formData.person_type === "pf") {
           return formData.name.trim() !== "" && formData.cpf.trim() !== "";
         } else {
           return formData.name.trim() !== "" && formData.cnpj.trim() !== "";
@@ -171,10 +171,10 @@ export default function CustomerRegister() {
           phone: formData.phone.replace(/\D/g, ""),
           email: formData.email || null,
           person_type: formData.person_type,
-          cpf: formData.person_type === "individual" ? formData.cpf : null,
-          cnpj: formData.person_type === "legal" ? formData.cnpj : null,
-          company_name: formData.person_type === "legal" ? formData.company_name : null,
-          state_registration: formData.person_type === "legal" ? formData.state_registration : null,
+          cpf: formData.person_type === "pf" ? formData.cpf : null,
+          cnpj: formData.person_type === "pj" ? formData.cnpj : null,
+          company_name: formData.person_type === "pj" ? formData.company_name : null,
+          state_registration: formData.person_type === "pj" ? formData.state_registration : null,
           birth_date: formData.birth_date || null,
           cep: formData.cep,
           state: formData.state,
@@ -274,7 +274,7 @@ export default function CustomerRegister() {
                     onValueChange={(value) => setFormData({ ...formData, person_type: value })}
                   >
                     <div className="flex items-center space-x-2 border rounded-lg p-4 hover:bg-accent cursor-pointer">
-                      <RadioGroupItem value="individual" id="individual" />
+                      <RadioGroupItem value="pf" id="individual" />
                       <Label htmlFor="individual" className="cursor-pointer flex-1">
                         <div className="font-medium">Pessoa Física</div>
                         <div className="text-sm text-muted-foreground">
@@ -283,7 +283,7 @@ export default function CustomerRegister() {
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2 border rounded-lg p-4 hover:bg-accent cursor-pointer">
-                      <RadioGroupItem value="legal" id="legal" />
+                      <RadioGroupItem value="pj" id="legal" />
                       <Label htmlFor="legal" className="cursor-pointer flex-1">
                         <div className="font-medium">Pessoa Jurídica</div>
                         <div className="text-sm text-muted-foreground">
@@ -301,17 +301,17 @@ export default function CustomerRegister() {
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="name">
-                    {formData.person_type === "individual" ? "Nome Completo" : "Razão Social"} *
+                    {formData.person_type === "pf" ? "Nome Completo" : "Razão Social"} *
                   </Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder={formData.person_type === "individual" ? "Digite seu nome completo" : "Digite a razão social"}
+                    placeholder={formData.person_type === "pf" ? "Digite seu nome completo" : "Digite a razão social"}
                   />
                 </div>
 
-                {formData.person_type === "individual" ? (
+                {formData.person_type === "pf" ? (
                   <>
                     <div>
                       <Label htmlFor="cpf">CPF *</Label>
