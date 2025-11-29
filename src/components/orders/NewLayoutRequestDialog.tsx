@@ -1143,8 +1143,8 @@ export const NewLayoutRequestDialog = ({
 
             {/* Descrição da Logo - apenas quando "criar_logo" */}
             {hasLogo === 'criar_logo' && (
-              <div className="space-y-4 p-4 border-2 border-purple-500 rounded-lg bg-purple-50">
-                <Label className="text-base font-medium text-purple-700">
+              <div className="space-y-4 p-4 border-2 border-purple-500 rounded-lg bg-purple-50 dark:bg-purple-950">
+                <Label className="text-base font-medium text-purple-700 dark:text-purple-300">
                   🎨 Descreva o que o cliente imagina para a logo *
                 </Label>
                 <Textarea
@@ -1152,9 +1152,9 @@ export const NewLayoutRequestDialog = ({
                   onChange={(e) => setLogoDescription(e.target.value)}
                   placeholder="Ex: Logo com cavalo, cores laranja e preto, estilo moderno e esportivo..."
                   rows={4}
-                  className="border-purple-300 focus:border-purple-500 bg-white"
+                  className="border-purple-300 focus:border-purple-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-white dark:border-purple-600"
                 />
-                <p className="text-xs text-purple-600">
+                <p className="text-xs text-purple-600 dark:text-purple-400">
                   Essa descrição será exibida para o designer que vai criar a logo.
                 </p>
               </div>

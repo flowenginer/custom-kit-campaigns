@@ -247,7 +247,7 @@ export const LogoSectionUploader = ({
 
               {/* 🆕 Checkbox para usar mesma logo da frente */}
               {(section.id === 'back' || section.id === 'sleeve-left' || section.id === 'sleeve-right') && (
-                <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-md border border-blue-200">
+                <div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-950 rounded-md border border-blue-200 dark:border-blue-800">
                   <Checkbox 
                     id={`same-front-${section.id}`}
                     checked={section.useSameAsFront || false}
