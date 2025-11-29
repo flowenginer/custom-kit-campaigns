@@ -4,13 +4,15 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DesignTask } from "@/types/design-task";
 import { useDraggable } from '@dnd-kit/core';
-import { Shirt, User, ChevronDown, ChevronUp } from "lucide-react";
+import { Shirt, User, ChevronDown, ChevronUp, Truck, Package } from "lucide-react";
 import { ElapsedTimer } from "./ElapsedTimer";
 import { CardFontSizes } from "@/hooks/useCardFontSizes";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { ShippingQuoteDialog } from "../orders/ShippingQuoteDialog";
+import { BlingExportButton } from "../orders/BlingExportButton";
 
 interface TaskCardProps {
   task: DesignTask;
@@ -42,6 +44,7 @@ const getPriorityConfig = (priority: string) => {
 
 export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onToggleCollapse, onOrderNumberUpdate }: TaskCardProps) => {
   const [localOrderNumber, setLocalOrderNumber] = useState(task.order_number || '');
+  const [showShippingDialog, setShowShippingDialog] = useState(false);
   
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task.id,
@@ -239,8 +242,44 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
                 </div>
               </div>
             </CollapsibleContent>
+
+            {/* Botões de Ação para Approved/Completed */}
+            {(task.status === 'approved' || task.status === 'completed') && !isCollapsed && (
+              <div className="px-3 pb-3 space-y-2">
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowShippingDialog(true);
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                >
+                  <Truck className="mr-2 h-4 w-4" />
+                  Cotar Frete
+                </Button>
+                
+                <BlingExportButton
+                  taskId={task.id}
+                  orderId={task.order_id}
+                  onExportSuccess={() => {
+                    toast.success("Pedido exportado com sucesso!");
+                  }}
+                />
+              </div>
+            )}
           </CardContent>
         </Collapsible>
+
+        <ShippingQuoteDialog
+          open={showShippingDialog}
+          onOpenChange={setShowShippingDialog}
+          taskId={task.id}
+          customerId={task.customer_id || null}
+          onShippingSelected={() => {
+            toast.success("Frete selecionado!");
+          }}
+        />
       </Card>
     </div>
   );

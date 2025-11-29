@@ -21,8 +21,11 @@ export const CustomerWizardDialog = ({
   onSuccess,
   initialPhone,
 }: CustomerWizardDialogProps) => {
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(0); // 0 = busca, 1-4 = wizard
   const [loading, setLoading] = useState(false);
+  const [searchMode, setSearchMode] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
   
   // Etapa 1: Tipo de pessoa
   const [personType, setPersonType] = useState<"fisica" | "juridica">("fisica");
@@ -66,6 +69,45 @@ export const CustomerWizardDialog = ({
     } catch (error) {
       console.error("Error fetching address:", error);
     }
+  };
+
+  const handleSearch = async () => {
+    if (!searchTerm.trim()) {
+      toast.error("Digite um termo para buscar");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .or(`name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%,cpf.ilike.%${searchTerm}%,cnpj.ilike.%${searchTerm}%`)
+        .limit(10);
+
+      if (error) throw error;
+      setSearchResults(data || []);
+
+      if (!data || data.length === 0) {
+        toast.info("Nenhum cliente encontrado");
+      }
+    } catch (error: any) {
+      console.error('Error searching customers:', error);
+      toast.error("Erro ao buscar clientes");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSelectExisting = (customer: any) => {
+    toast.success(`Cliente selecionado: ${customer.name}`);
+    onSuccess();
+    onOpenChange(false);
+  };
+
+  const handleCreateNew = () => {
+    setSearchMode(false);
+    setStep(1);
   };
 
   const handleNext = () => {
@@ -147,7 +189,10 @@ export const CustomerWizardDialog = ({
   };
 
   const resetForm = () => {
-    setStep(1);
+    setStep(0);
+    setSearchMode(true);
+    setSearchTerm("");
+    setSearchResults([]);
     setPersonType("fisica");
     setName("");
     setCompanyName("");
@@ -171,24 +216,71 @@ export const CustomerWizardDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Novo Cliente - Etapa {step} de 4</DialogTitle>
+          <DialogTitle>
+            {searchMode ? "Buscar ou Criar Cliente" : `Novo Cliente - Etapa ${step} de 4`}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Tela de Busca */}
+          {searchMode && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Buscar Cliente Existente</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Nome, telefone, CPF ou CNPJ..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  />
+                  <Button onClick={handleSearch} disabled={loading}>
+                    {loading ? "Buscando..." : "Buscar"}
+                  </Button>
+                </div>
+              </div>
+
+              {searchResults.length > 0 && (
+                <div className="space-y-2 max-h-64 overflow-y-auto border rounded-lg p-2">
+                  {searchResults.map((customer) => (
+                    <div
+                      key={customer.id}
+                      className="p-3 border rounded hover:bg-accent cursor-pointer"
+                      onClick={() => handleSelectExisting(customer)}
+                    >
+                      <p className="font-medium">{customer.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {customer.phone} • {customer.cpf || customer.cnpj}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="pt-4 border-t">
+                <Button onClick={handleCreateNew} variant="outline" className="w-full">
+                  Criar Novo Cliente
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Indicador de progresso */}
-          <div className="flex gap-2">
-            {[1, 2, 3, 4].map((s) => (
-              <div
-                key={s}
-                className={`h-2 flex-1 rounded ${
-                  s <= step ? "bg-primary" : "bg-muted"
-                }`}
-              />
-            ))}
-          </div>
+          {!searchMode && (
+            <div className="flex gap-2">
+              {[1, 2, 3, 4].map((s) => (
+                <div
+                  key={s}
+                  className={`h-2 flex-1 rounded ${
+                    s <= step ? "bg-primary" : "bg-muted"
+                  }`}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Etapa 1: Tipo de Pessoa */}
-          {step === 1 && (
+          {!searchMode && step === 1 && (
             <div className="space-y-4">
               <Label>Tipo de Cliente</Label>
               <RadioGroup value={personType} onValueChange={(v: any) => setPersonType(v)}>
@@ -205,7 +297,7 @@ export const CustomerWizardDialog = ({
           )}
 
           {/* Etapa 2: Dados Pessoais/Empresariais */}
-          {step === 2 && (
+          {!searchMode && step === 2 && (
             <div className="space-y-4">
               <div>
                 <Label htmlFor="name">
@@ -275,7 +367,7 @@ export const CustomerWizardDialog = ({
           )}
 
           {/* Etapa 3: Contato */}
-          {step === 3 && (
+          {!searchMode && step === 3 && (
             <div className="space-y-4">
               <div>
                 <Label htmlFor="phone">Telefone/WhatsApp *</Label>
@@ -309,7 +401,7 @@ export const CustomerWizardDialog = ({
           )}
 
           {/* Etapa 4: Endereço */}
-          {step === 4 && (
+          {!searchMode && step === 4 && (
             <div className="space-y-4">
               <div>
                 <Label htmlFor="cep">CEP *</Label>
