@@ -351,8 +351,8 @@ export default function CustomerRegister() {
                     </Button>
                   </div>
                   {(!formData.name.trim() || !formData.company_name.trim()) && (
-                    <p className="text-xs text-amber-600 dark:text-amber-400">
-                      Preencha o Nome e Nome Fantasia para continuar
+                    <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
+                      Preencha o Nome e Nome Fantasia para escolher o tipo de cadastro
                     </p>
                   )}
                 </div>
