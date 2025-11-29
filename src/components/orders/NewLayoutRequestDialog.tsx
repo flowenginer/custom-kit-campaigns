@@ -682,7 +682,7 @@ export const NewLayoutRequestDialog = ({
           <div className="space-y-4">
             <Label>Campanha *</Label>
             <ScrollArea className="h-[300px]">
-              <div className="grid grid-cols-2 gap-3 pr-4">
+              <div className="grid grid-cols-4 gap-3 pr-4">
                 {campaigns.map((campaign) => (
                   <Card
                     key={campaign.id}
