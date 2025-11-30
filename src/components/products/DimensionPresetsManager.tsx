@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Star } from "lucide-react";
+import { Plus, Trash2, Star, Edit } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
@@ -35,6 +35,7 @@ export function DimensionPresetsManager() {
   const [presets, setPresets] = useState<DimensionPreset[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [editingPreset, setEditingPreset] = useState<DimensionPreset | null>(null);
   
   const [formData, setFormData] = useState({
     model_tag: "",
@@ -65,6 +66,21 @@ export function DimensionPresetsManager() {
     setPresets(data || []);
   };
 
+  const openEditDialog = (preset: DimensionPreset) => {
+    setEditingPreset(preset);
+    setFormData({
+      model_tag: preset.model_tag,
+      name: preset.name,
+      peso: preset.peso,
+      altura: preset.altura,
+      largura: preset.largura,
+      profundidade: preset.profundidade,
+      volumes: preset.volumes,
+      is_default: preset.is_default,
+    });
+    setDialogOpen(true);
+  };
+
   const handleSave = async () => {
     if (!formData.model_tag || !formData.name) {
       toast.error("Preencha tipo e nome");
@@ -82,11 +98,22 @@ export function DimensionPresetsManager() {
           .eq("model_tag", formData.model_tag);
       }
 
-      const { error } = await supabase.from("dimension_presets").insert(formData);
+      if (editingPreset) {
+        // Atualizar preset existente
+        const { error } = await supabase
+          .from("dimension_presets")
+          .update(formData)
+          .eq("id", editingPreset.id);
 
-      if (error) throw error;
+        if (error) throw error;
+        toast.success("Preset atualizado com sucesso!");
+      } else {
+        // Criar novo preset
+        const { error } = await supabase.from("dimension_presets").insert(formData);
+        if (error) throw error;
+        toast.success("Preset criado com sucesso!");
+      }
 
-      toast.success("Preset criado com sucesso!");
       setDialogOpen(false);
       loadPresets();
       resetForm();
@@ -108,6 +135,7 @@ export function DimensionPresetsManager() {
       volumes: 1,
       is_default: false,
     });
+    setEditingPreset(null);
   };
 
   const setAsDefault = async (presetId: string, modelTag: string) => {
@@ -157,10 +185,16 @@ export function DimensionPresetsManager() {
         <div>
           <CardTitle>Pré-cadastro de Dimensões</CardTitle>
           <CardDescription>
-            Configure dimensões padrão por tipo de produto para facilitar o cadastro
+            Configure e edite dimensões padrão por tipo de produto
           </CardDescription>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog 
+          open={dialogOpen} 
+          onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) resetForm();
+          }}
+        >
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
@@ -169,7 +203,9 @@ export function DimensionPresetsManager() {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Criar Preset de Dimensões</DialogTitle>
+              <DialogTitle>
+                {editingPreset ? "Editar Preset" : "Criar Preset de Dimensões"}
+              </DialogTitle>
               <DialogDescription>
                 Configure as dimensões padrão para um tipo de produto
               </DialogDescription>
@@ -262,11 +298,14 @@ export function DimensionPresetsManager() {
             </div>
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              <Button variant="outline" onClick={() => {
+                setDialogOpen(false);
+                resetForm();
+              }}>
                 Cancelar
               </Button>
               <Button onClick={handleSave} disabled={loading}>
-                Salvar Preset
+                {editingPreset ? "Atualizar" : "Salvar"} Preset
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -315,7 +354,14 @@ export function DimensionPresetsManager() {
                       />
                     </Button>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right space-x-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openEditDialog(preset)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="sm"

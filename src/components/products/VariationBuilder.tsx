@@ -8,8 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, X, GripVertical } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Plus, X, GripVertical, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface VariationAttribute {
   id: string;
@@ -30,22 +33,52 @@ interface ShirtModelVariation {
   is_active: boolean;
 }
 
+interface ShirtModel {
+  id: string;
+  name: string;
+  model_tag: string | null;
+  segment_tag: string | null;
+}
+
+interface SelectedAttribute {
+  id: string;
+  name: string;
+  options: string[];
+}
+
 interface VariationBuilderProps {
-  modelId: string;
-  modelName: string;
+  modelId?: string;
+  modelName?: string;
 }
 
 export function VariationBuilder({ modelId, modelName }: VariationBuilderProps) {
   const [attributes, setAttributes] = useState<VariationAttribute[]>([]);
   const [variations, setVariations] = useState<ShirtModelVariation[]>([]);
-  const [selectedAttribute, setSelectedAttribute] = useState<string>("");
-  const [newOptions, setNewOptions] = useState<string[]>([]);
+  const [models, setModels] = useState<ShirtModel[]>([]);
+  
+  // Escopo de aplicação
+  const [scope, setScope] = useState<"single" | "all" | "type" | "segment">(modelId ? "single" : "all");
+  const [selectedModelId, setSelectedModelId] = useState<string>(modelId || "");
+  const [selectedType, setSelectedType] = useState<string>("");
+  const [selectedSegment, setSelectedSegment] = useState<string>("");
+  
+  // Atributos selecionados para mescla
+  const [selectedAttributes, setSelectedAttributes] = useState<SelectedAttribute[]>([]);
+  
+  // Criação de novo atributo
+  const [newAttributeDialog, setNewAttributeDialog] = useState(false);
+  const [newAttributeName, setNewAttributeName] = useState("");
+  const [newAttributeOptions, setNewAttributeOptions] = useState<string[]>([]);
   const [currentInput, setCurrentInput] = useState("");
+  
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     loadAttributes();
-    loadVariations();
+    loadModels();
+    if (modelId) {
+      loadVariations();
+    }
   }, [modelId]);
 
   const loadAttributes = async () => {
@@ -62,7 +95,23 @@ export function VariationBuilder({ modelId, modelName }: VariationBuilderProps) 
     setAttributes(data || []);
   };
 
+  const loadModels = async () => {
+    const { data, error } = await supabase
+      .from("shirt_models")
+      .select("id, name, model_tag, segment_tag")
+      .order("name");
+
+    if (error) {
+      toast.error("Erro ao carregar modelos");
+      return;
+    }
+
+    setModels(data || []);
+  };
+
   const loadVariations = async () => {
+    if (!modelId) return;
+    
     const { data, error } = await supabase
       .from("shirt_model_variations")
       .select("*")
@@ -78,13 +127,13 @@ export function VariationBuilder({ modelId, modelName }: VariationBuilderProps) 
 
   const handleAddOption = () => {
     if (currentInput.trim()) {
-      setNewOptions([...newOptions, currentInput.trim()]);
+      setNewAttributeOptions([...newAttributeOptions, currentInput.trim()]);
       setCurrentInput("");
     }
   };
 
   const handleRemoveOption = (index: number) => {
-    setNewOptions(newOptions.filter((_, i) => i !== index));
+    setNewAttributeOptions(newAttributeOptions.filter((_, i) => i !== index));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -94,38 +143,146 @@ export function VariationBuilder({ modelId, modelName }: VariationBuilderProps) 
     }
   };
 
+  const saveNewAttribute = async () => {
+    if (!newAttributeName || newAttributeOptions.length === 0) {
+      toast.error("Preencha o nome e adicione opções");
+      return;
+    }
+
+    const { error } = await supabase.from("variation_attributes").insert({
+      name: newAttributeName.toUpperCase(),
+      options: newAttributeOptions,
+      is_system: false,
+      display_order: attributes.length + 1,
+    });
+
+    if (error) {
+      toast.error("Erro ao criar atributo");
+      return;
+    }
+
+    toast.success("Atributo criado com sucesso!");
+    setNewAttributeDialog(false);
+    setNewAttributeName("");
+    setNewAttributeOptions([]);
+    loadAttributes();
+  };
+
+  const toggleAttributeSelection = (attribute: VariationAttribute) => {
+    const exists = selectedAttributes.find(a => a.id === attribute.id);
+    if (exists) {
+      setSelectedAttributes(selectedAttributes.filter(a => a.id !== attribute.id));
+    } else {
+      setSelectedAttributes([...selectedAttributes, {
+        id: attribute.id,
+        name: attribute.name,
+        options: [],
+      }]);
+    }
+  };
+
+  const updateAttributeOptions = (attributeId: string, options: string[]) => {
+    setSelectedAttributes(selectedAttributes.map(attr => 
+      attr.id === attributeId ? { ...attr, options } : attr
+    ));
+  };
+
+  const generateCombinations = (arrays: string[][]): string[][] => {
+    if (arrays.length === 0) return [[]];
+    const [first, ...rest] = arrays;
+    const combinations = generateCombinations(rest);
+    return first.flatMap(value => 
+      combinations.map(combo => [value, ...combo])
+    );
+  };
+
+  const getTargetModelIds = async (): Promise<string[]> => {
+    switch (scope) {
+      case "single":
+        return selectedModelId ? [selectedModelId] : [];
+      
+      case "all":
+        const { data: allModels } = await supabase
+          .from("shirt_models")
+          .select("id");
+        return allModels?.map(m => m.id) || [];
+      
+      case "type":
+        const { data: typeModels } = await supabase
+          .from("shirt_models")
+          .select("id")
+          .eq("model_tag", selectedType);
+        return typeModels?.map(m => m.id) || [];
+      
+      case "segment":
+        const { data: segmentModels } = await supabase
+          .from("shirt_models")
+          .select("id")
+          .eq("segment_tag", selectedSegment);
+        return segmentModels?.map(m => m.id) || [];
+      
+      default:
+        return [];
+    }
+  };
+
   const generateVariations = async () => {
-    if (!selectedAttribute || newOptions.length === 0) {
-      toast.error("Selecione um atributo e adicione opções");
+    if (selectedAttributes.length === 0 || selectedAttributes.some(a => a.options.length === 0)) {
+      toast.error("Selecione atributos e adicione opções");
       return;
     }
 
     setLoading(true);
 
     try {
-      const attribute = attributes.find(a => a.id === selectedAttribute);
-      if (!attribute) return;
+      const targetModelIds = await getTargetModelIds();
+      
+      if (targetModelIds.length === 0) {
+        toast.error("Nenhum modelo selecionado");
+        setLoading(false);
+        return;
+      }
 
-      const newVariations = newOptions.map((option, index) => ({
-        model_id: modelId,
-        size: attribute.name === "TAMANHO" ? option : "M",
-        gender: attribute.name === "GÊNERO" ? option : "unissex",
-        sku_suffix: option.toUpperCase().replace(/\s+/g, "_"),
-        price_adjustment: 0,
-        stock_quantity: 0,
-        is_active: true,
-      }));
+      // Gerar produto cartesiano dos atributos
+      const optionsArrays = selectedAttributes.map(attr => attr.options);
+      const combinations = generateCombinations(optionsArrays);
+
+      // Criar variações para cada modelo
+      const allVariations = targetModelIds.flatMap(mId => 
+        combinations.map(combo => {
+          // Mapear cada combinação para size, gender, etc
+          const variation: any = {
+            model_id: mId,
+            size: "M", // Default
+            gender: "unissex", // Default
+            sku_suffix: combo.join("_").toUpperCase().replace(/\s+/g, "_"),
+            price_adjustment: 0,
+            stock_quantity: 0,
+            is_active: true,
+          };
+
+          // Preencher campos baseado nos atributos
+          selectedAttributes.forEach((attr, idx) => {
+            if (attr.name === "TAMANHO") {
+              variation.size = combo[idx];
+            } else if (attr.name === "GÊNERO") {
+              variation.gender = combo[idx];
+            }
+          });
+
+          return variation;
+        })
+      );
 
       const { error } = await supabase
         .from("shirt_model_variations")
-        .insert(newVariations);
+        .insert(allVariations);
 
       if (error) throw error;
 
-      toast.success(`${newVariations.length} variações criadas com sucesso!`);
+      toast.success(`✨ ${allVariations.length} variações criadas com sucesso!`);
       loadVariations();
-      setNewOptions([]);
-      setSelectedAttribute("");
+      setSelectedAttributes([]);
     } catch (error: any) {
       toast.error(`Erro ao criar variações: ${error.message}`);
     } finally {
@@ -163,139 +320,271 @@ export function VariationBuilder({ modelId, modelName }: VariationBuilderProps) 
     toast.success("Variação excluída");
   };
 
+  const totalCombinations = selectedAttributes.reduce((acc, attr) => 
+    acc * (attr.options.length || 1), 1
+  );
+
+  const targetModelsCount = scope === "single" ? 1 : 
+    scope === "all" ? models.length : 
+    scope === "type" ? models.filter(m => m.model_tag === selectedType).length :
+    models.filter(m => m.segment_tag === selectedSegment).length;
+
+  const previewCount = totalCombinations * targetModelsCount;
+
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Criar Variações - {modelName}</CardTitle>
+          <CardTitle>Criar Variações {modelName && `- ${modelName}`}</CardTitle>
           <CardDescription>
-            Adicione variações de tamanho, gênero ou outros atributos ao produto
+            Configure o escopo de aplicação e combine atributos para gerar variações
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid grid-cols-2 gap-6">
-            {/* Container 1 - Tipo de Atributo */}
-            <div className="space-y-4">
-              <div>
-                <Label>Tipo de Atributo</Label>
-                <Select value={selectedAttribute} onValueChange={setSelectedAttribute}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o atributo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {attributes.map((attr) => (
-                      <SelectItem key={attr.id} value={attr.id}>
-                        {attr.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+          {/* Escopo de Aplicação */}
+          <div className="space-y-4 p-4 border rounded-lg bg-muted/20">
+            <Label className="text-base font-semibold">Escopo de Aplicação</Label>
+            <RadioGroup value={scope} onValueChange={(v: any) => setScope(v)} className="space-y-3">
+              {modelId && (
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="single" id="single" />
+                  <Label htmlFor="single" className="cursor-pointer">
+                    Produto específico: <span className="font-semibold">{modelName}</span>
+                  </Label>
+                </div>
+              )}
+              
+              {!modelId && (
+                <>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="all" id="all" />
+                    <Label htmlFor="all" className="cursor-pointer">Todos os produtos</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2 gap-4">
+                    <RadioGroupItem value="type" id="type" />
+                    <Label htmlFor="type" className="cursor-pointer">Por tipo:</Label>
+                    <Select value={selectedType} onValueChange={setSelectedType} disabled={scope !== "type"}>
+                      <SelectTrigger className="w-[200px]">
+                        <SelectValue placeholder="Selecione o tipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from(new Set(models.map(m => m.model_tag).filter(Boolean))).map((tag) => (
+                          <SelectItem key={tag} value={tag!}>{tag}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2 gap-4">
+                    <RadioGroupItem value="segment" id="segment" />
+                    <Label htmlFor="segment" className="cursor-pointer">Por segmento:</Label>
+                    <Select value={selectedSegment} onValueChange={setSelectedSegment} disabled={scope !== "segment"}>
+                      <SelectTrigger className="w-[200px]">
+                        <SelectValue placeholder="Selecione o segmento" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from(new Set(models.map(m => m.segment_tag).filter(Boolean))).map((tag) => (
+                          <SelectItem key={tag} value={tag!}>{tag}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
+            </RadioGroup>
+          </div>
+
+          {/* Atributos */}
+          <div className="space-y-4 p-4 border rounded-lg">
+            <div className="flex items-center justify-between">
+              <Label className="text-base font-semibold">Atributos (selecione múltiplos para mesclar)</Label>
+              <Dialog open={newAttributeDialog} onOpenChange={setNewAttributeDialog}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Criar Atributo
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Criar Novo Atributo</DialogTitle>
+                    <DialogDescription>
+                      Adicione um novo tipo de atributo personalizado
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Nome do Atributo</Label>
+                      <Input
+                        value={newAttributeName}
+                        onChange={(e) => setNewAttributeName(e.target.value)}
+                        placeholder="Ex: COR, ESTAMPA, ACABAMENTO"
+                      />
+                    </div>
+                    <div>
+                      <Label>Opções (pressione Enter)</Label>
+                      <Input
+                        value={currentInput}
+                        onChange={(e) => setCurrentInput(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Digite e pressione Enter..."
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-2 min-h-[80px] p-3 border rounded-md">
+                      {newAttributeOptions.map((option, index) => (
+                        <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                          {option}
+                          <button onClick={() => handleRemoveOption(index)} className="ml-1 hover:text-destructive">
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button onClick={saveNewAttribute}>Salvar Atributo</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
 
-            {/* Container 2 - Opções */}
-            <div className="space-y-4">
-              <div>
-                <Label>Opções (separar com Enter ou Tab)</Label>
-                <Input
-                  value={currentInput}
-                  onChange={(e) => setCurrentInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Digite e pressione Enter..."
-                  disabled={!selectedAttribute}
-                />
-              </div>
-              <div className="flex flex-wrap gap-2 min-h-[100px] p-3 border rounded-md bg-muted/20">
-                {newOptions.map((option, index) => (
-                  <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                    {option}
-                    <button
-                      onClick={() => handleRemoveOption(index)}
-                      className="ml-1 hover:text-destructive"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
+            <div className="space-y-3">
+              {attributes.map((attr) => {
+                const isSelected = selectedAttributes.find(a => a.id === attr.id);
+                return (
+                  <div key={attr.id} className="p-3 border rounded-lg space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        checked={!!isSelected}
+                        onCheckedChange={() => toggleAttributeSelection(attr)}
+                      />
+                      <Label className="cursor-pointer font-medium">{attr.name}</Label>
+                    </div>
+                    {isSelected && (
+                      <div className="ml-6 space-y-2">
+                        <Label className="text-sm text-muted-foreground">Opções disponíveis:</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {attr.options.map((option) => {
+                            const isOptionSelected = isSelected.options.includes(option);
+                            return (
+                              <Badge
+                                key={option}
+                                variant={isOptionSelected ? "default" : "outline"}
+                                className="cursor-pointer"
+                                onClick={() => {
+                                  const newOptions = isOptionSelected
+                                    ? isSelected.options.filter(o => o !== option)
+                                    : [...isSelected.options, option];
+                                  updateAttributeOptions(attr.id, newOptions);
+                                }}
+                              >
+                                {option}
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
+          {/* Preview */}
+          {selectedAttributes.length > 0 && (
+            <div className="p-4 bg-primary/5 border-2 border-primary/20 rounded-lg">
+              <div className="flex items-center gap-2 text-primary">
+                <Sparkles className="h-5 w-5" />
+                <span className="font-semibold">
+                  PRÉVIA: {previewCount} variações serão criadas
+                </span>
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                {totalCombinations} combinações × {targetModelsCount} produtos
+              </p>
+            </div>
+          )}
+
           <Button
             onClick={generateVariations}
-            disabled={loading || !selectedAttribute || newOptions.length === 0}
+            disabled={loading || selectedAttributes.length === 0 || previewCount === 0}
             className="w-full"
+            size="lg"
           >
-            <Plus className="mr-2 h-4 w-4" />
-            Adicionar Variações
+            <Plus className="mr-2 h-5 w-5" />
+            Gerar {previewCount} Variações
           </Button>
         </CardContent>
       </Card>
 
-      {/* Tabela de Variações */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Variações Cadastradas ({variations.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[50px]"></TableHead>
-                <TableHead>Tamanho</TableHead>
-                <TableHead>Gênero</TableHead>
-                <TableHead>SKU Suffix</TableHead>
-                <TableHead>Ajuste Preço</TableHead>
-                <TableHead>Estoque</TableHead>
-                <TableHead>Ativo</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {variations.length === 0 ? (
+      {/* Tabela de Variações - apenas se tiver modelId */}
+      {modelId && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Variações Cadastradas ({variations.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground">
-                    Nenhuma variação cadastrada
-                  </TableCell>
+                  <TableHead className="w-[50px]"></TableHead>
+                  <TableHead>Tamanho</TableHead>
+                  <TableHead>Gênero</TableHead>
+                  <TableHead>SKU Suffix</TableHead>
+                  <TableHead>Ajuste Preço</TableHead>
+                  <TableHead>Estoque</TableHead>
+                  <TableHead>Ativo</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
-              ) : (
-                variations.map((variation) => (
-                  <TableRow key={variation.id}>
-                    <TableCell>
-                      <GripVertical className="h-4 w-4 text-muted-foreground cursor-move" />
-                    </TableCell>
-                    <TableCell className="font-medium">{variation.size}</TableCell>
-                    <TableCell>{variation.gender}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{variation.sku_suffix || "-"}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      {variation.price_adjustment > 0 ? "+" : ""}
-                      {variation.price_adjustment.toFixed(2)}
-                    </TableCell>
-                    <TableCell>{variation.stock_quantity}</TableCell>
-                    <TableCell>
-                      <Switch
-                        checked={variation.is_active}
-                        onCheckedChange={() => toggleVariationStatus(variation.id, variation.is_active)}
-                      />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deleteVariation(variation.id)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+              </TableHeader>
+              <TableBody>
+                {variations.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center text-muted-foreground">
+                      Nenhuma variação cadastrada
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                ) : (
+                  variations.map((variation) => (
+                    <TableRow key={variation.id}>
+                      <TableCell>
+                        <GripVertical className="h-4 w-4 text-muted-foreground cursor-move" />
+                      </TableCell>
+                      <TableCell className="font-medium">{variation.size}</TableCell>
+                      <TableCell>{variation.gender}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{variation.sku_suffix || "-"}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {variation.price_adjustment > 0 ? "+" : ""}
+                        {variation.price_adjustment.toFixed(2)}
+                      </TableCell>
+                      <TableCell>{variation.stock_quantity}</TableCell>
+                      <TableCell>
+                        <Switch
+                          checked={variation.is_active}
+                          onCheckedChange={() => toggleVariationStatus(variation.id, variation.is_active)}
+                        />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteVariation(variation.id)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

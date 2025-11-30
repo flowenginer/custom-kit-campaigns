@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Settings } from "lucide-react";
+import { Settings } from "lucide-react";
 import { toast } from "sonner";
 
 interface ShirtModel {
@@ -18,12 +18,14 @@ interface ShirtModel {
 
 interface ProductListProps {
   onSelectModel: (id: string, name: string) => void;
+  onSwitchToVariations?: () => void;
 }
 
-export default function ProductList({ onSelectModel }: ProductListProps) {
+export default function ProductList({ onSelectModel, onSwitchToVariations }: ProductListProps) {
   const [products, setProducts] = useState<ShirtModel[]>([]);
   const [variationCounts, setVariationCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const [selectedProductId, setSelectedProductId] = useState<string>("");
 
   useEffect(() => {
     loadProducts();
@@ -65,12 +67,23 @@ export default function ProductList({ onSelectModel }: ProductListProps) {
     setVariationCounts(counts);
   };
 
+  const handleSelectProduct = (product: ShirtModel) => {
+    setSelectedProductId(product.id);
+    onSelectModel(product.id, product.name);
+    toast.success(`✅ ${product.name} selecionado`);
+    
+    // Automaticamente mudar para a aba de variações
+    if (onSwitchToVariations) {
+      onSwitchToVariations();
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Produtos Cadastrados</CardTitle>
         <CardDescription>
-          Gerencie os produtos e suas variações
+          Selecione um produto para gerenciar suas variações
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -101,7 +114,10 @@ export default function ProductList({ onSelectModel }: ProductListProps) {
               </TableRow>
             ) : (
               products.map((product) => (
-                <TableRow key={product.id}>
+                <TableRow 
+                  key={product.id}
+                  className={selectedProductId === product.id ? "bg-primary/5" : ""}
+                >
                   <TableCell>
                     <img
                       src={product.photo_main}
@@ -130,9 +146,9 @@ export default function ProductList({ onSelectModel }: ProductListProps) {
                   </TableCell>
                   <TableCell className="text-right space-x-2">
                     <Button
-                      variant="ghost"
+                      variant={selectedProductId === product.id ? "default" : "ghost"}
                       size="sm"
-                      onClick={() => onSelectModel(product.id, product.name)}
+                      onClick={() => handleSelectProduct(product)}
                     >
                       <Settings className="h-4 w-4" />
                     </Button>
