@@ -29,6 +29,8 @@ interface PriceRule {
   is_active: boolean;
   valid_from: string | null;
   valid_until: string | null;
+  affects_base_price: boolean;
+  affects_promotional_price: boolean;
 }
 
 export function PriceRulesManager() {
@@ -55,6 +57,8 @@ export function PriceRulesManager() {
     priority: number;
     valid_from: string;
     valid_until: string;
+    affects_base_price: boolean;
+    affects_promotional_price: boolean;
   }>({
     name: "",
     rule_type: "adjustment",
@@ -70,6 +74,8 @@ export function PriceRulesManager() {
     priority: 0,
     valid_from: "",
     valid_until: "",
+    affects_base_price: false,
+    affects_promotional_price: true,
   });
 
   useEffect(() => {
@@ -141,6 +147,8 @@ export function PriceRulesManager() {
       priority: rule.priority,
       valid_from: rule.valid_from || "",
       valid_until: rule.valid_until || "",
+      affects_base_price: rule.affects_base_price || false,
+      affects_promotional_price: rule.affects_promotional_price !== false,
     });
     setDialogOpen(true);
   };
@@ -170,6 +178,8 @@ export function PriceRulesManager() {
         is_active: true,
         valid_from: formData.valid_from || null,
         valid_until: formData.valid_until || null,
+        affects_base_price: formData.affects_base_price,
+        affects_promotional_price: formData.affects_promotional_price,
       };
 
       if (editingRule) {
@@ -214,6 +224,8 @@ export function PriceRulesManager() {
       priority: 0,
       valid_from: "",
       valid_until: "",
+      affects_base_price: false,
+      affects_promotional_price: true,
     });
     setEditingRule(null);
   };
@@ -343,30 +355,50 @@ export function PriceRulesManager() {
         return;
       }
 
-      // ETAPA 3: Aplicar ajuste nas variações
-      const adjustmentValue = rule.is_percentage 
-        ? null // TODO: calcular percentual baseado no preço base
-        : rule.price_value;
-
+      // ETAPA 3: Aplicar regra conforme configuração
       const UPDATE_BATCH_SIZE = 500;
       let totalUpdated = 0;
 
-      console.log(`[PriceRule] 💰 Aplicando ajuste de ${adjustmentValue} em ${allVariationIds.length} variações...`);
-
-      for (let i = 0; i < allVariationIds.length; i += UPDATE_BATCH_SIZE) {
-        const batch = allVariationIds.slice(i, i + UPDATE_BATCH_SIZE);
-        const { error: updateError } = await supabase
-          .from("shirt_model_variations")
-          .update({ price_adjustment: adjustmentValue })
-          .in("id", batch);
-
-        if (updateError) {
-          console.error(`[PriceRule] ❌ Erro ao atualizar lote ${Math.floor(i / UPDATE_BATCH_SIZE) + 1}:`, updateError);
-          throw updateError;
-        }
+      // Aplicar no preço base do modelo
+      if (rule.affects_base_price && modelIds.length > 0) {
+        console.log(`[PriceRule] 💰 Aplicando no preço base de ${modelIds.length} modelos...`);
         
-        totalUpdated += batch.length;
-        console.log(`[PriceRule] ✓ Lote ${Math.floor(i / UPDATE_BATCH_SIZE) + 1} atualizado: ${batch.length} variações`);
+        for (let i = 0; i < modelIds.length; i += UPDATE_BATCH_SIZE) {
+          const batch = modelIds.slice(i, i + UPDATE_BATCH_SIZE);
+          const { error: updateError } = await supabase
+            .from("shirt_models")
+            .update({ base_price: rule.price_value })
+            .in("id", batch);
+
+          if (updateError) {
+            console.error(`[PriceRule] ❌ Erro ao atualizar base_price:`, updateError);
+            throw updateError;
+          }
+          
+          totalUpdated += batch.length;
+          console.log(`[PriceRule] ✓ Base price atualizado: ${batch.length} modelos`);
+        }
+      }
+
+      // Aplicar no preço promocional das variações
+      if (rule.affects_promotional_price && allVariationIds.length > 0) {
+        console.log(`[PriceRule] 💰 Aplicando preço promocional em ${allVariationIds.length} variações...`);
+
+        for (let i = 0; i < allVariationIds.length; i += UPDATE_BATCH_SIZE) {
+          const batch = allVariationIds.slice(i, i + UPDATE_BATCH_SIZE);
+          const { error: updateError } = await supabase
+            .from("shirt_model_variations")
+            .update({ promotional_price: rule.price_value })
+            .in("id", batch);
+
+          if (updateError) {
+            console.error(`[PriceRule] ❌ Erro ao atualizar lote ${Math.floor(i / UPDATE_BATCH_SIZE) + 1}:`, updateError);
+            throw updateError;
+          }
+          
+          totalUpdated += batch.length;
+          console.log(`[PriceRule] ✓ Lote ${Math.floor(i / UPDATE_BATCH_SIZE) + 1} atualizado: ${batch.length} variações`);
+        }
       }
 
       console.log(`[PriceRule] ✅ Regra aplicada com sucesso! Total: ${totalUpdated} variações`);
@@ -698,6 +730,36 @@ export function PriceRulesManager() {
                   </div>
                 </div>
 
+                {/* Aplicação da Regra */}
+                <div className="p-4 border rounded-lg space-y-3 bg-muted/30">
+                  <Label className="text-base font-semibold">O que essa regra altera?</Label>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={formData.affects_base_price}
+                        onCheckedChange={(checked) => setFormData({ ...formData, affects_base_price: checked })}
+                      />
+                      <Label className="cursor-pointer">Alterar Preço Base do Modelo</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={formData.affects_promotional_price}
+                        onCheckedChange={(checked) => setFormData({ ...formData, affects_promotional_price: checked })}
+                      />
+                      <Label className="cursor-pointer">Definir Preço Promocional nas Variações</Label>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {formData.affects_base_price && formData.affects_promotional_price
+                      ? "⚠️ Atenção: Ambos serão alterados"
+                      : formData.affects_base_price
+                      ? "O preço base do modelo será alterado"
+                      : formData.affects_promotional_price
+                      ? "Um preço promocional será definido nas variações"
+                      : "⚠️ Selecione ao menos uma opção"}
+                  </p>
+                </div>
+
                 {formData.rule_type === "promotion" && (
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -752,6 +814,7 @@ export function PriceRulesManager() {
               <TableHead>Tipo</TableHead>
               <TableHead>Aplicar em</TableHead>
               <TableHead>Valor</TableHead>
+              <TableHead>Afeta</TableHead>
               <TableHead>Prioridade</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Ações</TableHead>
@@ -760,7 +823,7 @@ export function PriceRulesManager() {
           <TableBody>
             {rules.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                <TableCell colSpan={8} className="text-center text-muted-foreground">
                   Nenhuma regra cadastrada
                 </TableCell>
               </TableRow>
@@ -780,6 +843,16 @@ export function PriceRulesManager() {
                         <DollarSign className="h-3 w-3" />
                       )}
                       {rule.price_value.toFixed(2)}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-col gap-1">
+                      {rule.affects_base_price && (
+                        <Badge variant="default" className="text-xs">Preço Base</Badge>
+                      )}
+                      {rule.affects_promotional_price && (
+                        <Badge variant="destructive" className="text-xs">Preço Promo</Badge>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>{rule.priority}</TableCell>

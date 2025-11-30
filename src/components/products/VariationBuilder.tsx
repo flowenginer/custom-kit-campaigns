@@ -29,6 +29,7 @@ interface ShirtModelVariation {
   gender: string;
   sku_suffix: string | null;
   price_adjustment: number;
+  promotional_price: number | null;
   stock_quantity: number;
   is_active: boolean;
 }
@@ -667,6 +668,7 @@ export function VariationBuilder({ modelId, modelName, onClearSelection }: Varia
                   <TableHead>SKU Suffix</TableHead>
                   <TableHead>Preço Base</TableHead>
                   <TableHead>Ajuste</TableHead>
+                  <TableHead>Preço Promo</TableHead>
                   <TableHead>Preço Final</TableHead>
                   <TableHead>Estoque</TableHead>
                   <TableHead>Ativo</TableHead>
@@ -682,7 +684,7 @@ export function VariationBuilder({ modelId, modelName, onClearSelection }: Varia
                   </TableRow>
                 ) : (
                   variations.map((variation) => {
-                    const finalPrice = basePrice + variation.price_adjustment;
+                    const finalPrice = variation.promotional_price || (basePrice + variation.price_adjustment);
                     
                     return (
                       <TableRow key={variation.id}>
@@ -708,6 +710,15 @@ export function VariationBuilder({ modelId, modelName, onClearSelection }: Varia
                             {variation.price_adjustment > 0 ? "+" : ""}
                             {variation.price_adjustment.toFixed(2)}
                           </span>
+                        </TableCell>
+                        <TableCell>
+                          {variation.promotional_price ? (
+                            <span className="font-semibold text-destructive">
+                              R$ {variation.promotional_price.toFixed(2)}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <span className="font-semibold text-primary">
