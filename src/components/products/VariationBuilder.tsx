@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Plus, X, GripVertical, Sparkles } from "lucide-react";
+import { Plus, X, GripVertical, Sparkles, Edit, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
@@ -65,8 +65,9 @@ export function VariationBuilder({ modelId, modelName }: VariationBuilderProps) 
   // Atributos selecionados para mescla
   const [selectedAttributes, setSelectedAttributes] = useState<SelectedAttribute[]>([]);
   
-  // Criação de novo atributo
+  // Criação/edição de atributo
   const [newAttributeDialog, setNewAttributeDialog] = useState(false);
+  const [editingAttribute, setEditingAttribute] = useState<VariationAttribute | null>(null);
   const [newAttributeName, setNewAttributeName] = useState("");
   const [newAttributeOptions, setNewAttributeOptions] = useState<string[]>([]);
   const [currentInput, setCurrentInput] = useState("");
@@ -143,28 +144,56 @@ export function VariationBuilder({ modelId, modelName }: VariationBuilderProps) 
     }
   };
 
+  const openEditAttribute = (attr: VariationAttribute) => {
+    setEditingAttribute(attr);
+    setNewAttributeName(attr.name);
+    setNewAttributeOptions([...attr.options]);
+    setNewAttributeDialog(true);
+  };
+
   const saveNewAttribute = async () => {
     if (!newAttributeName || newAttributeOptions.length === 0) {
       toast.error("Preencha o nome e adicione opções");
       return;
     }
 
-    const { error } = await supabase.from("variation_attributes").insert({
-      name: newAttributeName.toUpperCase(),
-      options: newAttributeOptions,
-      is_system: false,
-      display_order: attributes.length + 1,
-    });
+    if (editingAttribute) {
+      // Atualizar atributo existente
+      const { error } = await supabase
+        .from("variation_attributes")
+        .update({
+          name: newAttributeName.toUpperCase(),
+          options: newAttributeOptions,
+        })
+        .eq("id", editingAttribute.id);
 
-    if (error) {
-      toast.error("Erro ao criar atributo");
-      return;
+      if (error) {
+        toast.error("Erro ao atualizar atributo");
+        return;
+      }
+
+      toast.success("Atributo atualizado com sucesso!");
+    } else {
+      // Criar novo atributo
+      const { error } = await supabase.from("variation_attributes").insert({
+        name: newAttributeName.toUpperCase(),
+        options: newAttributeOptions,
+        is_system: false,
+        display_order: attributes.length + 1,
+      });
+
+      if (error) {
+        toast.error("Erro ao criar atributo");
+        return;
+      }
+
+      toast.success("Atributo criado com sucesso!");
     }
 
-    toast.success("Atributo criado com sucesso!");
     setNewAttributeDialog(false);
     setNewAttributeName("");
     setNewAttributeOptions([]);
+    setEditingAttribute(null);
     loadAttributes();
   };
 
@@ -343,7 +372,29 @@ export function VariationBuilder({ modelId, modelName }: VariationBuilderProps) 
         <CardContent className="space-y-6">
           {/* Escopo de Aplicação */}
           <div className="space-y-4 p-4 border rounded-lg bg-muted/20">
-            <Label className="text-base font-semibold">Escopo de Aplicação</Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-base font-semibold">Escopo de Aplicação</Label>
+              {modelId && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedModelId("");
+                    setScope("all");
+                  }}
+                >
+                  <XCircle className="mr-2 h-4 w-4" />
+                  Limpar Seleção
+                </Button>
+              )}
+            </div>
+
+            {modelId && (
+              <Badge variant="secondary" className="mb-2">
+                {modelName}
+              </Badge>
+            )}
+
             <RadioGroup value={scope} onValueChange={(v: any) => setScope(v)} className="space-y-3">
               {modelId && (
                 <div className="flex items-center space-x-2">
@@ -354,44 +405,42 @@ export function VariationBuilder({ modelId, modelName }: VariationBuilderProps) 
                 </div>
               )}
               
-              {!modelId && (
-                <>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="all" id="all" />
-                    <Label htmlFor="all" className="cursor-pointer">Todos os produtos</Label>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2 gap-4">
-                    <RadioGroupItem value="type" id="type" />
-                    <Label htmlFor="type" className="cursor-pointer">Por tipo:</Label>
-                    <Select value={selectedType} onValueChange={setSelectedType} disabled={scope !== "type"}>
-                      <SelectTrigger className="w-[200px]">
-                        <SelectValue placeholder="Selecione o tipo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from(new Set(models.map(m => m.model_tag).filter(Boolean))).map((tag) => (
-                          <SelectItem key={tag} value={tag!}>{tag}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2 gap-4">
-                    <RadioGroupItem value="segment" id="segment" />
-                    <Label htmlFor="segment" className="cursor-pointer">Por segmento:</Label>
-                    <Select value={selectedSegment} onValueChange={setSelectedSegment} disabled={scope !== "segment"}>
-                      <SelectTrigger className="w-[200px]">
-                        <SelectValue placeholder="Selecione o segmento" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from(new Set(models.map(m => m.segment_tag).filter(Boolean))).map((tag) => (
-                          <SelectItem key={tag} value={tag!}>{tag}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </>
-              )}
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="all" id="all" />
+                <Label htmlFor="all" className="cursor-pointer">
+                  Todos os produtos ({models.length})
+                </Label>
+              </div>
+              
+              <div className="flex items-center space-x-2 gap-4">
+                <RadioGroupItem value="type" id="type" />
+                <Label htmlFor="type" className="cursor-pointer">Por tipo:</Label>
+                <Select value={selectedType} onValueChange={setSelectedType} disabled={scope !== "type"}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from(new Set(models.map(m => m.model_tag).filter(Boolean))).map((tag) => (
+                      <SelectItem key={tag} value={tag!}>{tag}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="flex items-center space-x-2 gap-4">
+                <RadioGroupItem value="segment" id="segment" />
+                <Label htmlFor="segment" className="cursor-pointer">Por segmento:</Label>
+                <Select value={selectedSegment} onValueChange={setSelectedSegment} disabled={scope !== "segment"}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Selecione o segmento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from(new Set(models.map(m => m.segment_tag).filter(Boolean))).map((tag) => (
+                      <SelectItem key={tag} value={tag!}>{tag}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </RadioGroup>
           </div>
 
@@ -408,9 +457,13 @@ export function VariationBuilder({ modelId, modelName }: VariationBuilderProps) 
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Criar Novo Atributo</DialogTitle>
+                    <DialogTitle>
+                      {editingAttribute ? "Editar Atributo" : "Criar Novo Atributo"}
+                    </DialogTitle>
                     <DialogDescription>
-                      Adicione um novo tipo de atributo personalizado
+                      {editingAttribute 
+                        ? "Modifique o nome e as opções do atributo" 
+                        : "Adicione um novo tipo de atributo personalizado"}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
@@ -443,7 +496,17 @@ export function VariationBuilder({ modelId, modelName }: VariationBuilderProps) 
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button onClick={saveNewAttribute}>Salvar Atributo</Button>
+                    <Button variant="outline" onClick={() => {
+                      setNewAttributeDialog(false);
+                      setEditingAttribute(null);
+                      setNewAttributeName("");
+                      setNewAttributeOptions([]);
+                    }}>
+                      Cancelar
+                    </Button>
+                    <Button onClick={saveNewAttribute}>
+                      {editingAttribute ? "Atualizar" : "Salvar"} Atributo
+                    </Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -454,12 +517,23 @@ export function VariationBuilder({ modelId, modelName }: VariationBuilderProps) 
                 const isSelected = selectedAttributes.find(a => a.id === attr.id);
                 return (
                   <div key={attr.id} className="p-3 border rounded-lg space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        checked={!!isSelected}
-                        onCheckedChange={() => toggleAttributeSelection(attr)}
-                      />
-                      <Label className="cursor-pointer font-medium">{attr.name}</Label>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          checked={!!isSelected}
+                          onCheckedChange={() => toggleAttributeSelection(attr)}
+                        />
+                        <Label className="cursor-pointer font-medium">{attr.name}</Label>
+                      </div>
+                      {!attr.is_system && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEditAttribute(attr)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                     {isSelected && (
                       <div className="ml-6 space-y-2">

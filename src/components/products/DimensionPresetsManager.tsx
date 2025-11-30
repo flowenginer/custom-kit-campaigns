@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Star, Edit } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Plus, Trash2, Star, Edit, Package } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
@@ -37,6 +38,14 @@ export function DimensionPresetsManager() {
   const [loading, setLoading] = useState(false);
   const [editingPreset, setEditingPreset] = useState<DimensionPreset | null>(null);
   
+  // Estado para aplicação em massa
+  const [applyDialogOpen, setApplyDialogOpen] = useState(false);
+  const [selectedPresetId, setSelectedPresetId] = useState<string>("");
+  const [applyScope, setApplyScope] = useState<"all" | "type" | "segment" | "combination">("all");
+  const [applyType, setApplyType] = useState<string>("");
+  const [applySegment, setApplySegment] = useState<string>("");
+  const [models, setModels] = useState<any[]>([]);
+  
   const [formData, setFormData] = useState({
     model_tag: "",
     name: "",
@@ -50,7 +59,15 @@ export function DimensionPresetsManager() {
 
   useEffect(() => {
     loadPresets();
+    loadModels();
   }, []);
+
+  const loadModels = async () => {
+    const { data } = await supabase
+      .from("shirt_models")
+      .select("id, name, model_tag, segment_tag");
+    setModels(data || []);
+  };
 
   const loadPresets = async () => {
     const { data, error } = await supabase
@@ -179,15 +196,180 @@ export function DimensionPresetsManager() {
     return MODEL_TAGS.find(t => t.value === tag)?.label || tag;
   };
 
+  const applyDimensions = async () => {
+    if (!selectedPresetId) {
+      toast.error("Selecione um preset");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const selectedPreset = presets.find(p => p.id === selectedPresetId);
+      if (!selectedPreset) throw new Error("Preset não encontrado");
+
+      // Buscar modelos conforme filtro
+      let query = supabase.from("shirt_models").select("id");
+
+      if (applyScope === "type") {
+        query = query.eq("model_tag", applyType);
+      } else if (applyScope === "segment") {
+        query = query.eq("segment_tag", applySegment);
+      } else if (applyScope === "combination") {
+        query = query.eq("model_tag", applyType).eq("segment_tag", applySegment);
+      }
+
+      const { data: targetModels, error: fetchError } = await query;
+      if (fetchError) throw fetchError;
+
+      if (!targetModels || targetModels.length === 0) {
+        toast.error("Nenhum produto encontrado com os filtros selecionados");
+        setLoading(false);
+        return;
+      }
+
+      // Atualizar dimensões
+      const { error: updateError } = await supabase
+        .from("shirt_models")
+        .update({
+          peso: selectedPreset.peso,
+          altura: selectedPreset.altura,
+          largura: selectedPreset.largura,
+          profundidade: selectedPreset.profundidade,
+          volumes: selectedPreset.volumes,
+        })
+        .in("id", targetModels.map(m => m.id));
+
+      if (updateError) throw updateError;
+
+      toast.success(`✅ Dimensões aplicadas em ${targetModels.length} produtos!`);
+      setApplyDialogOpen(false);
+      setSelectedPresetId("");
+    } catch (error: any) {
+      toast.error(`Erro ao aplicar dimensões: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getPreviewCount = () => {
+    if (applyScope === "all") return models.length;
+    if (applyScope === "type") return models.filter(m => m.model_tag === applyType).length;
+    if (applyScope === "segment") return models.filter(m => m.segment_tag === applySegment).length;
+    if (applyScope === "combination") {
+      return models.filter(m => m.model_tag === applyType && m.segment_tag === applySegment).length;
+    }
+    return 0;
+  };
+
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle>Pré-cadastro de Dimensões</CardTitle>
+    <div className="space-y-6">
+      {/* Seção de Aplicar Dimensões */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Aplicar Dimensões em Massa</CardTitle>
           <CardDescription>
-            Configure e edite dimensões padrão por tipo de produto
+            Aplique um preset de dimensões a múltiplos produtos de uma vez
           </CardDescription>
-        </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Preset de Dimensões</Label>
+              <Select value={selectedPresetId} onValueChange={setSelectedPresetId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um preset" />
+                </SelectTrigger>
+                <SelectContent>
+                  {presets.map((preset) => (
+                    <SelectItem key={preset.id} value={preset.id}>
+                      {preset.name} ({getModelTagLabel(preset.model_tag)})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-4 p-4 border rounded-lg bg-muted/20">
+            <Label className="text-base font-semibold">Aplicar em:</Label>
+            <RadioGroup value={applyScope} onValueChange={(v: any) => setApplyScope(v)} className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="all" id="apply-all" />
+                <Label htmlFor="apply-all" className="cursor-pointer">
+                  Todos os produtos ({models.length})
+                </Label>
+              </div>
+              
+              <div className="flex items-center space-x-2 gap-4">
+                <RadioGroupItem value="type" id="apply-type" />
+                <Label htmlFor="apply-type" className="cursor-pointer">Por tipo:</Label>
+                <Select value={applyType} onValueChange={setApplyType} disabled={applyScope !== "type" && applyScope !== "combination"}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MODEL_TAGS.map((tag) => (
+                      <SelectItem key={tag.value} value={tag.value}>
+                        {tag.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="flex items-center space-x-2 gap-4">
+                <RadioGroupItem value="segment" id="apply-segment" />
+                <Label htmlFor="apply-segment" className="cursor-pointer">Por segmento:</Label>
+                <Select value={applySegment} onValueChange={setApplySegment} disabled={applyScope !== "segment" && applyScope !== "combination"}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Selecione o segmento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from(new Set(models.map(m => m.segment_tag).filter(Boolean))).map((tag) => (
+                      <SelectItem key={tag} value={tag!}>{tag}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center space-x-2 gap-4">
+                <RadioGroupItem value="combination" id="apply-combination" />
+                <Label htmlFor="apply-combination" className="cursor-pointer">
+                  Combinação (Tipo + Segmento)
+                </Label>
+              </div>
+            </RadioGroup>
+
+            {getPreviewCount() > 0 && (
+              <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
+                <p className="text-sm font-medium">
+                  Preview: <span className="text-primary">{getPreviewCount()} produtos</span> serão atualizados
+                </p>
+              </div>
+            )}
+          </div>
+
+          <Button 
+            onClick={applyDimensions} 
+            disabled={loading || !selectedPresetId || getPreviewCount() === 0}
+            className="w-full"
+          >
+            <Package className="mr-2 h-4 w-4" />
+            Aplicar Dimensões
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Seção de Gerenciamento de Presets */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Pré-cadastro de Dimensões</CardTitle>
+            <CardDescription>
+              Configure e edite dimensões padrão por tipo de produto
+            </CardDescription>
+          </div>
         <Dialog 
           open={dialogOpen} 
           onOpenChange={(open) => {
@@ -377,5 +559,6 @@ export function DimensionPresetsManager() {
         </Table>
       </CardContent>
     </Card>
+    </div>
   );
 }
