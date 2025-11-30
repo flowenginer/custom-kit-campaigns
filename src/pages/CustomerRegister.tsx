@@ -264,6 +264,17 @@ export default function CustomerRegister() {
       });
       
       if (taskError) throw taskError;
+      
+      // Enviar notificação para o vendedor
+      if (linkData.created_by) {
+        await supabase.rpc('notify_customer_registered', {
+          p_user_id: linkData.created_by,
+          p_task_id: linkData.task_id,
+          p_customer_name: formData.person_type === 'juridica' 
+            ? formData.razao_social || formData.name 
+            : formData.name
+        });
+      }
     }
   };
 

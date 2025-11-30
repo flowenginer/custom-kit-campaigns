@@ -1,6 +1,11 @@
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Building2, User, Phone, Mail, MapPin, Calendar, DollarSign, Package } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Building2, User, Phone, Mail, MapPin, Calendar, DollarSign, Package, Users, UserX, UserCheck } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { TransferCustomerDialog } from "./TransferCustomerDialog";
 
 interface Customer {
   id: string;
@@ -21,6 +26,8 @@ interface Customer {
   total_orders: number;
   total_revenue: number;
   created_at: string;
+  is_active?: boolean;
+  created_by?: string | null;
 }
 
 interface CustomerDetailsDialogProps {
@@ -34,8 +41,36 @@ export const CustomerDetailsDialog = ({
   customer,
   open,
   onOpenChange,
+  onUpdate,
 }: CustomerDetailsDialogProps) => {
+  const [showTransferDialog, setShowTransferDialog] = useState(false);
+  const [loading, setLoading] = useState(false);
+
   if (!customer) return null;
+
+  const toggleCustomerStatus = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from("customers")
+        .update({ is_active: !customer.is_active })
+        .eq("id", customer.id);
+
+      if (error) throw error;
+
+      toast.success(
+        customer.is_active
+          ? "Cliente desativado com sucesso!"
+          : "Cliente reativado com sucesso!"
+      );
+      onUpdate();
+    } catch (error) {
+      console.error("Error toggling customer status:", error);
+      toast.error("Erro ao atualizar status do cliente");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -148,8 +183,49 @@ export const CustomerDetailsDialog = ({
               </p>
             </div>
           </div>
+
+          {/* Ações de Gerenciamento */}
+          <div className="flex gap-2 pt-4 border-t">
+            <Button
+              variant="outline"
+              onClick={() => setShowTransferDialog(true)}
+              disabled={loading}
+            >
+              <Users className="mr-2 h-4 w-4" />
+              Transferir para Vendedor
+            </Button>
+
+            <Button
+              variant={customer.is_active ? "destructive" : "default"}
+              onClick={toggleCustomerStatus}
+              disabled={loading}
+            >
+              {customer.is_active ? (
+                <>
+                  <UserX className="mr-2 h-4 w-4" />
+                  Desativar Cliente
+                </>
+              ) : (
+                <>
+                  <UserCheck className="mr-2 h-4 w-4" />
+                  Reativar Cliente
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </DialogContent>
+
+      <TransferCustomerDialog
+        open={showTransferDialog}
+        onOpenChange={setShowTransferDialog}
+        customerId={customer.id}
+        currentSalespersonId={customer.created_by || null}
+        onTransferSuccess={() => {
+          onUpdate();
+          setShowTransferDialog(false);
+        }}
+      />
     </Dialog>
   );
 };
