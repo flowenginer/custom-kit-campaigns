@@ -611,7 +611,7 @@ export function PriceRulesManager() {
                         >
                           {gender === "Masculino" ? "♂ Masculino" : 
                            gender === "Feminino" ? "♀ Feminino" : 
-                           gender === "Infantil" ? "👶 Infantil" : gender}
+                           "👶 Infantil"}
                         </Badge>
                       ))}
                     </div>
