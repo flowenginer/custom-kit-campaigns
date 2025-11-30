@@ -38,6 +38,7 @@ import CompanySettings from "./pages/admin/CompanySettings";
 import ProductPricing from "./pages/admin/ProductPricing";
 import Customers from "./pages/admin/Customers";
 import CustomerRegister from "./pages/CustomerRegister";
+import Products from "./pages/admin/Products";
 
 // Componente para rastrear mudanças de rota em SPAs
 const AnalyticsTracker = () => {
@@ -83,6 +84,7 @@ const App = () => (
             <Route path="production-ranking" element={<ProductionRanking />} />
             <Route path="segments" element={<Segments />} />
             <Route path="models" element={<Models />} />
+            <Route path="products" element={<Products />} />
             <Route path="campaigns" element={<Campaigns />} />
             <Route path="leads" element={<Leads />} />
             <Route path="workflows" element={<Workflows />} />
