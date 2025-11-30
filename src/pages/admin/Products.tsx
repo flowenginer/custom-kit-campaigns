@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
 import { Package, Settings, DollarSign, Ruler } from "lucide-react";
 import { VariationBuilder } from "@/components/products/VariationBuilder";
 import { PriceRulesManager } from "@/components/products/PriceRulesManager";
 import { DimensionPresetsManager } from "@/components/products/DimensionPresetsManager";
+import { BulkVariationCreator } from "@/components/products/BulkVariationCreator";
 import ProductList from "./ProductList";
 
 export default function Products() {
@@ -66,7 +68,16 @@ export default function Products() {
               onClearSelection={handleClearSelection}
             />
           ) : (
-            <VariationBuilder />
+            <div className="space-y-4">
+              <BulkVariationCreator />
+              <Card>
+                <CardContent className="flex items-center justify-center py-8">
+                  <p className="text-muted-foreground">
+                    Ou selecione um produto na aba "Lista de Produtos" para gerenciar suas variações individuais
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
           )}
         </TabsContent>
 
