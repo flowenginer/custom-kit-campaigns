@@ -2249,6 +2249,10 @@ export type Database = {
         Args: { p_cnpj?: string; p_cpf?: string }
         Returns: Json
       }
+      complete_customer_registration: {
+        Args: { p_customer_id: string; p_token: string }
+        Returns: undefined
+      }
       get_user_roles: {
         Args: { _user_id: string }
         Returns: {
