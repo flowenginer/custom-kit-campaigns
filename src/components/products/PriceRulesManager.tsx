@@ -222,16 +222,14 @@ export function PriceRulesManager() {
     setLoading(true);
     
     try {
-      let query = supabase.from("shirt_model_variations").select("id, model_id");
+      console.log(`[PriceRule] 🎯 Aplicando regra: ${rule.name}`);
+      console.log(`[PriceRule] Tipo: ${rule.apply_to}`, rule);
+      
       let modelIds: string[] = [];
       
-      // Filtrar por escopo
-      if (rule.apply_to === "size" && rule.sizes.length > 0) {
-        query = query.in("size", rule.sizes);
-      } else if (rule.apply_to === "gender" && rule.genders.length > 0) {
-        query = query.in("gender", rule.genders);
-      } else if (rule.apply_to === "custom_combination") {
-        // Filtrar por tipos selecionados
+      // ETAPA 1: Buscar modelos que atendem aos critérios
+      if (rule.apply_to === "custom_combination") {
+        // Filtrar por tipos (model_tags) se houver
         if (rule.model_tags?.length > 0) {
           const { data: models } = await supabase
             .from("shirt_models")
@@ -239,6 +237,7 @@ export function PriceRulesManager() {
             .in("model_tag", rule.model_tags);
           if (models?.length) {
             modelIds = models.map(m => m.id);
+            console.log(`[PriceRule] ✓ Modelos por tipo (${rule.model_tags.join(",")}): ${modelIds.length}`);
           }
         }
         
@@ -253,81 +252,127 @@ export function PriceRulesManager() {
               // Intersecção dos filtros
               const segmentIds = models.map(m => m.id);
               modelIds = modelIds.filter(id => segmentIds.includes(id));
+              console.log(`[PriceRule] ✓ Após filtro de segmento: ${modelIds.length} modelos`);
             } else {
               modelIds = models.map(m => m.id);
+              console.log(`[PriceRule] ✓ Modelos por segmento (${rule.segment_tags.join(",")}): ${modelIds.length}`);
             }
           }
         }
-        
-        // Aplicar filtro de modelos se houver
-        if (modelIds.length > 0) {
-          query = query.in("model_id", modelIds);
-        }
-        
-        // Filtrar por tamanhos
-        if (rule.sizes?.length > 0) {
-          query = query.in("size", rule.sizes);
-        }
-        
-        // Filtrar por gêneros
-        if (rule.genders?.length > 0) {
-          query = query.in("gender", rule.genders);
-        }
       } else if (rule.apply_to === "segment" && rule.segment_tag) {
-        // Buscar modelos do segmento
         const { data: models } = await supabase
           .from("shirt_models")
           .select("id")
           .eq("segment_tag", rule.segment_tag);
         
-        if (models && models.length > 0) {
-          query = query.in("model_id", models.map(m => m.id));
+        if (models?.length) {
+          modelIds = models.map(m => m.id);
+          console.log(`[PriceRule] ✓ Modelos do segmento ${rule.segment_tag}: ${modelIds.length}`);
         }
       } else if (rule.apply_to === "model_tag" && rule.model_tag) {
-        // Buscar modelos do tipo
         const { data: models } = await supabase
           .from("shirt_models")
           .select("id")
           .eq("model_tag", rule.model_tag);
         
-        if (models && models.length > 0) {
-          query = query.in("model_id", models.map(m => m.id));
+        if (models?.length) {
+          modelIds = models.map(m => m.id);
+          console.log(`[PriceRule] ✓ Modelos do tipo ${rule.model_tag}: ${modelIds.length}`);
         }
       }
       
-      const { data: variations, error: fetchError } = await query;
+      // ETAPA 2: Buscar variações em lotes (evita URL muito longa)
+      let allVariationIds: string[] = [];
       
-      if (fetchError) throw fetchError;
-      if (!variations || variations.length === 0) {
+      if (rule.apply_to === "size" && rule.sizes.length > 0) {
+        // Apenas filtro de tamanho (sem modelos específicos)
+        let query = supabase.from("shirt_model_variations").select("id");
+        query = query.in("size", rule.sizes);
+        const { data } = await query;
+        if (data) allVariationIds = data.map(v => v.id);
+        console.log(`[PriceRule] ✓ Variações por tamanho: ${allVariationIds.length}`);
+      } else if (rule.apply_to === "gender" && rule.genders.length > 0) {
+        // Apenas filtro de gênero (sem modelos específicos)
+        let query = supabase.from("shirt_model_variations").select("id");
+        query = query.in("gender", rule.genders);
+        const { data } = await query;
+        if (data) allVariationIds = data.map(v => v.id);
+        console.log(`[PriceRule] ✓ Variações por gênero: ${allVariationIds.length}`);
+      } else if (modelIds.length > 0) {
+        // Processar modelos em lotes de 50
+        const MODEL_BATCH_SIZE = 50;
+        console.log(`[PriceRule] 🔄 Buscando variações de ${modelIds.length} modelos em lotes de ${MODEL_BATCH_SIZE}...`);
+        
+        for (let i = 0; i < modelIds.length; i += MODEL_BATCH_SIZE) {
+          const modelBatch = modelIds.slice(i, i + MODEL_BATCH_SIZE);
+          let batchQuery = supabase
+            .from("shirt_model_variations")
+            .select("id");
+          
+          batchQuery = batchQuery.in("model_id", modelBatch);
+          
+          // Aplicar filtros adicionais
+          if (rule.sizes?.length > 0) {
+            batchQuery = batchQuery.in("size", rule.sizes);
+          }
+          
+          if (rule.genders?.length > 0) {
+            batchQuery = batchQuery.in("gender", rule.genders);
+          }
+          
+          const { data: batchVariations, error: batchError } = await batchQuery;
+          
+          if (batchError) {
+            console.error(`[PriceRule] ❌ Erro no lote ${i / MODEL_BATCH_SIZE + 1}:`, batchError);
+            throw batchError;
+          }
+          
+          if (batchVariations?.length) {
+            allVariationIds.push(...batchVariations.map(v => v.id));
+          }
+          
+          console.log(`[PriceRule] ✓ Lote ${Math.floor(i / MODEL_BATCH_SIZE) + 1}: ${batchVariations?.length || 0} variações`);
+        }
+      }
+      
+      console.log(`[PriceRule] 📊 Total de variações encontradas: ${allVariationIds.length}`);
+      
+      if (allVariationIds.length === 0) {
         toast.error("Nenhuma variação encontrada para aplicar a regra");
         setLoading(false);
         return;
       }
 
-      // Aplicar ajuste
+      // ETAPA 3: Aplicar ajuste nas variações
       const adjustmentValue = rule.is_percentage 
         ? null // TODO: calcular percentual baseado no preço base
         : rule.price_value;
 
-      // Processar em lotes de 500 para evitar erro de URL muito longa
-      const BATCH_SIZE = 500;
-      const variationIds = variations.map(v => v.id);
+      const UPDATE_BATCH_SIZE = 500;
       let totalUpdated = 0;
 
-      for (let i = 0; i < variationIds.length; i += BATCH_SIZE) {
-        const batch = variationIds.slice(i, i + BATCH_SIZE);
+      console.log(`[PriceRule] 💰 Aplicando ajuste de ${adjustmentValue} em ${allVariationIds.length} variações...`);
+
+      for (let i = 0; i < allVariationIds.length; i += UPDATE_BATCH_SIZE) {
+        const batch = allVariationIds.slice(i, i + UPDATE_BATCH_SIZE);
         const { error: updateError } = await supabase
           .from("shirt_model_variations")
           .update({ price_adjustment: adjustmentValue })
           .in("id", batch);
 
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.error(`[PriceRule] ❌ Erro ao atualizar lote ${Math.floor(i / UPDATE_BATCH_SIZE) + 1}:`, updateError);
+          throw updateError;
+        }
+        
         totalUpdated += batch.length;
+        console.log(`[PriceRule] ✓ Lote ${Math.floor(i / UPDATE_BATCH_SIZE) + 1} atualizado: ${batch.length} variações`);
       }
 
+      console.log(`[PriceRule] ✅ Regra aplicada com sucesso! Total: ${totalUpdated} variações`);
       toast.success(`✅ Regra aplicada a ${totalUpdated} variações!`);
     } catch (error: any) {
-      console.error("Erro ao aplicar regra:", error);
+      console.error("[PriceRule] ❌ Erro ao aplicar regra:", error);
       toast.error(`Erro ao aplicar regra: ${error.message || 'Erro desconhecido'}`);
     } finally {
       setLoading(false);
