@@ -14,6 +14,7 @@ interface ShirtModel {
   model_tag: string | null;
   segment_tag: string | null;
   photo_main: string;
+  image_front: string;
   base_price: number | null;
 }
 
@@ -209,9 +210,9 @@ export default function ProductList({ onSelectModel, onSwitchToVariations }: Pro
                   className={selectedProductId === product.id ? "bg-primary/5" : ""}
                 >
                   <TableCell>
-                    <img
-                      src={product.photo_main}
-                      alt={product.name}
+                  <img
+                    src={product.image_front || product.photo_main}
+                    alt={product.name}
                       className="w-12 h-12 object-cover rounded"
                     />
                   </TableCell>

@@ -16,7 +16,7 @@ interface PriceRule {
   id: string;
   name: string;
   rule_type: "fixed" | "adjustment" | "promotion";
-  apply_to: "all" | "segment" | "model_tag" | "size" | "gender";
+  apply_to: "all" | "segment" | "model_tag" | "size" | "gender" | "custom_combination";
   segment_tag: string | null;
   model_tag: string | null;
   sizes: string[];
@@ -34,11 +34,12 @@ export function PriceRulesManager() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [editingRule, setEditingRule] = useState<PriceRule | null>(null);
+  const [availableSizes, setAvailableSizes] = useState<string[]>([]);
   
   const [formData, setFormData] = useState<{
     name: string;
     rule_type: "fixed" | "adjustment" | "promotion";
-    apply_to: "all" | "segment" | "model_tag" | "size" | "gender";
+    apply_to: "all" | "segment" | "model_tag" | "size" | "gender" | "custom_combination";
     segment_tag: string;
     model_tag: string;
     sizes: string[];
@@ -65,7 +66,20 @@ export function PriceRulesManager() {
 
   useEffect(() => {
     loadRules();
+    loadSizes();
   }, []);
+
+  const loadSizes = async () => {
+    const { data } = await supabase
+      .from("variation_attributes")
+      .select("options")
+      .eq("name", "TAMANHO")
+      .single();
+    
+    if (data?.options) {
+      setAvailableSizes(data.options);
+    }
+  };
 
   const loadRules = async () => {
     const { data, error } = await supabase
@@ -180,6 +194,13 @@ export function PriceRulesManager() {
         query = query.in("size", rule.sizes);
       } else if (rule.apply_to === "gender" && rule.genders.length > 0) {
         query = query.in("gender", rule.genders);
+      } else if (rule.apply_to === "custom_combination") {
+        if (rule.sizes.length > 0) {
+          query = query.in("size", rule.sizes);
+        }
+        if (rule.genders.length > 0) {
+          query = query.in("gender", rule.genders);
+        }
       } else if (rule.apply_to === "segment" && rule.segment_tag) {
         // Buscar modelos do segmento
         const { data: models } = await supabase
@@ -289,6 +310,7 @@ export function PriceRulesManager() {
       case "model_tag": return "Tipo";
       case "size": return "Tamanhos";
       case "gender": return "Gênero";
+      case "custom_combination": return "Combinação Personalizada";
       default: return applyTo;
     }
   };
@@ -299,6 +321,15 @@ export function PriceRulesManager() {
       genders: formData.genders.includes(gender)
         ? formData.genders.filter(g => g !== gender)
         : [...formData.genders, gender]
+    });
+  };
+
+  const toggleSize = (size: string) => {
+    setFormData({
+      ...formData,
+      sizes: formData.sizes.includes(size)
+        ? formData.sizes.filter(s => s !== size)
+        : [...formData.sizes, size]
     });
   };
 
@@ -388,26 +419,36 @@ export function PriceRulesManager() {
                         <SelectItem value="model_tag">Por Tipo</SelectItem>
                         <SelectItem value="size">Por Tamanhos</SelectItem>
                         <SelectItem value="gender">Por Gênero</SelectItem>
+                        <SelectItem value="custom_combination">Combinação Personalizada</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
 
-                {formData.apply_to === "size" && (
+                {(formData.apply_to === "size" || formData.apply_to === "custom_combination") && (
                   <div>
-                    <Label>Tamanhos (separe com vírgula)</Label>
-                    <Input
-                      value={formData.sizes.join(", ")}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        sizes: e.target.value.split(",").map(s => s.trim()).filter(Boolean)
-                      })}
-                      placeholder="Ex: G1, G2, G3, G4, G5"
-                    />
+                    <Label>Tamanhos</Label>
+                    <div className="flex flex-wrap gap-2 mt-2 max-h-40 overflow-y-auto p-2 border rounded-md">
+                      {availableSizes.map((size) => (
+                        <Badge
+                          key={size}
+                          variant={formData.sizes.includes(size) ? "default" : "outline"}
+                          className="cursor-pointer hover:bg-primary/90 transition-colors"
+                          onClick={() => toggleSize(size)}
+                        >
+                          {size}
+                        </Badge>
+                      ))}
+                    </div>
+                    {formData.sizes.length > 0 && (
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Selecionados: {formData.sizes.join(", ")}
+                      </p>
+                    )}
                   </div>
                 )}
 
-                {formData.apply_to === "gender" && (
+                {(formData.apply_to === "gender" || formData.apply_to === "custom_combination") && (
                   <div>
                     <Label>Gêneros</Label>
                     <div className="flex flex-wrap gap-2 mt-2">
@@ -415,7 +456,7 @@ export function PriceRulesManager() {
                         <Badge
                           key={gender}
                           variant={formData.genders.includes(gender) ? "default" : "outline"}
-                          className="cursor-pointer hover:bg-primary/90"
+                          className="cursor-pointer hover:bg-primary/90 transition-colors"
                           onClick={() => toggleGender(gender)}
                         >
                           {gender === "masculino" ? "♂ Masculino" : 
@@ -423,6 +464,11 @@ export function PriceRulesManager() {
                         </Badge>
                       ))}
                     </div>
+                    {formData.genders.length > 0 && (
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Selecionados: {formData.genders.join(", ")}
+                      </p>
+                    )}
                   </div>
                 )}
 
