@@ -6,8 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, CheckCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, CheckCircle, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function CustomerRegister() {
   const { token } = useParams();
@@ -19,6 +29,8 @@ export default function CustomerRegister() {
   const [currentStep, setCurrentStep] = useState(1);
   const [cepLoading, setCepLoading] = useState(false);
   const [noCompany, setNoCompany] = useState(false);
+  const [existingCustomer, setExistingCustomer] = useState<any>(null);
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -154,6 +166,104 @@ export default function CustomerRegister() {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
+  // Verificar se cliente já existe por CPF ou CNPJ
+  const checkExistingCustomer = async () => {
+    const cpf = formData.person_type === "pf" ? formData.cpf.replace(/\D/g, "") : null;
+    const cnpj = formData.person_type === "pj" ? formData.cnpj.replace(/\D/g, "") : null;
+    
+    if (!cpf && !cnpj) return null;
+    
+    let query = supabase.from("customers").select("*");
+    
+    if (cpf) {
+      query = query.eq("cpf", cpf);
+    } else if (cnpj) {
+      query = query.eq("cnpj", cnpj);
+    }
+    
+    const { data } = await query.maybeSingle();
+    return data;
+  };
+
+  // Atualizar cadastro existente
+  const handleUpdateExisting = async () => {
+    setShowDuplicateDialog(false);
+    setSubmitting(true);
+
+    try {
+      const { error: updateError } = await supabase
+        .from("customers")
+        .update({
+          name: formData.person_type === "pj" ? formData.razao_social : formData.name,
+          phone: formData.phone.replace(/\D/g, ""),
+          email: formData.email || null,
+          company_name: formData.company_name,
+          state_registration: formData.person_type === "pj" ? formData.state_registration : null,
+          birth_date: formData.birth_date || null,
+          cep: formData.cep,
+          state: formData.state,
+          city: formData.city,
+          neighborhood: formData.neighborhood,
+          street: formData.street,
+          number: formData.number,
+          complement: formData.complement || null,
+        })
+        .eq("id", existingCustomer.id);
+
+      if (updateError) throw updateError;
+
+      // Atualizar link e task
+      await updateLinkAndTask(existingCustomer.id);
+      
+      setCompleted(true);
+      toast.success("Cadastro atualizado com sucesso!");
+    } catch (error: any) {
+      console.error("Erro ao atualizar:", error);
+      toast.error("Erro ao atualizar cadastro: " + error.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Usar cadastro existente sem modificar
+  const handleUseExisting = async () => {
+    setShowDuplicateDialog(false);
+    setSubmitting(true);
+
+    try {
+      await updateLinkAndTask(existingCustomer.id);
+      setCompleted(true);
+      toast.success("Cadastro vinculado com sucesso!");
+    } catch (error: any) {
+      console.error("Erro ao vincular:", error);
+      toast.error("Erro ao vincular cadastro: " + error.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Atualizar link e task com customer_id
+  const updateLinkAndTask = async (customerId: string) => {
+    // Atualizar link como usado
+    const { error: linkError } = await supabase
+      .from("customer_registration_links")
+      .update({
+        used_at: new Date().toISOString(),
+        customer_id: customerId,
+      })
+      .eq("id", linkData.id);
+
+    if (linkError) throw linkError;
+
+    // Atualizar task com customer_id
+    if (linkData.task_id) {
+      await supabase
+        .from("design_tasks")
+        .update({ customer_id: customerId })
+        .eq("id", linkData.task_id);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -165,7 +275,17 @@ export default function CustomerRegister() {
     setSubmitting(true);
 
     try {
-      // Criar cliente
+      // Verificar se cliente já existe
+      const existing = await checkExistingCustomer();
+      
+      if (existing) {
+        setExistingCustomer(existing);
+        setShowDuplicateDialog(true);
+        setSubmitting(false);
+        return;
+      }
+
+      // Criar cliente novo
       const { data: customer, error: customerError } = await supabase
         .from("customers")
         .insert({
@@ -191,24 +311,8 @@ export default function CustomerRegister() {
 
       if (customerError) throw customerError;
 
-      // Atualizar link como usado
-      const { error: linkError } = await supabase
-        .from("customer_registration_links")
-        .update({
-          used_at: new Date().toISOString(),
-          customer_id: customer.id,
-        })
-        .eq("id", linkData.id);
-
-      if (linkError) throw linkError;
-
-      // Atualizar task com customer_id
-      if (linkData.task_id) {
-        await supabase
-          .from("design_tasks")
-          .update({ customer_id: customer.id })
-          .eq("id", linkData.task_id);
-      }
+      // Atualizar link e task
+      await updateLinkAndTask(customer.id);
 
       setCompleted(true);
       toast.success("Cadastro realizado com sucesso!");
@@ -583,6 +687,54 @@ export default function CustomerRegister() {
           </form>
         </CardContent>
       </Card>
+
+      {/* Diálogo de Cliente Duplicado */}
+      <AlertDialog open={showDuplicateDialog} onOpenChange={setShowDuplicateDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-2 mb-2">
+              <AlertCircle className="h-5 w-5 text-amber-500" />
+              <AlertDialogTitle>Cliente Já Cadastrado</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                Já existe um cadastro com este {formData.person_type === "pf" ? "CPF" : "CNPJ"}:
+              </p>
+              <div className="bg-muted p-3 rounded-md space-y-1 text-sm">
+                <p><strong>Nome:</strong> {existingCustomer?.name}</p>
+                {existingCustomer?.company_name && (
+                  <p><strong>Nome Fantasia:</strong> {existingCustomer.company_name}</p>
+                )}
+                <p><strong>Telefone:</strong> {existingCustomer?.phone}</p>
+              </div>
+              <p className="pt-2">
+                O que você deseja fazer?
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel onClick={() => setSubmitting(false)}>
+              Cancelar
+            </AlertDialogCancel>
+            <Button
+              variant="outline"
+              onClick={handleUseExisting}
+              disabled={submitting}
+            >
+              {submitting ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : null}
+              Usar Cadastro Existente
+            </Button>
+            <AlertDialogAction onClick={handleUpdateExisting} disabled={submitting}>
+              {submitting ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : null}
+              Atualizar Meu Cadastro
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
