@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { BirthDatePicker } from "@/components/ui/birth-date-picker";
 import { Loader2, CheckCircle, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -493,11 +494,10 @@ export default function CustomerRegister() {
                     </div>
                     <div>
                       <Label htmlFor="birth_date">Data de Nascimento</Label>
-                      <Input
+                      <BirthDatePicker
                         id="birth_date"
-                        type="date"
                         value={formData.birth_date}
-                        onChange={(e) => setFormData({ ...formData, birth_date: e.target.value })}
+                        onChange={(value) => setFormData({ ...formData, birth_date: value })}
                       />
                     </div>
                   </>
