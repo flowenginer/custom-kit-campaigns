@@ -2200,6 +2200,10 @@ export type Database = {
         Returns: undefined
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      update_task_customer_id: {
+        Args: { p_customer_id: string; p_task_id: string }
+        Returns: undefined
+      }
       user_created_conversation: { Args: { conv_id: string }; Returns: boolean }
       user_is_participant: { Args: { conv_id: string }; Returns: boolean }
     }
