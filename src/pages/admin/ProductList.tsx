@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Settings } from "lucide-react";
@@ -26,6 +27,13 @@ export default function ProductList({ onSelectModel, onSwitchToVariations }: Pro
   const [variationCounts, setVariationCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
+  
+  // Filtros
+  const [filterType, setFilterType] = useState<string>("all");
+  const [filterSegment, setFilterSegment] = useState<string>("all");
+  const [searchText, setSearchText] = useState<string>("");
+  const [availableTypes, setAvailableTypes] = useState<string[]>([]);
+  const [availableSegments, setAvailableSegments] = useState<string[]>([]);
 
   useEffect(() => {
     loadProducts();
@@ -55,16 +63,46 @@ export default function ProductList({ onSelectModel, onSwitchToVariations }: Pro
   const loadVariationCounts = async (modelIds: string[]) => {
     const { data, error } = await supabase
       .from("shirt_model_variations")
-      .select("model_id")
+      .select("model_id, id")
       .in("model_id", modelIds);
 
-    if (error) return;
+    if (error) {
+      console.error("Erro ao carregar variações:", error);
+      return;
+    }
 
+    // Inicializar todos com 0
     const counts: Record<string, number> = {};
+    modelIds.forEach(id => counts[id] = 0);
+    
+    // Contar variações
     data?.forEach(v => {
       counts[v.model_id] = (counts[v.model_id] || 0) + 1;
     });
+    
     setVariationCounts(counts);
+  };
+
+  // Carregar opções de filtro
+  useEffect(() => {
+    const types = [...new Set(products.map(p => p.model_tag).filter(Boolean))] as string[];
+    const segments = [...new Set(products.map(p => p.segment_tag).filter(Boolean))] as string[];
+    setAvailableTypes(types);
+    setAvailableSegments(segments);
+  }, [products]);
+
+  // Filtrar produtos
+  const filteredProducts = products.filter(product => {
+    if (filterType !== "all" && product.model_tag !== filterType) return false;
+    if (filterSegment !== "all" && product.segment_tag !== filterSegment) return false;
+    if (searchText && !product.name.toLowerCase().includes(searchText.toLowerCase())) return false;
+    return true;
+  });
+
+  const clearFilters = () => {
+    setFilterType("all");
+    setFilterSegment("all");
+    setSearchText("");
   };
 
   const handleSelectProduct = (product: ShirtModel) => {
@@ -87,6 +125,58 @@ export default function ProductList({ onSelectModel, onSwitchToVariations }: Pro
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {/* Filtros */}
+        <div className="mb-6 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label>Tipo</Label>
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="all">Todos os Tipos</option>
+                {availableTypes.map(type => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <Label>Segmento</Label>
+              <select
+                value={filterSegment}
+                onChange={(e) => setFilterSegment(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="all">Todos os Segmentos</option>
+                {availableSegments.map(segment => (
+                  <option key={segment} value={segment}>{segment}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <Label>Pesquisar</Label>
+              <input
+                type="text"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                placeholder="Buscar por nome..."
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <Button variant="outline" size="sm" onClick={clearFilters}>
+              Limpar Filtros
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Mostrando {filteredProducts.length} de {products.length} produtos
+            </span>
+          </div>
+        </div>
         <Table>
           <TableHeader>
             <TableRow>
@@ -113,7 +203,7 @@ export default function ProductList({ onSelectModel, onSwitchToVariations }: Pro
                 </TableCell>
               </TableRow>
             ) : (
-              products.map((product) => (
+              filteredProducts.map((product) => (
                 <TableRow 
                   key={product.id}
                   className={selectedProductId === product.id ? "bg-primary/5" : ""}
