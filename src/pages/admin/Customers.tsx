@@ -56,16 +56,18 @@ export default function Customers() {
             full_name
           )
         `)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
+      
       setCustomers((data || []).map(c => ({
         ...c,
         person_type: c.person_type as 'fisica' | 'juridica',
         total_orders: c.total_orders || 0,
         total_revenue: c.total_revenue || 0,
         is_active: c.is_active ?? true,
-        salesperson_name: (c.profiles as any)?.full_name || null,
+        salesperson_name: Array.isArray(c.profiles) ? c.profiles[0]?.full_name : (c.profiles as any)?.full_name || null,
       })));
     } catch (error) {
       console.error("Error loading customers:", error);

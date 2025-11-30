@@ -6,6 +6,7 @@ import { Building2, User, Phone, Mail, MapPin, Calendar, DollarSign, Package, Us
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { TransferCustomerDialog } from "./TransferCustomerDialog";
+import { DeleteCustomerDialog } from "./DeleteCustomerDialog";
 
 interface Customer {
   id: string;
@@ -212,6 +213,15 @@ export const CustomerDetailsDialog = ({
                 </>
               )}
             </Button>
+
+            <DeleteCustomerDialog
+              customerId={customer.id}
+              customerName={customer.name}
+              onSuccess={() => {
+                onOpenChange(false);
+                onUpdate();
+              }}
+            />
           </div>
         </div>
       </DialogContent>
