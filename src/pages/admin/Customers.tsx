@@ -51,21 +51,24 @@ export default function Customers() {
       const { data, error } = await supabase
         .from("customers")
         .select("*")
-        .is("deleted_at", null)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       
-      // Buscar nomes dos vendedores separadamente
+      // Buscar nomes dos vendedores separadamente se houver clientes com created_by
       const customerIds = (data || []).map(c => c.created_by).filter(Boolean);
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, full_name")
-        .in("id", customerIds);
-
-      const profilesMap = new Map(
-        (profiles || []).map(p => [p.id, p.full_name])
-      );
+      
+      let profilesMap = new Map();
+      if (customerIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", customerIds);
+        
+        profilesMap = new Map(
+          (profiles || []).map(p => [p.id, p.full_name])
+        );
+      }
       
       setCustomers((data || []).map(c => ({
         ...c,
