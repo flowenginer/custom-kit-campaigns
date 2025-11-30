@@ -309,16 +309,26 @@ export function PriceRulesManager() {
         ? null // TODO: calcular percentual baseado no preço base
         : rule.price_value;
 
-      const { error: updateError } = await supabase
-        .from("shirt_model_variations")
-        .update({ price_adjustment: adjustmentValue })
-        .in("id", variations.map(v => v.id));
+      // Processar em lotes de 500 para evitar erro de URL muito longa
+      const BATCH_SIZE = 500;
+      const variationIds = variations.map(v => v.id);
+      let totalUpdated = 0;
 
-      if (updateError) throw updateError;
+      for (let i = 0; i < variationIds.length; i += BATCH_SIZE) {
+        const batch = variationIds.slice(i, i + BATCH_SIZE);
+        const { error: updateError } = await supabase
+          .from("shirt_model_variations")
+          .update({ price_adjustment: adjustmentValue })
+          .in("id", batch);
 
-      toast.success(`✅ Regra aplicada a ${variations.length} variações!`);
+        if (updateError) throw updateError;
+        totalUpdated += batch.length;
+      }
+
+      toast.success(`✅ Regra aplicada a ${totalUpdated} variações!`);
     } catch (error: any) {
-      toast.error(`Erro ao aplicar regra: ${error.message}`);
+      console.error("Erro ao aplicar regra:", error);
+      toast.error(`Erro ao aplicar regra: ${error.message || 'Erro desconhecido'}`);
     } finally {
       setLoading(false);
     }
