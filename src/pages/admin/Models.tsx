@@ -121,6 +121,9 @@ const Models = () => {
   const [bulkUploading, setBulkUploading] = useState(false);
   const [bulkProgress, setBulkProgress] = useState(0);
   const [bulkCurrentModel, setBulkCurrentModel] = useState("");
+  const [bulkBasePrice, setBulkBasePrice] = useState("");
+  const [bulkApplyDimensions, setBulkApplyDimensions] = useState(true);
+  const [defaultDimensionPreset, setDefaultDimensionPreset] = useState<any>(null);
 
   // Estados para seleção múltipla
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
@@ -144,6 +147,27 @@ const Models = () => {
     const savedView = localStorage.getItem('models-view-mode');
     if (savedView) setViewMode(savedView as ViewMode);
   }, []);
+
+  // Buscar dimension_presets quando bulkModelTag mudar
+  useEffect(() => {
+    if (!bulkModelTag) {
+      setDefaultDimensionPreset(null);
+      return;
+    }
+    
+    const loadDimensionPreset = async () => {
+      const { data: preset } = await supabase
+        .from("dimension_presets")
+        .select("*")
+        .eq("model_tag", bulkModelTag)
+        .eq("is_default", true)
+        .maybeSingle();
+      
+      setDefaultDimensionPreset(preset || null);
+    };
+    
+    loadDimensionPreset();
+  }, [bulkModelTag]);
 
   const setAndSaveViewMode = (mode: ViewMode) => {
     setViewMode(mode);
@@ -308,6 +332,23 @@ const Models = () => {
     }
   };
 
+  // Gerar SKU automático
+  const generateSKU = (modelTag: string, segmentTag: string, modelNumber: string): string => {
+    const typeAbbrev: Record<string, string> = {
+      'manga_curta': 'MC',
+      'manga_longa': 'ML',
+      'regata': 'REG',
+      'ziper': 'ZIP',
+      'ziper_manga_longa': 'ZIP-ML',
+    };
+    
+    const typeCode = typeAbbrev[modelTag] || modelTag.substring(0, 3).toUpperCase();
+    const segmentCode = segmentTag.substring(0, 4).toUpperCase();
+    const numberPadded = modelNumber.padStart(3, '0');
+    
+    return `${typeCode}-${segmentCode}-${numberPadded}`;
+  };
+
   const processBulkFiles = (files: FileList) => {
     const grouped: Record<string, Record<string, File>> = {};
     const errors: string[] = [];
@@ -417,20 +458,41 @@ const Models = () => {
           const selectedSegment = segments.find((s: any) => s.id === bulkSegmentId);
           const segmentTag = selectedSegment?.segment_tag || "";
           
+          // Gerar SKU automático
+          const generatedSKU = generateSKU(bulkModelTag, segmentTag, modelNumber);
+          
+          // Preparar dados do modelo
+          const modelData: any = {
+            name: `Modelo ${modelNumber}`,
+            segment_tag: segmentTag,
+            model_tag: bulkModelTag,
+            segment_id: bulkSegmentId,
+            sku: generatedSKU,
+            photo_main: "temp",
+            image_front: "temp",
+            image_back: "temp",
+            image_right: "temp",
+            image_left: "temp",
+          };
+          
+          // Adicionar preço base se fornecido
+          if (bulkBasePrice && parseFloat(bulkBasePrice) > 0) {
+            modelData.base_price = parseFloat(bulkBasePrice);
+          }
+          
+          // Aplicar dimensões padrão se checkbox marcado
+          if (bulkApplyDimensions && defaultDimensionPreset) {
+            modelData.peso = defaultDimensionPreset.peso;
+            modelData.altura = defaultDimensionPreset.altura;
+            modelData.largura = defaultDimensionPreset.largura;
+            modelData.profundidade = defaultDimensionPreset.profundidade;
+            modelData.volumes = defaultDimensionPreset.volumes;
+          }
+          
           // Criar modelo no banco
           const { data: model, error: insertError } = await supabase
             .from("shirt_models")
-            .insert({
-              name: `Modelo ${modelNumber}`,
-              segment_tag: segmentTag,
-              model_tag: bulkModelTag,
-              segment_id: bulkSegmentId,
-              photo_main: "temp",
-              image_front: "temp",
-              image_back: "temp",
-              image_right: "temp",
-              image_left: "temp",
-            })
+            .insert(modelData)
             .select()
             .single();
           
@@ -491,6 +553,8 @@ const Models = () => {
           
           if (updateError) throw updateError;
           
+          // Nota: Criação de variações automáticas será implementada quando a tabela variation_attributes estiver disponível
+          
           successCount++;
         } catch (error: any) {
           console.error(`Erro ao criar modelo ${modelNumber}:`, error);
@@ -517,6 +581,8 @@ const Models = () => {
       setBulkGroupedModels({});
       setBulkSegmentId("");
       setBulkModelTag("");
+      setBulkBasePrice("");
+      setBulkApplyDimensions(true);
       
     } catch (error: any) {
       toast.error("Erro no upload em massa: " + error.message);
@@ -1908,6 +1974,100 @@ const Models = () => {
                     </SelectContent>
                   </Select>
                 </div>
+                
+                {/* NOVAS OPÇÕES */}
+                <div className="border-t pt-4 space-y-4">
+                  <h3 className="font-semibold text-sm">Configurações Adicionais (Opcional)</h3>
+                  
+                  {/* Preço Base */}
+                  <div className="space-y-2">
+                    <Label htmlFor="bulkBasePrice">Preço Base (R$)</Label>
+                    <Input
+                      id="bulkBasePrice"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={bulkBasePrice}
+                      onChange={(e) => setBulkBasePrice(e.target.value)}
+                      placeholder="39.90"
+                      disabled={bulkUploading}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Será aplicado a todos os modelos criados
+                    </p>
+                  </div>
+                  
+                  {/* Aplicar Dimensões Padrão */}
+                  <div className="flex items-start space-x-3">
+                    <Checkbox
+                      id="bulkApplyDimensions"
+                      checked={bulkApplyDimensions}
+                      onCheckedChange={(checked) => setBulkApplyDimensions(checked as boolean)}
+                      disabled={bulkUploading || !defaultDimensionPreset}
+                    />
+                    <div className="space-y-1">
+                      <Label htmlFor="bulkApplyDimensions" className="cursor-pointer">
+                        Aplicar dimensões padrão do tipo ({bulkModelTag || 'selecione um tipo'})
+                      </Label>
+                      {defaultDimensionPreset && (
+                        <p className="text-xs text-muted-foreground">
+                          Peso: {defaultDimensionPreset.peso}kg | 
+                          Alt: {defaultDimensionPreset.altura}cm | 
+                          Larg: {defaultDimensionPreset.largura}cm | 
+                          Prof: {defaultDimensionPreset.profundidade}cm
+                        </p>
+                      )}
+                      {!defaultDimensionPreset && bulkModelTag && (
+                        <p className="text-xs text-amber-600">
+                          ⚠️ Nenhum preset padrão encontrado para este tipo
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Criar Variações Automáticas - Temporariamente desabilitado */}
+                  <div className="space-y-3 opacity-50">
+                    <div className="flex items-start space-x-3">
+                      <Checkbox
+                        id="bulkCreateVariations"
+                        checked={false}
+                        disabled={true}
+                      />
+                      <div>
+                        <Label htmlFor="bulkCreateVariations" className="cursor-not-allowed text-muted-foreground">
+                          Criar variações automáticas
+                        </Label>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Em breve: Essa funcionalidade estará disponível após configurar atributos de variações
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Preview do SKU */}
+                  {bulkModelTag && bulkSegmentId && Object.keys(bulkGroupedModels).length > 0 && (
+                    <div className="bg-muted p-3 rounded">
+                      <p className="text-xs font-medium mb-1">SKU será gerado automaticamente:</p>
+                      <p className="text-xs font-mono">
+                        {(() => {
+                          const selectedSegment = segments.find((s: any) => s.id === bulkSegmentId);
+                          const segmentTag = selectedSegment?.segment_tag || "";
+                          const firstModel = Object.keys(bulkGroupedModels).sort()[0];
+                          const typeAbbrev: Record<string, string> = {
+                            'manga_curta': 'MC',
+                            'manga_longa': 'ML',
+                            'regata': 'REG',
+                            'ziper': 'ZIP',
+                            'ziper_manga_longa': 'ZIP-ML',
+                          };
+                          const typeCode = typeAbbrev[bulkModelTag] || bulkModelTag.substring(0, 3).toUpperCase();
+                          const segmentCode = segmentTag.substring(0, 4).toUpperCase();
+                          return `${typeCode}-${segmentCode}-${firstModel.padStart(3, '0')}`;
+                        })()}, ...
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
             
@@ -1938,6 +2098,8 @@ const Models = () => {
                   setBulkGroupedModels({});
                   setBulkSegmentId("");
                   setBulkModelTag("");
+                  setBulkBasePrice("");
+                  setBulkApplyDimensions(true);
                 }}
                 disabled={bulkUploading}
                 className="flex-1"
