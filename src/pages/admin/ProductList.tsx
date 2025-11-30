@@ -36,7 +36,7 @@ export default function ProductList({ onSelectModel, onSwitchToVariations }: Pro
   const [products, setProducts] = useState<ShirtModel[]>([]);
   const [variationCounts, setVariationCounts] = useState<Record<string, number>>({});
   const [stockCounts, setStockCounts] = useState<Record<string, number>>({});
-  const [priceRanges, setPriceRanges] = useState<Record<string, { min: number; max: number }>>({});
+  const [promotionalPrices, setPromotionalPrices] = useState<Record<string, number | null>>({});
   const [loading, setLoading] = useState(true);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
@@ -104,7 +104,7 @@ export default function ProductList({ onSelectModel, onSwitchToVariations }: Pro
   const loadStockAndPrices = async (modelIds: string[]) => {
     const { data, error } = await supabase
       .from("shirt_model_variations")
-      .select("model_id, stock_quantity, price_adjustment")
+      .select("model_id, stock_quantity, promotional_price")
       .in("model_id", modelIds);
 
     if (error) {
@@ -113,25 +113,24 @@ export default function ProductList({ onSelectModel, onSwitchToVariations }: Pro
     }
 
     const stocks: Record<string, number> = {};
-    const prices: Record<string, { min: number; max: number }> = {};
+    const promoPrice: Record<string, number | null> = {};
     
     modelIds.forEach(id => {
       stocks[id] = 0;
-      prices[id] = { min: Infinity, max: -Infinity };
+      promoPrice[id] = null;
     });
 
     data?.forEach(v => {
       stocks[v.model_id] = (stocks[v.model_id] || 0) + v.stock_quantity;
       
-      const basePrice = products.find(p => p.id === v.model_id)?.base_price || 0;
-      const finalPrice = basePrice + v.price_adjustment;
-      
-      if (finalPrice < prices[v.model_id].min) prices[v.model_id].min = finalPrice;
-      if (finalPrice > prices[v.model_id].max) prices[v.model_id].max = finalPrice;
+      // Pegar o menor preço promocional (se houver)
+      if (v.promotional_price && (!promoPrice[v.model_id] || v.promotional_price < promoPrice[v.model_id]!)) {
+        promoPrice[v.model_id] = v.promotional_price;
+      }
     });
 
     setStockCounts(stocks);
-    setPriceRanges(prices);
+    setPromotionalPrices(promoPrice);
   };
 
   // Carregar opções de filtro
@@ -280,7 +279,7 @@ export default function ProductList({ onSelectModel, onSwitchToVariations }: Pro
               <TableHead>SKU</TableHead>
               <TableHead>Tipo/Segmento</TableHead>
               <TableHead>Preço Base</TableHead>
-              <TableHead>Faixa de Preço</TableHead>
+              <TableHead>Preço Promocional</TableHead>
               <TableHead>
                 <Package className="inline h-4 w-4 mr-1" />
                 Estoque
@@ -304,7 +303,7 @@ export default function ProductList({ onSelectModel, onSwitchToVariations }: Pro
               </TableRow>
             ) : (
               filteredProducts.map((product) => {
-                const priceRange = priceRanges[product.id];
+                const promoPrice = promotionalPrices[product.id];
                 const stock = stockCounts[product.id] || 0;
                 
                 return (
@@ -352,10 +351,14 @@ export default function ProductList({ onSelectModel, onSwitchToVariations }: Pro
                       )}
                     </TableCell>
                     <TableCell>
-                      {priceRange && priceRange.min !== Infinity ? (
-                        <div className="text-xs">
-                          <div>Min: R$ {priceRange.min.toFixed(2)}</div>
-                          <div>Max: R$ {priceRange.max.toFixed(2)}</div>
+                      {promoPrice ? (
+                        <div className="flex flex-col gap-1">
+                          <span className="text-sm font-semibold text-destructive">
+                            R$ {promoPrice.toFixed(2)}
+                          </span>
+                          <Badge variant="destructive" className="text-xs w-fit">
+                            PROMOÇÃO
+                          </Badge>
                         </div>
                       ) : (
                         <span className="text-muted-foreground text-xs">-</span>
