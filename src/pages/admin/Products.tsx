@@ -17,6 +17,11 @@ export default function Products() {
     setActiveTab("variations");
   };
 
+  const handleClearSelection = () => {
+    setSelectedModelId("");
+    setSelectedModelName("");
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -58,6 +63,7 @@ export default function Products() {
             <VariationBuilder
               modelId={selectedModelId}
               modelName={selectedModelName}
+              onClearSelection={handleClearSelection}
             />
           ) : (
             <VariationBuilder />

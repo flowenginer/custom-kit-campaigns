@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Plus, X, GripVertical, Sparkles, Edit, XCircle } from "lucide-react";
+import { Plus, X, GripVertical, Sparkles, Edit, XCircle, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
@@ -49,9 +49,10 @@ interface SelectedAttribute {
 interface VariationBuilderProps {
   modelId?: string;
   modelName?: string;
+  onClearSelection?: () => void;
 }
 
-export function VariationBuilder({ modelId, modelName }: VariationBuilderProps) {
+export function VariationBuilder({ modelId, modelName, onClearSelection }: VariationBuilderProps) {
   const [attributes, setAttributes] = useState<VariationAttribute[]>([]);
   const [variations, setVariations] = useState<ShirtModelVariation[]>([]);
   const [models, setModels] = useState<ShirtModel[]>([]);
@@ -71,6 +72,10 @@ export function VariationBuilder({ modelId, modelName }: VariationBuilderProps) 
   const [newAttributeName, setNewAttributeName] = useState("");
   const [newAttributeOptions, setNewAttributeOptions] = useState<string[]>([]);
   const [currentInput, setCurrentInput] = useState("");
+  
+  // Exclusão de atributo
+  const [deleteAttributeDialog, setDeleteAttributeDialog] = useState(false);
+  const [attributeToDelete, setAttributeToDelete] = useState<VariationAttribute | null>(null);
   
   const [loading, setLoading] = useState(false);
 
@@ -149,6 +154,30 @@ export function VariationBuilder({ modelId, modelName }: VariationBuilderProps) 
     setNewAttributeName(attr.name);
     setNewAttributeOptions([...attr.options]);
     setNewAttributeDialog(true);
+  };
+
+  const confirmDeleteAttribute = (attr: VariationAttribute) => {
+    setAttributeToDelete(attr);
+    setDeleteAttributeDialog(true);
+  };
+
+  const deleteAttribute = async () => {
+    if (!attributeToDelete) return;
+
+    const { error } = await supabase
+      .from("variation_attributes")
+      .delete()
+      .eq("id", attributeToDelete.id);
+
+    if (error) {
+      toast.error("Erro ao excluir atributo");
+      return;
+    }
+
+    toast.success("Atributo excluído com sucesso!");
+    setDeleteAttributeDialog(false);
+    setAttributeToDelete(null);
+    loadAttributes();
   };
 
   const saveNewAttribute = async () => {
@@ -381,6 +410,7 @@ export function VariationBuilder({ modelId, modelName }: VariationBuilderProps) 
                   onClick={() => {
                     setSelectedModelId("");
                     setScope("all");
+                    onClearSelection?.();
                   }}
                 >
                   <XCircle className="mr-2 h-4 w-4" />
@@ -525,7 +555,7 @@ export function VariationBuilder({ modelId, modelName }: VariationBuilderProps) 
                         />
                         <Label className="cursor-pointer font-medium">{attr.name}</Label>
                       </div>
-                      {!attr.is_system && (
+                      <div className="flex items-center gap-1">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -533,7 +563,16 @@ export function VariationBuilder({ modelId, modelName }: VariationBuilderProps) 
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                      )}
+                        {!attr.is_system && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => confirmDeleteAttribute(attr)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     {isSelected && (
                       <div className="ml-6 space-y-2">
@@ -659,6 +698,30 @@ export function VariationBuilder({ modelId, modelName }: VariationBuilderProps) 
           </CardContent>
         </Card>
       )}
+
+      {/* Dialog de confirmação de exclusão */}
+      <Dialog open={deleteAttributeDialog} onOpenChange={setDeleteAttributeDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Exclusão</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir o atributo <strong>{attributeToDelete?.name}</strong>?
+              Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setDeleteAttributeDialog(false);
+              setAttributeToDelete(null);
+            }}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={deleteAttribute}>
+              Excluir Atributo
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
