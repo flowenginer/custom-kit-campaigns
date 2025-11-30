@@ -25,7 +25,6 @@ interface PriceRule {
   genders: string[];
   price_value: number;
   is_percentage: boolean;
-  priority: number;
   is_active: boolean;
   valid_from: string | null;
   valid_until: string | null;
@@ -54,7 +53,6 @@ export function PriceRulesManager() {
     genders: string[];
     price_value: number;
     is_percentage: boolean;
-    priority: number;
     valid_from: string;
     valid_until: string;
     affects_base_price: boolean;
@@ -71,7 +69,6 @@ export function PriceRulesManager() {
     genders: [],
     price_value: 0,
     is_percentage: false,
-    priority: 0,
     valid_from: "",
     valid_until: "",
     affects_base_price: false,
@@ -144,7 +141,6 @@ export function PriceRulesManager() {
       genders: rule.genders || [],
       price_value: rule.price_value,
       is_percentage: rule.is_percentage,
-      priority: rule.priority,
       valid_from: rule.valid_from || "",
       valid_until: rule.valid_until || "",
       affects_base_price: rule.affects_base_price || false,
@@ -174,7 +170,6 @@ export function PriceRulesManager() {
         genders: formData.genders,
         price_value: formData.price_value,
         is_percentage: formData.is_percentage,
-        priority: formData.priority,
         is_active: true,
         valid_from: formData.valid_from || null,
         valid_until: formData.valid_until || null,
@@ -221,7 +216,6 @@ export function PriceRulesManager() {
       genders: [],
       price_value: 0,
       is_percentage: false,
-      priority: 0,
       valid_from: "",
       valid_until: "",
       affects_base_price: false,
@@ -606,7 +600,7 @@ export function PriceRulesManager() {
                 Nova Regra
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
               <DialogHeader>
                 <DialogTitle>
                   {editingRule ? "Editar Regra de Preço" : "Criar Regra de Preço"}
@@ -618,7 +612,7 @@ export function PriceRulesManager() {
                 </DialogDescription>
               </DialogHeader>
               
-              <div className="grid gap-4">
+              <div className="grid gap-4 overflow-y-auto pr-2">
                 <div>
                   <Label>Nome da Regra</Label>
                   <Input
@@ -831,15 +825,6 @@ export function PriceRulesManager() {
                     </div>
                   </div>
                 )}
-
-                <div>
-                  <Label>Prioridade (0 = baixa, 100 = alta)</Label>
-                  <Input
-                    type="number"
-                    value={formData.priority}
-                    onChange={(e) => setFormData({ ...formData, priority: parseInt(e.target.value) || 0 })}
-                  />
-                </div>
               </div>
 
               <DialogFooter>
@@ -866,7 +851,6 @@ export function PriceRulesManager() {
               <TableHead>Aplicar em</TableHead>
               <TableHead>Valor</TableHead>
               <TableHead>Afeta</TableHead>
-              <TableHead>Prioridade</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -874,7 +858,7 @@ export function PriceRulesManager() {
           <TableBody>
             {rules.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground">
+                <TableCell colSpan={7} className="text-center text-muted-foreground">
                   Nenhuma regra cadastrada
                 </TableCell>
               </TableRow>
@@ -906,7 +890,6 @@ export function PriceRulesManager() {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>{rule.priority}</TableCell>
                   <TableCell>
                     <Switch
                       checked={rule.is_active}
