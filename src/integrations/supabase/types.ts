@@ -1047,6 +1047,45 @@ export type Database = {
           },
         ]
       }
+      dimension_presets: {
+        Row: {
+          altura: number | null
+          created_at: string | null
+          id: string
+          is_default: boolean | null
+          largura: number | null
+          model_tag: string
+          name: string
+          peso: number | null
+          profundidade: number | null
+          volumes: number | null
+        }
+        Insert: {
+          altura?: number | null
+          created_at?: string | null
+          id?: string
+          is_default?: boolean | null
+          largura?: number | null
+          model_tag: string
+          name: string
+          peso?: number | null
+          profundidade?: number | null
+          volumes?: number | null
+        }
+        Update: {
+          altura?: number | null
+          created_at?: string | null
+          id?: string
+          is_default?: boolean | null
+          largura?: number | null
+          model_tag?: string
+          name?: string
+          peso?: number | null
+          profundidade?: number | null
+          volumes?: number | null
+        }
+        Relationships: []
+      }
       erp_exports: {
         Row: {
           created_at: string | null
@@ -1780,6 +1819,57 @@ export type Database = {
           },
         ]
       }
+      price_rules: {
+        Row: {
+          apply_to: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          is_percentage: boolean | null
+          model_tag: string | null
+          name: string
+          price_value: number
+          priority: number | null
+          rule_type: string
+          segment_tag: string | null
+          sizes: string[] | null
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          apply_to: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_percentage?: boolean | null
+          model_tag?: string | null
+          name: string
+          price_value: number
+          priority?: number | null
+          rule_type: string
+          segment_tag?: string | null
+          sizes?: string[] | null
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          apply_to?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_percentage?: boolean | null
+          model_tag?: string | null
+          name?: string
+          price_value?: number
+          priority?: number | null
+          rule_type?: string
+          segment_tag?: string | null
+          sizes?: string[] | null
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
       product_prices: {
         Row: {
           base_price: number
@@ -2177,6 +2267,36 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           volume?: number | null
+        }
+        Relationships: []
+      }
+      variation_attributes: {
+        Row: {
+          created_at: string | null
+          display_order: number | null
+          id: string
+          is_system: boolean | null
+          name: string
+          options: string[]
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_system?: boolean | null
+          name: string
+          options?: string[]
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_system?: boolean | null
+          name?: string
+          options?: string[]
+          updated_at?: string | null
         }
         Relationships: []
       }
