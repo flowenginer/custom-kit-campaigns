@@ -235,174 +235,225 @@ export function PriceRulesManager() {
     
     try {
       console.log(`[PriceRule] 🎯 Aplicando regra: ${rule.name}`);
-      console.log(`[PriceRule] Tipo: ${rule.apply_to}`, rule);
+      console.log(`[PriceRule] Tipo: ${rule.rule_type}, Aplica em: ${rule.apply_to}`);
+      console.log(`[PriceRule] Afeta base: ${rule.affects_base_price}, Afeta promo: ${rule.affects_promotional_price}`);
       
-      let modelIds: string[] = [];
+      let targetModelIds: string[] = [];
+      let targetVariationIds: string[] = [];
       
-      // ETAPA 1: Buscar modelos que atendem aos critérios
-      if (rule.apply_to === "custom_combination") {
-        // Filtrar por tipos (model_tags) se houver
-        if (rule.model_tags?.length > 0) {
-          const { data: models } = await supabase
-            .from("shirt_models")
-            .select("id")
-            .in("model_tag", rule.model_tags);
-          if (models?.length) {
-            modelIds = models.map(m => m.id);
-            console.log(`[PriceRule] ✓ Modelos por tipo (${rule.model_tags.join(",")}): ${modelIds.length}`);
-          }
-        }
-        
-        // Filtrar por segmentos selecionados
-        if (rule.segment_tags?.length > 0) {
-          const { data: models } = await supabase
-            .from("shirt_models")
-            .select("id")
-            .in("segment_tag", rule.segment_tags);
-          if (models?.length) {
-            if (modelIds.length > 0) {
-              // Intersecção dos filtros
-              const segmentIds = models.map(m => m.id);
-              modelIds = modelIds.filter(id => segmentIds.includes(id));
-              console.log(`[PriceRule] ✓ Após filtro de segmento: ${modelIds.length} modelos`);
-            } else {
-              modelIds = models.map(m => m.id);
-              console.log(`[PriceRule] ✓ Modelos por segmento (${rule.segment_tags.join(",")}): ${modelIds.length}`);
-            }
-          }
+      // ETAPA 1: Identificar modelos que atendem aos critérios
+      if (rule.apply_to === "all") {
+        // Buscar todos os modelos
+        const { data: allModels } = await supabase
+          .from("shirt_models")
+          .select("id");
+        if (allModels) {
+          targetModelIds = allModels.map(m => m.id);
+          console.log(`[PriceRule] ✓ Todos os modelos: ${targetModelIds.length}`);
         }
       } else if (rule.apply_to === "segment" && rule.segment_tag) {
         const { data: models } = await supabase
           .from("shirt_models")
           .select("id")
           .eq("segment_tag", rule.segment_tag);
-        
-        if (models?.length) {
-          modelIds = models.map(m => m.id);
-          console.log(`[PriceRule] ✓ Modelos do segmento ${rule.segment_tag}: ${modelIds.length}`);
+        if (models) {
+          targetModelIds = models.map(m => m.id);
+          console.log(`[PriceRule] ✓ Modelos do segmento ${rule.segment_tag}: ${targetModelIds.length}`);
         }
       } else if (rule.apply_to === "model_tag" && rule.model_tag) {
         const { data: models } = await supabase
           .from("shirt_models")
           .select("id")
           .eq("model_tag", rule.model_tag);
+        if (models) {
+          targetModelIds = models.map(m => m.id);
+          console.log(`[PriceRule] ✓ Modelos do tipo ${rule.model_tag}: ${targetModelIds.length}`);
+        }
+      } else if (rule.apply_to === "custom_combination") {
+        let modelQuery = supabase.from("shirt_models").select("id");
+        let hasFilter = false;
         
-        if (models?.length) {
-          modelIds = models.map(m => m.id);
-          console.log(`[PriceRule] ✓ Modelos do tipo ${rule.model_tag}: ${modelIds.length}`);
+        if (rule.model_tags?.length > 0) {
+          modelQuery = modelQuery.in("model_tag", rule.model_tags);
+          hasFilter = true;
+        }
+        
+        if (rule.segment_tags?.length > 0) {
+          modelQuery = modelQuery.in("segment_tag", rule.segment_tags);
+          hasFilter = true;
+        }
+        
+        if (hasFilter) {
+          const { data: models } = await modelQuery;
+          if (models) {
+            targetModelIds = models.map(m => m.id);
+            console.log(`[PriceRule] ✓ Modelos por combinação: ${targetModelIds.length}`);
+          }
         }
       }
       
-      // ETAPA 2: Buscar variações em lotes (evita URL muito longa)
-      let allVariationIds: string[] = [];
-      
-      if (rule.apply_to === "size" && rule.sizes.length > 0) {
-        // Apenas filtro de tamanho (sem modelos específicos)
-        let query = supabase.from("shirt_model_variations").select("id");
-        query = query.in("size", rule.sizes);
-        const { data } = await query;
-        if (data) allVariationIds = data.map(v => v.id);
-        console.log(`[PriceRule] ✓ Variações por tamanho: ${allVariationIds.length}`);
-      } else if (rule.apply_to === "gender" && rule.genders.length > 0) {
-        // Apenas filtro de gênero (sem modelos específicos)
-        let query = supabase.from("shirt_model_variations").select("id");
-        query = query.in("gender", rule.genders);
-        const { data } = await query;
-        if (data) allVariationIds = data.map(v => v.id);
-        console.log(`[PriceRule] ✓ Variações por gênero: ${allVariationIds.length}`);
-      } else if (modelIds.length > 0) {
-        // Processar modelos em lotes de 50
-        const MODEL_BATCH_SIZE = 50;
-        console.log(`[PriceRule] 🔄 Buscando variações de ${modelIds.length} modelos em lotes de ${MODEL_BATCH_SIZE}...`);
-        
-        for (let i = 0; i < modelIds.length; i += MODEL_BATCH_SIZE) {
-          const modelBatch = modelIds.slice(i, i + MODEL_BATCH_SIZE);
-          let batchQuery = supabase
+      // ETAPA 2: Buscar variações com base nos critérios
+      if (rule.apply_to === "size" && rule.sizes?.length > 0) {
+        // Filtro apenas por tamanho
+        const { data: variations } = await supabase
+          .from("shirt_model_variations")
+          .select("id, model_id, promotional_price")
+          .in("size", rule.sizes);
+        if (variations) {
+          targetVariationIds = variations.map(v => v.id);
+          console.log(`[PriceRule] ✓ Variações por tamanho: ${targetVariationIds.length}`);
+        }
+      } else if (rule.apply_to === "gender" && rule.genders?.length > 0) {
+        // Filtro apenas por gênero
+        const { data: variations } = await supabase
+          .from("shirt_model_variations")
+          .select("id, model_id, promotional_price")
+          .in("gender", rule.genders);
+        if (variations) {
+          targetVariationIds = variations.map(v => v.id);
+          console.log(`[PriceRule] ✓ Variações por gênero: ${targetVariationIds.length}`);
+        }
+      } else if (targetModelIds.length > 0) {
+        // Buscar variações dos modelos selecionados com filtros adicionais
+        const BATCH_SIZE = 50;
+        for (let i = 0; i < targetModelIds.length; i += BATCH_SIZE) {
+          const batch = targetModelIds.slice(i, i + BATCH_SIZE);
+          let varQuery = supabase
             .from("shirt_model_variations")
-            .select("id");
+            .select("id, model_id, promotional_price")
+            .in("model_id", batch);
           
-          batchQuery = batchQuery.in("model_id", modelBatch);
-          
-          // Aplicar filtros adicionais
           if (rule.sizes?.length > 0) {
-            batchQuery = batchQuery.in("size", rule.sizes);
+            varQuery = varQuery.in("size", rule.sizes);
           }
-          
           if (rule.genders?.length > 0) {
-            batchQuery = batchQuery.in("gender", rule.genders);
+            varQuery = varQuery.in("gender", rule.genders);
           }
           
-          const { data: batchVariations, error: batchError } = await batchQuery;
-          
-          if (batchError) {
-            console.error(`[PriceRule] ❌ Erro no lote ${i / MODEL_BATCH_SIZE + 1}:`, batchError);
-            throw batchError;
+          const { data: batchVars } = await varQuery;
+          if (batchVars) {
+            targetVariationIds.push(...batchVars.map(v => v.id));
           }
-          
-          if (batchVariations?.length) {
-            allVariationIds.push(...batchVariations.map(v => v.id));
-          }
-          
-          console.log(`[PriceRule] ✓ Lote ${Math.floor(i / MODEL_BATCH_SIZE) + 1}: ${batchVariations?.length || 0} variações`);
         }
+        console.log(`[PriceRule] ✓ Variações encontradas: ${targetVariationIds.length}`);
       }
       
-      console.log(`[PriceRule] 📊 Total de variações encontradas: ${allVariationIds.length}`);
-      
-      if (allVariationIds.length === 0) {
-        toast.error("Nenhuma variação encontrada para aplicar a regra");
+      if (targetModelIds.length === 0 && targetVariationIds.length === 0) {
+        toast.error("Nenhum produto encontrado para aplicar a regra");
         setLoading(false);
         return;
       }
 
-      // ETAPA 3: Aplicar regra conforme configuração
-      const UPDATE_BATCH_SIZE = 500;
+      // ETAPA 3: Aplicar regra
       let totalUpdated = 0;
+      const BATCH_SIZE = 500;
 
-      // Aplicar no preço base do modelo
-      if (rule.affects_base_price && modelIds.length > 0) {
-        console.log(`[PriceRule] 💰 Aplicando no preço base de ${modelIds.length} modelos...`);
+      // Aplicar no preço base dos modelos
+      if (rule.affects_base_price && targetModelIds.length > 0) {
+        console.log(`[PriceRule] 💰 Aplicando no preço base...`);
         
-        for (let i = 0; i < modelIds.length; i += UPDATE_BATCH_SIZE) {
-          const batch = modelIds.slice(i, i + UPDATE_BATCH_SIZE);
-          const { error: updateError } = await supabase
-            .from("shirt_models")
-            .update({ base_price: rule.price_value })
-            .in("id", batch);
-
-          if (updateError) {
-            console.error(`[PriceRule] ❌ Erro ao atualizar base_price:`, updateError);
-            throw updateError;
+        if (rule.rule_type === "fixed") {
+          // Preço fixo: substituir
+          for (let i = 0; i < targetModelIds.length; i += BATCH_SIZE) {
+            const batch = targetModelIds.slice(i, i + BATCH_SIZE);
+            const { error } = await supabase
+              .from("shirt_models")
+              .update({ base_price: rule.price_value })
+              .in("id", batch);
+            
+            if (error) throw error;
+            totalUpdated += batch.length;
           }
+          console.log(`[PriceRule] ✓ ${totalUpdated} preços base atualizados (fixo)`);
+        } else {
+          // Ajuste ou promoção: calcular baseado no valor atual
+          const { data: models } = await supabase
+            .from("shirt_models")
+            .select("id, base_price")
+            .in("id", targetModelIds);
           
-          totalUpdated += batch.length;
-          console.log(`[PriceRule] ✓ Base price atualizado: ${batch.length} modelos`);
+          if (models) {
+            for (const model of models) {
+              const currentPrice = model.base_price || 0;
+              let newPrice: number;
+              
+              if (rule.is_percentage) {
+                newPrice = currentPrice * (1 + rule.price_value / 100);
+              } else {
+                newPrice = currentPrice + rule.price_value;
+              }
+              
+              const { error } = await supabase
+                .from("shirt_models")
+                .update({ base_price: newPrice })
+                .eq("id", model.id);
+              
+              if (error) throw error;
+              totalUpdated++;
+            }
+            console.log(`[PriceRule] ✓ ${totalUpdated} preços base ajustados`);
+          }
         }
       }
 
       // Aplicar no preço promocional das variações
-      if (rule.affects_promotional_price && allVariationIds.length > 0) {
-        console.log(`[PriceRule] 💰 Aplicando preço promocional em ${allVariationIds.length} variações...`);
-
-        for (let i = 0; i < allVariationIds.length; i += UPDATE_BATCH_SIZE) {
-          const batch = allVariationIds.slice(i, i + UPDATE_BATCH_SIZE);
-          const { error: updateError } = await supabase
-            .from("shirt_model_variations")
-            .update({ promotional_price: rule.price_value })
-            .in("id", batch);
-
-          if (updateError) {
-            console.error(`[PriceRule] ❌ Erro ao atualizar lote ${Math.floor(i / UPDATE_BATCH_SIZE) + 1}:`, updateError);
-            throw updateError;
+      if (rule.affects_promotional_price && targetVariationIds.length > 0) {
+        console.log(`[PriceRule] 💰 Aplicando no preço promocional...`);
+        
+        if (rule.rule_type === "fixed") {
+          // Preço fixo: substituir
+          for (let i = 0; i < targetVariationIds.length; i += BATCH_SIZE) {
+            const batch = targetVariationIds.slice(i, i + BATCH_SIZE);
+            const { error } = await supabase
+              .from("shirt_model_variations")
+              .update({ promotional_price: rule.price_value })
+              .in("id", batch);
+            
+            if (error) throw error;
+            totalUpdated += batch.length;
           }
+          console.log(`[PriceRule] ✓ ${totalUpdated} preços promocionais atualizados (fixo)`);
+        } else {
+          // Ajuste ou promoção: buscar base_price do modelo e calcular
+          const { data: variations } = await supabase
+            .from("shirt_model_variations")
+            .select(`
+              id,
+              model_id,
+              price_adjustment,
+              shirt_models!inner(base_price)
+            `)
+            .in("id", targetVariationIds);
           
-          totalUpdated += batch.length;
-          console.log(`[PriceRule] ✓ Lote ${Math.floor(i / UPDATE_BATCH_SIZE) + 1} atualizado: ${batch.length} variações`);
+          if (variations) {
+            for (const variation of variations) {
+              const basePrice = (variation.shirt_models as any)?.base_price || 0;
+              const currentPrice = variation.price_adjustment 
+                ? basePrice + variation.price_adjustment 
+                : basePrice;
+              
+              let newPrice: number;
+              if (rule.is_percentage) {
+                newPrice = currentPrice * (1 + rule.price_value / 100);
+              } else {
+                newPrice = currentPrice + rule.price_value;
+              }
+              
+              const { error } = await supabase
+                .from("shirt_model_variations")
+                .update({ promotional_price: newPrice })
+                .eq("id", variation.id);
+              
+              if (error) throw error;
+              totalUpdated++;
+            }
+            console.log(`[PriceRule] ✓ ${totalUpdated} preços promocionais ajustados`);
+          }
         }
       }
 
-      console.log(`[PriceRule] ✅ Regra aplicada com sucesso! Total: ${totalUpdated} variações`);
-      toast.success(`✅ Regra aplicada a ${totalUpdated} variações!`);
+      console.log(`[PriceRule] ✅ Regra aplicada com sucesso! Total: ${totalUpdated} itens`);
+      toast.success(`✅ Regra aplicada a ${totalUpdated} itens!`);
     } catch (error: any) {
       console.error("[PriceRule] ❌ Erro ao aplicar regra:", error);
       toast.error(`Erro ao aplicar regra: ${error.message || 'Erro desconhecido'}`);
