@@ -690,44 +690,29 @@ export const NewLayoutRequestDialog = ({
           <div className="space-y-4">
             <Label>Campanha *</Label>
             
-            {/* Botão verde "Criação do Zero" */}
-            <Card
-              className="p-6 cursor-pointer transition-all hover:border-green-500 hover:shadow-lg border-2 border-green-500 bg-green-50 dark:bg-green-950"
-              onClick={() => {
-                setIsFromScratch(true);
-                setSelectedCampaignId("");
-                setSelectedModel(null);
-                setCurrentStep("uniform");
-              }}
-            >
-              <div className="flex flex-col items-center gap-3">
-                <div className="bg-green-500 rounded-full p-3">
-                  <Plus className="h-8 w-8 text-white" />
-                </div>
-                <div className="text-center">
-                  <h3 className="text-lg font-bold text-green-700 dark:text-green-300">
-                    🎨 CRIAÇÃO DO ZERO
-                  </h3>
-                  <p className="text-sm text-green-600 dark:text-green-400 mt-1">
-                    Layout personalizado sem base de campanha
-                  </p>
-                </div>
-              </div>
-            </Card>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  Ou escolha uma campanha
-                </span>
-              </div>
-            </div>
-            
             <ScrollArea className="h-[250px]">
               <div className="grid grid-cols-4 gap-3 pr-4">
+                {/* Botão "Criação do Zero" como primeiro item do grid */}
+                <Card
+                  className={`p-4 cursor-pointer transition-all hover:border-green-500 hover:shadow-md border-2 ${
+                    isFromScratch ? "border-green-500 ring-2 ring-green-500 bg-green-50 dark:bg-green-950" : "border-green-500 bg-green-50 dark:bg-green-950"
+                  }`}
+                  onClick={() => {
+                    setIsFromScratch(true);
+                    setSelectedCampaignId("");
+                    setSelectedModel(null);
+                    setCurrentStep("uniform");
+                  }}
+                >
+                  <div className="flex flex-col items-center gap-2">
+                    <Plus className="h-8 w-8 text-green-500" />
+                    <span className="text-sm font-medium text-center text-green-700 dark:text-green-300">
+                      Criação do Zero
+                    </span>
+                  </div>
+                </Card>
+
+                {/* Campanhas existentes */}
                 {campaigns.map((campaign) => (
                   <Card
                     key={campaign.id}
