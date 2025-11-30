@@ -50,16 +50,22 @@ export default function Customers() {
     try {
       const { data, error } = await supabase
         .from("customers")
-        .select(`
-          *,
-          profiles:created_by (
-            full_name
-          )
-        `)
+        .select("*")
         .is("deleted_at", null)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
+      
+      // Buscar nomes dos vendedores separadamente
+      const customerIds = (data || []).map(c => c.created_by).filter(Boolean);
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", customerIds);
+
+      const profilesMap = new Map(
+        (profiles || []).map(p => [p.id, p.full_name])
+      );
       
       setCustomers((data || []).map(c => ({
         ...c,
@@ -67,7 +73,7 @@ export default function Customers() {
         total_orders: c.total_orders || 0,
         total_revenue: c.total_revenue || 0,
         is_active: c.is_active ?? true,
-        salesperson_name: Array.isArray(c.profiles) ? c.profiles[0]?.full_name : (c.profiles as any)?.full_name || null,
+        salesperson_name: c.created_by ? profilesMap.get(c.created_by) || null : null,
       })));
     } catch (error) {
       console.error("Error loading customers:", error);
