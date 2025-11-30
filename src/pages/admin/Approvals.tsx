@@ -6,10 +6,13 @@ import { ModificationApprovalsList } from "@/components/admin/ModificationApprov
 import { ModificationApprovalsHistory } from "@/components/admin/ModificationApprovalsHistory";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, Trash2, Edit } from "lucide-react";
+import { AlertCircle, Trash2, Edit, User } from "lucide-react";
 import { usePendingApprovalsCount } from "@/hooks/usePendingApprovalsCount";
 import { usePendingDeletesCount } from "@/hooks/usePendingDeletesCount";
 import { usePendingModificationsCount } from "@/hooks/usePendingModificationsCount";
+import { usePendingCustomerDeletesCount } from "@/hooks/usePendingCustomerDeletesCount";
+import { CustomerDeleteApprovalsList } from "@/components/admin/CustomerDeleteApprovalsList";
+import { CustomerDeleteApprovalsHistory } from "@/components/admin/CustomerDeleteApprovalsHistory";
 import { useCallback } from "react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
@@ -18,6 +21,7 @@ const Approvals = () => {
   const { count: urgentCount } = usePendingApprovalsCount();
   const { count: deleteCount } = usePendingDeletesCount();
   const { count: modificationsCount } = usePendingModificationsCount();
+  const { count: customerDeleteCount } = usePendingCustomerDeletesCount();
 
   const refreshData = useCallback(async () => {
     // Forçar re-render (os componentes têm seus próprios refetch)
@@ -55,6 +59,9 @@ const Approvals = () => {
           </TabsTrigger>
           <TabsTrigger value="modifications">
             ✏️ Alterações {modificationsCount > 0 && `(${modificationsCount})`}
+          </TabsTrigger>
+          <TabsTrigger value="customer_deletes">
+            👤 Clientes {customerDeleteCount > 0 && `(${customerDeleteCount})`}
           </TabsTrigger>
         </TabsList>
 
@@ -147,6 +154,37 @@ const Approvals = () => {
             </TabsContent>
             <TabsContent value="history" className="mt-6">
               <ModificationApprovalsHistory />
+            </TabsContent>
+          </Tabs>
+        </TabsContent>
+
+        {/* ABA EXCLUSÃO DE CLIENTES */}
+        <TabsContent value="customer_deletes" className="mt-6">
+          <Card className="border-purple-200 bg-purple-50/50 mb-6">
+            <CardHeader>
+              <div className="flex items-start gap-3">
+                <User className="h-5 w-5 text-purple-600 mt-0.5" />
+                <div>
+                  <CardTitle className="text-purple-900">Solicitações de Exclusão de Clientes</CardTitle>
+                  <CardDescription className="text-purple-700">
+                    Vendedores solicitaram a exclusão de clientes. Revise cada solicitação e aprove ou rejeite conforme necessário.
+                    Clientes aprovados para exclusão serão desativados (soft delete).
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+
+          <Tabs defaultValue="pending" className="w-full">
+            <TabsList>
+              <TabsTrigger value="pending">Pendentes</TabsTrigger>
+              <TabsTrigger value="history">Histórico</TabsTrigger>
+            </TabsList>
+            <TabsContent value="pending" className="mt-6">
+              <CustomerDeleteApprovalsList />
+            </TabsContent>
+            <TabsContent value="history" className="mt-6">
+              <CustomerDeleteApprovalsHistory />
             </TabsContent>
           </Tabs>
         </TabsContent>
