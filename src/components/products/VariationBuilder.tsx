@@ -56,6 +56,7 @@ export function VariationBuilder({ modelId, modelName, onClearSelection }: Varia
   const [attributes, setAttributes] = useState<VariationAttribute[]>([]);
   const [variations, setVariations] = useState<ShirtModelVariation[]>([]);
   const [models, setModels] = useState<ShirtModel[]>([]);
+  const [basePrice, setBasePrice] = useState<number>(0);
   
   // Escopo de aplicação
   const [scope, setScope] = useState<"single" | "all" | "type" | "segment">(modelId ? "single" : "all");
@@ -84,8 +85,26 @@ export function VariationBuilder({ modelId, modelName, onClearSelection }: Varia
     loadModels();
     if (modelId) {
       loadVariations();
+      loadModelBasePrice();
     }
   }, [modelId]);
+
+  const loadModelBasePrice = async () => {
+    if (!modelId) return;
+    
+    const { data, error } = await supabase
+      .from("shirt_models")
+      .select("base_price")
+      .eq("id", modelId)
+      .single();
+
+    if (error) {
+      console.error("Erro ao carregar preço base:", error);
+      return;
+    }
+
+    setBasePrice(data?.base_price || 0);
+  };
 
   const loadAttributes = async () => {
     const { data, error } = await supabase
@@ -646,7 +665,9 @@ export function VariationBuilder({ modelId, modelName, onClearSelection }: Varia
                   <TableHead>Tamanho</TableHead>
                   <TableHead>Gênero</TableHead>
                   <TableHead>SKU Suffix</TableHead>
-                  <TableHead>Ajuste Preço</TableHead>
+                  <TableHead>Preço Base</TableHead>
+                  <TableHead>Ajuste</TableHead>
+                  <TableHead>Preço Final</TableHead>
                   <TableHead>Estoque</TableHead>
                   <TableHead>Ativo</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
@@ -660,38 +681,62 @@ export function VariationBuilder({ modelId, modelName, onClearSelection }: Varia
                     </TableCell>
                   </TableRow>
                 ) : (
-                  variations.map((variation) => (
-                    <TableRow key={variation.id}>
-                      <TableCell>
-                        <GripVertical className="h-4 w-4 text-muted-foreground cursor-move" />
-                      </TableCell>
-                      <TableCell className="font-medium">{variation.size}</TableCell>
-                      <TableCell>{variation.gender}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{variation.sku_suffix || "-"}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        {variation.price_adjustment > 0 ? "+" : ""}
-                        {variation.price_adjustment.toFixed(2)}
-                      </TableCell>
-                      <TableCell>{variation.stock_quantity}</TableCell>
-                      <TableCell>
-                        <Switch
-                          checked={variation.is_active}
-                          onCheckedChange={() => toggleVariationStatus(variation.id, variation.is_active)}
-                        />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => deleteVariation(variation.id)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  variations.map((variation) => {
+                    const finalPrice = basePrice + variation.price_adjustment;
+                    
+                    return (
+                      <TableRow key={variation.id}>
+                        <TableCell>
+                          <GripVertical className="h-4 w-4 text-muted-foreground cursor-move" />
+                        </TableCell>
+                        <TableCell className="font-medium">{variation.size}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{variation.gender}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <code className="text-xs bg-muted px-2 py-1 rounded">
+                            {variation.sku_suffix || "-"}
+                          </code>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-muted-foreground">
+                            R$ {basePrice.toFixed(2)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className={variation.price_adjustment >= 0 ? "text-green-600" : "text-red-600"}>
+                            {variation.price_adjustment > 0 ? "+" : ""}
+                            {variation.price_adjustment.toFixed(2)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-semibold text-primary">
+                            R$ {finalPrice.toFixed(2)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={variation.stock_quantity > 0 ? "default" : "secondary"}>
+                            {variation.stock_quantity}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Switch
+                            checked={variation.is_active}
+                            onCheckedChange={() => toggleVariationStatus(variation.id, variation.is_active)}
+                          />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteVariation(variation.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
