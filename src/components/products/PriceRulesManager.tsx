@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Percent, DollarSign, Play, PlayCircle } from "lucide-react";
+import { Plus, Trash2, Percent, DollarSign, Play, PlayCircle, Edit } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
@@ -32,6 +32,7 @@ export function PriceRulesManager() {
   const [rules, setRules] = useState<PriceRule[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [editingRule, setEditingRule] = useState<PriceRule | null>(null);
   
   const [formData, setFormData] = useState<{
     name: string;
@@ -77,6 +78,24 @@ export function PriceRulesManager() {
     setRules((data as PriceRule[]) || []);
   };
 
+  const openEditDialog = (rule: PriceRule) => {
+    setEditingRule(rule);
+    setFormData({
+      name: rule.name,
+      rule_type: rule.rule_type,
+      apply_to: rule.apply_to,
+      segment_tag: rule.segment_tag || "",
+      model_tag: rule.model_tag || "",
+      sizes: rule.sizes || [],
+      price_value: rule.price_value,
+      is_percentage: rule.is_percentage,
+      priority: rule.priority,
+      valid_from: rule.valid_from || "",
+      valid_until: rule.valid_until || "",
+    });
+    setDialogOpen(true);
+  };
+
   const handleSave = async () => {
     if (!formData.name) {
       toast.error("Preencha o nome da regra");
@@ -86,7 +105,7 @@ export function PriceRulesManager() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.from("price_rules").insert({
+      const payload = {
         name: formData.name,
         rule_type: formData.rule_type,
         apply_to: formData.apply_to,
@@ -99,11 +118,24 @@ export function PriceRulesManager() {
         is_active: true,
         valid_from: formData.valid_from || null,
         valid_until: formData.valid_until || null,
-      });
+      };
 
-      if (error) throw error;
+      if (editingRule) {
+        // Atualizar regra existente
+        const { error } = await supabase
+          .from("price_rules")
+          .update(payload)
+          .eq("id", editingRule.id);
 
-      toast.success("Regra criada com sucesso!");
+        if (error) throw error;
+        toast.success("Regra atualizada com sucesso!");
+      } else {
+        // Criar nova regra
+        const { error } = await supabase.from("price_rules").insert(payload);
+        if (error) throw error;
+        toast.success("Regra criada com sucesso!");
+      }
+
       setDialogOpen(false);
       loadRules();
       resetForm();
@@ -128,6 +160,7 @@ export function PriceRulesManager() {
       valid_from: "",
       valid_until: "",
     });
+    setEditingRule(null);
   };
 
   const applyRule = async (rule: PriceRule) => {
@@ -269,7 +302,13 @@ export function PriceRulesManager() {
             <PlayCircle className="mr-2 h-4 w-4" />
             Aplicar Todas Ativas
           </Button>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Dialog 
+            open={dialogOpen} 
+            onOpenChange={(open) => {
+              setDialogOpen(open);
+              if (!open) resetForm();
+            }}
+          >
             <DialogTrigger asChild>
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
@@ -278,9 +317,13 @@ export function PriceRulesManager() {
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
-                <DialogTitle>Criar Regra de Preço</DialogTitle>
+                <DialogTitle>
+                  {editingRule ? "Editar Regra de Preço" : "Criar Regra de Preço"}
+                </DialogTitle>
                 <DialogDescription>
-                  Configure uma nova regra de preço para seus produtos
+                  {editingRule 
+                    ? "Modifique a configuração da regra de preço" 
+                    : "Configure uma nova regra de preço para seus produtos"}
                 </DialogDescription>
               </DialogHeader>
               
@@ -397,11 +440,14 @@ export function PriceRulesManager() {
               </div>
 
               <DialogFooter>
-                <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                <Button variant="outline" onClick={() => {
+                  setDialogOpen(false);
+                  resetForm();
+                }}>
                   Cancelar
                 </Button>
                 <Button onClick={handleSave} disabled={loading}>
-                  Salvar Regra
+                  {editingRule ? "Atualizar" : "Salvar"} Regra
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -461,6 +507,13 @@ export function PriceRulesManager() {
                       disabled={loading || !rule.is_active}
                     >
                       <Play className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openEditDialog(rule)}
+                    >
+                      <Edit className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"
