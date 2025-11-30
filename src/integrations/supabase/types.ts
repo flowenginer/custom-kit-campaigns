@@ -1823,6 +1823,7 @@ export type Database = {
         Row: {
           apply_to: string
           created_at: string | null
+          genders: string[] | null
           id: string
           is_active: boolean | null
           is_percentage: boolean | null
@@ -1839,6 +1840,7 @@ export type Database = {
         Insert: {
           apply_to: string
           created_at?: string | null
+          genders?: string[] | null
           id?: string
           is_active?: boolean | null
           is_percentage?: boolean | null
@@ -1855,6 +1857,7 @@ export type Database = {
         Update: {
           apply_to?: string
           created_at?: string | null
+          genders?: string[] | null
           id?: string
           is_active?: boolean | null
           is_percentage?: boolean | null

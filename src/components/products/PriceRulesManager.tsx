@@ -16,10 +16,11 @@ interface PriceRule {
   id: string;
   name: string;
   rule_type: "fixed" | "adjustment" | "promotion";
-  apply_to: "all" | "segment" | "model_tag" | "size";
+  apply_to: "all" | "segment" | "model_tag" | "size" | "gender";
   segment_tag: string | null;
   model_tag: string | null;
   sizes: string[];
+  genders: string[];
   price_value: number;
   is_percentage: boolean;
   priority: number;
@@ -37,10 +38,11 @@ export function PriceRulesManager() {
   const [formData, setFormData] = useState<{
     name: string;
     rule_type: "fixed" | "adjustment" | "promotion";
-    apply_to: "all" | "segment" | "model_tag" | "size";
+    apply_to: "all" | "segment" | "model_tag" | "size" | "gender";
     segment_tag: string;
     model_tag: string;
     sizes: string[];
+    genders: string[];
     price_value: number;
     is_percentage: boolean;
     priority: number;
@@ -53,6 +55,7 @@ export function PriceRulesManager() {
     segment_tag: "",
     model_tag: "",
     sizes: [],
+    genders: [],
     price_value: 0,
     is_percentage: false,
     priority: 0,
@@ -87,6 +90,7 @@ export function PriceRulesManager() {
       segment_tag: rule.segment_tag || "",
       model_tag: rule.model_tag || "",
       sizes: rule.sizes || [],
+      genders: rule.genders || [],
       price_value: rule.price_value,
       is_percentage: rule.is_percentage,
       priority: rule.priority,
@@ -112,6 +116,7 @@ export function PriceRulesManager() {
         segment_tag: formData.segment_tag || null,
         model_tag: formData.model_tag || null,
         sizes: formData.sizes,
+        genders: formData.genders,
         price_value: formData.price_value,
         is_percentage: formData.is_percentage,
         priority: formData.priority,
@@ -154,6 +159,7 @@ export function PriceRulesManager() {
       segment_tag: "",
       model_tag: "",
       sizes: [],
+      genders: [],
       price_value: 0,
       is_percentage: false,
       priority: 0,
@@ -172,6 +178,8 @@ export function PriceRulesManager() {
       // Filtrar por escopo
       if (rule.apply_to === "size" && rule.sizes.length > 0) {
         query = query.in("size", rule.sizes);
+      } else if (rule.apply_to === "gender" && rule.genders.length > 0) {
+        query = query.in("gender", rule.genders);
       } else if (rule.apply_to === "segment" && rule.segment_tag) {
         // Buscar modelos do segmento
         const { data: models } = await supabase
@@ -280,8 +288,18 @@ export function PriceRulesManager() {
       case "segment": return "Segmento";
       case "model_tag": return "Tipo";
       case "size": return "Tamanhos";
+      case "gender": return "Gênero";
       default: return applyTo;
     }
+  };
+
+  const toggleGender = (gender: string) => {
+    setFormData({
+      ...formData,
+      genders: formData.genders.includes(gender)
+        ? formData.genders.filter(g => g !== gender)
+        : [...formData.genders, gender]
+    });
   };
 
   return (
@@ -369,6 +387,7 @@ export function PriceRulesManager() {
                         <SelectItem value="segment">Por Segmento</SelectItem>
                         <SelectItem value="model_tag">Por Tipo</SelectItem>
                         <SelectItem value="size">Por Tamanhos</SelectItem>
+                        <SelectItem value="gender">Por Gênero</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -385,6 +404,25 @@ export function PriceRulesManager() {
                       })}
                       placeholder="Ex: G1, G2, G3, G4, G5"
                     />
+                  </div>
+                )}
+
+                {formData.apply_to === "gender" && (
+                  <div>
+                    <Label>Gêneros</Label>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {["masculino", "feminino", "unissex"].map((gender) => (
+                        <Badge
+                          key={gender}
+                          variant={formData.genders.includes(gender) ? "default" : "outline"}
+                          className="cursor-pointer hover:bg-primary/90"
+                          onClick={() => toggleGender(gender)}
+                        >
+                          {gender === "masculino" ? "♂ Masculino" : 
+                           gender === "feminino" ? "♀ Feminino" : "⚥ Unissex"}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
                 )}
 
