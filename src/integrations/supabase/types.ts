@@ -1921,6 +1921,53 @@ export type Database = {
         }
         Relationships: []
       }
+      shirt_model_variations: {
+        Row: {
+          created_at: string | null
+          gender: string
+          id: string
+          is_active: boolean | null
+          model_id: string
+          price_adjustment: number | null
+          size: string
+          sku_suffix: string | null
+          stock_quantity: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          gender?: string
+          id?: string
+          is_active?: boolean | null
+          model_id: string
+          price_adjustment?: number | null
+          size: string
+          sku_suffix?: string | null
+          stock_quantity?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          gender?: string
+          id?: string
+          is_active?: boolean | null
+          model_id?: string
+          price_adjustment?: number | null
+          size?: string
+          sku_suffix?: string | null
+          stock_quantity?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shirt_model_variations_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "shirt_models"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shirt_models: {
         Row: {
           altura: number | null
