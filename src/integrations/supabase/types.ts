@@ -1821,6 +1821,8 @@ export type Database = {
       }
       price_rules: {
         Row: {
+          affects_base_price: boolean | null
+          affects_promotional_price: boolean | null
           apply_to: string
           created_at: string | null
           genders: string[] | null
@@ -1840,6 +1842,8 @@ export type Database = {
           valid_until: string | null
         }
         Insert: {
+          affects_base_price?: boolean | null
+          affects_promotional_price?: boolean | null
           apply_to: string
           created_at?: string | null
           genders?: string[] | null
@@ -1859,6 +1863,8 @@ export type Database = {
           valid_until?: string | null
         }
         Update: {
+          affects_base_price?: boolean | null
+          affects_promotional_price?: boolean | null
           apply_to?: string
           created_at?: string | null
           genders?: string[] | null
@@ -2028,6 +2034,7 @@ export type Database = {
           is_active: boolean | null
           model_id: string
           price_adjustment: number | null
+          promotional_price: number | null
           size: string
           sku_suffix: string | null
           stock_quantity: number | null
@@ -2040,6 +2047,7 @@ export type Database = {
           is_active?: boolean | null
           model_id: string
           price_adjustment?: number | null
+          promotional_price?: number | null
           size: string
           sku_suffix?: string | null
           stock_quantity?: number | null
@@ -2052,6 +2060,7 @@ export type Database = {
           is_active?: boolean | null
           model_id?: string
           price_adjustment?: number | null
+          promotional_price?: number | null
           size?: string
           sku_suffix?: string | null
           stock_quantity?: number | null
