@@ -766,8 +766,8 @@ export const NewLayoutRequestDialog = ({
                     }`}
                     onClick={() => {
                       setSelectedUniformType(type.tag_value);
-                      // Se for criação do zero, vai para personalização
-                      setCurrentStep(isFromScratch ? "front" : "model");
+                      // Se for criação do zero, vai para dados do cliente
+                      setCurrentStep(isFromScratch ? "customer" : "model");
                     }}
                   >
                     <div className="flex flex-col items-center gap-2">
@@ -997,7 +997,7 @@ export const NewLayoutRequestDialog = ({
             <div className="flex gap-2">
               <Button 
                 variant="outline" 
-                onClick={() => setCurrentStep(isFromScratch ? "sleeves_right" : "model")} 
+                onClick={() => setCurrentStep(isFromScratch ? "uniform" : "model")} 
                 className="flex-1"
               >
                 Voltar
@@ -1036,7 +1036,7 @@ export const NewLayoutRequestDialog = ({
                 onNext={() => setCurrentStep("back")}
               />
             )}
-            <Button variant="outline" onClick={() => setCurrentStep(isFromScratch ? "uniform" : "customer")} className="w-full">
+            <Button variant="outline" onClick={() => setCurrentStep("customer")} className="w-full">
               Voltar
             </Button>
           </div>
@@ -1100,7 +1100,7 @@ export const NewLayoutRequestDialog = ({
                 side="right"
                 value={rightSleeveCustomization}
                 onChange={(data) => setRightSleeveCustomization({ ...rightSleeveCustomization, ...data })}
-                onNext={() => setCurrentStep(isFromScratch ? "customer" : "logo")}
+                onNext={() => setCurrentStep("logo")}
               />
             )}
             <Button variant="outline" onClick={() => setCurrentStep("sleeves_left")} className="w-full">
