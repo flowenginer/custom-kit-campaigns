@@ -106,6 +106,7 @@ export const TaskDetailsDialog = ({
   const [transferring, setTransferring] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showModificationDialog, setShowModificationDialog] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   
   const { roles, isSalesperson, isDesigner, isSuperAdmin, isAdmin } = useUserRole();
 
@@ -148,6 +149,8 @@ export const TaskDetailsDialog = ({
       setUploadedPreviews([]);
       setUploadProgress("");
       setLogoSections([]);
+      setPendingFiles([]);
+      setUploadNotes("");
     }
   }, [open]);
 
@@ -449,8 +452,8 @@ export const TaskDetailsDialog = ({
     setShowDeleteDialog(true);
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!task || !e.target.files || e.target.files.length === 0) return;
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
 
     // Validação de arquivos
     const files = Array.from(e.target.files);
@@ -460,15 +463,28 @@ export const TaskDetailsDialog = ({
     for (const file of files) {
       if (file.size > maxSize) {
         toast.error(`Arquivo ${file.name} é muito grande. Máximo: 10MB`);
+        e.target.value = '';
         return;
       }
       
       const fileExt = '.' + file.name.split('.').pop()?.toLowerCase();
       if (!allowedExtensions.includes(fileExt)) {
         toast.error(`Tipo de arquivo ${fileExt} não permitido`);
+        e.target.value = '';
         return;
       }
     }
+
+    // Apenas armazenar arquivos localmente sem fazer upload
+    setPendingFiles(files);
+    toast.success(`${files.length} arquivo(s) selecionado(s). Adicione notas e clique em "Enviar Mockup".`);
+    
+    // Limpar o input para permitir selecionar os mesmos arquivos novamente se necessário
+    e.target.value = '';
+  };
+
+  const handleSubmitMockup = async () => {
+    if (!task || pendingFiles.length === 0) return;
 
     setUploading(true);
     const newVersion = task.current_version + 1;
@@ -476,9 +492,9 @@ export const TaskDetailsDialog = ({
     try {
       const uploadedFiles = [];
 
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        setUploadProgress(`Enviando ${i + 1} de ${files.length}...`);
+      for (let i = 0; i < pendingFiles.length; i++) {
+        const file = pendingFiles[i];
+        setUploadProgress(`Enviando ${i + 1} de ${pendingFiles.length}...`);
         
         const fileExt = file.name.split('.').pop();
         const fileName = `${task.id}/v${newVersion}/${Date.now()}.${fileExt}`;
@@ -505,7 +521,7 @@ export const TaskDetailsDialog = ({
       // Gerar previews dos arquivos enviados
       const previews = uploadedFiles.map((file, idx) => ({
         url: file.url,
-        name: files[idx].name
+        name: pendingFiles[idx].name
       }));
       setUploadedPreviews(prev => [...prev, ...previews]);
 
@@ -521,9 +537,10 @@ export const TaskDetailsDialog = ({
 
       if (updateError) throw updateError;
 
-    toast.success("Mockup enviado com sucesso!");
+      toast.success("Mockup enviado com sucesso!");
       setUploadNotes("");
       setUploadProgress("");
+      setPendingFiles([]);
       onTaskUpdated();
     } catch (error) {
       console.error("Error uploading files:", error);
@@ -1128,7 +1145,7 @@ export const TaskDetailsDialog = ({
                     <div className="text-center space-y-2">
                       <Upload className="h-12 w-12 mx-auto text-muted-foreground" />
                       <Label htmlFor="mockup-upload" className="text-lg font-medium cursor-pointer">
-                        Enviar Mockup para Cliente
+                        Selecionar Arquivos do Mockup
                       </Label>
                       <p className="text-xs text-muted-foreground">
                         PDF, PNG, JPG, AI, PSD ou ZIP • Múltiplos arquivos permitidos • Máximo 10MB cada
@@ -1144,6 +1161,36 @@ export const TaskDetailsDialog = ({
                       disabled={uploading}
                       className="cursor-pointer"
                     />
+
+                    {/* Preview dos arquivos selecionados */}
+                    {pendingFiles.length > 0 && (
+                      <div className="space-y-2 p-4 bg-primary/5 border-2 border-primary rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-medium">
+                            📁 {pendingFiles.length} arquivo(s) selecionado(s)
+                          </Label>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setPendingFiles([])}
+                            disabled={uploading}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="space-y-1">
+                          {pendingFiles.map((file, idx) => (
+                            <div key={idx} className="flex items-center gap-2 text-sm">
+                              <FileText className="h-4 w-4 text-primary" />
+                              <span className="flex-1 truncate">{file.name}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {(file.size / 1024 / 1024).toFixed(2)} MB
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     
                     <div className="space-y-2 p-4 border-2 border-amber-500 dark:border-amber-600 rounded-lg bg-amber-50 dark:bg-amber-950">
                       <Label className="text-base font-medium text-amber-700 dark:text-amber-300">
@@ -1160,13 +1207,26 @@ export const TaskDetailsDialog = ({
                         Essas notas serão visíveis junto com os arquivos enviados.
                       </p>
                     </div>
-                    
-                    {uploading && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                        <span className="font-medium">{uploadProgress}</span>
-                      </div>
-                    )}
+
+                    {/* Botão de enviar */}
+                    <Button
+                      onClick={handleSubmitMockup}
+                      disabled={uploading || pendingFiles.length === 0}
+                      className="w-full"
+                      size="lg"
+                    >
+                      {uploading ? (
+                        <>
+                          <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                          {uploadProgress}
+                        </>
+                      ) : (
+                        <>
+                          <Send className="h-5 w-5 mr-2" />
+                          📤 Enviar Mockup
+                        </>
+                      )}
+                    </Button>
                   </CardContent>
                 </Card>
               )}
