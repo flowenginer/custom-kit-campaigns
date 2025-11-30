@@ -9,6 +9,13 @@ import ProductList from "./ProductList";
 export default function Products() {
   const [selectedModelId, setSelectedModelId] = useState<string>("");
   const [selectedModelName, setSelectedModelName] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<string>("list");
+
+  const handleSelectModel = (id: string, name: string) => {
+    setSelectedModelId(id);
+    setSelectedModelName(name);
+    setActiveTab("variations");
+  };
 
   return (
     <div className="space-y-6">
@@ -19,7 +26,7 @@ export default function Products() {
         </p>
       </div>
 
-      <Tabs defaultValue="list" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="list" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
@@ -41,10 +48,8 @@ export default function Products() {
 
         <TabsContent value="list">
           <ProductList
-            onSelectModel={(id, name) => {
-              setSelectedModelId(id);
-              setSelectedModelName(name);
-            }}
+            onSelectModel={handleSelectModel}
+            onSwitchToVariations={() => setActiveTab("variations")}
           />
         </TabsContent>
 
@@ -55,9 +60,7 @@ export default function Products() {
               modelName={selectedModelName}
             />
           ) : (
-            <div className="text-center text-muted-foreground p-12 border-2 border-dashed rounded-lg">
-              Selecione um produto na aba "Lista de Produtos" para gerenciar suas variações
-            </div>
+            <VariationBuilder />
           )}
         </TabsContent>
 
