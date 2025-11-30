@@ -766,8 +766,8 @@ export const NewLayoutRequestDialog = ({
                     }`}
                     onClick={() => {
                       setSelectedUniformType(type.tag_value);
-                      // Se for criação do zero, pula direto para customer
-                      setCurrentStep(isFromScratch ? "customer" : "model");
+                      // Se for criação do zero, vai para personalização
+                      setCurrentStep(isFromScratch ? "front" : "model");
                     }}
                   >
                     <div className="flex flex-col items-center gap-2">
@@ -997,7 +997,7 @@ export const NewLayoutRequestDialog = ({
             <div className="flex gap-2">
               <Button 
                 variant="outline" 
-                onClick={() => setCurrentStep(isFromScratch ? "uniform" : "model")} 
+                onClick={() => setCurrentStep(isFromScratch ? "sleeves_right" : "model")} 
                 className="flex-1"
               >
                 Voltar
@@ -1021,15 +1021,22 @@ export const NewLayoutRequestDialog = ({
       case "front":
         return (
           <div className="space-y-4">
-            {selectedModel && (
+            {(selectedModel || isFromScratch) && (
               <FrontEditor
-                model={selectedModel}
+                model={selectedModel || {
+                  id: 'scratch',
+                  name: 'Criação do Zero',
+                  image_front: '/placeholder.svg',
+                  image_front_small_logo: '/placeholder.svg',
+                  image_front_large_logo: '/placeholder.svg',
+                  image_front_clean: '/placeholder.svg'
+                }}
                 value={frontCustomization}
                 onChange={setFrontCustomization}
                 onNext={() => setCurrentStep("back")}
               />
             )}
-            <Button variant="outline" onClick={() => setCurrentStep("customer")} className="w-full">
+            <Button variant="outline" onClick={() => setCurrentStep(isFromScratch ? "uniform" : "customer")} className="w-full">
               Voltar
             </Button>
           </div>
@@ -1038,9 +1045,13 @@ export const NewLayoutRequestDialog = ({
       case "back":
         return (
           <div className="space-y-4">
-            {selectedModel && (
+            {(selectedModel || isFromScratch) && (
               <BackEditor
-                model={selectedModel}
+                model={selectedModel || {
+                  id: 'scratch',
+                  name: 'Criação do Zero',
+                  image_back: '/placeholder.svg'
+                }}
                 value={backCustomization}
                 onChange={setBackCustomization}
                 onNext={() => setCurrentStep("sleeves_left")}
@@ -1055,9 +1066,14 @@ export const NewLayoutRequestDialog = ({
       case "sleeves_left":
         return (
           <div className="space-y-4">
-            {selectedModel && (
+            {(selectedModel || isFromScratch) && (
               <SleeveEditor
-                model={selectedModel}
+                model={selectedModel || {
+                  id: 'scratch',
+                  name: 'Criação do Zero',
+                  image_left: '/placeholder.svg',
+                  image_right: '/placeholder.svg'
+                }}
                 side="left"
                 value={leftSleeveCustomization}
                 onChange={(data) => setLeftSleeveCustomization({ ...leftSleeveCustomization, ...data })}
@@ -1073,13 +1089,18 @@ export const NewLayoutRequestDialog = ({
       case "sleeves_right":
         return (
           <div className="space-y-4">
-            {selectedModel && (
+            {(selectedModel || isFromScratch) && (
               <SleeveEditor
-                model={selectedModel}
+                model={selectedModel || {
+                  id: 'scratch',
+                  name: 'Criação do Zero',
+                  image_left: '/placeholder.svg',
+                  image_right: '/placeholder.svg'
+                }}
                 side="right"
                 value={rightSleeveCustomization}
                 onChange={(data) => setRightSleeveCustomization({ ...rightSleeveCustomization, ...data })}
-                onNext={() => setCurrentStep("logo")}
+                onNext={() => setCurrentStep(isFromScratch ? "customer" : "logo")}
               />
             )}
             <Button variant="outline" onClick={() => setCurrentStep("sleeves_left")} className="w-full">
