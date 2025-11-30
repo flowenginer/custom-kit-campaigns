@@ -246,36 +246,23 @@ export default function CustomerRegister() {
 
   // Atualizar link e task com customer_id
   const updateLinkAndTask = async (customerId: string) => {
-    // Atualizar link como usado
-    const { error: linkError } = await supabase
-      .from("customer_registration_links")
-      .update({
-        used_at: new Date().toISOString(),
-        customer_id: customerId,
-      })
-      .eq("id", linkData.id);
+    // Usar função RPC que contorna RLS de forma segura
+    const { error: updateError } = await supabase.rpc('complete_customer_registration', {
+      p_token: token!,
+      p_customer_id: customerId
+    });
 
-    if (linkError) throw linkError;
+    if (updateError) throw updateError;
 
-    // Atualizar task com customer_id usando RPC (bypassa RLS)
-    if (linkData.task_id) {
-      const { error: taskError } = await supabase.rpc('update_task_customer_id', {
+    // Enviar notificação para o vendedor
+    if (linkData.created_by && linkData.task_id) {
+      await supabase.rpc('notify_customer_registered', {
+        p_user_id: linkData.created_by,
         p_task_id: linkData.task_id,
-        p_customer_id: customerId
+        p_customer_name: formData.person_type === 'pj' 
+          ? formData.razao_social || formData.name 
+          : formData.name
       });
-      
-      if (taskError) throw taskError;
-      
-      // Enviar notificação para o vendedor
-      if (linkData.created_by) {
-        await supabase.rpc('notify_customer_registered', {
-          p_user_id: linkData.created_by,
-          p_task_id: linkData.task_id,
-          p_customer_name: formData.person_type === 'juridica' 
-            ? formData.razao_social || formData.name 
-            : formData.name
-        });
-      }
     }
   };
 
