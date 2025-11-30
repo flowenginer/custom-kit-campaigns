@@ -1828,11 +1828,13 @@ export type Database = {
           is_active: boolean | null
           is_percentage: boolean | null
           model_tag: string | null
+          model_tags: string[] | null
           name: string
           price_value: number
           priority: number | null
           rule_type: string
           segment_tag: string | null
+          segment_tags: string[] | null
           sizes: string[] | null
           valid_from: string | null
           valid_until: string | null
@@ -1845,11 +1847,13 @@ export type Database = {
           is_active?: boolean | null
           is_percentage?: boolean | null
           model_tag?: string | null
+          model_tags?: string[] | null
           name: string
           price_value: number
           priority?: number | null
           rule_type: string
           segment_tag?: string | null
+          segment_tags?: string[] | null
           sizes?: string[] | null
           valid_from?: string | null
           valid_until?: string | null
@@ -1862,11 +1866,13 @@ export type Database = {
           is_active?: boolean | null
           is_percentage?: boolean | null
           model_tag?: string | null
+          model_tags?: string[] | null
           name?: string
           price_value?: number
           priority?: number | null
           rule_type?: string
           segment_tag?: string | null
+          segment_tags?: string[] | null
           sizes?: string[] | null
           valid_from?: string | null
           valid_until?: string | null

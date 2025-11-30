@@ -19,6 +19,8 @@ interface PriceRule {
   apply_to: "all" | "segment" | "model_tag" | "size" | "gender" | "custom_combination";
   segment_tag: string | null;
   model_tag: string | null;
+  model_tags: string[];
+  segment_tags: string[];
   sizes: string[];
   genders: string[];
   price_value: number;
@@ -35,6 +37,8 @@ export function PriceRulesManager() {
   const [loading, setLoading] = useState(false);
   const [editingRule, setEditingRule] = useState<PriceRule | null>(null);
   const [availableSizes, setAvailableSizes] = useState<string[]>([]);
+  const [availableTypes, setAvailableTypes] = useState<string[]>([]);
+  const [availableSegments, setAvailableSegments] = useState<string[]>([]);
   
   const [formData, setFormData] = useState<{
     name: string;
@@ -42,6 +46,8 @@ export function PriceRulesManager() {
     apply_to: "all" | "segment" | "model_tag" | "size" | "gender" | "custom_combination";
     segment_tag: string;
     model_tag: string;
+    model_tags: string[];
+    segment_tags: string[];
     sizes: string[];
     genders: string[];
     price_value: number;
@@ -55,6 +61,8 @@ export function PriceRulesManager() {
     apply_to: "all",
     segment_tag: "",
     model_tag: "",
+    model_tags: [],
+    segment_tags: [],
     sizes: [],
     genders: [],
     price_value: 0,
@@ -67,6 +75,7 @@ export function PriceRulesManager() {
   useEffect(() => {
     loadRules();
     loadSizes();
+    loadTypesAndSegments();
   }, []);
 
   const loadSizes = async () => {
@@ -79,6 +88,26 @@ export function PriceRulesManager() {
     if (data?.options) {
       setAvailableSizes(data.options);
     }
+  };
+
+  const loadTypesAndSegments = async () => {
+    // Carregar tipos únicos
+    const { data: typesData } = await supabase
+      .from("shirt_models")
+      .select("model_tag")
+      .not("model_tag", "is", null);
+    
+    const types = [...new Set(typesData?.map(t => t.model_tag).filter(Boolean))] as string[];
+    setAvailableTypes(types);
+
+    // Carregar segmentos únicos
+    const { data: segmentsData } = await supabase
+      .from("shirt_models")
+      .select("segment_tag")
+      .not("segment_tag", "is", null);
+    
+    const segments = [...new Set(segmentsData?.map(s => s.segment_tag).filter(Boolean))] as string[];
+    setAvailableSegments(segments);
   };
 
   const loadRules = async () => {
@@ -103,6 +132,8 @@ export function PriceRulesManager() {
       apply_to: rule.apply_to,
       segment_tag: rule.segment_tag || "",
       model_tag: rule.model_tag || "",
+      model_tags: rule.model_tags || [],
+      segment_tags: rule.segment_tags || [],
       sizes: rule.sizes || [],
       genders: rule.genders || [],
       price_value: rule.price_value,
@@ -129,6 +160,8 @@ export function PriceRulesManager() {
         apply_to: formData.apply_to,
         segment_tag: formData.segment_tag || null,
         model_tag: formData.model_tag || null,
+        model_tags: formData.model_tags,
+        segment_tags: formData.segment_tags,
         sizes: formData.sizes,
         genders: formData.genders,
         price_value: formData.price_value,
@@ -172,6 +205,8 @@ export function PriceRulesManager() {
       apply_to: "all",
       segment_tag: "",
       model_tag: "",
+      model_tags: [],
+      segment_tags: [],
       sizes: [],
       genders: [],
       price_value: 0,
@@ -188,6 +223,7 @@ export function PriceRulesManager() {
     
     try {
       let query = supabase.from("shirt_model_variations").select("id, model_id");
+      let modelIds: string[] = [];
       
       // Filtrar por escopo
       if (rule.apply_to === "size" && rule.sizes.length > 0) {
@@ -195,10 +231,46 @@ export function PriceRulesManager() {
       } else if (rule.apply_to === "gender" && rule.genders.length > 0) {
         query = query.in("gender", rule.genders);
       } else if (rule.apply_to === "custom_combination") {
-        if (rule.sizes.length > 0) {
+        // Filtrar por tipos selecionados
+        if (rule.model_tags?.length > 0) {
+          const { data: models } = await supabase
+            .from("shirt_models")
+            .select("id")
+            .in("model_tag", rule.model_tags);
+          if (models?.length) {
+            modelIds = models.map(m => m.id);
+          }
+        }
+        
+        // Filtrar por segmentos selecionados
+        if (rule.segment_tags?.length > 0) {
+          const { data: models } = await supabase
+            .from("shirt_models")
+            .select("id")
+            .in("segment_tag", rule.segment_tags);
+          if (models?.length) {
+            if (modelIds.length > 0) {
+              // Intersecção dos filtros
+              const segmentIds = models.map(m => m.id);
+              modelIds = modelIds.filter(id => segmentIds.includes(id));
+            } else {
+              modelIds = models.map(m => m.id);
+            }
+          }
+        }
+        
+        // Aplicar filtro de modelos se houver
+        if (modelIds.length > 0) {
+          query = query.in("model_id", modelIds);
+        }
+        
+        // Filtrar por tamanhos
+        if (rule.sizes?.length > 0) {
           query = query.in("size", rule.sizes);
         }
-        if (rule.genders.length > 0) {
+        
+        // Filtrar por gêneros
+        if (rule.genders?.length > 0) {
           query = query.in("gender", rule.genders);
         }
       } else if (rule.apply_to === "segment" && rule.segment_tag) {
@@ -333,6 +405,38 @@ export function PriceRulesManager() {
     });
   };
 
+  const toggleModelTag = (tag: string) => {
+    setFormData({
+      ...formData,
+      model_tags: formData.model_tags.includes(tag)
+        ? formData.model_tags.filter(t => t !== tag)
+        : [...formData.model_tags, tag]
+    });
+  };
+
+  const toggleSegmentTag = (tag: string) => {
+    setFormData({
+      ...formData,
+      segment_tags: formData.segment_tags.includes(tag)
+        ? formData.segment_tags.filter(s => s !== tag)
+        : [...formData.segment_tags, tag]
+    });
+  };
+
+  const getTypeLabel = (tag: string) => {
+    switch(tag) {
+      case "manga_curta": return "👕 Manga Curta";
+      case "manga_longa": return "👔 Manga Longa";
+      case "regata": return "🥋 Regata";
+      case "ziper": return "🧥 Zíper";
+      default: return tag;
+    }
+  };
+
+  const formatSegmentName = (tag: string) => {
+    return tag.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -424,6 +528,52 @@ export function PriceRulesManager() {
                     </Select>
                   </div>
                 </div>
+
+                {(formData.apply_to === "model_tag" || formData.apply_to === "custom_combination") && (
+                  <div>
+                    <Label>Tipos de Modelo</Label>
+                    <div className="flex flex-wrap gap-2 mt-2 p-2 border rounded-md">
+                      {availableTypes.map((type) => (
+                        <Badge
+                          key={type}
+                          variant={formData.model_tags.includes(type) ? "default" : "outline"}
+                          className="cursor-pointer hover:bg-primary/90 transition-colors"
+                          onClick={() => toggleModelTag(type)}
+                        >
+                          {getTypeLabel(type)}
+                        </Badge>
+                      ))}
+                    </div>
+                    {formData.model_tags.length > 0 && (
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Selecionados: {formData.model_tags.map(t => getTypeLabel(t)).join(", ")}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {(formData.apply_to === "segment" || formData.apply_to === "custom_combination") && (
+                  <div>
+                    <Label>Segmentos</Label>
+                    <div className="flex flex-wrap gap-2 mt-2 max-h-32 overflow-y-auto p-2 border rounded-md">
+                      {availableSegments.map((segment) => (
+                        <Badge
+                          key={segment}
+                          variant={formData.segment_tags.includes(segment) ? "default" : "outline"}
+                          className="cursor-pointer hover:bg-primary/90 transition-colors"
+                          onClick={() => toggleSegmentTag(segment)}
+                        >
+                          {formatSegmentName(segment)}
+                        </Badge>
+                      ))}
+                    </div>
+                    {formData.segment_tags.length > 0 && (
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Selecionados: {formData.segment_tags.map(s => formatSegmentName(s)).join(", ")}
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {(formData.apply_to === "size" || formData.apply_to === "custom_combination") && (
                   <div>
