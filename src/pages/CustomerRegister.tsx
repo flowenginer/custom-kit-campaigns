@@ -256,12 +256,14 @@ export default function CustomerRegister() {
 
     if (linkError) throw linkError;
 
-    // Atualizar task com customer_id
+    // Atualizar task com customer_id usando RPC (bypassa RLS)
     if (linkData.task_id) {
-      await supabase
-        .from("design_tasks")
-        .update({ customer_id: customerId })
-        .eq("id", linkData.task_id);
+      const { error: taskError } = await supabase.rpc('update_task_customer_id', {
+        p_task_id: linkData.task_id,
+        p_customer_id: customerId
+      });
+      
+      if (taskError) throw taskError;
     }
   };
 
@@ -306,6 +308,7 @@ export default function CustomerRegister() {
           street: formData.street,
           number: formData.number,
           complement: formData.complement || null,
+          created_by: linkData.created_by, // Associar vendedor ao cliente
         })
         .select()
         .single();

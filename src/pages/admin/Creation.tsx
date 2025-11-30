@@ -103,18 +103,21 @@ const Creation = () => {
     loadTasks();
     getCurrentUser();
     
-    // Subscribe to realtime changes for new cards
+    // Subscribe to realtime changes for new cards and updates
     const channel = supabase
       .channel("design_tasks_changes")
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*",
           schema: "public",
           table: "design_tasks",
         },
-        () => {
-          playNewCard();
+        (payload) => {
+          // Tocar som apenas em INSERT (novos cards)
+          if (payload.eventType === 'INSERT') {
+            playNewCard();
+          }
           loadTasks();
         }
       )
@@ -170,6 +173,7 @@ const Creation = () => {
           created_by,
           created_by_salesperson,
           order_number,
+          customer_id,
           orders!inner (
             customer_name,
             customer_email,
@@ -229,6 +233,7 @@ const Creation = () => {
           ? task.designer.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
           : null,
         status_changed_at: task.status_changed_at,
+        customer_id: task.customer_id,
       }));
 
       setTasks(formattedTasks);
