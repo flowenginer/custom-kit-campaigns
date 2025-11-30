@@ -166,22 +166,23 @@ export default function CustomerRegister() {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
-  // Verificar se cliente já existe por CPF ou CNPJ
+  // Verificar se cliente já existe por CPF ou CNPJ usando RPC
   const checkExistingCustomer = async () => {
     const cpf = formData.person_type === "pf" ? formData.cpf.replace(/\D/g, "") : null;
     const cnpj = formData.person_type === "pj" ? formData.cnpj.replace(/\D/g, "") : null;
     
     if (!cpf && !cnpj) return null;
     
-    let query = supabase.from("customers").select("*");
+    const { data, error } = await supabase.rpc('check_customer_exists', {
+      p_cpf: cpf,
+      p_cnpj: cnpj
+    });
     
-    if (cpf) {
-      query = query.eq("cpf", cpf);
-    } else if (cnpj) {
-      query = query.eq("cnpj", cnpj);
+    if (error) {
+      console.error('Erro ao verificar cliente:', error);
+      return null;
     }
     
-    const { data } = await query.maybeSingle();
     return data;
   };
 

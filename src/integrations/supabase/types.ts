@@ -2178,6 +2178,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_customer_exists: {
+        Args: { p_cnpj?: string; p_cpf?: string }
+        Returns: Json
+      }
       get_user_roles: {
         Args: { _user_id: string }
         Returns: {
