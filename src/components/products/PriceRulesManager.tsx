@@ -602,15 +602,16 @@ export function PriceRulesManager() {
                   <div>
                     <Label>Gêneros</Label>
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {["masculino", "feminino", "unissex"].map((gender) => (
+                      {["Masculino", "Feminino", "Infantil"].map((gender) => (
                         <Badge
                           key={gender}
                           variant={formData.genders.includes(gender) ? "default" : "outline"}
                           className="cursor-pointer hover:bg-primary/90 transition-colors"
                           onClick={() => toggleGender(gender)}
                         >
-                          {gender === "masculino" ? "♂ Masculino" : 
-                           gender === "feminino" ? "♀ Feminino" : "⚥ Unissex"}
+                          {gender === "Masculino" ? "♂ Masculino" : 
+                           gender === "Feminino" ? "♀ Feminino" : 
+                           gender === "Infantil" ? "👶 Infantil" : gender}
                         </Badge>
                       ))}
                     </div>
