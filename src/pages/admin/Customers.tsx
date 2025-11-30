@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, User, Building2, Phone, Mail, MapPin } from "lucide-react";
+import { Plus, Search, User, Building2, Phone, Mail, MapPin, Users } from "lucide-react";
 import { toast } from "sonner";
 import { CustomerWizardDialog } from "@/components/customers/CustomerWizardDialog";
 import { CustomerDetailsDialog } from "@/components/customers/CustomerDetailsDialog";
@@ -28,6 +28,9 @@ interface Customer {
   total_orders: number;
   total_revenue: number;
   created_at: string;
+  is_active: boolean;
+  created_by: string | null;
+  salesperson_name?: string;
 }
 
 export default function Customers() {
@@ -47,7 +50,12 @@ export default function Customers() {
     try {
       const { data, error } = await supabase
         .from("customers")
-        .select("*")
+        .select(`
+          *,
+          profiles:created_by (
+            full_name
+          )
+        `)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -56,6 +64,8 @@ export default function Customers() {
         person_type: c.person_type as 'fisica' | 'juridica',
         total_orders: c.total_orders || 0,
         total_revenue: c.total_revenue || 0,
+        is_active: c.is_active ?? true,
+        salesperson_name: (c.profiles as any)?.full_name || null,
       })));
     } catch (error) {
       console.error("Error loading customers:", error);
@@ -137,7 +147,9 @@ export default function Customers() {
           {filteredCustomers.map((customer) => (
             <Card
               key={customer.id}
-              className="cursor-pointer hover:shadow-lg transition-shadow"
+              className={`cursor-pointer hover:shadow-lg transition-shadow ${
+                !customer.is_active ? 'opacity-50 border-destructive' : ''
+              }`}
               onClick={() => handleCustomerClick(customer)}
             >
               <CardHeader>
@@ -150,9 +162,16 @@ export default function Customers() {
                     )}
                     <CardTitle className="text-lg">{customer.name}</CardTitle>
                   </div>
-                  <Badge variant={customer.person_type === "juridica" ? "default" : "secondary"}>
-                    {customer.person_type === "juridica" ? "PJ" : "PF"}
-                  </Badge>
+                  <div className="flex flex-col gap-1 items-end">
+                    <Badge variant={customer.person_type === "juridica" ? "default" : "secondary"}>
+                      {customer.person_type === "juridica" ? "PJ" : "PF"}
+                    </Badge>
+                    {!customer.is_active && (
+                      <Badge variant="destructive" className="text-xs">
+                        Inativo
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-2">
@@ -178,6 +197,14 @@ export default function Customers() {
                     {customer.city}, {customer.state}
                   </span>
                 </div>
+                {customer.salesperson_name && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Users className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">
+                      Vendedor: <span className="font-medium text-foreground">{customer.salesperson_name}</span>
+                    </span>
+                  </div>
+                )}
                 <div className="pt-2 border-t flex justify-between text-sm">
                   <span className="text-muted-foreground">Pedidos:</span>
                   <span className="font-semibold">{customer.total_orders || 0}</span>

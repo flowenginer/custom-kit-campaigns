@@ -589,6 +589,7 @@ export type Database = {
           email: string | null
           first_order_date: string | null
           id: string
+          is_active: boolean | null
           last_order_date: string | null
           name: string
           neighborhood: string
@@ -616,6 +617,7 @@ export type Database = {
           email?: string | null
           first_order_date?: string | null
           id?: string
+          is_active?: boolean | null
           last_order_date?: string | null
           name: string
           neighborhood: string
@@ -643,6 +645,7 @@ export type Database = {
           email?: string | null
           first_order_date?: string | null
           id?: string
+          is_active?: boolean | null
           last_order_date?: string | null
           name?: string
           neighborhood?: string
@@ -2200,6 +2203,10 @@ export type Database = {
         Returns: undefined
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      notify_customer_registered: {
+        Args: { p_customer_name: string; p_task_id: string; p_user_id: string }
+        Returns: undefined
+      }
       update_task_customer_id: {
         Args: { p_customer_id: string; p_task_id: string }
         Returns: undefined

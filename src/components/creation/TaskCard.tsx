@@ -256,11 +256,11 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
               </div>
             </CollapsibleContent>
 
-            {/* Botões de Ação - APENAS em status approved */}
-            {!isCollapsed && task.status === 'approved' && (
+            {/* Botões de Ação - Mostrar quando cliente cadastrado OU status approved */}
+            {!isCollapsed && (task.customer_id || task.status === 'approved') && (
               <div className="px-3 pb-3 space-y-2">
-                {/* Cliente SEM cadastro: apenas Solicitar Cadastro */}
-                {!task.customer_id && (
+                {/* Cliente SEM cadastro E status approved: apenas Solicitar Cadastro */}
+                {!task.customer_id && task.status === 'approved' && (
                   <RequestCustomerRegistrationButton
                     taskId={task.id}
                     leadId={task.lead_id}
@@ -292,14 +292,16 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
                   </div>
                 )}
 
-                {/* Exportar Bling - sempre disponível em approved */}
-                <BlingExportButton
-                  taskId={task.id}
-                  orderId={task.order_id}
-                  onExportSuccess={() => {
-                    toast.success("Pedido exportado com sucesso!");
-                  }}
-                />
+                {/* Exportar Bling - sempre disponível quando status = approved */}
+                {task.status === 'approved' && (
+                  <BlingExportButton
+                    taskId={task.id}
+                    orderId={task.order_id}
+                    onExportSuccess={() => {
+                      toast.success("Pedido exportado com sucesso!");
+                    }}
+                  />
+                )}
               </div>
             )}
           </CardContent>
