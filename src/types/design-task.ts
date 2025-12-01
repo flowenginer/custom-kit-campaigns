@@ -87,6 +87,11 @@ export interface DesignTask {
   logo_action?: 'designer_create' | 'waiting_client' | null;
   logo_description?: string | null;
   task_layouts?: DesignTaskLayout[];
+  // Business segment from lead (for Adventure campaigns)
+  business_segment_id?: string | null;
+  business_segment_name?: string | null;
+  business_segment_icon?: string | null;
+  business_segment_other?: string | null;
 }
 
 export interface DesignTaskHistory {

@@ -163,10 +163,11 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
               <div className="grid grid-cols-3 gap-2">
                 {/* COLUNA ESQUERDA */}
                 <div className="space-y-1.5">
-                  {/* Segmento/Campanha */}
+                  {/* Segmento/Campanha - prioriza segmento real do cliente */}
                   <div className="border border-border rounded px-2 py-1.5 bg-card text-center min-h-[36px] flex items-center justify-center">
                     <span className="font-medium text-card-foreground truncate" style={{ fontSize: `${fontSizes?.segment || 12}px` }}>
-                      {task.campaign_name || task.segment_tag || 'N/A'}
+                      {task.business_segment_icon && `${task.business_segment_icon} `}
+                      {task.business_segment_name || task.business_segment_other || task.campaign_name || task.segment_tag || 'N/A'}
                     </span>
                   </div>
 

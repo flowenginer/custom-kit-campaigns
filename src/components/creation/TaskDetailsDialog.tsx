@@ -74,6 +74,7 @@ import {
   Edit
 } from "lucide-react";
 import { ModificationRequestDialog } from "@/components/orders/ModificationRequestDialog";
+import { BusinessSegmentField } from "./BusinessSegmentField";
 
 interface TaskDetailsDialogProps {
   task: DesignTask | null;
@@ -976,8 +977,11 @@ export const TaskDetailsDialog = ({
                     <h3 className="font-semibold text-sm">Informações do Pedido</h3>
                     <div>
                       <Label className="text-xs text-muted-foreground">Campanha</Label>
-                      <p className="text-sm font-medium">{task.campaign_name}</p>
+                      <p className="text-sm font-medium">{task.campaign_name || 'N/A'}</p>
                     </div>
+                    
+                    {/* Segmento do Cliente - editável */}
+                    <BusinessSegmentField task={task} onTaskUpdated={onTaskUpdated} />
                     <div>
                       <Label className="text-xs text-muted-foreground">Modelo</Label>
                       <p className="text-sm">{task.model_name}</p>

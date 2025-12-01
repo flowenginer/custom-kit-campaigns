@@ -92,7 +92,10 @@ export default function AdvancedDashboard() {
           utm_campaign,
           order_id,
           campaign_id,
-          campaigns(segment_id, segments(name))
+          business_segment_id,
+          business_segment_other,
+          campaigns(segment_id, segment_tag, segments(name)),
+          business_segments(name, icon)
         `)
         .is("deleted_at", null)
         .gte("created_at", startDate.toISOString())
@@ -165,14 +168,24 @@ export default function AdvancedDashboard() {
 
     // Process cross-analysis data
     const grouped = filteredLeads.reduce((acc: any, lead) => {
-      const key = `${lead.utm_source || "unknown"}_${lead.utm_medium || "unknown"}_${
-        (lead.campaigns as any)?.segments?.name || "Sem segmento"
-      }`;
+      // Determinar segmento real: se Adventure + business_segment, usar segmento escolhido
+      const campaignSegmentTag = (lead.campaigns as any)?.segment_tag;
+      let segmentName: string;
+      
+      if (campaignSegmentTag === 'adventure_' && (lead.business_segment_id || lead.business_segment_other)) {
+        // Adventure campaign com business_segment escolhido pelo cliente
+        segmentName = (lead.business_segments as any)?.name || lead.business_segment_other || "Adventure";
+      } else {
+        // Usar segmento da campanha normalmente
+        segmentName = (lead.campaigns as any)?.segments?.name || "Sem segmento";
+      }
+      
+      const key = `${lead.utm_source || "unknown"}_${lead.utm_medium || "unknown"}_${segmentName}`;
       if (!acc[key]) {
         acc[key] = {
           utm_source: lead.utm_source || "unknown",
           utm_medium: lead.utm_medium || "unknown",
-          segment_name: (lead.campaigns as any)?.segments?.name || "Sem segmento",
+          segment_name: segmentName,
           total_leads: 0,
           total_orders: 0,
           conversion_rate: 0,
@@ -216,7 +229,16 @@ export default function AdvancedDashboard() {
       .filter(lead => lead.utm_source && lead.campaign_id)
       .reduce((acc: any, lead) => {
         const source = lead.utm_source || "unknown";
-        const target = (lead.campaigns as any)?.segments?.name || "Sem segmento";
+        // Usar segmento real (business_segment) se disponível
+        const campaignSegmentTag = (lead.campaigns as any)?.segment_tag;
+        let target: string;
+        
+        if (campaignSegmentTag === 'adventure_' && (lead.business_segment_id || lead.business_segment_other)) {
+          target = (lead.business_segments as any)?.name || lead.business_segment_other || "Adventure";
+        } else {
+          target = (lead.campaigns as any)?.segments?.name || "Sem segmento";
+        }
+        
         const key = `${source}_${target}`;
         
         if (!acc[key]) {
