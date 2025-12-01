@@ -486,8 +486,8 @@ export const CustomizationViewer = ({
         </Card>
       )}
       
-      {/* Observações da Criação do Zero - de logo.logoDescription ou internalNotes */}
-      {data?.fromScratch && (transformedData.logo?.logoDescription || transformedData.internalNotes) && (
+      {/* Observações da Criação do Zero - SEMPRE mostra se fromScratch */}
+      {data?.fromScratch && (
         <Card className="border-2 border-purple-500 dark:border-purple-600">
           <CardContent className="p-4">
             <h3 className="text-lg font-bold mb-3 flex items-center gap-2 text-purple-800 dark:text-purple-300">
@@ -495,7 +495,7 @@ export const CustomizationViewer = ({
             </h3>
             <div className="bg-purple-50 dark:bg-purple-950 p-4 rounded-lg border border-purple-300 dark:border-purple-700">
               <p className="text-sm whitespace-pre-wrap text-purple-900 dark:text-purple-100">
-                {transformedData.logo?.logoDescription || transformedData.internalNotes}
+                {transformedData.logo?.logoDescription || transformedData.internalNotes || transformedData.scratchDescription || "Nenhuma observação foi registrada para este pedido."}
               </p>
             </div>
           </CardContent>
@@ -639,7 +639,7 @@ export const CustomizationViewer = ({
             <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
               <Badge variant="default">FRENTE</Badge>
             </h3>
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-3 gap-6">
               {/* Coluna Esquerda: Detalhes */}
               <div className="space-y-4">
                 <div>
@@ -672,7 +672,7 @@ export const CustomizationViewer = ({
                   <div>
                     <Label className="text-xs text-muted-foreground">Observação - Logo Pequena</Label>
                     <div className="flex items-center gap-2">
-                      <p className="text-sm bg-amber-50 dark:bg-amber-950 border border-amber-300 dark:border-amber-700 p-2 rounded flex-1">{transformedData.front.smallLogoObservation}</p>
+                      <p className="text-sm bg-amber-50 dark:bg-amber-950 text-amber-900 dark:text-amber-100 border border-amber-300 dark:border-amber-700 p-2 rounded flex-1">{transformedData.front.smallLogoObservation}</p>
                       <Button size="sm" variant="ghost" onClick={() => copyToClipboard(transformedData.front.smallLogoObservation!)}>
                         <Copy className="h-3 w-3" />
                       </Button>
@@ -683,7 +683,7 @@ export const CustomizationViewer = ({
                   <div>
                     <Label className="text-xs text-muted-foreground">Observação - Logo Grande</Label>
                     <div className="flex items-center gap-2">
-                      <p className="text-sm bg-amber-50 dark:bg-amber-950 border border-amber-300 dark:border-amber-700 p-2 rounded flex-1">{transformedData.front.largeLogoObservation}</p>
+                      <p className="text-sm bg-amber-50 dark:bg-amber-950 text-amber-900 dark:text-amber-100 border border-amber-300 dark:border-amber-700 p-2 rounded flex-1">{transformedData.front.largeLogoObservation}</p>
                       <Button size="sm" variant="ghost" onClick={() => copyToClipboard(transformedData.front.largeLogoObservation!)}>
                         <Copy className="h-3 w-3" />
                       </Button>
@@ -718,10 +718,20 @@ export const CustomizationViewer = ({
                     </div>
                   </div>
                 )}
+                {frontAssets.length > 0 && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-2 block">Assets da Frente</Label>
+                    <AssetGallery
+                      assets={frontAssets}
+                      columns={2}
+                      imageHeight="h-32"
+                    />
+                  </div>
+                )}
               </div>
 
-              {/* Coluna Direita: Preview Visual e Assets */}
-              <div className="space-y-4">
+              {/* Coluna Central: Preview Visual */}
+              <div className="flex flex-col items-center justify-start">
                 {transformedData.modelImages?.front && (
                   <ShirtPreviewAnnotated
                     imageUrl={getModelImageForSection('front', transformedData.front)}
@@ -733,30 +743,51 @@ export const CustomizationViewer = ({
                     })}
                   />
                 )}
-                
-                {/* Logos do Cliente para a Frente */}
-                {transformedData.logo?.logoUrls && transformedData.logo.logoUrls.length > 0 && (
-                  <div>
-                    <Label className="text-xs text-muted-foreground mb-2 block">Logo do Cliente</Label>
-                    <AssetGallery
-                      assets={transformedData.logo.logoUrls.map((url: string, idx: number) => ({
-                        url,
-                        label: `Logo ${idx + 1}`
-                      }))}
-                      columns={2}
-                      imageHeight="h-48"
-                    />
+              </div>
+
+              {/* Coluna Direita: Logo do Cliente */}
+              <div className="space-y-4">
+                <Label className="text-xs text-muted-foreground block">Logo do Cliente</Label>
+                {transformedData.logo?.logoUrls && transformedData.logo.logoUrls.length > 0 ? (
+                  <div className="space-y-3">
+                    {transformedData.logo.logoUrls.map((url: string, idx: number) => (
+                      <div key={idx} className="border-2 border-blue-400 dark:border-blue-600 rounded-lg p-3 bg-blue-50/50 dark:bg-blue-950/30">
+                        <img 
+                          src={url} 
+                          alt={`Logo ${idx + 1}`} 
+                          className="w-full h-32 object-contain rounded cursor-pointer hover:opacity-80 transition-opacity bg-white dark:bg-gray-800"
+                          onClick={() => setZoomImage({ url, alt: `Logo do Cliente ${idx + 1}` })}
+                        />
+                        <Button 
+                          size="sm" 
+                          className="w-full mt-2" 
+                          variant="outline"
+                          onClick={async () => {
+                            try {
+                              const response = await fetch(url);
+                              const blob = await response.blob();
+                              const blobUrl = URL.createObjectURL(blob);
+                              const link = document.createElement('a');
+                              link.href = blobUrl;
+                              link.download = `logo_cliente_${idx + 1}.png`;
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                              URL.revokeObjectURL(blobUrl);
+                              toast.success(`Logo ${idx + 1} baixada!`);
+                            } catch (error) {
+                              toast.error("Erro ao baixar logo");
+                            }
+                          }}
+                        >
+                          <Download className="h-3 w-3 mr-1" /> Download Logo {idx + 1}
+                        </Button>
+                      </div>
+                    ))}
                   </div>
-                )}
-                
-                {frontAssets.length > 0 && (
-                  <div>
-                    <Label className="text-xs text-muted-foreground mb-2 block">Assets</Label>
-                    <AssetGallery
-                      assets={frontAssets}
-                      columns={2}
-                      imageHeight="h-48"
-                    />
+                ) : (
+                  <div className="text-center text-muted-foreground p-6 border-2 border-dashed rounded-lg bg-muted/20">
+                    <p className="text-sm">Sem logo do cliente</p>
                   </div>
                 )}
               </div>
@@ -772,7 +803,7 @@ export const CustomizationViewer = ({
             <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
               <Badge variant="default">COSTAS</Badge>
             </h3>
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-3 gap-6">
               {/* Coluna Esquerda: Detalhes */}
               <div className="space-y-4">
                 {transformedData.back.logoLarge && (
@@ -785,7 +816,7 @@ export const CustomizationViewer = ({
                   <div>
                     <Label className="text-xs text-muted-foreground">Observação - Logo Grande Costas</Label>
                     <div className="flex items-center gap-2">
-                      <p className="text-sm bg-amber-50 dark:bg-amber-950 border border-amber-300 dark:border-amber-700 p-2 rounded flex-1">{transformedData.back.logoLargeObservation}</p>
+                      <p className="text-sm bg-amber-50 dark:bg-amber-950 text-amber-900 dark:text-amber-100 border border-amber-300 dark:border-amber-700 p-2 rounded flex-1">{transformedData.back.logoLargeObservation}</p>
                       <Button size="sm" variant="ghost" onClick={() => copyToClipboard(transformedData.back.logoLargeObservation!)}>
                         <Copy className="h-3 w-3" />
                       </Button>
@@ -796,7 +827,7 @@ export const CustomizationViewer = ({
                   <div>
                     <Label className="text-xs text-muted-foreground">Observação - Logo Nuca</Label>
                     <div className="flex items-center gap-2">
-                      <p className="text-sm bg-amber-50 dark:bg-amber-950 border border-amber-300 dark:border-amber-700 p-2 rounded flex-1">{transformedData.back.logoNeckObservation}</p>
+                      <p className="text-sm bg-amber-50 dark:bg-amber-950 text-amber-900 dark:text-amber-100 border border-amber-300 dark:border-amber-700 p-2 rounded flex-1">{transformedData.back.logoNeckObservation}</p>
                       <Button size="sm" variant="ghost" onClick={() => copyToClipboard(transformedData.back.logoNeckObservation!)}>
                         <Copy className="h-3 w-3" />
                       </Button>
@@ -879,10 +910,20 @@ export const CustomizationViewer = ({
                     <p className="text-sm bg-muted p-2 rounded">{transformedData.back.sponsorsLocation}</p>
                   </div>
                 )}
+                {backAssets.length > 0 && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-2 block">Assets das Costas</Label>
+                    <AssetGallery
+                      assets={backAssets}
+                      columns={2}
+                      imageHeight="h-32"
+                    />
+                  </div>
+                )}
               </div>
 
-              {/* Coluna Direita: Preview Visual e Assets */}
-              <div className="space-y-4">
+              {/* Coluna Central: Preview Visual */}
+              <div className="flex flex-col items-center justify-start">
                 {transformedData.modelImages?.back && (
                   <ShirtPreviewAnnotated
                     imageUrl={transformedData.modelImages.back}
@@ -894,26 +935,88 @@ export const CustomizationViewer = ({
                     })}
                   />
                 )}
-                
-                {clientLogosAssets.length > 0 && (
-                  <div>
-                    <Label className="text-xs text-muted-foreground mb-2 block">Logos do Cliente</Label>
-                    <AssetGallery
-                      assets={clientLogosAssets}
-                      columns={2}
-                      imageHeight="h-48"
-                    />
+              </div>
+
+              {/* Coluna Direita: Logo do Cliente */}
+              <div className="space-y-4">
+                <Label className="text-xs text-muted-foreground block">Logo do Cliente</Label>
+                {transformedData.logo?.logoUrls && transformedData.logo.logoUrls.length > 0 ? (
+                  <div className="space-y-3">
+                    {transformedData.logo.logoUrls.map((url: string, idx: number) => (
+                      <div key={idx} className="border-2 border-blue-400 dark:border-blue-600 rounded-lg p-3 bg-blue-50/50 dark:bg-blue-950/30">
+                        <img 
+                          src={url} 
+                          alt={`Logo ${idx + 1}`} 
+                          className="w-full h-32 object-contain rounded cursor-pointer hover:opacity-80 transition-opacity bg-white dark:bg-gray-800"
+                          onClick={() => setZoomImage({ url, alt: `Logo do Cliente ${idx + 1}` })}
+                        />
+                        <Button 
+                          size="sm" 
+                          className="w-full mt-2" 
+                          variant="outline"
+                          onClick={async () => {
+                            try {
+                              const response = await fetch(url);
+                              const blob = await response.blob();
+                              const blobUrl = URL.createObjectURL(blob);
+                              const link = document.createElement('a');
+                              link.href = blobUrl;
+                              link.download = `logo_cliente_${idx + 1}.png`;
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                              URL.revokeObjectURL(blobUrl);
+                              toast.success(`Logo ${idx + 1} baixada!`);
+                            } catch (error) {
+                              toast.error("Erro ao baixar logo");
+                            }
+                          }}
+                        >
+                          <Download className="h-3 w-3 mr-1" /> Download Logo {idx + 1}
+                        </Button>
+                      </div>
+                    ))}
                   </div>
-                )}
-                
-                {backAssets.length > 0 && (
-                  <div>
-                    <Label className="text-xs text-muted-foreground mb-2 block">Assets</Label>
-                    <AssetGallery
-                      assets={backAssets}
-                      columns={2}
-                      imageHeight="h-48"
-                    />
+                ) : clientLogosAssets.length > 0 ? (
+                  <div className="space-y-3">
+                    {clientLogosAssets.map((asset: any, idx: number) => (
+                      <div key={idx} className="border-2 border-blue-400 dark:border-blue-600 rounded-lg p-3 bg-blue-50/50 dark:bg-blue-950/30">
+                        <img 
+                          src={asset.url} 
+                          alt={asset.label} 
+                          className="w-full h-32 object-contain rounded cursor-pointer hover:opacity-80 transition-opacity bg-white dark:bg-gray-800"
+                          onClick={() => setZoomImage({ url: asset.url, alt: asset.label })}
+                        />
+                        <Button 
+                          size="sm" 
+                          className="w-full mt-2" 
+                          variant="outline"
+                          onClick={async () => {
+                            try {
+                              const response = await fetch(asset.url);
+                              const blob = await response.blob();
+                              const blobUrl = URL.createObjectURL(blob);
+                              const link = document.createElement('a');
+                              link.href = blobUrl;
+                              link.download = `logo_cliente_${idx + 1}.png`;
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                              URL.revokeObjectURL(blobUrl);
+                              toast.success(`Logo ${idx + 1} baixada!`);
+                            } catch (error) {
+                              toast.error("Erro ao baixar logo");
+                            }
+                          }}
+                        >
+                          <Download className="h-3 w-3 mr-1" /> Download {asset.label}
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground p-6 border-2 border-dashed rounded-lg bg-muted/20">
+                    <p className="text-sm">Sem logo do cliente</p>
                   </div>
                 )}
               </div>
