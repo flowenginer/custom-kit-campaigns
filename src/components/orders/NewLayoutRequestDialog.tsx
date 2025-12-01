@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -29,7 +29,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, Plus, AlertTriangle, Check, Search, X, Megaphone, Edit, Pencil } from "lucide-react";
+import { Loader2, Plus, AlertTriangle, Check, Search, X, Megaphone, Edit, Pencil, Building2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useDebounce } from "use-debounce";
 import { FrontEditor } from "@/components/customization/FrontEditor";
@@ -38,6 +38,7 @@ import { SleeveEditor } from "@/components/customization/SleeveEditor";
 import { UrgentReasonDialog } from "@/components/orders/UrgentReasonDialog";
 import { TaskPriority } from "@/types/design-task";
 import { useUniformTypes } from "@/hooks/useUniformTypes";
+import { useBusinessSegments } from "@/hooks/useBusinessSegments";
 
 // Importar imagens dos uniformes
 import mangaCurtaImg from "@/assets/uniforms/manga-curta.png";
@@ -119,6 +120,11 @@ export const NewLayoutRequestDialog = ({
   const [urgentReasonText, setUrgentReasonText] = useState<string>("");
   const [urgentReasonDialogOpen, setUrgentReasonDialogOpen] = useState(false);
   const [logoDescription, setLogoDescription] = useState<string>("");
+  
+  // Business segment states (for Adventure campaigns)
+  const [businessSegmentId, setBusinessSegmentId] = useState<string | null>(null);
+  const [businessSegmentOther, setBusinessSegmentOther] = useState<string>("");
+  const { data: businessSegments = [] } = useBusinessSegments(true);
   const [currentStep, setCurrentStep] = useState<
     | "quantity_layouts"
     | "setup_layout"
@@ -251,6 +257,18 @@ export const NewLayoutRequestDialog = ({
       setFilteredModels([]);
     }
   }, [selectedUniformType, models]);
+
+  // Check if any selected campaign is Adventure
+  const isAdventureCampaign = useMemo(() => {
+    // Check if any of the configured layouts has an Adventure campaign
+    const hasAdventureLayout = layouts.some(layout => {
+      const campaign = campaigns.find(c => c.id === layout.campaignId);
+      return campaign?.segment_tag === 'adventure_';
+    });
+    // Also check the currently selected campaign
+    const currentCampaign = campaigns.find(c => c.id === selectedCampaignId);
+    return hasAdventureLayout || currentCampaign?.segment_tag === 'adventure_';
+  }, [layouts, campaigns, selectedCampaignId]);
 
   // Search customers
   useEffect(() => {
@@ -543,6 +561,9 @@ export const NewLayoutRequestDialog = ({
           hasLogo: firstLayout.hasLogo !== "sem_logo" && firstLayout.hasLogo !== "depois",
           logoUrls: firstLayout.uploadedLogoUrls || [],
           internalNotes,
+          // Business segment (for Adventure campaigns)
+          businessSegmentId: isAdventureCampaign ? businessSegmentId : null,
+          businessSegmentOther: isAdventureCampaign && businessSegmentId === 'other' ? businessSegmentOther : null,
         };
 
         const { error: pendingError } = await supabase
@@ -625,6 +646,9 @@ export const NewLayoutRequestDialog = ({
           uploaded_logo_url: firstLayout.uploadedLogoUrls && firstLayout.uploadedLogoUrls.length > 0 ? firstLayout.uploadedLogoUrls[0] : null,
           customization_summary: customizationData,
           completed: true,
+          // Business segment (for Adventure campaigns)
+          business_segment_id: isAdventureCampaign && businessSegmentId && businessSegmentId !== 'other' ? businessSegmentId : null,
+          business_segment_other: isAdventureCampaign && businessSegmentId === 'other' ? businessSegmentOther : null,
         }])
         .select()
         .single();
@@ -747,6 +771,9 @@ export const NewLayoutRequestDialog = ({
     setCustomerSearchTerm("");
     setCustomerSearchResults([]);
     setSelectedCustomerId(null);
+    // Reset business segment
+    setBusinessSegmentId(null);
+    setBusinessSegmentOther("");
     setFrontCustomization({
       logoType: "none",
       hasSmallLogo: false,
@@ -1763,6 +1790,64 @@ export const NewLayoutRequestDialog = ({
                 disabled={!!selectedCustomerId}
               />
             </div>
+
+            {/* Business Segment Selector (Adventure campaigns only) */}
+            {isAdventureCampaign && (
+              <div className="space-y-3 p-4 border rounded-lg bg-accent/30">
+                <Label className="flex items-center gap-2 text-base font-medium">
+                  <Building2 className="h-4 w-4" />
+                  Segmento de Negócio do Cliente *
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Selecione o segmento de atuação do cliente
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {businessSegments.map((segment) => (
+                    <Card
+                      key={segment.id}
+                      className={`p-3 cursor-pointer transition-all hover:border-primary ${
+                        businessSegmentId === segment.id
+                          ? "border-primary ring-2 ring-primary bg-primary/5"
+                          : ""
+                      }`}
+                      onClick={() => {
+                        setBusinessSegmentId(segment.id);
+                        setBusinessSegmentOther("");
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">{segment.icon || '📦'}</span>
+                        <span className="text-sm font-medium">{segment.name}</span>
+                      </div>
+                    </Card>
+                  ))}
+                  {/* Option for "Other" */}
+                  <Card
+                    className={`p-3 cursor-pointer transition-all hover:border-primary ${
+                      businessSegmentId === "other"
+                        ? "border-primary ring-2 ring-primary bg-primary/5"
+                        : ""
+                    }`}
+                    onClick={() => setBusinessSegmentId("other")}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">📦</span>
+                      <span className="text-sm font-medium">Outro segmento</span>
+                    </div>
+                  </Card>
+                </div>
+                {/* Text input for "Other" option */}
+                {businessSegmentId === "other" && (
+                  <Input
+                    value={businessSegmentOther}
+                    onChange={(e) => setBusinessSegmentOther(e.target.value)}
+                    placeholder="Descreva o segmento..."
+                    className="mt-2"
+                  />
+                )}
+              </div>
+            )}
+
             <div className="flex gap-2">
               <Button 
                 variant="outline" 
@@ -1787,7 +1872,12 @@ export const NewLayoutRequestDialog = ({
                     setCurrentStep("front");
                   }
                 }}
-                disabled={!customerName.trim() || !customerPhone}
+                disabled={
+                  !customerName.trim() || 
+                  !customerPhone || 
+                  (isAdventureCampaign && !businessSegmentId) ||
+                  (isAdventureCampaign && businessSegmentId === "other" && !businessSegmentOther.trim())
+                }
                 className="flex-1"
               >
                 {layoutCount > 1 ? "Revisar Layouts" : "Continuar"}
