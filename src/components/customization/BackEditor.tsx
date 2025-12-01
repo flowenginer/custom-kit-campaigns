@@ -102,6 +102,39 @@ export const BackEditor = ({ model, value, onChange, onNext }: BackEditorProps) 
           </p>
         </CardHeader>
         <CardContent className="space-y-6 pb-8 md:pb-6">
+          {/* Sem personalização - movido para o topo */}
+          <div className="space-y-3 pb-4 border-b">
+            <Button
+              variant={value.noCustomization ? "default" : "outline"}
+              onClick={() => {
+                // Se marcar "sem personalização", desmarca todas as outras opções
+                onChange({ 
+                  ...value, 
+                  noCustomization: !value.noCustomization,
+                  ...(!value.noCustomization ? {
+                    logoLarge: false,
+                    logoNeck: false,
+                    name: false,
+                    whatsapp: false,
+                    instagram: false,
+                    email: false,
+                    website: false,
+                    hasCustomDescription: false,
+                    hasSponsors: false,
+                  } : {})
+                });
+              }}
+              className={`w-full h-12 text-base justify-start gap-2 ${
+                value.noCustomization 
+                  ? "bg-red-600 hover:bg-red-700 text-white border-red-600" 
+                  : "border-red-200 hover:bg-red-50 hover:text-red-600"
+              }`}
+            >
+              <span className="text-lg">🚫</span>
+              <span className="font-semibold">Sem personalização</span>
+            </Button>
+          </div>
+
           {/* Logo Grande */}
           <div className="space-y-3">
             <div className="flex items-center space-x-3">
@@ -424,41 +457,6 @@ export const BackEditor = ({ model, value, onChange, onNext }: BackEditorProps) 
             )}
           </div>
 
-          {/* Sem personalização */}
-          <div className="space-y-3 border-t pt-4">
-            <div className="flex items-center space-x-3">
-              <Checkbox
-                id="noCustomization"
-                checked={value.noCustomization}
-                onCheckedChange={(checked) => {
-                  // Se marcar "sem personalização", desmarca todas as outras opções
-                  onChange({ 
-                    ...value, 
-                    noCustomization: checked as boolean,
-                    ...(checked ? {
-                      logoLarge: false,
-                      logoNeck: false,
-                      name: false,
-                      whatsapp: false,
-                      instagram: false,
-                      email: false,
-                      website: false,
-                      hasCustomDescription: false,
-                      hasSponsors: false,
-                    } : {})
-                  });
-                }}
-                className="h-5 w-5 border-red-500 data-[state=checked]:bg-red-600"
-              />
-              <Label 
-                htmlFor="noCustomization" 
-                className="flex-1 py-1 cursor-pointer text-base text-red-500 font-semibold"
-              >
-                🚫 Sem personalização
-              </Label>
-            </div>
-          </div>
-          
           {/* Botão para confirmar e continuar */}
           <div className="pt-6 pb-2 border-t sticky bottom-0 md:static">
             <Button
