@@ -58,6 +58,7 @@ interface LayoutConfig {
   campaignName: string;
   uniformType: string;
   model: any;
+  isFromScratch: boolean;
   frontCustomization: any;
   backCustomization: any;
   leftSleeveCustomization: any;
@@ -759,32 +760,90 @@ export const NewLayoutRequestDialog = ({
               <h3 className="text-lg font-semibold">Layout {currentLayoutIndex + 1} de {layoutCount}</h3>
               <Badge variant="outline">{currentLayoutIndex + 1}/{layoutCount}</Badge>
             </div>
-            
-            {/* Campaign Selection */}
-            <div className="space-y-2">
-              <Label>Segmento/Campanha *</Label>
-              <ScrollArea className="h-[200px]">
-                <div className="grid grid-cols-3 gap-2 pr-4">
-                  {campaigns.map((campaign) => (
-                    <Card
-                      key={campaign.id}
-                      className={`p-3 cursor-pointer transition-all hover:border-primary ${
-                        selectedCampaignId === campaign.id ? "border-primary ring-2 ring-primary" : ""
-                      }`}
-                      onClick={() => setSelectedCampaignId(campaign.id)}
-                    >
-                      <div className="flex flex-col items-center gap-1">
-                        <Megaphone className="h-6 w-6 text-primary" />
-                        <span className="text-xs font-medium text-center">{campaign.name}</span>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              </ScrollArea>
-            </div>
 
-            {/* Uniform Type Selection */}
-            {selectedCampaignId && (
+            {/* Escolha inicial: Layout do Zero ou Baseado em Campanha */}
+            <div className="space-y-3">
+              <Label className="text-base">Como deseja criar este layout?</Label>
+              <div className="grid grid-cols-2 gap-4">
+                {/* Card Layout do Zero */}
+                <Card
+                  className={`p-6 cursor-pointer transition-all hover:border-primary hover:shadow-lg ${
+                    isFromScratch
+                      ? "border-primary ring-2 ring-primary bg-primary/5"
+                      : "border-border hover:border-primary/50"
+                  }`}
+                  onClick={() => {
+                    setIsFromScratch(true);
+                    setSelectedCampaignId("");
+                    setSelectedModel(null);
+                  }}
+                >
+                  <div className="flex flex-col items-center gap-3 text-center">
+                    <div className="p-3 rounded-full bg-primary/10">
+                      <Plus className="h-8 w-8 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-lg mb-1">Layout do Zero</h3>
+                      <p className="text-xs text-muted-foreground">
+                        Designer criará do zero, sem modelo base
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Card Baseado em Campanha */}
+                <Card
+                  className={`p-6 cursor-pointer transition-all hover:border-primary hover:shadow-lg ${
+                    !isFromScratch && selectedCampaignId
+                      ? "border-primary ring-2 ring-primary bg-primary/5"
+                      : "border-border hover:border-primary/50"
+                  }`}
+                  onClick={() => {
+                    setIsFromScratch(false);
+                  }}
+                >
+                  <div className="flex flex-col items-center gap-3 text-center">
+                    <div className="p-3 rounded-full bg-primary/10">
+                      <Megaphone className="h-8 w-8 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-lg mb-1">Baseado em Campanha</h3>
+                      <p className="text-xs text-muted-foreground">
+                        Usar segmento existente como base
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            </div>
+            
+            {/* Campaign Selection - mostrar apenas se não for do zero */}
+            {!isFromScratch && (
+              <div className="space-y-2">
+                <Label>Segmento/Campanha *</Label>
+                <ScrollArea className="h-[160px]">
+                  <div className="grid grid-cols-3 gap-2 pr-4">
+                    {campaigns.map((campaign) => (
+                      <Card
+                        key={campaign.id}
+                        className={`p-3 cursor-pointer transition-all hover:border-primary ${
+                          selectedCampaignId === campaign.id ? "border-primary ring-2 ring-primary" : ""
+                        }`}
+                        onClick={() => setSelectedCampaignId(campaign.id)}
+                      >
+                        <div className="flex flex-col items-center gap-1">
+                          <Megaphone className="h-6 w-6 text-primary" />
+                          <span className="text-xs font-medium text-center">{campaign.name}</span>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+            )}
+
+            {/* Uniform Type Selection - mostrar se campanha selecionada OU se for do zero */}
+            {(selectedCampaignId || isFromScratch) && (
               <div className="space-y-2">
                 <Label>Tipo de Uniforme *</Label>
                 <div className="grid grid-cols-2 gap-2">
@@ -812,8 +871,8 @@ export const NewLayoutRequestDialog = ({
               </div>
             )}
 
-            {/* Model Selection */}
-            {selectedUniformType && (
+            {/* Model Selection - mostrar apenas se NÃO for do zero */}
+            {!isFromScratch && selectedUniformType && (
               <div className="space-y-2">
                 <Label>Modelo *</Label>
                 <ScrollArea className="h-[200px]">
@@ -841,6 +900,16 @@ export const NewLayoutRequestDialog = ({
               </div>
             )}
 
+            {/* Badge informativo se for do zero */}
+            {isFromScratch && selectedUniformType && (
+              <Alert className="bg-primary/5 border-primary">
+                <AlertDescription className="text-sm font-medium flex items-center gap-2">
+                  <span className="text-lg">🎨</span>
+                  <span>Criação do Zero - Designer criará layout sem modelo base</span>
+                </AlertDescription>
+              </Alert>
+            )}
+
             {/* Action Buttons */}
             <div className="flex gap-2 pt-4">
               <Button
@@ -851,6 +920,7 @@ export const NewLayoutRequestDialog = ({
                     // Carregar dados do layout anterior
                     const prevLayout = layouts[currentLayoutIndex - 1];
                     if (prevLayout) {
+                      setIsFromScratch(prevLayout.isFromScratch || false);
                       setSelectedCampaignId(prevLayout.campaignId);
                       setSelectedUniformType(prevLayout.uniformType);
                       setSelectedModel(prevLayout.model);
@@ -865,19 +935,30 @@ export const NewLayoutRequestDialog = ({
               </Button>
               <Button
                 onClick={() => {
-                  if (!selectedCampaignId || !selectedUniformType || !selectedModel) {
-                    toast.error("Selecione campanha, tipo e modelo");
-                    return;
+                  // Validar se tem as informações necessárias
+                  if (isFromScratch) {
+                    // Para layout do zero, só precisa do tipo de uniforme
+                    if (!selectedUniformType) {
+                      toast.error("Selecione o tipo de uniforme");
+                      return;
+                    }
+                  } else {
+                    // Para layout baseado em campanha, precisa de tudo
+                    if (!selectedCampaignId || !selectedUniformType || !selectedModel) {
+                      toast.error("Selecione campanha, tipo e modelo");
+                      return;
+                    }
                   }
 
                   // Salvar configuração do layout atual
                   const campaign = campaigns.find(c => c.id === selectedCampaignId);
                   const newLayout: LayoutConfig = {
                     id: `layout_${currentLayoutIndex}`,
-                    campaignId: selectedCampaignId,
-                    campaignName: campaign?.name || "",
+                    campaignId: isFromScratch ? "" : selectedCampaignId,
+                    campaignName: isFromScratch ? "Layout do Zero" : (campaign?.name || ""),
                     uniformType: selectedUniformType,
-                    model: selectedModel,
+                    model: isFromScratch ? null : selectedModel,
+                    isFromScratch: isFromScratch,
                     frontCustomization: {},
                     backCustomization: {},
                     leftSleeveCustomization: {},
@@ -894,6 +975,7 @@ export const NewLayoutRequestDialog = ({
                     setSelectedCampaignId("");
                     setSelectedUniformType("");
                     setSelectedModel(null);
+                    setIsFromScratch(false);
                   } else {
                     setCurrentStep("customer");
                   }
@@ -913,11 +995,17 @@ export const NewLayoutRequestDialog = ({
               {layouts.map((layout, idx) => (
                 <Card key={layout.id} className="p-4">
                   <div className="flex items-start gap-3">
-                    <img
-                      src={layout.model.photo_main}
-                      alt={layout.model.name}
-                      className="w-20 h-20 object-contain rounded"
-                    />
+                    {layout.isFromScratch ? (
+                      <div className="w-20 h-20 flex items-center justify-center bg-primary/10 rounded">
+                        <Plus className="h-10 w-10 text-primary" />
+                      </div>
+                    ) : (
+                      <img
+                        src={layout.model?.photo_main}
+                        alt={layout.model?.name}
+                        className="w-20 h-20 object-contain rounded"
+                      />
+                    )}
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-2">
                         <h4 className="font-semibold">Layout {idx + 1}</h4>
@@ -927,6 +1015,7 @@ export const NewLayoutRequestDialog = ({
                           onClick={() => {
                             setCurrentLayoutIndex(idx);
                             setCurrentStep("setup_layout");
+                            setIsFromScratch(layout.isFromScratch || false);
                             setSelectedCampaignId(layout.campaignId);
                             setSelectedUniformType(layout.uniformType);
                             setSelectedModel(layout.model);
@@ -938,7 +1027,9 @@ export const NewLayoutRequestDialog = ({
                       <div className="text-xs space-y-1">
                         <p><strong>Segmento:</strong> {layout.campaignName}</p>
                         <p><strong>Tipo:</strong> {getLabel(layout.uniformType)}</p>
-                        <p><strong>Modelo:</strong> {layout.model.name}</p>
+                        {!layout.isFromScratch && layout.model && (
+                          <p><strong>Modelo:</strong> {layout.model.name}</p>
+                        )}
                       </div>
                     </div>
                   </div>
