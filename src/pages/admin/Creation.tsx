@@ -207,7 +207,14 @@ const Creation = () => {
             needs_logo,
             uploaded_logo_url,
             logo_action,
-            logo_description
+            logo_description,
+            business_segment_id,
+            business_segment_other,
+            business_segments (
+              id,
+              name,
+              icon
+            )
           )
         `)
         .is('deleted_at', null)
@@ -275,6 +282,11 @@ const Creation = () => {
         status_changed_at: task.status_changed_at,
         customer_id: task.customer_id,
         task_layouts: layoutsByTaskId[task.id] || [],
+        // Business segment from lead
+        business_segment_id: task.lead?.business_segment_id || null,
+        business_segment_name: (task.lead?.business_segments as any)?.name || null,
+        business_segment_icon: (task.lead?.business_segments as any)?.icon || null,
+        business_segment_other: task.lead?.business_segment_other || null,
       }));
 
       setTasks(formattedTasks);
