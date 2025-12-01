@@ -399,11 +399,12 @@ export const NewLayoutRequestDialog = ({
         return sum + (qty || 0);
       }, 0);
 
-      // Processar uploads de logos para cada layout
+      // Processar uploads de logos para cada layout (incluindo logos por posição)
       const layoutsWithUploadedLogos = await Promise.all(
         layouts.map(async (layout) => {
           let uploadedLogoUrls: string[] = [];
           
+          // Upload logos do cliente (logoFiles)
           if (layout.hasLogo === "sim" && layout.logoFiles && layout.logoFiles.length > 0) {
             for (const file of layout.logoFiles) {
               const url = await uploadLogoToStorage(file);
@@ -413,10 +414,71 @@ export const NewLayoutRequestDialog = ({
               uploadedLogoUrls.push(url);
             }
           }
+
+          // Upload logos por posição da FRENTE
+          let frontSmallLogoFileUrl: string | null = null;
+          let frontLargeLogoFileUrl: string | null = null;
+          let frontCustomFileUrl: string | null = null;
+          
+          if (layout.frontCustomization?.smallLogoFile instanceof File) {
+            frontSmallLogoFileUrl = await uploadLogoToStorage(layout.frontCustomization.smallLogoFile);
+          }
+          if (layout.frontCustomization?.largeLogoFile instanceof File) {
+            frontLargeLogoFileUrl = await uploadLogoToStorage(layout.frontCustomization.largeLogoFile);
+          }
+          if (layout.frontCustomization?.customFile instanceof File) {
+            frontCustomFileUrl = await uploadLogoToStorage(layout.frontCustomization.customFile);
+          }
+
+          // Upload logos por posição das COSTAS
+          let backLogoLargeFileUrl: string | null = null;
+          let backLogoNeckFileUrl: string | null = null;
+          let backCustomFileUrl: string | null = null;
+          
+          if (layout.backCustomization?.logoLargeFile instanceof File) {
+            backLogoLargeFileUrl = await uploadLogoToStorage(layout.backCustomization.logoLargeFile);
+          }
+          if (layout.backCustomization?.logoNeckFile instanceof File) {
+            backLogoNeckFileUrl = await uploadLogoToStorage(layout.backCustomization.logoNeckFile);
+          }
+          if (layout.backCustomization?.customFile instanceof File) {
+            backCustomFileUrl = await uploadLogoToStorage(layout.backCustomization.customFile);
+          }
+
+          // Upload logos dos patrocinadores
+          let sponsorsLogosUrls: string[] = [];
+          if (layout.backCustomization?.sponsors && layout.backCustomization.sponsors.length > 0) {
+            for (const sponsor of layout.backCustomization.sponsors) {
+              if (sponsor.logoFile instanceof File) {
+                const url = await uploadLogoToStorage(sponsor.logoFile);
+                if (url) sponsorsLogosUrls.push(url);
+              }
+            }
+          }
+
+          // Upload logos das MANGAS
+          let leftSleeveLogoFileUrl: string | null = null;
+          let rightSleeveLogoFileUrl: string | null = null;
+          
+          if (layout.leftSleeveCustomization?.logoFile instanceof File) {
+            leftSleeveLogoFileUrl = await uploadLogoToStorage(layout.leftSleeveCustomization.logoFile);
+          }
+          if (layout.rightSleeveCustomization?.logoFile instanceof File) {
+            rightSleeveLogoFileUrl = await uploadLogoToStorage(layout.rightSleeveCustomization.logoFile);
+          }
           
           return {
             ...layout,
             uploadedLogoUrls,
+            frontSmallLogoFileUrl,
+            frontLargeLogoFileUrl,
+            frontCustomFileUrl,
+            backLogoLargeFileUrl,
+            backLogoNeckFileUrl,
+            backCustomFileUrl,
+            sponsorsLogosUrls,
+            leftSleeveLogoFileUrl,
+            rightSleeveLogoFileUrl,
           };
         })
       );
@@ -607,11 +669,29 @@ export const NewLayoutRequestDialog = ({
           fromScratch: layout.isFromScratch,
           uniformType: layout.uniformType,
           model: layout.isFromScratch ? null : layout.model?.name,
-          front: layout.frontCustomization,
-          back: layout.backCustomization,
+          internalNotes: internalNotes || null, // ✅ Incluir observações internas
+          front: {
+            ...layout.frontCustomization,
+            smallLogoFileUrl: layout.frontSmallLogoFileUrl || null, // ✅ URL da logo pequena
+            largeLogoFileUrl: layout.frontLargeLogoFileUrl || null, // ✅ URL da logo grande
+            customFileUrl: layout.frontCustomFileUrl || null, // ✅ URL do arquivo customizado
+          },
+          back: {
+            ...layout.backCustomization,
+            logoLargeFileUrl: layout.backLogoLargeFileUrl || null, // ✅ URL da logo grande costas
+            logoNeckFileUrl: layout.backLogoNeckFileUrl || null, // ✅ URL da logo nuca
+            customFileUrl: layout.backCustomFileUrl || null, // ✅ URL do arquivo customizado costas
+            sponsorsLogosUrls: layout.sponsorsLogosUrls || [], // ✅ URLs dos patrocinadores
+          },
           sleeves: {
-            left: layout.leftSleeveCustomization,
-            right: layout.rightSleeveCustomization,
+            left: {
+              ...layout.leftSleeveCustomization,
+              logoFileUrl: layout.leftSleeveLogoFileUrl || null, // ✅ URL da logo manga esquerda
+            },
+            right: {
+              ...layout.rightSleeveCustomization,
+              logoFileUrl: layout.rightSleeveLogoFileUrl || null, // ✅ URL da logo manga direita
+            },
           },
           logo: {
             hasLogo: layout.hasLogo,
