@@ -24,6 +24,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -91,6 +92,7 @@ export const NewLayoutRequestDialog = ({
   const [layoutCount, setLayoutCount] = useState(1);
   const [layouts, setLayouts] = useState<LayoutConfig[]>([]);
   const [currentLayoutIndex, setCurrentLayoutIndex] = useState(0);
+  const [selectedLayoutsToCopy, setSelectedLayoutsToCopy] = useState<number[]>([]);
 
   // Form states
   const [isFromScratch, setIsFromScratch] = useState(false);
@@ -1228,129 +1230,179 @@ export const NewLayoutRequestDialog = ({
         );
 
       case "copy_customization":
+        // Layouts disponíveis para receber a cópia (do atual até o último)
+        const remainingLayoutIndices = Array.from(
+          { length: layoutCount - currentLayoutIndex },
+          (_, i) => currentLayoutIndex + i
+        );
+        const sourceLayout = layouts[currentLayoutIndex - 1];
+
         return (
-          <div className="space-y-4">
-            <div className="text-center space-y-4">
+          <div className="space-y-6">
+            <div className="text-center space-y-2">
               <h3 className="text-lg font-semibold">
-                Deseja aplicar a mesma configuração completa ao Layout {currentLayoutIndex + 1}?
+                Copiar Personalização do Layout {currentLayoutIndex}
               </h3>
               <p className="text-sm text-muted-foreground">
-                Você pode copiar toda a configuração (personalização + logo) do Layout {currentLayoutIndex} ou começar do zero.
+                Selecione para quais layouts deseja aplicar a mesma configuração
               </p>
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    // Copiar TUDO do layout anterior (personalização + logo)
-                    const prevLayout = layouts[currentLayoutIndex - 1];
-                    setFrontCustomization(prevLayout.frontCustomization);
-                    setBackCustomization(prevLayout.backCustomization);
-                    setLeftSleeveCustomization(prevLayout.leftSleeveCustomization);
-                    setRightSleeveCustomization(prevLayout.rightSleeveCustomization);
-                    
-                    // Copiar dados de logo
-                    setHasLogo(prevLayout.hasLogo);
-                    setLogoFiles(prevLayout.logoFiles || []);
-                    setLogoDescription(prevLayout.logoDescription || "");
-                    
-                    // Salvar no layout atual
-                    const updatedLayouts = [...layouts];
-                    updatedLayouts[currentLayoutIndex] = {
-                      ...updatedLayouts[currentLayoutIndex],
-                      frontCustomization: prevLayout.frontCustomization,
-                      backCustomization: prevLayout.backCustomization,
-                      leftSleeveCustomization: prevLayout.leftSleeveCustomization,
-                      rightSleeveCustomization: prevLayout.rightSleeveCustomization,
-                      hasLogo: prevLayout.hasLogo,
-                      logoFiles: prevLayout.logoFiles,
-                      logoDescription: prevLayout.logoDescription,
-                    };
-                    setLayouts(updatedLayouts);
+            </div>
 
-                    // Ir para próximo layout ou concluir
-                    if (currentLayoutIndex + 1 < layoutCount) {
-                      setCurrentLayoutIndex(currentLayoutIndex + 1);
-                      setCurrentStep("copy_customization");
-                    } else {
-                      setCurrentStep("notes");
-                    }
-                  }}
-                  className="flex-1"
-                >
-                  <Check className="h-4 w-4 mr-2" />
-                  Sim, Copiar Tudo
-                </Button>
-                <Button
-                  onClick={() => {
-                    // Resetar TUDO para começar do zero
-                    setFrontCustomization({
-                      logoType: "none",
-                      hasSmallLogo: false,
-                      hasLargeLogo: false,
-                      hasCustom: false,
-                      textColor: "#000000",
-                      text: "",
-                      logoUrl: "",
-                      customDescription: "",
-                      customFile: null,
-                    });
-                    setBackCustomization({
-                      logoLarge: false,
-                      logoUrl: "",
-                      logoNeck: false,
-                      name: false,
-                      nameText: "",
-                      whatsapp: false,
-                      whatsappText: "",
-                      instagram: false,
-                      instagramText: "",
-                      email: false,
-                      emailText: "",
-                      website: false,
-                      websiteText: "",
-                      hasSponsors: false,
-                      sponsorsLocation: "",
-                      sponsors: [],
-                      sponsorsLogosUrls: [],
-                      noCustomization: false,
-                      hasCustomDescription: false,
-                      customDescription: "",
-                      customFile: null,
-                    });
-                    setLeftSleeveCustomization({
-                      flag: false,
-                      flagState: undefined,
-                      flagUrl: "",
-                      logoSmall: false,
-                      logoFile: null,
-                      logoUrl: "",
-                      text: false,
-                      textContent: "",
-                    });
-                    setRightSleeveCustomization({
-                      flag: false,
-                      flagState: undefined,
-                      flagUrl: "",
-                      logoSmall: false,
-                      logoFile: null,
-                      logoUrl: "",
-                      text: false,
-                      textContent: "",
-                    });
-                    
-                    // Resetar também dados de logo
-                    setHasLogo(null);
-                    setLogoFiles([]);
-                    setLogoDescription("");
-                    
-                    setCurrentStep("front");
-                  }}
-                  className="flex-1"
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Não, Personalizar do Zero
-                </Button>
-              </div>
+            {/* Grid de Layouts com Checkboxes */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {remainingLayoutIndices.map((layoutIndex) => {
+                const isSelected = selectedLayoutsToCopy.includes(layoutIndex);
+                const layout = layouts[layoutIndex];
+                const layoutModel = layout?.model?.name || getLabel(layout?.uniformType) || "A configurar";
+                
+                return (
+                  <Card
+                    key={layoutIndex}
+                    className={`p-4 cursor-pointer transition-all ${
+                      isSelected 
+                        ? "border-primary ring-2 ring-primary bg-primary/5" 
+                        : "border-muted hover:border-primary/50"
+                    }`}
+                    onClick={() => {
+                      if (isSelected) {
+                        setSelectedLayoutsToCopy(prev => 
+                          prev.filter(i => i !== layoutIndex)
+                        );
+                      } else {
+                        setSelectedLayoutsToCopy(prev => [...prev, layoutIndex]);
+                      }
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Checkbox 
+                        checked={isSelected} 
+                        onCheckedChange={() => {}}
+                        className="pointer-events-none"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium">Layout {layoutIndex + 1}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {layoutModel}
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {/* Resumo da seleção */}
+            {selectedLayoutsToCopy.length > 0 && (
+              <Alert>
+                <Check className="h-4 w-4" />
+                <AlertDescription>
+                  Copiar para: {selectedLayoutsToCopy.map(i => `Layout ${i + 1}`).join(", ")}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Botões de ação */}
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  // Copiar para todos os layouts selecionados
+                  const updatedLayouts = [...layouts];
+                  
+                  selectedLayoutsToCopy.forEach(targetIndex => {
+                    updatedLayouts[targetIndex] = {
+                      ...updatedLayouts[targetIndex],
+                      frontCustomization: sourceLayout.frontCustomization,
+                      backCustomization: sourceLayout.backCustomization,
+                      leftSleeveCustomization: sourceLayout.leftSleeveCustomization,
+                      rightSleeveCustomization: sourceLayout.rightSleeveCustomization,
+                      hasLogo: sourceLayout.hasLogo,
+                      logoFiles: sourceLayout.logoFiles,
+                      logoDescription: sourceLayout.logoDescription,
+                    };
+                  });
+                  
+                  setLayouts(updatedLayouts);
+                  setSelectedLayoutsToCopy([]);
+                  setCurrentStep("notes");
+                }}
+                className="flex-1"
+                disabled={selectedLayoutsToCopy.length === 0}
+              >
+                <Check className="h-4 w-4 mr-2" />
+                Aplicar nos Selecionados ({selectedLayoutsToCopy.length})
+              </Button>
+              
+              <Button
+                onClick={() => {
+                  // Resetar para personalizar do zero
+                  setFrontCustomization({
+                    logoType: "none",
+                    hasSmallLogo: false,
+                    hasLargeLogo: false,
+                    hasCustom: false,
+                    textColor: "#000000",
+                    text: "",
+                    logoUrl: "",
+                    customDescription: "",
+                    customFile: null,
+                  });
+                  setBackCustomization({
+                    logoLarge: false,
+                    logoUrl: "",
+                    logoNeck: false,
+                    name: false,
+                    nameText: "",
+                    whatsapp: false,
+                    whatsappText: "",
+                    instagram: false,
+                    instagramText: "",
+                    email: false,
+                    emailText: "",
+                    website: false,
+                    websiteText: "",
+                    hasSponsors: false,
+                    sponsorsLocation: "",
+                    sponsors: [],
+                    sponsorsLogosUrls: [],
+                    noCustomization: false,
+                    hasCustomDescription: false,
+                    customDescription: "",
+                    customFile: null,
+                  });
+                  setLeftSleeveCustomization({
+                    flag: false,
+                    flagState: undefined,
+                    flagUrl: "",
+                    logoSmall: false,
+                    logoFile: null,
+                    logoUrl: "",
+                    text: false,
+                    textContent: "",
+                  });
+                  setRightSleeveCustomization({
+                    flag: false,
+                    flagState: undefined,
+                    flagUrl: "",
+                    logoSmall: false,
+                    logoFile: null,
+                    logoUrl: "",
+                    text: false,
+                    textContent: "",
+                  });
+                  
+                  setHasLogo(null);
+                  setLogoFiles([]);
+                  setLogoDescription("");
+                  setSelectedLayoutsToCopy([]);
+                  
+                  setCurrentStep("front");
+                }}
+                className="flex-1"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Personalizar Cada Um
+              </Button>
             </div>
           </div>
         );
