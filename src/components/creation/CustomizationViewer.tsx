@@ -63,6 +63,9 @@ export const CustomizationViewer = ({
     return {
       front: rawData.front ? {
         logoType: rawData.front.logoType,
+        hasSmallLogo: rawData.front.hasSmallLogo || false,
+        hasLargeLogo: rawData.front.hasLargeLogo || false,
+        hasCustom: rawData.front.hasCustom || false,
         logoFile: rawData.front.logoUrl || undefined,
         text: rawData.front.text || undefined,
         customDescription: rawData.front.customDescription || undefined,
@@ -439,18 +442,23 @@ export const CustomizationViewer = ({
                 <p className="text-sm text-green-700 dark:text-green-400 mt-1">
                   Este pedido requer criação de layout do zero, sem base de campanha ou modelo pré-definido.
                 </p>
-                
-                {transformedData.scratchDescription && (
-                  <div className="mt-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-green-300 dark:border-green-700">
-                    <Label className="text-xs text-green-600 dark:text-green-400 font-medium">
-                      Descrição do cliente:
-                    </Label>
-                    <p className="text-sm text-gray-800 dark:text-gray-200 mt-1 whitespace-pre-wrap">
-                      {transformedData.scratchDescription}
-                    </p>
-                  </div>
-                )}
               </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Descrição da Criação - Container Separado */}
+      {data?.fromScratch && transformedData.scratchDescription && (
+        <Card className="border-2 border-amber-500 dark:border-amber-600">
+          <CardContent className="p-4">
+            <h3 className="text-lg font-bold mb-3 flex items-center gap-2 text-amber-800 dark:text-amber-300">
+              ✏️ DESCRIÇÃO DA CRIAÇÃO
+            </h3>
+            <div className="bg-amber-50 dark:bg-amber-950 p-4 rounded-lg border border-amber-300 dark:border-amber-700">
+              <p className="text-sm whitespace-pre-wrap text-amber-900 dark:text-amber-100">
+                {transformedData.scratchDescription}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -571,52 +579,6 @@ export const CustomizationViewer = ({
         </Card>
       )}
 
-      {/* SEÇÃO: LOGO DO CLIENTE */}
-      {transformedData.logo && (transformedData.logo.logoUrls?.length > 0 || transformedData.logo.logoDescription) && (
-        <Card className="border-2 border-blue-500 dark:border-blue-600">
-          <CardContent className="p-6">
-            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <Badge className="bg-blue-600 dark:bg-blue-700 text-white">LOGO DO CLIENTE</Badge>
-            </h3>
-            <div className="space-y-4">
-              {transformedData.logo.hasLogo && (
-                <div>
-                  <Label className="text-xs text-muted-foreground">Tipo de Logo</Label>
-                  <p className="text-sm font-medium bg-muted p-2 rounded">
-                    {transformedData.logo.hasLogo === 'sim' && '✓ Upload realizado'}
-                    {transformedData.logo.hasLogo === 'criar_logo' && '⚠️ Designer deve criar'}
-                    {transformedData.logo.hasLogo === 'depois' && '⏰ Cliente enviará depois'}
-                    {transformedData.logo.hasLogo === 'sem_logo' && '✗ Sem logo'}
-                  </p>
-                </div>
-              )}
-              
-              {transformedData.logo.logoDescription && (
-                <div>
-                  <Label className="text-xs text-muted-foreground">Descrição para Criação</Label>
-                  <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded border border-blue-300 dark:border-blue-700">
-                    <p className="text-sm whitespace-pre-wrap text-blue-900 dark:text-blue-100">{transformedData.logo.logoDescription}</p>
-                  </div>
-                </div>
-              )}
-              
-              {transformedData.logo.logoUrls && transformedData.logo.logoUrls.length > 0 && (
-                <div>
-                  <Label className="text-xs text-muted-foreground mb-2 block">Logos Enviadas pelo Cliente</Label>
-                  <AssetGallery
-                    assets={transformedData.logo.logoUrls.map((url: string, idx: number) => ({
-                      url,
-                      label: `Logo ${idx + 1}`
-                    }))}
-                    columns={3}
-                    imageHeight="h-40"
-                  />
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* SEÇÃO: OBSERVAÇÕES INTERNAS */}
       {transformedData.internalNotes && (
@@ -643,10 +605,30 @@ export const CustomizationViewer = ({
               {/* Coluna Esquerda: Detalhes */}
               <div className="space-y-4">
                 <div>
-                  <Label className="text-xs text-muted-foreground">
-                    {transformedData.front.logoType === 'custom' ? 'Outras personalizações' : 'Posicionamento do Logo'}
-                  </Label>
-                  <p className="text-sm font-medium">{formatLogoType(transformedData.front.logoType)}</p>
+                  <Label className="text-xs text-muted-foreground">Posicionamento do Logo</Label>
+                  <div className="space-y-2 mt-1">
+                    {transformedData.front.hasSmallLogo && (
+                      <p className="text-sm bg-muted p-2 rounded flex items-center gap-2">
+                        ✓ Logo pequena no peito esquerdo
+                      </p>
+                    )}
+                    {transformedData.front.hasLargeLogo && (
+                      <p className="text-sm bg-muted p-2 rounded flex items-center gap-2">
+                        ✓ Logo grande no centro
+                      </p>
+                    )}
+                    {transformedData.front.hasCustom && (
+                      <p className="text-sm bg-muted p-2 rounded flex items-center gap-2">
+                        ✓ Outras personalizações
+                      </p>
+                    )}
+                    {!transformedData.front.hasSmallLogo && !transformedData.front.hasLargeLogo && !transformedData.front.hasCustom && transformedData.front.logoType && (
+                      <p className="text-sm bg-muted p-2 rounded">{formatLogoType(transformedData.front.logoType)}</p>
+                    )}
+                    {!transformedData.front.hasSmallLogo && !transformedData.front.hasLargeLogo && !transformedData.front.hasCustom && !transformedData.front.logoType && (
+                      <p className="text-sm text-muted-foreground">Nenhum logo na frente</p>
+                    )}
+                  </div>
                 </div>
                 {transformedData.front.smallLogoObservation && (
                   <div>
@@ -713,6 +695,22 @@ export const CustomizationViewer = ({
                     })}
                   />
                 )}
+                
+                {/* Logos do Cliente para a Frente */}
+                {transformedData.logo?.logoUrls && transformedData.logo.logoUrls.length > 0 && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-2 block">Logo do Cliente</Label>
+                    <AssetGallery
+                      assets={transformedData.logo.logoUrls.map((url: string, idx: number) => ({
+                        url,
+                        label: `Logo ${idx + 1}`
+                      }))}
+                      columns={2}
+                      imageHeight="h-48"
+                    />
+                  </div>
+                )}
+                
                 {frontAssets.length > 0 && (
                   <div>
                     <Label className="text-xs text-muted-foreground mb-2 block">Assets</Label>
@@ -981,6 +979,53 @@ export const CustomizationViewer = ({
                       </div>
                     )}
                   </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* SEÇÃO: LOGO DO CLIENTE - Movida para depois de MANGAS */}
+      {transformedData.logo && (transformedData.logo.logoUrls?.length > 0 || transformedData.logo.logoDescription) && (
+        <Card className="border-2 border-blue-500 dark:border-blue-600">
+          <CardContent className="p-6">
+            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <Badge className="bg-blue-600 dark:bg-blue-700 text-white">LOGO DO CLIENTE</Badge>
+            </h3>
+            <div className="space-y-4">
+              {transformedData.logo.hasLogo && (
+                <div>
+                  <Label className="text-xs text-muted-foreground">Tipo de Logo</Label>
+                  <p className="text-sm font-medium bg-muted p-2 rounded">
+                    {transformedData.logo.hasLogo === 'sim' && '✓ Upload realizado'}
+                    {transformedData.logo.hasLogo === 'criar_logo' && '⚠️ Designer deve criar'}
+                    {transformedData.logo.hasLogo === 'depois' && '⏰ Cliente enviará depois'}
+                    {transformedData.logo.hasLogo === 'sem_logo' && '✗ Sem logo'}
+                  </p>
+                </div>
+              )}
+              
+              {transformedData.logo.logoDescription && (
+                <div>
+                  <Label className="text-xs text-muted-foreground">Descrição para Criação</Label>
+                  <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded border border-blue-300 dark:border-blue-700">
+                    <p className="text-sm whitespace-pre-wrap text-blue-900 dark:text-blue-100">{transformedData.logo.logoDescription}</p>
+                  </div>
+                </div>
+              )}
+              
+              {transformedData.logo.logoUrls && transformedData.logo.logoUrls.length > 0 && (
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-2 block">Logos Enviadas pelo Cliente</Label>
+                  <AssetGallery
+                    assets={transformedData.logo.logoUrls.map((url: string, idx: number) => ({
+                      url,
+                      label: `Logo ${idx + 1}`
+                    }))}
+                    columns={3}
+                    imageHeight="h-40"
+                  />
                 </div>
               )}
             </div>
