@@ -6,13 +6,16 @@ import { TaskCardSkeleton } from "@/components/creation/TaskCardSkeleton";
 import { TaskCard } from "@/components/creation/TaskCard";
 import { DesignTask } from "@/types/design-task";
 import { toast } from "sonner";
-import { PackageSearch, Plus, Trash2 } from "lucide-react";
+import { PackageSearch, Plus, Trash2, AlertTriangle, RefreshCw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { NewLayoutRequestDialog } from "@/components/orders/NewLayoutRequestDialog";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 /**
  * Página EXCLUSIVA de Vendedores para gerenciar LEADS SEM LOGO
@@ -22,17 +25,39 @@ import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
  * - Vendedor pode fazer upload da logo do cliente
  * - Após upload, tarefa vai para "pending" e aparece na página Creation para designers
  * - Designers NÃO veem esta página
+ * - NOVA FEATURE: Exibe tarefas rejeitadas pelo designer
  */
+
+interface TaskRejection {
+  id: string;
+  task_id: string;
+  reason_type: string;
+  reason_text: string | null;
+  created_at: string;
+  resolved: boolean;
+}
+
+const REJECTION_REASONS: Record<string, string> = {
+  'low_quality_logo': '📷 Logo com baixa qualidade',
+  'missing_logo': '🖼️ Logo não enviada ou incompleta',
+  'missing_info': '📋 Falta informações no pedido',
+  'incomplete_specs': '🎨 Especificações incompletas',
+  'wrong_format': '📁 Formato de arquivo incorreto',
+  'other': '❓ Outro motivo',
+};
 
 const Orders = () => {
   const { isSuperAdmin, isAdmin, isSalesperson } = useUserRole();
   const [tasks, setTasks] = useState<DesignTask[]>([]);
+  const [rejectedTasks, setRejectedTasks] = useState<DesignTask[]>([]);
+  const [taskRejections, setTaskRejections] = useState<Record<string, TaskRejection>>({});
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<DesignTask | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newRequestOpen, setNewRequestOpen] = useState(false);
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("pending");
 
   const refreshData = useCallback(async () => {
     await loadTasks();
@@ -95,7 +120,8 @@ const Orders = () => {
           lead:leads!design_tasks_lead_id_fkey (
             needs_logo,
             uploaded_logo_url,
-            logo_action
+            logo_action,
+            salesperson_status
           )
         `)
         .is('deleted_at', null)
@@ -118,33 +144,65 @@ const Orders = () => {
         needs_logo: task.lead?.needs_logo,
         logo_action: task.lead?.logo_action,
         uploaded_logo_url: task.lead?.uploaded_logo_url || null,
+        salesperson_status: task.lead?.salesperson_status,
         created_by_salesperson: task.created_by_salesperson,
         creator_name: task.creator?.full_name || null,
         designer_name: null,
         designer_initials: null,
       }));
 
-      // ✅ Filtrar APENAS tarefas que estão AGUARDANDO logo (waiting_client)
+      // ✅ Filtrar tarefas AGUARDANDO logo (waiting_client)
       let pendingLogoTasks = formattedTasks.filter(task => 
-        task.needs_logo === true && task.logo_action === 'waiting_client'
+        task.needs_logo === true && task.logo_action === 'waiting_client' &&
+        (task as any).salesperson_status !== 'rejected_by_designer'
       );
       console.log('🔍 Orders.tsx - Tasks waiting for client logo:', pendingLogoTasks.length);
+
+      // ✅ Filtrar tarefas REJEITADAS pelo designer
+      let rejectedByDesigner = formattedTasks.filter(task =>
+        (task as any).salesperson_status === 'rejected_by_designer'
+      );
+      console.log('🔴 Orders.tsx - Tasks rejected by designer:', rejectedByDesigner.length);
+
+      // Buscar detalhes das rejeições
+      if (rejectedByDesigner.length > 0) {
+        const taskIds = rejectedByDesigner.map(t => t.id);
+        const { data: rejections } = await supabase
+          .from('task_rejections')
+          .select('*')
+          .in('task_id', taskIds)
+          .eq('resolved', false)
+          .order('created_at', { ascending: false });
+
+        if (rejections) {
+          const rejectionsMap: Record<string, TaskRejection> = {};
+          rejections.forEach(r => {
+            if (!rejectionsMap[r.task_id]) {
+              rejectionsMap[r.task_id] = r as TaskRejection;
+            }
+          });
+          setTaskRejections(rejectionsMap);
+        }
+      }
 
       // Filtrar por vendedor se não for admin
       if (isSalesperson && !isSuperAdmin && !isAdmin && currentUserId) {
         pendingLogoTasks = pendingLogoTasks.filter(task => task.created_by === currentUserId);
+        rejectedByDesigner = rejectedByDesigner.filter(task => task.created_by === currentUserId);
         console.log('👤 Orders.tsx - Filtered by salesperson:', pendingLogoTasks.length);
       }
 
       setTasks(pendingLogoTasks);
+      setRejectedTasks(rejectedByDesigner);
 
       // Atualizar tarefa selecionada se o modal estiver aberto
       if (selectedTask) {
-        const updatedSelectedTask = pendingLogoTasks.find(t => t.id === selectedTask.id);
+        const allTasks = [...pendingLogoTasks, ...rejectedByDesigner];
+        const updatedSelectedTask = allTasks.find(t => t.id === selectedTask.id);
         if (updatedSelectedTask) {
           setSelectedTask(updatedSelectedTask);
         } else {
-          // Tarefa não está mais na lista (logo foi enviado), fechar modal
+          // Tarefa não está mais na lista, fechar modal
           setDialogOpen(false);
           setSelectedTask(null);
         }
@@ -167,10 +225,11 @@ const Orders = () => {
   };
 
   const handleSelectAll = () => {
-    if (selectedTasks.length === tasks.length) {
+    const currentTasks = activeTab === 'pending' ? tasks : rejectedTasks;
+    if (selectedTasks.length === currentTasks.length) {
       setSelectedTasks([]);
     } else {
-      setSelectedTasks(tasks.map(t => t.id));
+      setSelectedTasks(currentTasks.map(t => t.id));
     }
   };
 
@@ -208,13 +267,57 @@ const Orders = () => {
     }
   };
 
+  const handleResendToDesigner = async (task: DesignTask) => {
+    try {
+      // Marcar rejeição como resolvida
+      if (taskRejections[task.id]) {
+        await supabase
+          .from('task_rejections')
+          .update({ 
+            resolved: true, 
+            resolved_at: new Date().toISOString(),
+            resolved_by: currentUserId
+          })
+          .eq('id', taskRejections[task.id].id);
+      }
+
+      // Atualizar lead para remover status de rejeitado
+      if (task.lead_id) {
+        await supabase
+          .from('leads')
+          .update({
+            salesperson_status: 'sent_to_designer',
+            needs_logo: false,
+          })
+          .eq('id', task.lead_id);
+      }
+
+      // Registrar no histórico
+      await supabase.from('design_task_history').insert({
+        task_id: task.id,
+        user_id: currentUserId,
+        action: 'resent_to_designer',
+        notes: 'Tarefa reenviada ao designer após correção',
+      });
+
+      toast.success("Tarefa reenviada para o designer!");
+      loadTasks();
+    } catch (error) {
+      console.error("Error resending task:", error);
+      toast.error("Erro ao reenviar tarefa");
+    }
+  };
+
+  const currentTasks = activeTab === 'pending' ? tasks : rejectedTasks;
+  const totalCount = tasks.length + rejectedTasks.length;
+
   return (
     <div className="p-8 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Pedidos - Aguardando Logo</h1>
           <p className="text-muted-foreground mt-1">
-            {tasks.length} pedido{tasks.length !== 1 ? 's' : ''} aguardando envio de logo do cliente
+            {totalCount} pedido{totalCount !== 1 ? 's' : ''} aguardando ação
           </p>
         </div>
 
@@ -235,65 +338,153 @@ const Orders = () => {
         </div>
       </div>
 
-      {isSuperAdmin && tasks.length > 0 && (
-        <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg border">
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="select-all"
-              checked={selectedTasks.length === tasks.length && tasks.length > 0}
-              onCheckedChange={handleSelectAll}
-            />
-            <label htmlFor="select-all" className="text-sm font-medium cursor-pointer">
-              Selecionar todos
-              {selectedTasks.length > 0 && ` (${selectedTasks.length} selecionado${selectedTasks.length !== 1 ? 's' : ''})`}
-            </label>
-          </div>
-          
-          {selectedTasks.length > 0 && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleDeleteSelected}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Apagar Selecionados ({selectedTasks.length})
-            </Button>
-          )}
-        </div>
-      )}
+      {/* Tabs para separar pendentes e rejeitadas */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="pending" className="gap-2">
+            Aguardando Logo
+            {tasks.length > 0 && (
+              <Badge variant="secondary" className="ml-1">{tasks.length}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="rejected" className="gap-2">
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            Devolvidas
+            {rejectedTasks.length > 0 && (
+              <Badge variant="destructive" className="ml-1">{rejectedTasks.length}</Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
 
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...Array(6)].map((_, i) => (
-            <TaskCardSkeleton key={i} />
-          ))}
-        </div>
-      ) : tasks.length === 0 ? (
-        <Card className="border-2 border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-16 space-y-4">
-            <PackageSearch className="h-16 w-16 text-muted-foreground/50" />
-            <div className="text-center space-y-2">
-              <h3 className="text-lg font-semibold">Nenhum pedido aguardando logo</h3>
-              <p className="text-sm text-muted-foreground max-w-md">
-                Todos os pedidos já possuem logo enviada ou foram encaminhados para o designer.
-              </p>
+        <TabsContent value="pending" className="space-y-4 mt-4">
+          {isSuperAdmin && tasks.length > 0 && (
+            <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg border">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="select-all-pending"
+                  checked={selectedTasks.length === tasks.length && tasks.length > 0}
+                  onCheckedChange={handleSelectAll}
+                />
+                <label htmlFor="select-all-pending" className="text-sm font-medium cursor-pointer">
+                  Selecionar todos
+                  {selectedTasks.length > 0 && ` (${selectedTasks.length} selecionado${selectedTasks.length !== 1 ? 's' : ''})`}
+                </label>
+              </div>
+              
+              {selectedTasks.length > 0 && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleDeleteSelected}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Apagar Selecionados ({selectedTasks.length})
+                </Button>
+              )}
             </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {tasks.map((task) => (
-            <TaskCard 
-              key={task.id}
-              task={task}
-              onClick={() => handleTaskClick(task)}
-              selectable={isSuperAdmin}
-              selected={selectedTasks.includes(task.id)}
-              onSelect={handleSelectTask}
-            />
-          ))}
-        </div>
-      )}
+          )}
+
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[...Array(6)].map((_, i) => (
+                <TaskCardSkeleton key={i} />
+              ))}
+            </div>
+          ) : tasks.length === 0 ? (
+            <Card className="border-2 border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-16 space-y-4">
+                <PackageSearch className="h-16 w-16 text-muted-foreground/50" />
+                <div className="text-center space-y-2">
+                  <h3 className="text-lg font-semibold">Nenhum pedido aguardando logo</h3>
+                  <p className="text-sm text-muted-foreground max-w-md">
+                    Todos os pedidos já possuem logo enviada ou foram encaminhados para o designer.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {tasks.map((task) => (
+                <TaskCard 
+                  key={task.id}
+                  task={task}
+                  onClick={() => handleTaskClick(task)}
+                  selectable={isSuperAdmin}
+                  selected={selectedTasks.includes(task.id)}
+                  onSelect={handleSelectTask}
+                />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="rejected" className="space-y-4 mt-4">
+          {rejectedTasks.length === 0 ? (
+            <Card className="border-2 border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-16 space-y-4">
+                <AlertTriangle className="h-16 w-16 text-muted-foreground/50" />
+                <div className="text-center space-y-2">
+                  <h3 className="text-lg font-semibold">Nenhuma tarefa devolvida</h3>
+                  <p className="text-sm text-muted-foreground max-w-md">
+                    Tarefas devolvidas pelos designers aparecerão aqui.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {rejectedTasks.map((task) => {
+                const rejection = taskRejections[task.id];
+                const reasonLabel = rejection ? REJECTION_REASONS[rejection.reason_type] || rejection.reason_type : 'Motivo não especificado';
+                
+                return (
+                  <Card key={task.id} className="border-amber-500/50 bg-amber-500/5">
+                    <CardContent className="p-4 space-y-4">
+                      {/* Alert de rejeição */}
+                      <Alert variant="destructive" className="bg-destructive/10 border-destructive/30">
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertTitle>Tarefa Devolvida pelo Designer</AlertTitle>
+                        <AlertDescription className="space-y-2">
+                          <p><strong>Motivo:</strong> {reasonLabel}</p>
+                          {rejection?.reason_text && (
+                            <p><strong>Observação:</strong> {rejection.reason_text}</p>
+                          )}
+                        </AlertDescription>
+                      </Alert>
+
+                      {/* Info da tarefa */}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-semibold">{task.customer_name}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {task.campaign_name} • {task.quantity} unidades
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleTaskClick(task)}
+                          >
+                            Ver Detalhes
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => handleResendToDesigner(task)}
+                          >
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                            Reenviar ao Designer
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* ✅ Modal com contexto de VENDEDOR */}
       <TaskDetailsDialog
