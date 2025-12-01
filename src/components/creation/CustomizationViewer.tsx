@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Download, Copy, ArrowRightLeft, Loader2, Palette } from "lucide-react";
+import { Download, Copy, ArrowRightLeft, Loader2, Palette, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { CustomizationSummary } from "./CustomizationSummary";
 import { ShirtPreviewAnnotated } from "./ShirtPreviewAnnotated";
@@ -472,20 +472,23 @@ export const CustomizationViewer = ({
 
       {/* Descrição da Criação - Sempre mostra para layouts do zero */}
       {data?.fromScratch && (
-        <Card className="border-2 border-amber-500 dark:border-amber-600">
-          <CardContent className="p-4">
-            <h3 className="text-lg font-bold mb-3 flex items-center gap-2 text-amber-800 dark:text-amber-300">
-              ✏️ DESCRIÇÃO DA CRIAÇÃO
-            </h3>
-            <div className="bg-amber-50 dark:bg-amber-950 p-4 rounded-lg border border-amber-300 dark:border-amber-700">
-              <p className="text-sm whitespace-pre-wrap text-amber-900 dark:text-amber-100">
+        <div className="border-2 border-amber-500 dark:border-amber-600 rounded-lg p-4 space-y-4 bg-amber-50 dark:bg-amber-950">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-5 w-5 text-amber-700 dark:text-amber-400" />
+            <h3 className="font-semibold text-amber-900 dark:text-amber-100">Descrição da Criação</h3>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-amber-700 dark:text-amber-300">Observações informadas pelo vendedor</Label>
+            <div className="p-4 rounded-md border border-amber-300 dark:border-amber-700 bg-white dark:bg-gray-800">
+              <p className="text-sm whitespace-pre-wrap text-gray-900 dark:text-white">
                 {transformedData.scratchDescription || 
                  transformedData.logo?.logoDescription || 
                  "Nenhuma descrição foi informada para este layout."}
               </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
       
       {/* Alerta de Criação de Logo */}
