@@ -139,8 +139,12 @@ export const NotificationsDropdown = () => {
 
   const handleNotificationClick = (notification: Notification) => {
     markAsRead(notification.id);
-    // Navigate to creation page with the task
-    navigate('/admin/creation');
+    // Navigate based on notification type
+    if (notification.type === 'task_rejected') {
+      navigate('/admin/orders');
+    } else {
+      navigate('/admin/creation');
+    }
   };
 
   const getNotificationIcon = (type: string) => {
@@ -155,6 +159,8 @@ export const NotificationsDropdown = () => {
         return '💬';
       case 'customer_registered':
         return '📋';
+      case 'task_rejected':
+        return '⚠️';
       default:
         return '📋';
     }

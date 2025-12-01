@@ -2287,6 +2287,50 @@ export type Database = {
         }
         Relationships: []
       }
+      task_rejections: {
+        Row: {
+          created_at: string | null
+          id: string
+          reason_text: string | null
+          reason_type: string
+          rejected_by: string | null
+          resolved: boolean | null
+          resolved_at: string | null
+          resolved_by: string | null
+          task_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          reason_text?: string | null
+          reason_type: string
+          rejected_by?: string | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          task_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          reason_text?: string | null
+          reason_type?: string
+          rejected_by?: string | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_rejections_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "design_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       urgent_reasons: {
         Row: {
           created_at: string | null

@@ -50,6 +50,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { LogoSectionUploader } from "@/components/orders/LogoSectionUploader";
 import { ChangeRequestsTab } from "./ChangeRequestsTab";
 import { DeleteReasonDialog } from "../orders/DeleteReasonDialog";
+import { RejectTaskDialog } from "./RejectTaskDialog";
 import { 
   Download, 
   ExternalLink, 
@@ -107,6 +108,7 @@ export const TaskDetailsDialog = ({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showModificationDialog, setShowModificationDialog] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
   
   const { roles, isSalesperson, isDesigner, isSuperAdmin, isAdmin } = useUserRole();
 
@@ -765,6 +767,15 @@ export const TaskDetailsDialog = ({
                       (task.assigned_to === currentUser?.id || isSuperAdmin || isAdmin) &&
                       task.status !== 'completed' &&
                       context === 'creation';
+
+  // Designer pode recusar tarefa se:
+  // - Tarefa está pendente e não atribuída
+  // - É designer
+  // - Contexto é 'creation'
+  const canReject = task?.status === 'pending' && 
+                    !task?.assigned_to && 
+                    isDesigner &&
+                    context === 'creation';
 
   return (
     <Dialog 
@@ -1738,6 +1749,17 @@ export const TaskDetailsDialog = ({
                   </Dialog>
                 )}
 
+                {canReject && (
+                  <Button 
+                    variant="outline" 
+                    className="text-destructive border-destructive hover:bg-destructive/10"
+                    onClick={() => setShowRejectDialog(true)}
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Recusar Tarefa
+                  </Button>
+                )}
+
                 {canAssign && (
                   <Button onClick={handleAssignSelf}>
                     <UserPlus className="h-4 w-4 mr-2" />
@@ -1882,6 +1904,19 @@ export const TaskDetailsDialog = ({
         taskId={task.id}
         onSuccess={onTaskUpdated}
       />
+
+      {currentUser?.id && (
+        <RejectTaskDialog
+          task={task}
+          open={showRejectDialog}
+          onOpenChange={setShowRejectDialog}
+          onSuccess={() => {
+            onTaskUpdated();
+            onOpenChange(false);
+          }}
+          currentUserId={currentUser.id}
+        />
+      )}
     </Dialog>
   );
 };
