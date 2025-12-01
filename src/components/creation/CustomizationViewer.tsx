@@ -470,8 +470,8 @@ export const CustomizationViewer = ({
         </Card>
       )}
 
-      {/* Descrição da Criação - Container Separado */}
-      {data?.fromScratch && transformedData.scratchDescription && (
+      {/* Descrição da Criação - Sempre mostra para layouts do zero */}
+      {data?.fromScratch && (
         <Card className="border-2 border-amber-500 dark:border-amber-600">
           <CardContent className="p-4">
             <h3 className="text-lg font-bold mb-3 flex items-center gap-2 text-amber-800 dark:text-amber-300">
@@ -479,23 +479,9 @@ export const CustomizationViewer = ({
             </h3>
             <div className="bg-amber-50 dark:bg-amber-950 p-4 rounded-lg border border-amber-300 dark:border-amber-700">
               <p className="text-sm whitespace-pre-wrap text-amber-900 dark:text-amber-100">
-                {transformedData.scratchDescription}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-      
-      {/* Observações da Criação do Zero - SEMPRE mostra se fromScratch */}
-      {data?.fromScratch && (
-        <Card className="border-2 border-purple-500 dark:border-purple-600">
-          <CardContent className="p-4">
-            <h3 className="text-lg font-bold mb-3 flex items-center gap-2 text-purple-800 dark:text-purple-300">
-              📝 OBSERVAÇÕES DO PEDIDO
-            </h3>
-            <div className="bg-purple-50 dark:bg-purple-950 p-4 rounded-lg border border-purple-300 dark:border-purple-700">
-              <p className="text-sm whitespace-pre-wrap text-purple-900 dark:text-purple-100">
-                {transformedData.logo?.logoDescription || transformedData.internalNotes || transformedData.scratchDescription || "Nenhuma observação foi registrada para este pedido."}
+                {transformedData.scratchDescription || 
+                 transformedData.logo?.logoDescription || 
+                 "Nenhuma descrição foi informada para este layout."}
               </p>
             </div>
           </CardContent>
