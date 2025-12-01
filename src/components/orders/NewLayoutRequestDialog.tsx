@@ -28,7 +28,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, Plus, AlertTriangle, Check, Search, X, Megaphone, Edit } from "lucide-react";
+import { Loader2, Plus, AlertTriangle, Check, Search, X, Megaphone, Edit, Pencil } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useDebounce } from "use-debounce";
 import { FrontEditor } from "@/components/customization/FrontEditor";
@@ -809,75 +809,132 @@ export const NewLayoutRequestDialog = ({
             {/* Campaign Selection com botão Layout do Zero */}
             <div className="space-y-2">
               <Label>Segmento/Campanha *</Label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                {/* Botão Layout do Zero - estilo verde */}
-                <Card
-                  className={`p-3 cursor-pointer transition-all hover:border-green-500 hover:shadow-md border-2 ${
-                    isFromScratch 
-                      ? "border-green-500 ring-2 ring-green-500 bg-green-50 dark:bg-green-950" 
-                      : "border-green-500 bg-green-50 dark:bg-green-950"
-                  }`}
-                  onClick={() => {
-                    setIsFromScratch(true);
-                    setSelectedCampaignId("");
-                    setSelectedModel(null);
-                  }}
-                >
-                  <div className="flex flex-col items-center gap-1">
-                    <Plus className="h-6 w-6 text-green-500" />
-                    <span className="text-xs font-medium text-center text-green-700 dark:text-green-300">
-                      Layout do Zero
-                    </span>
-                  </div>
-                </Card>
-
-                {/* Campanhas/Segmentos */}
-                {campaigns.map((campaign) => (
-                  <Card
-                    key={campaign.id}
-                    className={`p-3 cursor-pointer transition-all hover:border-primary ${
-                      selectedCampaignId === campaign.id ? "border-primary ring-2 ring-primary" : ""
-                    }`}
+              
+              {(selectedCampaignId || isFromScratch) ? (
+                // Modo colapsado - mostra apenas o selecionado
+                <div className="flex items-center gap-2">
+                  <Card className="p-3 flex-1 border-primary ring-2 ring-primary">
+                    <div className="flex items-center gap-2">
+                      {isFromScratch ? (
+                        <>
+                          <Plus className="h-5 w-5 text-green-500" />
+                          <span className="font-medium text-green-700 dark:text-green-300">Layout do Zero</span>
+                        </>
+                      ) : (
+                        <>
+                          <Megaphone className="h-5 w-5 text-primary" />
+                          <span className="font-medium">{campaigns.find(c => c.id === selectedCampaignId)?.name}</span>
+                        </>
+                      )}
+                    </div>
+                  </Card>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
                     onClick={() => {
+                      setSelectedCampaignId("");
                       setIsFromScratch(false);
-                      setSelectedCampaignId(campaign.id);
+                      setSelectedUniformType("");
+                      setSelectedModel(null);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4 mr-1" />
+                    Alterar
+                  </Button>
+                </div>
+              ) : (
+                // Modo expandido - mostra grid completo
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  {/* Botão Layout do Zero - estilo verde */}
+                  <Card
+                    className={`p-3 cursor-pointer transition-all hover:border-green-500 hover:shadow-md border-2 border-green-500 bg-green-50 dark:bg-green-950`}
+                    onClick={() => {
+                      setIsFromScratch(true);
+                      setSelectedCampaignId("");
+                      setSelectedModel(null);
                     }}
                   >
                     <div className="flex flex-col items-center gap-1">
-                      <Megaphone className="h-6 w-6 text-primary" />
-                      <span className="text-xs font-medium text-center">{campaign.name}</span>
+                      <Plus className="h-6 w-6 text-green-500" />
+                      <span className="text-xs font-medium text-center text-green-700 dark:text-green-300">
+                        Layout do Zero
+                      </span>
                     </div>
                   </Card>
-                ))}
-              </div>
+
+                  {/* Campanhas/Segmentos */}
+                  {campaigns.map((campaign) => (
+                    <Card
+                      key={campaign.id}
+                      className="p-3 cursor-pointer transition-all hover:border-primary"
+                      onClick={() => {
+                        setIsFromScratch(false);
+                        setSelectedCampaignId(campaign.id);
+                      }}
+                    >
+                      <div className="flex flex-col items-center gap-1">
+                        <Megaphone className="h-6 w-6 text-primary" />
+                        <span className="text-xs font-medium text-center">{campaign.name}</span>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Uniform Type Selection - mostrar se campanha selecionada OU se for do zero */}
             {(selectedCampaignId || isFromScratch) && (
               <div className="space-y-2">
                 <Label>Tipo de Uniforme *</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  {uniformTypes.map((type) => (
-                    <Card
-                      key={type.tag_value}
-                      className={`p-3 cursor-pointer transition-all hover:border-primary ${
-                        selectedUniformType === type.tag_value ? "border-primary ring-2 ring-primary" : ""
-                      }`}
-                      onClick={() => setSelectedUniformType(type.tag_value)}
-                    >
-                      <div className="flex flex-col items-center gap-1">
-                        <img
-                          src={UNIFORM_IMAGES[type.tag_value] || mangaCurtaImg}
-                          alt={getLabel(type.tag_value)}
-                          className="w-16 h-16 object-contain"
+                
+                {selectedUniformType ? (
+                  // Modo colapsado
+                  <div className="flex items-center gap-2">
+                    <Card className="p-3 flex-1 border-primary ring-2 ring-primary">
+                      <div className="flex items-center gap-2">
+                        <img 
+                          src={UNIFORM_IMAGES[selectedUniformType] || mangaCurtaImg} 
+                          alt={getLabel(selectedUniformType)}
+                          className="w-10 h-10 object-contain" 
                         />
-                        <span className="text-xs font-medium text-center">
-                          {getIcon(type.tag_value)} {getLabel(type.tag_value)}
-                        </span>
+                        <span className="font-medium">{getIcon(selectedUniformType)} {getLabel(selectedUniformType)}</span>
                       </div>
                     </Card>
-                  ))}
-                </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        setSelectedUniformType("");
+                        setSelectedModel(null);
+                      }}
+                    >
+                      <Pencil className="h-4 w-4 mr-1" />
+                      Alterar
+                    </Button>
+                  </div>
+                ) : (
+                  // Modo expandido
+                  <div className="grid grid-cols-2 gap-2">
+                    {uniformTypes.map((type) => (
+                      <Card
+                        key={type.tag_value}
+                        className="p-3 cursor-pointer transition-all hover:border-primary"
+                        onClick={() => setSelectedUniformType(type.tag_value)}
+                      >
+                        <div className="flex flex-col items-center gap-1">
+                          <img
+                            src={UNIFORM_IMAGES[type.tag_value] || mangaCurtaImg}
+                            alt={getLabel(type.tag_value)}
+                            className="w-16 h-16 object-contain"
+                          />
+                          <span className="text-xs font-medium text-center">
+                            {getIcon(type.tag_value)} {getLabel(type.tag_value)}
+                          </span>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -885,26 +942,50 @@ export const NewLayoutRequestDialog = ({
             {!isFromScratch && selectedUniformType && (
               <div className="space-y-2">
                 <Label>Modelo *</Label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                  {filteredModels.map((model) => (
-                    <Card
-                      key={model.id}
-                      className={`p-2 cursor-pointer transition-all hover:border-primary ${
-                        selectedModel?.id === model.id ? "border-primary ring-2 ring-primary" : ""
-                      }`}
-                      onClick={() => setSelectedModel(model)}
-                    >
-                      <div className="flex flex-col items-center gap-1">
-                        <img
-                          src={model.photo_main}
-                          alt={model.name}
-                          className="w-full aspect-square object-contain rounded"
+                
+                {selectedModel ? (
+                  // Modo colapsado
+                  <div className="flex items-center gap-2">
+                    <Card className="p-3 flex-1 border-primary ring-2 ring-primary">
+                      <div className="flex items-center gap-2">
+                        <img 
+                          src={selectedModel.photo_main} 
+                          alt={selectedModel.name}
+                          className="w-12 h-12 object-contain rounded" 
                         />
-                        <span className="text-xs font-medium text-center">{model.name}</span>
+                        <span className="font-medium">{selectedModel.name}</span>
                       </div>
                     </Card>
-                  ))}
-                </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setSelectedModel(null)}
+                    >
+                      <Pencil className="h-4 w-4 mr-1" />
+                      Alterar
+                    </Button>
+                  </div>
+                ) : (
+                  // Modo expandido
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                    {filteredModels.map((model) => (
+                      <Card
+                        key={model.id}
+                        className="p-2 cursor-pointer transition-all hover:border-primary"
+                        onClick={() => setSelectedModel(model)}
+                      >
+                        <div className="flex flex-col items-center gap-1">
+                          <img
+                            src={model.photo_main}
+                            alt={model.name}
+                            className="w-full aspect-square object-contain rounded"
+                          />
+                          <span className="text-xs font-medium text-center">{model.name}</span>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
