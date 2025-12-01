@@ -26,6 +26,10 @@ interface FrontCustomization {
   logoUrl: string;
   customDescription?: string;
   customFile?: File | null;
+  smallLogoObservation?: string;
+  smallLogoFile?: File | null;
+  largeLogoObservation?: string;
+  largeLogoFile?: File | null;
 }
 
 interface FrontEditorProps {
@@ -38,6 +42,8 @@ interface FrontEditorProps {
 export const FrontEditor = ({ model, value, onChange, onNext }: FrontEditorProps) => {
   const [isZoomOpen, setIsZoomOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const smallLogoInputRef = useRef<HTMLInputElement | null>(null);
+  const largeLogoInputRef = useRef<HTMLInputElement | null>(null);
   
   const getImageUrl = () => {
     // Prioriza small logo, depois large logo, depois custom, senão padrão
@@ -124,34 +130,122 @@ export const FrontEditor = ({ model, value, onChange, onNext }: FrontEditorProps
               🚫 Sem personalização
             </Button>
 
-            <div className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-muted/50">
-              <Checkbox
-                id="small_logo"
-                checked={value.hasSmallLogo}
-                onCheckedChange={(checked) => onChange({ 
-                  ...value, 
-                  hasSmallLogo: !!checked,
-                  logoType: checked ? 'selected' : (value.hasLargeLogo || value.hasCustom) ? 'selected' : 'none'
-                })}
-              />
-              <Label htmlFor="small_logo" className="text-base cursor-pointer flex-1">
-                Logo pequena no peito esquerdo
-              </Label>
+            <div className="space-y-3">
+              <div className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-muted/50">
+                <Checkbox
+                  id="small_logo"
+                  checked={value.hasSmallLogo}
+                  onCheckedChange={(checked) => onChange({ 
+                    ...value, 
+                    hasSmallLogo: !!checked,
+                    logoType: checked ? 'selected' : (value.hasLargeLogo || value.hasCustom) ? 'selected' : 'none'
+                  })}
+                />
+                <Label htmlFor="small_logo" className="text-base cursor-pointer flex-1">
+                  Logo pequena no peito esquerdo
+                </Label>
+              </div>
+              
+              {value.hasSmallLogo && (
+                <div className="ml-8 space-y-3 p-4 bg-muted/50 rounded-lg border">
+                  <div className="space-y-2">
+                    <Label className="text-base">Observação (opcional)</Label>
+                    <Textarea
+                      placeholder="Descreva detalhes sobre a logo pequena no peito..."
+                      value={value.smallLogoObservation || ""}
+                      onChange={(e) => onChange({ ...value, smallLogoObservation: e.target.value })}
+                      className="min-h-[80px] text-base"
+                      rows={3}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-base">Upload da Logo</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full h-12"
+                      onClick={() => smallLogoInputRef.current?.click()}
+                    >
+                      <Upload className="mr-2 h-4 w-4" />
+                      {value.smallLogoFile ? value.smallLogoFile.name : "Escolher arquivo"}
+                    </Button>
+                    <input
+                      ref={smallLogoInputRef}
+                      type="file"
+                      accept="image/*,.pdf"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        onChange({ ...value, smallLogoFile: file });
+                      }}
+                    />
+                    {value.smallLogoFile && (
+                      <p className="text-xs text-muted-foreground">
+                        Arquivo selecionado: {value.smallLogoFile.name}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
               
-            <div className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-muted/50">
-              <Checkbox
-                id="large_logo"
-                checked={value.hasLargeLogo}
-                onCheckedChange={(checked) => onChange({ 
-                  ...value, 
-                  hasLargeLogo: !!checked,
-                  logoType: checked ? 'selected' : (value.hasSmallLogo || value.hasCustom) ? 'selected' : 'none'
-                })}
-              />
-              <Label htmlFor="large_logo" className="text-base cursor-pointer flex-1">
-                Logo grande no centro
-              </Label>
+            <div className="space-y-3">
+              <div className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-muted/50">
+                <Checkbox
+                  id="large_logo"
+                  checked={value.hasLargeLogo}
+                  onCheckedChange={(checked) => onChange({ 
+                    ...value, 
+                    hasLargeLogo: !!checked,
+                    logoType: checked ? 'selected' : (value.hasSmallLogo || value.hasCustom) ? 'selected' : 'none'
+                  })}
+                />
+                <Label htmlFor="large_logo" className="text-base cursor-pointer flex-1">
+                  Logo grande no centro
+                </Label>
+              </div>
+              
+              {value.hasLargeLogo && (
+                <div className="ml-8 space-y-3 p-4 bg-muted/50 rounded-lg border">
+                  <div className="space-y-2">
+                    <Label className="text-base">Observação (opcional)</Label>
+                    <Textarea
+                      placeholder="Descreva detalhes sobre a logo grande no centro..."
+                      value={value.largeLogoObservation || ""}
+                      onChange={(e) => onChange({ ...value, largeLogoObservation: e.target.value })}
+                      className="min-h-[80px] text-base"
+                      rows={3}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-base">Upload da Logo</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full h-12"
+                      onClick={() => largeLogoInputRef.current?.click()}
+                    >
+                      <Upload className="mr-2 h-4 w-4" />
+                      {value.largeLogoFile ? value.largeLogoFile.name : "Escolher arquivo"}
+                    </Button>
+                    <input
+                      ref={largeLogoInputRef}
+                      type="file"
+                      accept="image/*,.pdf"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        onChange({ ...value, largeLogoFile: file });
+                      }}
+                    />
+                    {value.largeLogoFile && (
+                      <p className="text-xs text-muted-foreground">
+                        Arquivo selecionado: {value.largeLogoFile.name}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
               
             <div className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-muted/50">

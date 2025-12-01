@@ -45,6 +45,10 @@ interface BackCustomization {
   hasCustomDescription: boolean;
   customDescription?: string;
   customFile?: File | null;
+  logoLargeObservation?: string;
+  logoLargeFile?: File | null;
+  logoNeckObservation?: string;
+  logoNeckFile?: File | null;
 }
 
 interface BackEditorProps {
@@ -57,6 +61,8 @@ interface BackEditorProps {
 export const BackEditor = ({ model, value, onChange, onNext }: BackEditorProps) => {
   const [isZoomOpen, setIsZoomOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const logoLargeInputRef = useRef<HTMLInputElement | null>(null);
+  const logoNeckInputRef = useRef<HTMLInputElement | null>(null);
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6 pb-4">
@@ -154,6 +160,48 @@ export const BackEditor = ({ model, value, onChange, onNext }: BackEditorProps) 
                 Logo grande no centro
               </Label>
             </div>
+            
+            {value.logoLarge && (
+              <div className="ml-8 space-y-3 p-4 bg-muted/50 rounded-lg border">
+                <div className="space-y-2">
+                  <Label className="text-base">Observação (opcional)</Label>
+                  <Textarea
+                    placeholder="Descreva detalhes sobre a logo grande nas costas..."
+                    value={value.logoLargeObservation || ""}
+                    onChange={(e) => onChange({ ...value, logoLargeObservation: e.target.value })}
+                    className="min-h-[80px] text-base"
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-base">Upload da Logo</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-12"
+                    onClick={() => logoLargeInputRef.current?.click()}
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    {value.logoLargeFile ? value.logoLargeFile.name : "Escolher arquivo"}
+                  </Button>
+                  <input
+                    ref={logoLargeInputRef}
+                    type="file"
+                    accept="image/*,.pdf"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      onChange({ ...value, logoLargeFile: file });
+                    }}
+                  />
+                  {value.logoLargeFile && (
+                    <p className="text-xs text-muted-foreground">
+                      Arquivo selecionado: {value.logoLargeFile.name}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Logo na Nuca */}
@@ -175,6 +223,48 @@ export const BackEditor = ({ model, value, onChange, onNext }: BackEditorProps) 
                 Logo pequena na nuca
               </Label>
             </div>
+            
+            {value.logoNeck && (
+              <div className="ml-8 space-y-3 p-4 bg-muted/50 rounded-lg border">
+                <div className="space-y-2">
+                  <Label className="text-base">Observação (opcional)</Label>
+                  <Textarea
+                    placeholder="Descreva detalhes sobre a logo na nuca..."
+                    value={value.logoNeckObservation || ""}
+                    onChange={(e) => onChange({ ...value, logoNeckObservation: e.target.value })}
+                    className="min-h-[80px] text-base"
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-base">Upload da Logo</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-12"
+                    onClick={() => logoNeckInputRef.current?.click()}
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    {value.logoNeckFile ? value.logoNeckFile.name : "Escolher arquivo"}
+                  </Button>
+                  <input
+                    ref={logoNeckInputRef}
+                    type="file"
+                    accept="image/*,.pdf"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      onChange({ ...value, logoNeckFile: file });
+                    }}
+                  />
+                  {value.logoNeckFile && (
+                    <p className="text-xs text-muted-foreground">
+                      Arquivo selecionado: {value.logoNeckFile.name}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Nome */}
