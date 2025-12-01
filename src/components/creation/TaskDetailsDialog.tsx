@@ -1160,6 +1160,8 @@ export const TaskDetailsDialog = ({
                             onModelChange={onTaskUpdated}
                             logoAction={task.logo_action}
                             logoDescription={task.logo_description}
+                            task={task}
+                            onTaskUpdated={onTaskUpdated}
                           />
                           
                           {/* Seção de Alterações dentro do mockup */}
@@ -1201,6 +1203,8 @@ export const TaskDetailsDialog = ({
                         onModelChange={onTaskUpdated}
                         logoAction={task.logo_action}
                         logoDescription={task.logo_description}
+                        task={task}
+                        onTaskUpdated={onTaskUpdated}
                       />
                       
                       {/* Seção de Alterações */}
@@ -1240,6 +1244,8 @@ export const TaskDetailsDialog = ({
                         onModelChange={onTaskUpdated}
                         logoAction={task.logo_action}
                         logoDescription={task.logo_description}
+                        task={task}
+                        onTaskUpdated={onTaskUpdated}
                       />
                       
                       {/* Seção de Alterações - sem layoutId para compatibilidade */}

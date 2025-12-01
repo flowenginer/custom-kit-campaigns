@@ -14,6 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useUniformTypes } from "@/hooks/useUniformTypes";
 import { cn } from "@/lib/utils";
+import { BusinessSegmentField } from "./BusinessSegmentField";
+import { DesignTask } from "@/types/design-task";
 
 interface CustomizationViewerProps {
   data: any;
@@ -28,6 +30,9 @@ interface CustomizationViewerProps {
   onModelChange?: () => void;
   logoAction?: 'designer_create' | 'waiting_client' | null;
   logoDescription?: string | null;
+  // Business Segment props
+  task?: DesignTask | null;
+  onTaskUpdated?: () => void;
 }
 
 export const CustomizationViewer = ({ 
@@ -42,7 +47,9 @@ export const CustomizationViewer = ({
   isSalesperson,
   onModelChange,
   logoAction,
-  logoDescription
+  logoDescription,
+  task,
+  onTaskUpdated
 }: CustomizationViewerProps) => {
   const [zoomImage, setZoomImage] = useState<{ url: string; alt: string } | null>(null);
   const [changeModelDialogOpen, setChangeModelDialogOpen] = useState(false);
@@ -578,6 +585,15 @@ export const CustomizationViewer = ({
                     <p className="text-sm font-medium bg-muted p-2 rounded">{campaignName}</p>
                   </div>
                 )}
+                
+                {/* Segmento do Cliente - Editável */}
+                {task && onTaskUpdated && (
+                  <BusinessSegmentField 
+                    task={task} 
+                    onTaskUpdated={onTaskUpdated} 
+                  />
+                )}
+                
                 {modelName && (
                   <div>
                     <Label className="text-xs text-muted-foreground">Modelo</Label>
