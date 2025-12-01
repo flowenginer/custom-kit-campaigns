@@ -65,6 +65,9 @@ interface LayoutConfig {
   backCustomization: any;
   leftSleeveCustomization: any;
   rightSleeveCustomization: any;
+  hasLogo: "sim" | "depois" | "sem_logo" | "criar_logo" | null;
+  logoFiles: File[];
+  logoDescription: string;
 }
 
 interface NewLayoutRequestDialogProps {
@@ -126,6 +129,7 @@ export const NewLayoutRequestDialog = ({
     | "back"
     | "sleeves_left"
     | "sleeves_right"
+    | "logo_layout"
     | "copy_customization"
     | "logo"
     | "notes"
@@ -367,14 +371,21 @@ export const NewLayoutRequestDialog = ({
       return;
     }
 
-    if (hasLogo === null) {
-      toast.error("Informe se o cliente tem logo");
-      return;
-    }
-
-    if (hasLogo === "sim" && logoFiles.length === 0) {
-      toast.error("Faça upload de pelo menos uma logo do cliente");
-      return;
+    // Validar que todos os layouts tenham configuração de logo
+    for (let i = 0; i < layouts.length; i++) {
+      const layout = layouts[i];
+      if (!layout.hasLogo) {
+        toast.error(`Configure a logo do Layout ${i + 1}`);
+        return;
+      }
+      if (layout.hasLogo === "sim" && (!layout.logoFiles || layout.logoFiles.length === 0)) {
+        toast.error(`Faça upload da logo do Layout ${i + 1}`);
+        return;
+      }
+      if (layout.hasLogo === "criar_logo" && !layout.logoDescription?.trim()) {
+        toast.error(`Descreva a logo para o Layout ${i + 1}`);
+        return;
+      }
     }
 
     setLoading(true);
@@ -386,59 +397,27 @@ export const NewLayoutRequestDialog = ({
         return sum + (qty || 0);
       }, 0);
 
-      // Upload de logos se fornecidas
-      let uploadedLogoUrls: string[] = [];
-      if (hasLogo === "sim" && logoFiles.length > 0) {
-        for (const file of logoFiles) {
-          const url = await uploadLogoToStorage(file);
-          if (!url) {
-            toast.error("Erro ao fazer upload de uma das logos");
-            setLoading(false);
-            return;
-          }
-          uploadedLogoUrls.push(url);
-        }
-      }
-
-      // Upload do arquivo customFile da frente (se houver)
-      let frontLogoUrl = "";
-      if (frontCustomization.customFile) {
-        const url = await uploadLogoToStorage(frontCustomization.customFile);
-        if (url) {
-          frontLogoUrl = url;
-        }
-      }
-
-      // Upload dos logos dos patrocinadores (se houver)
-      let sponsorsLogosUrls: string[] = [];
-      if (backCustomization.sponsors && backCustomization.sponsors.length > 0) {
-        for (const sponsor of backCustomization.sponsors) {
-          if (sponsor.logoFile) {
-            const url = await uploadLogoToStorage(sponsor.logoFile);
-            if (url) {
-              sponsorsLogosUrls.push(url);
+      // Processar uploads de logos para cada layout
+      const layoutsWithUploadedLogos = await Promise.all(
+        layouts.map(async (layout) => {
+          let uploadedLogoUrls: string[] = [];
+          
+          if (layout.hasLogo === "sim" && layout.logoFiles && layout.logoFiles.length > 0) {
+            for (const file of layout.logoFiles) {
+              const url = await uploadLogoToStorage(file);
+              if (!url) {
+                throw new Error(`Erro ao fazer upload da logo do Layout ${layout.id}`);
+              }
+              uploadedLogoUrls.push(url);
             }
           }
-        }
-      }
-
-      // Upload do logo da manga esquerda (se houver)
-      let leftSleeveLogoUrl = "";
-      if (leftSleeveCustomization.logoFile) {
-        const url = await uploadLogoToStorage(leftSleeveCustomization.logoFile);
-        if (url) {
-          leftSleeveLogoUrl = url;
-        }
-      }
-
-      // Upload do logo da manga direita (se houver)
-      let rightSleeveLogoUrl = "";
-      if (rightSleeveCustomization.logoFile) {
-        const url = await uploadLogoToStorage(rightSleeveCustomization.logoFile);
-        if (url) {
-          rightSleeveLogoUrl = url;
-        }
-      }
+          
+          return {
+            ...layout,
+            uploadedLogoUrls,
+          };
+        })
+      );
 
       // Obter user ID atual
       const {
@@ -451,49 +430,18 @@ export const NewLayoutRequestDialog = ({
       }
 
       // Usar o primeiro layout como base para campaign e model (para o order)
-      const firstLayout = layouts[0];
+      const firstLayout = layoutsWithUploadedLogos[0];
       const isFromScratch = firstLayout.isFromScratch;
       const selectedCampaignId = firstLayout.campaignId;
       const selectedModel = firstLayout.model;
       const selectedUniformType = firstLayout.uniformType;
 
-      // Preparar dados de customização (remover File objects que não podem ser serializados)
+      // Preparar dados de customização simplificados (para manter compatibilidade)
       const customizationData = {
+        layouts: layoutsWithUploadedLogos.length,
         fromScratch: isFromScratch,
         uniformType: selectedUniformType,
-        model: isFromScratch ? null : selectedModel.name,
-        front: {
-          ...frontCustomization,
-          logoUrl: frontLogoUrl || frontCustomization.logoUrl, // URL do upload
-          customFile: undefined, // Remove File object
-          customFileName: frontCustomization.customFile?.name, // Salva apenas o nome
-        },
-        back: {
-          ...backCustomization,
-          customFile: undefined, // Remove File object
-          customFileName: backCustomization.customFile?.name, // Salva apenas o nome
-          sponsorsLogosUrls, // URLs dos uploads dos patrocinadores
-          sponsors: backCustomization.sponsors.map(s => ({
-            name: s.name,
-            logoFileName: s.logoFile?.name, // Salva apenas o nome do arquivo
-          })),
-        },
-        sleeves: {
-          left: {
-            ...leftSleeveCustomization,
-            logoUrl: leftSleeveLogoUrl || leftSleeveCustomization.logoUrl, // URL do upload
-            logoFile: undefined, // Remove File object
-            logoFileName: leftSleeveCustomization.logoFile?.name, // Salva apenas o nome
-          },
-          right: {
-            ...rightSleeveCustomization,
-            logoUrl: rightSleeveLogoUrl || rightSleeveCustomization.logoUrl, // URL do upload
-            logoFile: undefined, // Remove File object
-            logoFileName: rightSleeveCustomization.logoFile?.name, // Salva apenas o nome
-          },
-        },
-        uploadChoice: hasLogo === "sim" ? "agora" : "depois",
-        logoUrls: uploadedLogoUrls,
+        model: isFromScratch ? null : selectedModel?.name,
         internalNotes,
       };
 
@@ -515,8 +463,21 @@ export const NewLayoutRequestDialog = ({
           },
           quantity: totalQuantity,
           customization: customizationData,
-          hasLogo: hasLogo !== "sem_logo" && hasLogo !== "depois",
-          logoUrls: uploadedLogoUrls,
+          layouts: layoutsWithUploadedLogos.map(l => ({
+            id: l.id,
+            campaignId: l.campaignId,
+            campaignName: l.campaignName,
+            uniformType: l.uniformType,
+            model: l.model,
+            isFromScratch: l.isFromScratch,
+            quantity: l.quantity,
+            customQuantity: l.customQuantity,
+            hasLogo: l.hasLogo,
+            uploadedLogoUrls: l.uploadedLogoUrls,
+            logoDescription: l.logoDescription,
+          })),
+          hasLogo: firstLayout.hasLogo !== "sem_logo" && firstLayout.hasLogo !== "depois",
+          logoUrls: firstLayout.uploadedLogoUrls || [],
           internalNotes,
         };
 
@@ -581,7 +542,7 @@ export const NewLayoutRequestDialog = ({
       // 1.5. Se um cliente existente foi selecionado, vincular ao design_task
       let finalCustomerId = selectedCustomerId;
 
-      // 2. Criar LEAD com order_id
+      // 2. Criar LEAD com order_id (usando dados do primeiro layout)
       const { data: leadData, error: leadError } = await supabase
         .from("leads")
         .insert([{
@@ -594,10 +555,10 @@ export const NewLayoutRequestDialog = ({
           order_id: orderData.id,
           created_by: user.id,
           created_by_salesperson: true,
-          needs_logo: hasLogo === "depois" || hasLogo === "sem_logo",
-          logo_action: hasLogo === "depois" ? "waiting_client" : (hasLogo === "criar_logo" ? "designer_create" : null),
-          logo_description: hasLogo === "criar_logo" ? logoDescription : null,
-          uploaded_logo_url: uploadedLogoUrls.length > 0 ? uploadedLogoUrls[0] : null,
+          needs_logo: firstLayout.hasLogo === "depois" || firstLayout.hasLogo === "sem_logo",
+          logo_action: firstLayout.hasLogo === "depois" ? "waiting_client" : (firstLayout.hasLogo === "criar_logo" ? "designer_create" : null),
+          logo_description: firstLayout.hasLogo === "criar_logo" ? firstLayout.logoDescription : null,
+          uploaded_logo_url: firstLayout.uploadedLogoUrls && firstLayout.uploadedLogoUrls.length > 0 ? firstLayout.uploadedLogoUrls[0] : null,
           customization_summary: customizationData,
           completed: true,
         }])
@@ -630,7 +591,7 @@ export const NewLayoutRequestDialog = ({
       if (updateTaskError) throw updateTaskError;
 
       // 5. Criar design_task_layouts para cada layout configurado
-      const layoutsToInsert = layouts.map((layout, index) => ({
+      const layoutsToInsert = layoutsWithUploadedLogos.map((layout, index) => ({
         task_id: taskData.id,
         layout_number: index + 1,
         campaign_id: layout.isFromScratch ? null : layout.campaignId,
@@ -649,6 +610,11 @@ export const NewLayoutRequestDialog = ({
           sleeves: {
             left: layout.leftSleeveCustomization,
             right: layout.rightSleeveCustomization,
+          },
+          logo: {
+            hasLogo: layout.hasLogo,
+            logoUrls: layout.uploadedLogoUrls || [],
+            logoDescription: layout.logoDescription || null,
           },
         },
       }));
@@ -758,7 +724,8 @@ export const NewLayoutRequestDialog = ({
     if (currentStep === "quantity_layouts") return "Quantos mockups este cliente precisa?";
     if (currentStep === "setup_layout") return `Configurar Layout ${currentLayoutIndex + 1} de ${layoutCount}`;
     if (currentStep === "review_layouts") return "Revisar Todos os Layouts";
-    if (currentStep === "copy_customization") return "Copiar Personalização?";
+    if (currentStep === "copy_customization") return "Copiar Configuração Completa?";
+    if (currentStep === "logo_layout") return `Layout ${currentLayoutIndex + 1}/${layoutCount} - Logo`;
     if (currentStep === "customer") return "Dados do Cliente";
     if (layoutCount > 1 && ["front", "back", "sleeves_left", "sleeves_right"].includes(currentStep)) {
       return `Layout ${currentLayoutIndex + 1}/${layoutCount} - ${currentStep === "front" ? "Frente" : currentStep === "back" ? "Costas" : "Mangas"}`;
@@ -1100,6 +1067,9 @@ export const NewLayoutRequestDialog = ({
                     backCustomization: {},
                     leftSleeveCustomization: {},
                     rightSleeveCustomization: {},
+                    hasLogo: null,
+                    logoFiles: [],
+                    logoDescription: "",
                   };
 
                   const updatedLayouts = [...layouts];
@@ -1217,23 +1187,28 @@ export const NewLayoutRequestDialog = ({
           <div className="space-y-4">
             <div className="text-center space-y-4">
               <h3 className="text-lg font-semibold">
-                Deseja aplicar a mesma personalização ao Layout {currentLayoutIndex + 1}?
+                Deseja aplicar a mesma configuração completa ao Layout {currentLayoutIndex + 1}?
               </h3>
               <p className="text-sm text-muted-foreground">
-                Você pode copiar toda a personalização do Layout {currentLayoutIndex} ou começar do zero.
+                Você pode copiar toda a configuração (personalização + logo) do Layout {currentLayoutIndex} ou começar do zero.
               </p>
               <div className="flex gap-3">
                 <Button
                   variant="outline"
                   onClick={() => {
-                    // Copiar personalização do layout anterior
+                    // Copiar TUDO do layout anterior (personalização + logo)
                     const prevLayout = layouts[currentLayoutIndex - 1];
                     setFrontCustomization(prevLayout.frontCustomization);
                     setBackCustomization(prevLayout.backCustomization);
                     setLeftSleeveCustomization(prevLayout.leftSleeveCustomization);
                     setRightSleeveCustomization(prevLayout.rightSleeveCustomization);
                     
-                    // Salvar no layout atual e avançar
+                    // Copiar dados de logo
+                    setHasLogo(prevLayout.hasLogo);
+                    setLogoFiles(prevLayout.logoFiles || []);
+                    setLogoDescription(prevLayout.logoDescription || "");
+                    
+                    // Salvar no layout atual
                     const updatedLayouts = [...layouts];
                     updatedLayouts[currentLayoutIndex] = {
                       ...updatedLayouts[currentLayoutIndex],
@@ -1241,6 +1216,9 @@ export const NewLayoutRequestDialog = ({
                       backCustomization: prevLayout.backCustomization,
                       leftSleeveCustomization: prevLayout.leftSleeveCustomization,
                       rightSleeveCustomization: prevLayout.rightSleeveCustomization,
+                      hasLogo: prevLayout.hasLogo,
+                      logoFiles: prevLayout.logoFiles,
+                      logoDescription: prevLayout.logoDescription,
                     };
                     setLayouts(updatedLayouts);
 
@@ -1249,17 +1227,17 @@ export const NewLayoutRequestDialog = ({
                       setCurrentLayoutIndex(currentLayoutIndex + 1);
                       setCurrentStep("copy_customization");
                     } else {
-                      setCurrentStep("logo");
+                      setCurrentStep("notes");
                     }
                   }}
                   className="flex-1"
                 >
                   <Check className="h-4 w-4 mr-2" />
-                  Sim, Copiar Personalização
+                  Sim, Copiar Tudo
                 </Button>
                 <Button
                   onClick={() => {
-                    // Resetar personalizações para começar do zero
+                    // Resetar TUDO para começar do zero
                     setFrontCustomization({
                       logoType: "none",
                       hasSmallLogo: false,
@@ -1314,6 +1292,11 @@ export const NewLayoutRequestDialog = ({
                       text: false,
                       textContent: "",
                     });
+                    
+                    // Resetar também dados de logo
+                    setHasLogo(null);
+                    setLogoFiles([]);
+                    setLogoDescription("");
                     
                     setCurrentStep("front");
                   }}
@@ -1730,20 +1713,219 @@ export const NewLayoutRequestDialog = ({
                   };
                   setLayouts(updatedLayouts);
 
-                  // Se há mais layouts para personalizar, perguntar se quer copiar
-                  if (layoutCount > 1 && currentLayoutIndex + 1 < layoutCount) {
-                    setCurrentLayoutIndex(currentLayoutIndex + 1);
-                    setCurrentStep("copy_customization");
-                  } else {
-                    // Último ou único layout, ir para logo
-                    setCurrentStep("logo");
-                  }
+                  // Ir para configuração de logo deste layout
+                  setCurrentStep("logo_layout");
                 }}
               />
             )}
             <Button variant="outline" onClick={() => setCurrentStep("sleeves_left")} className="w-full">
               Voltar
             </Button>
+          </div>
+        );
+
+      case "logo_layout":
+        return (
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <Label className="text-lg font-semibold">
+                Layout {currentLayoutIndex + 1} de {layoutCount} - Cliente tem logo?
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Selecione a opção que melhor se aplica para este layout
+              </p>
+              
+              <div className="grid grid-cols-1 gap-3">
+                {/* Opção 1: Sim, fazer upload agora */}
+                <Card 
+                  className={`cursor-pointer transition-all hover:border-primary ${
+                    hasLogo === 'sim' ? 'border-primary ring-2 ring-primary bg-primary/5' : ''
+                  }`}
+                  onClick={() => setHasLogo('sim')}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                        hasLogo === 'sim' ? 'border-primary bg-primary' : 'border-muted-foreground'
+                      }`}>
+                        {hasLogo === 'sim' && <Check className="h-3 w-3 text-white" />}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-base font-medium">✅ Sim, fazer upload agora</p>
+                        <p className="text-sm text-muted-foreground mt-0.5">
+                          O cliente já possui logo e vou anexar agora
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Opção 2: Enviar depois */}
+                <Card 
+                  className={`cursor-pointer transition-all hover:border-primary ${
+                    hasLogo === 'depois' ? 'border-primary ring-2 ring-primary bg-primary/5' : ''
+                  }`}
+                  onClick={() => setHasLogo('depois')}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                        hasLogo === 'depois' ? 'border-primary bg-primary' : 'border-muted-foreground'
+                      }`}>
+                        {hasLogo === 'depois' && <Check className="h-3 w-3 text-white" />}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-base font-medium">📩 Vou enviar depois</p>
+                        <p className="text-sm text-muted-foreground mt-0.5">
+                          O cliente vai enviar por email/WhatsApp
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Opção 3: Cliente não quer logo */}
+                <Card 
+                  className={`cursor-pointer transition-all hover:border-orange-500 ${
+                    hasLogo === 'sem_logo' ? 'border-orange-500 ring-2 ring-orange-500 bg-orange-500/5' : ''
+                  }`}
+                  onClick={() => setHasLogo('sem_logo')}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                        hasLogo === 'sem_logo' ? 'border-orange-500 bg-orange-500' : 'border-muted-foreground'
+                      }`}>
+                        {hasLogo === 'sem_logo' && <Check className="h-3 w-3 text-white" />}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-base font-medium text-orange-600">🚫 Cliente não quer logo</p>
+                        <p className="text-sm text-muted-foreground mt-0.5">
+                          A camisa será produzida sem nenhuma logo
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Opção 4: Criar logo para o cliente */}
+                <Card 
+                  className={`cursor-pointer transition-all hover:border-purple-500 ${
+                    hasLogo === 'criar_logo' ? 'border-purple-500 ring-2 ring-purple-500 bg-purple-500/5' : ''
+                  }`}
+                  onClick={() => setHasLogo('criar_logo')}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                        hasLogo === 'criar_logo' ? 'border-purple-500 bg-purple-500' : 'border-muted-foreground'
+                      }`}>
+                        {hasLogo === 'criar_logo' && <Check className="h-3 w-3 text-white" />}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-base font-medium text-purple-600">🎨 Criar logo para o cliente</p>
+                        <p className="text-sm text-muted-foreground mt-0.5">
+                          O designer vai criar uma logo nova
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* Descrição da Logo - apenas quando "criar_logo" */}
+            {hasLogo === 'criar_logo' && (
+              <div className="space-y-4 p-4 border-2 border-purple-500 rounded-lg bg-purple-50 dark:bg-purple-950">
+                <Label className="text-base font-medium text-purple-700 dark:text-purple-300">
+                  🎨 Descreva o que o cliente imagina para a logo *
+                </Label>
+                <Textarea
+                  value={logoDescription}
+                  onChange={(e) => setLogoDescription(e.target.value)}
+                  placeholder="Ex: Logo com cavalo, cores laranja e preto, estilo moderno e esportivo..."
+                  rows={4}
+                  className="border-purple-300 focus:border-purple-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-white dark:border-purple-600"
+                />
+                <p className="text-xs text-purple-600 dark:text-purple-400">
+                  Essa descrição será exibida para o designer que vai criar a logo.
+                </p>
+              </div>
+            )}
+
+            {/* Upload apenas se "sim" */}
+            {hasLogo === "sim" && (
+              <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                <Label className="text-base font-medium">Upload das Logos *</Label>
+                {logoFiles.map((file, index) => (
+                  <div key={index} className="flex items-center gap-2 p-3 bg-background rounded border">
+                    <span className="text-sm flex-1 truncate">{file.name}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const newFiles = logoFiles.filter((_, i) => i !== index);
+                        setLogoFiles(newFiles);
+                      }}
+                    >
+                      ✕
+                    </Button>
+                  </div>
+                ))}
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setLogoFiles([...logoFiles, file]);
+                      e.target.value = '';
+                    }
+                  }}
+                  className="mt-2"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Adicione uma logo por vez. Cada logo adicionada abre um novo campo.
+                </p>
+              </div>
+            )}
+            
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setCurrentStep("sleeves_right")} className="flex-1">
+                Voltar
+              </Button>
+              <Button
+                onClick={() => {
+                  // Salvar dados de logo no layout atual
+                  const updatedLayouts = [...layouts];
+                  updatedLayouts[currentLayoutIndex] = {
+                    ...updatedLayouts[currentLayoutIndex],
+                    hasLogo: hasLogo,
+                    logoFiles: logoFiles,
+                    logoDescription: logoDescription,
+                  };
+                  setLayouts(updatedLayouts);
+
+                  // Se há mais layouts, perguntar se quer copiar TUDO
+                  if (layoutCount > 1 && currentLayoutIndex + 1 < layoutCount) {
+                    setCurrentLayoutIndex(currentLayoutIndex + 1);
+                    setCurrentStep("copy_customization");
+                  } else {
+                    // Último layout, ir para notas
+                    setCurrentStep("notes");
+                  }
+                }}
+                disabled={
+                  hasLogo === null || 
+                  (hasLogo === "sim" && logoFiles.length === 0) ||
+                  (hasLogo === "criar_logo" && !logoDescription.trim())
+                }
+                className="flex-1"
+              >
+                Continuar
+              </Button>
+            </div>
           </div>
         );
 
@@ -1980,7 +2162,7 @@ export const NewLayoutRequestDialog = ({
               </p>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setCurrentStep("logo")} className="flex-1">
+              <Button variant="outline" onClick={() => setCurrentStep("logo_layout")} className="flex-1">
                 Voltar
               </Button>
               <Button onClick={handleSubmit} disabled={loading} className="flex-1">
