@@ -797,16 +797,16 @@ export const NewLayoutRequestDialog = ({
               <Badge variant="outline">{currentLayoutIndex + 1}/{layoutCount}</Badge>
             </div>
 
-            {/* Escolha inicial: Layout do Zero ou Baseado em Campanha */}
-            <div className="space-y-3">
-              <Label className="text-base">Como deseja criar este layout?</Label>
-              <div className="grid grid-cols-2 gap-4">
-                {/* Card Layout do Zero */}
+            {/* Campaign Selection com botão Layout do Zero */}
+            <div className="space-y-2">
+              <Label>Segmento/Campanha *</Label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                {/* Botão Layout do Zero - estilo verde */}
                 <Card
-                  className={`p-6 cursor-pointer transition-all hover:border-primary hover:shadow-lg ${
-                    isFromScratch
-                      ? "border-primary ring-2 ring-primary bg-primary/5"
-                      : "border-border hover:border-primary/50"
+                  className={`p-3 cursor-pointer transition-all hover:border-green-500 hover:shadow-md border-2 ${
+                    isFromScratch 
+                      ? "border-green-500 ring-2 ring-green-500 bg-green-50 dark:bg-green-950" 
+                      : "border-green-500 bg-green-50 dark:bg-green-950"
                   }`}
                   onClick={() => {
                     setIsFromScratch(true);
@@ -814,67 +814,34 @@ export const NewLayoutRequestDialog = ({
                     setSelectedModel(null);
                   }}
                 >
-                  <div className="flex flex-col items-center gap-3 text-center">
-                    <div className="p-3 rounded-full bg-primary/10">
-                      <Plus className="h-8 w-8 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-lg mb-1">Layout do Zero</h3>
-                      <p className="text-xs text-muted-foreground">
-                        Designer criará do zero, sem modelo base
-                      </p>
-                    </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <Plus className="h-6 w-6 text-green-500" />
+                    <span className="text-xs font-medium text-center text-green-700 dark:text-green-300">
+                      Layout do Zero
+                    </span>
                   </div>
                 </Card>
 
-                {/* Card Baseado em Campanha */}
-                <Card
-                  className={`p-6 cursor-pointer transition-all hover:border-primary hover:shadow-lg ${
-                    !isFromScratch && selectedCampaignId
-                      ? "border-primary ring-2 ring-primary bg-primary/5"
-                      : "border-border hover:border-primary/50"
-                  }`}
-                  onClick={() => {
-                    setIsFromScratch(false);
-                  }}
-                >
-                  <div className="flex flex-col items-center gap-3 text-center">
-                    <div className="p-3 rounded-full bg-primary/10">
-                      <Megaphone className="h-8 w-8 text-primary" />
+                {/* Campanhas/Segmentos */}
+                {campaigns.map((campaign) => (
+                  <Card
+                    key={campaign.id}
+                    className={`p-3 cursor-pointer transition-all hover:border-primary ${
+                      selectedCampaignId === campaign.id ? "border-primary ring-2 ring-primary" : ""
+                    }`}
+                    onClick={() => {
+                      setIsFromScratch(false);
+                      setSelectedCampaignId(campaign.id);
+                    }}
+                  >
+                    <div className="flex flex-col items-center gap-1">
+                      <Megaphone className="h-6 w-6 text-primary" />
+                      <span className="text-xs font-medium text-center">{campaign.name}</span>
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-lg mb-1">Baseado em Campanha</h3>
-                      <p className="text-xs text-muted-foreground">
-                        Usar segmento existente como base
-                      </p>
-                    </div>
-                  </div>
-                </Card>
+                  </Card>
+                ))}
               </div>
             </div>
-            
-            {/* Campaign Selection - mostrar apenas se não for do zero */}
-            {!isFromScratch && (
-              <div className="space-y-2">
-                <Label>Segmento/Campanha *</Label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                  {campaigns.map((campaign) => (
-                    <Card
-                      key={campaign.id}
-                      className={`p-3 cursor-pointer transition-all hover:border-primary ${
-                        selectedCampaignId === campaign.id ? "border-primary ring-2 ring-primary" : ""
-                      }`}
-                      onClick={() => setSelectedCampaignId(campaign.id)}
-                    >
-                      <div className="flex flex-col items-center gap-1">
-                        <Megaphone className="h-6 w-6 text-primary" />
-                        <span className="text-xs font-medium text-center">{campaign.name}</span>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* Uniform Type Selection - mostrar se campanha selecionada OU se for do zero */}
             {(selectedCampaignId || isFromScratch) && (
