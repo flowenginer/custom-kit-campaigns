@@ -217,14 +217,28 @@ const Creation = () => {
       if (taskIds.length > 0) {
         const { data: layoutsData, error: layoutsError } = await supabase
           .from('design_task_layouts')
-          .select('*')
+          .select(`
+            *,
+            shirt_models:model_id (
+              image_front,
+              image_back,
+              image_left,
+              image_right
+            )
+          `)
           .in('task_id', taskIds)
           .order('layout_number', { ascending: true });
 
         if (!layoutsError && layoutsData) {
-          layoutsByTaskId = layoutsData.reduce((acc, layout) => {
+          layoutsByTaskId = layoutsData.reduce((acc, layout: any) => {
             if (!acc[layout.task_id]) acc[layout.task_id] = [];
-            acc[layout.task_id].push(layout);
+            acc[layout.task_id].push({
+              ...layout,
+              model_image_front: layout.shirt_models?.image_front || layout.customization_data?.modelImages?.front || null,
+              model_image_back: layout.shirt_models?.image_back || layout.customization_data?.modelImages?.back || null,
+              model_image_left: layout.shirt_models?.image_left || layout.customization_data?.modelImages?.left || null,
+              model_image_right: layout.shirt_models?.image_right || layout.customization_data?.modelImages?.right || null,
+            });
             return acc;
           }, {} as Record<string, any[]>);
         }

@@ -140,9 +140,19 @@ export const CustomizationViewer = ({
 
   const collectAllImages = () => {
     const images: Array<{ url: string; label: string }> = [];
+    
+    // Logos da Frente
     if (transformedData?.front?.logoFile) images.push({ url: transformedData.front.logoFile, label: 'Logo Frente' });
     if (transformedData?.front?.customFileUrl) images.push({ url: transformedData.front.customFileUrl, label: 'Arquivo Anexado Frente' });
+    if (transformedData?.front?.smallLogoFile) images.push({ url: transformedData.front.smallLogoFile, label: 'Logo Pequena Frente' });
+    if (transformedData?.front?.largeLogoFile) images.push({ url: transformedData.front.largeLogoFile, label: 'Logo Grande Frente' });
+    
+    // Logos das Costas
     if (transformedData?.back?.logo) images.push({ url: transformedData.back.logo, label: 'Logo Costas' });
+    if (transformedData?.back?.logoLargeFile) images.push({ url: transformedData.back.logoLargeFile, label: 'Logo Grande Costas' });
+    if (transformedData?.back?.logoNeckFile) images.push({ url: transformedData.back.logoNeckFile, label: 'Logo Nuca' });
+    
+    // Patrocinadores
     if (transformedData?.back?.sponsors) {
       transformedData.back.sponsors.forEach((sponsor: any, idx: number) => {
         if (sponsor.logo) images.push({ url: sponsor.logo, label: `Patrocinador ${idx + 1}` });
@@ -153,15 +163,27 @@ export const CustomizationViewer = ({
         if (url) images.push({ url, label: `Logo Patrocinador ${idx + 1}` });
       });
     }
-    if (transformedData?.clientLogos) {
-      transformedData.clientLogos.forEach((url: string, idx: number) => {
+    
+    // Logos do Cliente (de logo.logoUrls - CORREÇÃO PRINCIPAL)
+    if (transformedData?.logo?.logoUrls) {
+      transformedData.logo.logoUrls.forEach((url: string, idx: number) => {
         if (url) images.push({ url, label: `Logo Cliente ${idx + 1}` });
       });
     }
+    
+    // Logos legadas (clientLogos no nível raiz)
+    if (transformedData?.clientLogos) {
+      transformedData.clientLogos.forEach((url: string, idx: number) => {
+        if (url) images.push({ url, label: `Logo Cliente Legado ${idx + 1}` });
+      });
+    }
+    
+    // Mangas
     if (transformedData?.leftSleeve?.flag) images.push({ url: transformedData.leftSleeve.flag, label: 'Bandeira Manga Esquerda' });
     if (transformedData?.leftSleeve?.logo) images.push({ url: transformedData.leftSleeve.logo, label: 'Logo Manga Esquerda' });
     if (transformedData?.rightSleeve?.flag) images.push({ url: transformedData.rightSleeve.flag, label: 'Bandeira Manga Direita' });
     if (transformedData?.rightSleeve?.logo) images.push({ url: transformedData.rightSleeve.logo, label: 'Logo Manga Direita' });
+    
     return images;
   };
 
@@ -458,6 +480,22 @@ export const CustomizationViewer = ({
             <div className="bg-amber-50 dark:bg-amber-950 p-4 rounded-lg border border-amber-300 dark:border-amber-700">
               <p className="text-sm whitespace-pre-wrap text-amber-900 dark:text-amber-100">
                 {transformedData.scratchDescription}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
+      {/* Observações da Criação do Zero - de logo.logoDescription ou internalNotes */}
+      {data?.fromScratch && (transformedData.logo?.logoDescription || transformedData.internalNotes) && (
+        <Card className="border-2 border-purple-500 dark:border-purple-600">
+          <CardContent className="p-4">
+            <h3 className="text-lg font-bold mb-3 flex items-center gap-2 text-purple-800 dark:text-purple-300">
+              📝 OBSERVAÇÕES DO PEDIDO
+            </h3>
+            <div className="bg-purple-50 dark:bg-purple-950 p-4 rounded-lg border border-purple-300 dark:border-purple-700">
+              <p className="text-sm whitespace-pre-wrap text-purple-900 dark:text-purple-100">
+                {transformedData.logo?.logoDescription || transformedData.internalNotes}
               </p>
             </div>
           </CardContent>
