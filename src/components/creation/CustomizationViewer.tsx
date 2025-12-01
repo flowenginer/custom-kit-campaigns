@@ -72,9 +72,11 @@ export const CustomizationViewer = ({
         customFileName: rawData.front.customFileName || undefined,
         customFileUrl: rawData.front.customFileUrl || undefined,
         smallLogoObservation: rawData.front.smallLogoObservation || undefined,
-        smallLogoFile: rawData.front.smallLogoFile || undefined,
+        // ✅ Priorizar URL uploaded, fallback para campo legado
+        smallLogoFileUrl: rawData.front.smallLogoFileUrl || rawData.front.smallLogoFile || undefined,
         largeLogoObservation: rawData.front.largeLogoObservation || undefined,
-        largeLogoFile: rawData.front.largeLogoFile || undefined,
+        // ✅ Priorizar URL uploaded, fallback para campo legado
+        largeLogoFileUrl: rawData.front.largeLogoFileUrl || rawData.front.largeLogoFile || undefined,
       } : undefined,
       
       back: rawData.back ? {
@@ -86,9 +88,12 @@ export const CustomizationViewer = ({
         logo: rawData.back.logoUrl || undefined,
         logoLarge: rawData.back.logoLarge || false,
         logoLargeObservation: rawData.back.logoLargeObservation || undefined,
-        logoLargeFile: rawData.back.logoLargeFile || undefined,
+        // ✅ Priorizar URL uploaded, fallback para campo legado
+        logoLargeFileUrl: rawData.back.logoLargeFileUrl || rawData.back.logoLargeFile || undefined,
         logoNeckObservation: rawData.back.logoNeckObservation || undefined,
-        logoNeckFile: rawData.back.logoNeckFile || undefined,
+        // ✅ Priorizar URL uploaded, fallback para campo legado
+        logoNeckFileUrl: rawData.back.logoNeckFileUrl || rawData.back.logoNeckFile || undefined,
+        customFileUrl: rawData.back.customFileUrl || undefined,
         hasSponsors: rawData.back.hasSponsors || false,
         sponsorsLocation: rawData.back.sponsorsLocation || undefined,
         sponsors: rawData.back.sponsors || [],
@@ -98,7 +103,8 @@ export const CustomizationViewer = ({
       leftSleeve: rawData.sleeves?.left ? {
         flag: rawData.sleeves.left.flagUrl || undefined,
         flagState: rawData.sleeves.left.flagState || undefined,
-        logo: rawData.sleeves.left.logoUrl || undefined,
+        // ✅ Priorizar URL uploaded
+        logo: rawData.sleeves.left.logoFileUrl || rawData.sleeves.left.logoUrl || undefined,
         logoFileName: rawData.sleeves.left.logoFileName || undefined,
         text: rawData.sleeves.left.text ? rawData.sleeves.left.textContent : undefined
       } : undefined,
@@ -106,7 +112,8 @@ export const CustomizationViewer = ({
       rightSleeve: rawData.sleeves?.right ? {
         flag: rawData.sleeves.right.flagUrl || undefined,
         flagState: rawData.sleeves.right.flagState || undefined,
-        logo: rawData.sleeves.right.logoUrl || undefined,
+        // ✅ Priorizar URL uploaded
+        logo: rawData.sleeves.right.logoFileUrl || rawData.sleeves.right.logoUrl || undefined,
         logoFileName: rawData.sleeves.right.logoFileName || undefined,
         text: rawData.sleeves.right.text ? rawData.sleeves.right.textContent : undefined
       } : undefined,
@@ -144,13 +151,14 @@ export const CustomizationViewer = ({
     // Logos da Frente
     if (transformedData?.front?.logoFile) images.push({ url: transformedData.front.logoFile, label: 'Logo Frente' });
     if (transformedData?.front?.customFileUrl) images.push({ url: transformedData.front.customFileUrl, label: 'Arquivo Anexado Frente' });
-    if (transformedData?.front?.smallLogoFile) images.push({ url: transformedData.front.smallLogoFile, label: 'Logo Pequena Frente' });
-    if (transformedData?.front?.largeLogoFile) images.push({ url: transformedData.front.largeLogoFile, label: 'Logo Grande Frente' });
+    if (transformedData?.front?.smallLogoFileUrl) images.push({ url: transformedData.front.smallLogoFileUrl, label: 'Logo Pequena Frente' });
+    if (transformedData?.front?.largeLogoFileUrl) images.push({ url: transformedData.front.largeLogoFileUrl, label: 'Logo Grande Frente' });
     
     // Logos das Costas
     if (transformedData?.back?.logo) images.push({ url: transformedData.back.logo, label: 'Logo Costas' });
-    if (transformedData?.back?.logoLargeFile) images.push({ url: transformedData.back.logoLargeFile, label: 'Logo Grande Costas' });
-    if (transformedData?.back?.logoNeckFile) images.push({ url: transformedData.back.logoNeckFile, label: 'Logo Nuca' });
+    if (transformedData?.back?.logoLargeFileUrl) images.push({ url: transformedData.back.logoLargeFileUrl, label: 'Logo Grande Costas' });
+    if (transformedData?.back?.logoNeckFileUrl) images.push({ url: transformedData.back.logoNeckFileUrl, label: 'Logo Nuca' });
+    if (transformedData?.back?.customFileUrl) images.push({ url: transformedData.back.customFileUrl, label: 'Arquivo Anexado Costas' });
     
     // Patrocinadores
     if (transformedData?.back?.sponsors) {
@@ -523,6 +531,20 @@ export const CustomizationViewer = ({
         </Card>
       )}
       
+      {/* SEÇÃO: OBSERVAÇÕES INTERNAS - PRIMEIRO CONTAINER */}
+      {transformedData.internalNotes && (
+        <Card className="border-2 border-amber-500 dark:border-amber-600">
+          <CardContent className="p-6">
+            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <Badge className="bg-amber-600 dark:bg-amber-700 text-white">OBSERVAÇÕES INTERNAS</Badge>
+            </h3>
+            <div className="bg-amber-50 dark:bg-amber-950 p-4 rounded border border-amber-300 dark:border-amber-700">
+              <p className="text-sm whitespace-pre-wrap text-amber-900 dark:text-amber-100">{transformedData.internalNotes}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* RESUMO NO TOPO */}
       <CustomizationSummary
         front={transformedData.front}
@@ -601,21 +623,6 @@ export const CustomizationViewer = ({
                   </Button>
                 )}
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-
-      {/* SEÇÃO: OBSERVAÇÕES INTERNAS */}
-      {transformedData.internalNotes && (
-        <Card className="border-2 border-amber-500 dark:border-amber-600">
-          <CardContent className="p-6">
-            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <Badge className="bg-amber-600 dark:bg-amber-700 text-white">OBSERVAÇÕES INTERNAS</Badge>
-            </h3>
-            <div className="bg-amber-50 dark:bg-amber-950 p-4 rounded border border-amber-300 dark:border-amber-700">
-              <p className="text-sm whitespace-pre-wrap text-amber-900 dark:text-amber-100">{transformedData.internalNotes}</p>
             </div>
           </CardContent>
         </Card>
@@ -734,49 +741,125 @@ export const CustomizationViewer = ({
                 )}
               </div>
 
-              {/* Coluna Direita: Logo do Cliente */}
+              {/* Coluna Direita: Logos por Posição da Frente */}
               <div className="space-y-4">
-                <Label className="text-xs text-muted-foreground block">Logo do Cliente</Label>
-                {transformedData.logo?.logoUrls && transformedData.logo.logoUrls.length > 0 ? (
-                  <div className="space-y-3">
-                    {transformedData.logo.logoUrls.map((url: string, idx: number) => (
-                      <div key={idx} className="border-2 border-blue-400 dark:border-blue-600 rounded-lg p-3 bg-blue-50/50 dark:bg-blue-950/30">
-                        <img 
-                          src={url} 
-                          alt={`Logo ${idx + 1}`} 
-                          className="w-full h-32 object-contain rounded cursor-pointer hover:opacity-80 transition-opacity bg-white dark:bg-gray-800"
-                          onClick={() => setZoomImage({ url, alt: `Logo do Cliente ${idx + 1}` })}
-                        />
-                        <Button 
-                          size="sm" 
-                          className="w-full mt-2" 
-                          variant="outline"
-                          onClick={async () => {
-                            try {
-                              const response = await fetch(url);
-                              const blob = await response.blob();
-                              const blobUrl = URL.createObjectURL(blob);
-                              const link = document.createElement('a');
-                              link.href = blobUrl;
-                              link.download = `logo_cliente_${idx + 1}.png`;
-                              document.body.appendChild(link);
-                              link.click();
-                              document.body.removeChild(link);
-                              URL.revokeObjectURL(blobUrl);
-                              toast.success(`Logo ${idx + 1} baixada!`);
-                            } catch (error) {
-                              toast.error("Erro ao baixar logo");
-                            }
-                          }}
-                        >
-                          <Download className="h-3 w-3 mr-1" /> Download Logo {idx + 1}
-                        </Button>
-                      </div>
-                    ))}
+                <Label className="text-xs text-muted-foreground block">Logos da Frente</Label>
+                
+                {/* Logo Pequena (Peito Esquerdo) */}
+                {transformedData.front?.smallLogoFileUrl && (
+                  <div className="border-2 border-green-400 dark:border-green-600 rounded-lg p-3 bg-green-50/50 dark:bg-green-950/30">
+                    <Label className="text-xs text-green-700 dark:text-green-300 mb-2 block">Logo Peito Esquerdo</Label>
+                    <img 
+                      src={transformedData.front.smallLogoFileUrl} 
+                      alt="Logo Peito Esquerdo" 
+                      className="w-full h-32 object-contain rounded cursor-pointer hover:opacity-80 transition-opacity bg-white dark:bg-gray-800"
+                      onClick={() => setZoomImage({ url: transformedData.front.smallLogoFileUrl!, alt: 'Logo Peito Esquerdo' })}
+                    />
+                    <Button 
+                      size="sm" 
+                      className="w-full mt-2" 
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          const response = await fetch(transformedData.front!.smallLogoFileUrl!);
+                          const blob = await response.blob();
+                          const blobUrl = URL.createObjectURL(blob);
+                          const link = document.createElement('a');
+                          link.href = blobUrl;
+                          link.download = `logo_peito_esquerdo.png`;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          URL.revokeObjectURL(blobUrl);
+                          toast.success('Logo baixada!');
+                        } catch (error) {
+                          toast.error("Erro ao baixar logo");
+                        }
+                      }}
+                    >
+                      <Download className="h-3 w-3 mr-1" /> Download
+                    </Button>
                   </div>
-                ) : (
+                )}
+
+                {/* Logo Grande (Centro) */}
+                {transformedData.front?.largeLogoFileUrl && (
+                  <div className="border-2 border-purple-400 dark:border-purple-600 rounded-lg p-3 bg-purple-50/50 dark:bg-purple-950/30">
+                    <Label className="text-xs text-purple-700 dark:text-purple-300 mb-2 block">Logo Grande Centro</Label>
+                    <img 
+                      src={transformedData.front.largeLogoFileUrl} 
+                      alt="Logo Grande Centro" 
+                      className="w-full h-32 object-contain rounded cursor-pointer hover:opacity-80 transition-opacity bg-white dark:bg-gray-800"
+                      onClick={() => setZoomImage({ url: transformedData.front.largeLogoFileUrl!, alt: 'Logo Grande Centro' })}
+                    />
+                    <Button 
+                      size="sm" 
+                      className="w-full mt-2" 
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          const response = await fetch(transformedData.front!.largeLogoFileUrl!);
+                          const blob = await response.blob();
+                          const blobUrl = URL.createObjectURL(blob);
+                          const link = document.createElement('a');
+                          link.href = blobUrl;
+                          link.download = `logo_grande_centro.png`;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          URL.revokeObjectURL(blobUrl);
+                          toast.success('Logo baixada!');
+                        } catch (error) {
+                          toast.error("Erro ao baixar logo");
+                        }
+                      }}
+                    >
+                      <Download className="h-3 w-3 mr-1" /> Download
+                    </Button>
+                  </div>
+                )}
+
+                {/* Arquivo Customizado */}
+                {transformedData.front?.customFileUrl && (
+                  <div className="border-2 border-orange-400 dark:border-orange-600 rounded-lg p-3 bg-orange-50/50 dark:bg-orange-950/30">
+                    <Label className="text-xs text-orange-700 dark:text-orange-300 mb-2 block">Arquivo Anexado</Label>
+                    <img 
+                      src={transformedData.front.customFileUrl} 
+                      alt="Arquivo Anexado" 
+                      className="w-full h-32 object-contain rounded cursor-pointer hover:opacity-80 transition-opacity bg-white dark:bg-gray-800"
+                      onClick={() => setZoomImage({ url: transformedData.front.customFileUrl!, alt: 'Arquivo Anexado' })}
+                    />
+                    <Button 
+                      size="sm" 
+                      className="w-full mt-2" 
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          const response = await fetch(transformedData.front!.customFileUrl!);
+                          const blob = await response.blob();
+                          const blobUrl = URL.createObjectURL(blob);
+                          const link = document.createElement('a');
+                          link.href = blobUrl;
+                          link.download = `arquivo_anexado_frente.png`;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          URL.revokeObjectURL(blobUrl);
+                          toast.success('Arquivo baixado!');
+                        } catch (error) {
+                          toast.error("Erro ao baixar arquivo");
+                        }
+                      }}
+                    >
+                      <Download className="h-3 w-3 mr-1" /> Download
+                    </Button>
+                  </div>
+                )}
+
+                {/* Mensagem se não houver logos */}
+                {!transformedData.front?.smallLogoFileUrl && !transformedData.front?.largeLogoFileUrl && !transformedData.front?.customFileUrl && (
                   <div className="text-center text-muted-foreground p-6 border-2 border-dashed rounded-lg bg-muted/20">
-                    <p className="text-sm">Sem logo do cliente</p>
+                    <p className="text-sm">Sem logos carregadas para a frente</p>
                   </div>
                 )}
               </div>
@@ -926,86 +1009,125 @@ export const CustomizationViewer = ({
                 )}
               </div>
 
-              {/* Coluna Direita: Logo do Cliente */}
+              {/* Coluna Direita: Logos por Posição das Costas */}
               <div className="space-y-4">
-                <Label className="text-xs text-muted-foreground block">Logo do Cliente</Label>
-                {transformedData.logo?.logoUrls && transformedData.logo.logoUrls.length > 0 ? (
-                  <div className="space-y-3">
-                    {transformedData.logo.logoUrls.map((url: string, idx: number) => (
-                      <div key={idx} className="border-2 border-blue-400 dark:border-blue-600 rounded-lg p-3 bg-blue-50/50 dark:bg-blue-950/30">
-                        <img 
-                          src={url} 
-                          alt={`Logo ${idx + 1}`} 
-                          className="w-full h-32 object-contain rounded cursor-pointer hover:opacity-80 transition-opacity bg-white dark:bg-gray-800"
-                          onClick={() => setZoomImage({ url, alt: `Logo do Cliente ${idx + 1}` })}
-                        />
-                        <Button 
-                          size="sm" 
-                          className="w-full mt-2" 
-                          variant="outline"
-                          onClick={async () => {
-                            try {
-                              const response = await fetch(url);
-                              const blob = await response.blob();
-                              const blobUrl = URL.createObjectURL(blob);
-                              const link = document.createElement('a');
-                              link.href = blobUrl;
-                              link.download = `logo_cliente_${idx + 1}.png`;
-                              document.body.appendChild(link);
-                              link.click();
-                              document.body.removeChild(link);
-                              URL.revokeObjectURL(blobUrl);
-                              toast.success(`Logo ${idx + 1} baixada!`);
-                            } catch (error) {
-                              toast.error("Erro ao baixar logo");
-                            }
-                          }}
-                        >
-                          <Download className="h-3 w-3 mr-1" /> Download Logo {idx + 1}
-                        </Button>
-                      </div>
-                    ))}
+                <Label className="text-xs text-muted-foreground block">Logos das Costas</Label>
+                
+                {/* Logo Grande Centro */}
+                {transformedData.back?.logoLargeFileUrl && (
+                  <div className="border-2 border-purple-400 dark:border-purple-600 rounded-lg p-3 bg-purple-50/50 dark:bg-purple-950/30">
+                    <Label className="text-xs text-purple-700 dark:text-purple-300 mb-2 block">Logo Grande Centro</Label>
+                    <img 
+                      src={transformedData.back.logoLargeFileUrl} 
+                      alt="Logo Grande Centro Costas" 
+                      className="w-full h-32 object-contain rounded cursor-pointer hover:opacity-80 transition-opacity bg-white dark:bg-gray-800"
+                      onClick={() => setZoomImage({ url: transformedData.back!.logoLargeFileUrl!, alt: 'Logo Grande Centro Costas' })}
+                    />
+                    <Button 
+                      size="sm" 
+                      className="w-full mt-2" 
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          const response = await fetch(transformedData.back!.logoLargeFileUrl!);
+                          const blob = await response.blob();
+                          const blobUrl = URL.createObjectURL(blob);
+                          const link = document.createElement('a');
+                          link.href = blobUrl;
+                          link.download = `logo_grande_costas.png`;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          URL.revokeObjectURL(blobUrl);
+                          toast.success('Logo baixada!');
+                        } catch (error) {
+                          toast.error("Erro ao baixar logo");
+                        }
+                      }}
+                    >
+                      <Download className="h-3 w-3 mr-1" /> Download
+                    </Button>
                   </div>
-                ) : clientLogosAssets.length > 0 ? (
-                  <div className="space-y-3">
-                    {clientLogosAssets.map((asset: any, idx: number) => (
-                      <div key={idx} className="border-2 border-blue-400 dark:border-blue-600 rounded-lg p-3 bg-blue-50/50 dark:bg-blue-950/30">
-                        <img 
-                          src={asset.url} 
-                          alt={asset.label} 
-                          className="w-full h-32 object-contain rounded cursor-pointer hover:opacity-80 transition-opacity bg-white dark:bg-gray-800"
-                          onClick={() => setZoomImage({ url: asset.url, alt: asset.label })}
-                        />
-                        <Button 
-                          size="sm" 
-                          className="w-full mt-2" 
-                          variant="outline"
-                          onClick={async () => {
-                            try {
-                              const response = await fetch(asset.url);
-                              const blob = await response.blob();
-                              const blobUrl = URL.createObjectURL(blob);
-                              const link = document.createElement('a');
-                              link.href = blobUrl;
-                              link.download = `logo_cliente_${idx + 1}.png`;
-                              document.body.appendChild(link);
-                              link.click();
-                              document.body.removeChild(link);
-                              URL.revokeObjectURL(blobUrl);
-                              toast.success(`Logo ${idx + 1} baixada!`);
-                            } catch (error) {
-                              toast.error("Erro ao baixar logo");
-                            }
-                          }}
-                        >
-                          <Download className="h-3 w-3 mr-1" /> Download {asset.label}
-                        </Button>
-                      </div>
-                    ))}
+                )}
+
+                {/* Logo Nuca */}
+                {transformedData.back?.logoNeckFileUrl && (
+                  <div className="border-2 border-teal-400 dark:border-teal-600 rounded-lg p-3 bg-teal-50/50 dark:bg-teal-950/30">
+                    <Label className="text-xs text-teal-700 dark:text-teal-300 mb-2 block">Logo Nuca</Label>
+                    <img 
+                      src={transformedData.back.logoNeckFileUrl} 
+                      alt="Logo Nuca" 
+                      className="w-full h-32 object-contain rounded cursor-pointer hover:opacity-80 transition-opacity bg-white dark:bg-gray-800"
+                      onClick={() => setZoomImage({ url: transformedData.back!.logoNeckFileUrl!, alt: 'Logo Nuca' })}
+                    />
+                    <Button 
+                      size="sm" 
+                      className="w-full mt-2" 
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          const response = await fetch(transformedData.back!.logoNeckFileUrl!);
+                          const blob = await response.blob();
+                          const blobUrl = URL.createObjectURL(blob);
+                          const link = document.createElement('a');
+                          link.href = blobUrl;
+                          link.download = `logo_nuca.png`;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          URL.revokeObjectURL(blobUrl);
+                          toast.success('Logo baixada!');
+                        } catch (error) {
+                          toast.error("Erro ao baixar logo");
+                        }
+                      }}
+                    >
+                      <Download className="h-3 w-3 mr-1" /> Download
+                    </Button>
                   </div>
-                ) : (
+                )}
+
+                {/* Arquivo Customizado Costas */}
+                {transformedData.back?.customFileUrl && (
+                  <div className="border-2 border-orange-400 dark:border-orange-600 rounded-lg p-3 bg-orange-50/50 dark:bg-orange-950/30">
+                    <Label className="text-xs text-orange-700 dark:text-orange-300 mb-2 block">Arquivo Anexado</Label>
+                    <img 
+                      src={transformedData.back.customFileUrl} 
+                      alt="Arquivo Anexado Costas" 
+                      className="w-full h-32 object-contain rounded cursor-pointer hover:opacity-80 transition-opacity bg-white dark:bg-gray-800"
+                      onClick={() => setZoomImage({ url: transformedData.back!.customFileUrl!, alt: 'Arquivo Anexado Costas' })}
+                    />
+                    <Button 
+                      size="sm" 
+                      className="w-full mt-2" 
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          const response = await fetch(transformedData.back!.customFileUrl!);
+                          const blob = await response.blob();
+                          const blobUrl = URL.createObjectURL(blob);
+                          const link = document.createElement('a');
+                          link.href = blobUrl;
+                          link.download = `arquivo_anexado_costas.png`;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          URL.revokeObjectURL(blobUrl);
+                          toast.success('Arquivo baixado!');
+                        } catch (error) {
+                          toast.error("Erro ao baixar arquivo");
+                        }
+                      }}
+                    >
+                      <Download className="h-3 w-3 mr-1" /> Download
+                    </Button>
+                  </div>
+                )}
+
+                {/* Mensagem se não houver logos */}
+                {!transformedData.back?.logoLargeFileUrl && !transformedData.back?.logoNeckFileUrl && !transformedData.back?.customFileUrl && (
                   <div className="text-center text-muted-foreground p-6 border-2 border-dashed rounded-lg bg-muted/20">
-                    <p className="text-sm">Sem logo do cliente</p>
+                    <p className="text-sm">Sem logos carregadas para as costas</p>
                   </div>
                 )}
               </div>
