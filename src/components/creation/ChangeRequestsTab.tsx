@@ -15,12 +15,13 @@ import { ChangeRequest } from "@/types/design-task";
 interface ChangeRequestsTabProps {
   taskId: string;
   taskStatus?: string;
+  layoutId?: string; // Novo: ID do layout específico
   onChangeRequestAdded?: () => void;
   onClose?: () => void;
   onSendForApproval?: () => void;
 }
 
-export const ChangeRequestsTab = ({ taskId, taskStatus, onChangeRequestAdded, onClose, onSendForApproval }: ChangeRequestsTabProps) => {
+export const ChangeRequestsTab = ({ taskId, taskStatus, layoutId, onChangeRequestAdded, onClose, onSendForApproval }: ChangeRequestsTabProps) => {
   const [changeRequests, setChangeRequests] = useState<ChangeRequest[]>([]);
   const [description, setDescription] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -39,11 +40,18 @@ export const ChangeRequestsTab = ({ taskId, taskStatus, onChangeRequestAdded, on
 
   const loadChangeRequests = async () => {
     try {
-      // Buscar todas as solicitações de alteração
-      const { data: requests, error: requestsError } = await supabase
+      // Buscar todas as solicitações de alteração (filtradas por layout se layoutId fornecido)
+      let query = supabase
         .from("change_requests")
         .select("*")
-        .eq("task_id", taskId)
+        .eq("task_id", taskId);
+      
+      // Se layoutId for fornecido, filtrar por esse layout específico
+      if (layoutId) {
+        query = query.eq("layout_id", layoutId);
+      }
+      
+      const { data: requests, error: requestsError } = await query
         .order("created_at", { ascending: false });
 
       if (requestsError) {
@@ -161,6 +169,7 @@ export const ChangeRequestsTab = ({ taskId, taskStatus, onChangeRequestAdded, on
         .from("change_requests")
         .insert([{
           task_id: taskId,
+          layout_id: layoutId || null, // Incluir layout_id se fornecido
           description: description.trim(),
           attachments: attachments,
           created_by: currentUserId

@@ -68,6 +68,10 @@ export const CustomizationViewer = ({
         customDescription: rawData.front.customDescription || undefined,
         customFileName: rawData.front.customFileName || undefined,
         customFileUrl: rawData.front.customFileUrl || undefined,
+        smallLogoObservation: rawData.front.smallLogoObservation || undefined,
+        smallLogoFile: rawData.front.smallLogoFile || undefined,
+        largeLogoObservation: rawData.front.largeLogoObservation || undefined,
+        largeLogoFile: rawData.front.largeLogoFile || undefined,
       } : undefined,
       
       back: rawData.back ? {
@@ -78,6 +82,10 @@ export const CustomizationViewer = ({
         whatsapp: { enabled: rawData.back.whatsapp, value: rawData.back.whatsappText },
         logo: rawData.back.logoUrl || undefined,
         logoLarge: rawData.back.logoLarge || false,
+        logoLargeObservation: rawData.back.logoLargeObservation || undefined,
+        logoLargeFile: rawData.back.logoLargeFile || undefined,
+        logoNeckObservation: rawData.back.logoNeckObservation || undefined,
+        logoNeckFile: rawData.back.logoNeckFile || undefined,
         hasSponsors: rawData.back.hasSponsors || false,
         sponsorsLocation: rawData.back.sponsorsLocation || undefined,
         sponsors: rawData.back.sponsors || [],
@@ -100,9 +108,17 @@ export const CustomizationViewer = ({
         text: rawData.sleeves.right.text ? rawData.sleeves.right.textContent : undefined
       } : undefined,
       
+      logo: rawData.logo ? {
+        hasLogo: rawData.logo.hasLogo,
+        logoUrls: rawData.logo.logoUrls || [],
+        logoDescription: rawData.logo.logoDescription || undefined,
+      } : undefined,
+      
       clientLogos: rawData.logoUrls || [],
       
       internalNotes: rawData.internalNotes || undefined,
+      
+      scratchDescription: rawData.scratchDescription || undefined,
       
       modelImages: {
         front: rawData.modelImages?.front,
@@ -423,6 +439,17 @@ export const CustomizationViewer = ({
                 <p className="text-sm text-green-700 dark:text-green-400 mt-1">
                   Este pedido requer criação de layout do zero, sem base de campanha ou modelo pré-definido.
                 </p>
+                
+                {transformedData.scratchDescription && (
+                  <div className="mt-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-green-300 dark:border-green-700">
+                    <Label className="text-xs text-green-600 dark:text-green-400 font-medium">
+                      Descrição do cliente:
+                    </Label>
+                    <p className="text-sm text-gray-800 dark:text-gray-200 mt-1 whitespace-pre-wrap">
+                      {transformedData.scratchDescription}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
@@ -544,6 +571,53 @@ export const CustomizationViewer = ({
         </Card>
       )}
 
+      {/* SEÇÃO: LOGO DO CLIENTE */}
+      {transformedData.logo && (transformedData.logo.logoUrls?.length > 0 || transformedData.logo.logoDescription) && (
+        <Card className="border-2 border-blue-500 dark:border-blue-600">
+          <CardContent className="p-6">
+            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <Badge className="bg-blue-600 dark:bg-blue-700 text-white">LOGO DO CLIENTE</Badge>
+            </h3>
+            <div className="space-y-4">
+              {transformedData.logo.hasLogo && (
+                <div>
+                  <Label className="text-xs text-muted-foreground">Tipo de Logo</Label>
+                  <p className="text-sm font-medium bg-muted p-2 rounded">
+                    {transformedData.logo.hasLogo === 'sim' && '✓ Upload realizado'}
+                    {transformedData.logo.hasLogo === 'criar_logo' && '⚠️ Designer deve criar'}
+                    {transformedData.logo.hasLogo === 'depois' && '⏰ Cliente enviará depois'}
+                    {transformedData.logo.hasLogo === 'sem_logo' && '✗ Sem logo'}
+                  </p>
+                </div>
+              )}
+              
+              {transformedData.logo.logoDescription && (
+                <div>
+                  <Label className="text-xs text-muted-foreground">Descrição para Criação</Label>
+                  <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded border border-blue-300 dark:border-blue-700">
+                    <p className="text-sm whitespace-pre-wrap text-blue-900 dark:text-blue-100">{transformedData.logo.logoDescription}</p>
+                  </div>
+                </div>
+              )}
+              
+              {transformedData.logo.logoUrls && transformedData.logo.logoUrls.length > 0 && (
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-2 block">Logos Enviadas pelo Cliente</Label>
+                  <AssetGallery
+                    assets={transformedData.logo.logoUrls.map((url: string, idx: number) => ({
+                      url,
+                      label: `Logo ${idx + 1}`
+                    }))}
+                    columns={3}
+                    imageHeight="h-40"
+                  />
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* SEÇÃO: OBSERVAÇÕES INTERNAS */}
       {transformedData.internalNotes && (
         <Card className="border-2 border-amber-500 dark:border-amber-600">
@@ -574,6 +648,28 @@ export const CustomizationViewer = ({
                   </Label>
                   <p className="text-sm font-medium">{formatLogoType(transformedData.front.logoType)}</p>
                 </div>
+                {transformedData.front.smallLogoObservation && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Observação - Logo Pequena</Label>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm bg-amber-50 dark:bg-amber-950 border border-amber-300 dark:border-amber-700 p-2 rounded flex-1">{transformedData.front.smallLogoObservation}</p>
+                      <Button size="sm" variant="ghost" onClick={() => copyToClipboard(transformedData.front.smallLogoObservation!)}>
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                {transformedData.front.largeLogoObservation && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Observação - Logo Grande</Label>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm bg-amber-50 dark:bg-amber-950 border border-amber-300 dark:border-amber-700 p-2 rounded flex-1">{transformedData.front.largeLogoObservation}</p>
+                      <Button size="sm" variant="ghost" onClick={() => copyToClipboard(transformedData.front.largeLogoObservation!)}>
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
                 {transformedData.front.customDescription && (
                   <div>
                     <Label className="text-xs text-muted-foreground">Descrição da Personalização</Label>
@@ -647,6 +743,28 @@ export const CustomizationViewer = ({
                   <div>
                     <Label className="text-xs text-muted-foreground">Logo Grande</Label>
                     <p className="text-sm bg-muted p-2 rounded">✓ Logo grande no centro das costas</p>
+                  </div>
+                )}
+                {transformedData.back.logoLargeObservation && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Observação - Logo Grande Costas</Label>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm bg-amber-50 dark:bg-amber-950 border border-amber-300 dark:border-amber-700 p-2 rounded flex-1">{transformedData.back.logoLargeObservation}</p>
+                      <Button size="sm" variant="ghost" onClick={() => copyToClipboard(transformedData.back.logoLargeObservation!)}>
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                {transformedData.back.logoNeckObservation && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Observação - Logo Nuca</Label>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm bg-amber-50 dark:bg-amber-950 border border-amber-300 dark:border-amber-700 p-2 rounded flex-1">{transformedData.back.logoNeckObservation}</p>
+                      <Button size="sm" variant="ghost" onClick={() => copyToClipboard(transformedData.back.logoNeckObservation!)}>
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
                 )}
                 {transformedData.back.name?.enabled && (
