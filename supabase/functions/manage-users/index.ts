@@ -121,13 +121,26 @@ serve(async (req) => {
 
     // ATUALIZAR ROLES
     if (action === 'update_roles' && req.method === 'PATCH') {
-      const { user_id, roles, allowed_kanban_columns, allowed_menu_items, full_name } = await req.json();
+      const { user_id, roles, allowed_kanban_columns, allowed_menu_items, full_name, new_email } = await req.json();
 
       if (!user_id || !roles) {
         throw new Error('user_id e roles são obrigatórios');
       }
 
       console.log(`Atualizando roles do usuário: ${user_id}`);
+
+      // Atualizar e-mail se fornecido e diferente
+      if (new_email && new_email.trim() !== '') {
+        console.log(`Atualizando e-mail para: ${new_email}`);
+        const { error: emailError } = await supabaseAdmin.auth.admin.updateUserById(
+          user_id,
+          { email: new_email }
+        );
+        if (emailError) {
+          console.error('Erro ao atualizar e-mail:', emailError);
+          throw new Error(`Erro ao atualizar e-mail: ${emailError.message}`);
+        }
+      }
 
       // Remover roles antigas
       await supabaseAdmin
