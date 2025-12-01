@@ -128,9 +128,10 @@ const Models = () => {
   
   // Estados para criação automática de variações
   const [bulkCreateVariations, setBulkCreateVariations] = useState(false);
-  const [bulkVariationSizes, setBulkVariationSizes] = useState<string[]>(['P', 'M', 'G', 'GG', 'XG']);
+  const [bulkVariationSizes, setBulkVariationSizes] = useState<string[]>(['PP', 'P', 'M', 'G', 'GG', 'XG', 'G1', 'G2', 'G3', 'G4']);
   const [bulkVariationGender, setBulkVariationGender] = useState<string>('unissex');
   const [bulkPromotionalPrice, setBulkPromotionalPrice] = useState<string>("");
+  const [bulkPromotionalPriceSpecial, setBulkPromotionalPriceSpecial] = useState<string>("");
 
   // Estados para seleção múltipla
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
@@ -562,15 +563,25 @@ const Models = () => {
           
           // Criar variações automáticas se habilitado
           if (bulkCreateVariations && bulkVariationSizes.length > 0) {
-            const variationsToCreate = bulkVariationSizes.map(size => ({
-              model_id: model.id,
-              size: size,
-              gender: bulkVariationGender,
-              price_adjustment: 0,
-              promotional_price: bulkPromotionalPrice ? parseFloat(bulkPromotionalPrice) : null,
-              is_active: true,
-              stock_quantity: 0
-            }));
+            const standardSizes = ['PP', 'P', 'M', 'G', 'GG', 'XG'];
+            const specialSizes = ['G1', 'G2', 'G3', 'G4'];
+            
+            const variationsToCreate = bulkVariationSizes.map(size => {
+              const isSpecialSize = specialSizes.includes(size);
+              const promotionalPrice = isSpecialSize 
+                ? (bulkPromotionalPriceSpecial ? parseFloat(bulkPromotionalPriceSpecial) : null)
+                : (bulkPromotionalPrice ? parseFloat(bulkPromotionalPrice) : null);
+              
+              return {
+                model_id: model.id,
+                size: size,
+                gender: bulkVariationGender,
+                price_adjustment: 0,
+                promotional_price: promotionalPrice,
+                is_active: true,
+                stock_quantity: 0
+              };
+            });
             
             const { error: variationsError } = await supabase
               .from('shirt_model_variations')
@@ -614,9 +625,10 @@ const Models = () => {
       setBulkBasePrice("");
       setBulkApplyDimensions(true);
       setBulkCreateVariations(false);
-      setBulkVariationSizes(['P', 'M', 'G', 'GG', 'XG']);
+      setBulkVariationSizes(['PP', 'P', 'M', 'G', 'GG', 'XG', 'G1', 'G2', 'G3', 'G4']);
       setBulkVariationGender('unissex');
       setBulkPromotionalPrice("");
+      setBulkPromotionalPriceSpecial("");
       
     } catch (error: any) {
       toast.error("Erro no upload em massa: " + error.message);
@@ -1991,7 +2003,7 @@ const Models = () => {
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent position="popper" className="z-[100]">
                           {segments.map((segment: any) => (
                             <SelectItem key={segment.id} value={segment.id}>
                               {segment.name}
@@ -2089,11 +2101,37 @@ const Models = () => {
                         
                         {bulkCreateVariations && (
                           <div className="space-y-3 pl-1">
-                            {/* Seleção de Tamanhos */}
+                            {/* Seleção de Tamanhos Padrão */}
                             <div className="space-y-2">
-                              <Label className="text-xs font-medium text-muted-foreground">Tamanhos:</Label>
+                              <Label className="text-xs font-medium text-muted-foreground">Tamanhos Padrão (PP ao XG):</Label>
                               <div className="flex flex-wrap gap-2">
-                                {['P', 'M', 'G', 'GG', 'XG', 'XXG'].map((size) => (
+                                {['PP', 'P', 'M', 'G', 'GG', 'XG'].map((size) => (
+                                  <div key={size} className="flex items-center space-x-1.5">
+                                    <Checkbox
+                                      id={`size-${size}`}
+                                      checked={bulkVariationSizes.includes(size)}
+                                      onCheckedChange={(checked) => {
+                                        if (checked) {
+                                          setBulkVariationSizes([...bulkVariationSizes, size]);
+                                        } else {
+                                          setBulkVariationSizes(bulkVariationSizes.filter(s => s !== size));
+                                        }
+                                      }}
+                                      disabled={bulkUploading}
+                                    />
+                                    <Label htmlFor={`size-${size}`} className="text-xs cursor-pointer">
+                                      {size}
+                                    </Label>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                            
+                            {/* Seleção de Tamanhos Especiais */}
+                            <div className="space-y-2">
+                              <Label className="text-xs font-medium text-muted-foreground">Tamanhos Especiais (G1 ao G4):</Label>
+                              <div className="flex flex-wrap gap-2">
+                                {['G1', 'G2', 'G3', 'G4'].map((size) => (
                                   <div key={size} className="flex items-center space-x-1.5">
                                     <Checkbox
                                       id={`size-${size}`}
@@ -2136,33 +2174,56 @@ const Models = () => {
                               </Select>
                             </div>
                             
-                            {/* Preço Promocional */}
-                            <div className="space-y-2">
-                              <Label htmlFor="bulkPromotionalPrice" className="text-xs font-medium text-muted-foreground">
-                                Preço Promocional (R$):
-                              </Label>
-                              <Input
-                                id="bulkPromotionalPrice"
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                value={bulkPromotionalPrice}
-                                onChange={(e) => setBulkPromotionalPrice(e.target.value)}
-                                placeholder="Opcional"
-                                disabled={bulkUploading}
-                                className="h-8 text-xs"
-                              />
+                            {/* Preços Promocionais */}
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-2">
+                                <Label htmlFor="bulkPromotionalPrice" className="text-xs font-medium text-muted-foreground">
+                                  Preço Promo PP-XG (R$):
+                                </Label>
+                                <Input
+                                  id="bulkPromotionalPrice"
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  value={bulkPromotionalPrice}
+                                  onChange={(e) => setBulkPromotionalPrice(e.target.value)}
+                                  placeholder="Ex: 49.90"
+                                  disabled={bulkUploading}
+                                  className="h-8 text-xs"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="bulkPromotionalPriceSpecial" className="text-xs font-medium text-muted-foreground">
+                                  Preço Promo G1-G4 (R$):
+                                </Label>
+                                <Input
+                                  id="bulkPromotionalPriceSpecial"
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  value={bulkPromotionalPriceSpecial}
+                                  onChange={(e) => setBulkPromotionalPriceSpecial(e.target.value)}
+                                  placeholder="Ex: 59.90"
+                                  disabled={bulkUploading}
+                                  className="h-8 text-xs"
+                                />
+                              </div>
                             </div>
                             
                             {/* Preview */}
                             {bulkVariationSizes.length > 0 && (
-                              <div className="bg-primary/5 border border-primary/20 rounded-md p-2">
+                              <div className="bg-primary/5 border border-primary/20 rounded-md p-2 space-y-1">
                                 <p className="text-xs text-primary font-medium">
                                   ✨ Serão criadas {bulkVariationSizes.length} variações por modelo
                                 </p>
-                                <p className="text-xs text-muted-foreground mt-0.5">
-                                  Total: {Object.keys(bulkGroupedModels).length} modelos × {bulkVariationSizes.length} = {' '}
-                                  <span className="font-bold">{Object.keys(bulkGroupedModels).length * bulkVariationSizes.length} variações</span>
+                                <p className="text-xs text-muted-foreground">
+                                  • {bulkVariationSizes.filter(s => ['PP', 'P', 'M', 'G', 'GG', 'XG'].includes(s)).length} variações padrão (PP-XG)
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  • {bulkVariationSizes.filter(s => ['G1', 'G2', 'G3', 'G4'].includes(s)).length} variações especiais (G1-G4)
+                                </p>
+                                <p className="text-xs font-semibold text-primary mt-1">
+                                  Total: {Object.keys(bulkGroupedModels).length * bulkVariationSizes.length} variações
                                 </p>
                               </div>
                             )}
