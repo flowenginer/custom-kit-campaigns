@@ -19,6 +19,17 @@ interface CrossData {
 }
 
 export const SegmentCrossTable = ({ startDate, endDate, type }: SegmentCrossTableProps) => {
+  // Buscar segmentos de negócio para mapeamento
+  const { data: businessSegments } = useQuery({
+    queryKey: ['business-segments-map'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('business_segments')
+        .select('id, name, icon');
+      return data || [];
+    }
+  });
+
   const { data, isLoading } = useQuery({
     queryKey: ['segment-cross', startDate, endDate, type],
     queryFn: async () => {
@@ -33,7 +44,9 @@ export const SegmentCrossTable = ({ startDate, endDate, type }: SegmentCrossTabl
           id,
           ${userField},
           campaign_id,
+          lead_id,
           campaigns(name, segment_tag),
+          leads(business_segment_id, business_segment_other),
           ${profileField}(id, full_name)
         `)
         .is('deleted_at', null)
@@ -50,6 +63,9 @@ export const SegmentCrossTable = ({ startDate, endDate, type }: SegmentCrossTabl
 
       if (error) throw error;
 
+      // Criar mapa de business segments
+      const segmentMap = new Map(businessSegments?.map(s => [s.id, { name: s.name, icon: s.icon }]) || []);
+
       // Agrupar dados
       const grouped: { [key: string]: CrossData } = {};
       const allSegments = new Set<string>();
@@ -57,7 +73,25 @@ export const SegmentCrossTable = ({ startDate, endDate, type }: SegmentCrossTabl
       data.forEach((task: any) => {
         const userId = task[userField];
         const userName = (task as any).profiles?.full_name || 'Desconhecido';
-        const segmentName = formatSegmentTag(task.campaigns?.segment_tag);
+        
+        // Determinar o segmento real
+        let segmentName: string;
+        const lead = task.leads;
+        const campaignSegmentTag = task.campaigns?.segment_tag;
+        
+        // Se for Adventure e tiver business_segment, usar ele
+        if (campaignSegmentTag === 'adventure_' && lead) {
+          if (lead.business_segment_id && segmentMap.has(lead.business_segment_id)) {
+            const segment = segmentMap.get(lead.business_segment_id)!;
+            segmentName = `${segment.icon} ${segment.name}`;
+          } else if (lead.business_segment_other) {
+            segmentName = `📦 ${lead.business_segment_other}`;
+          } else {
+            segmentName = formatSegmentTag(campaignSegmentTag);
+          }
+        } else {
+          segmentName = formatSegmentTag(campaignSegmentTag);
+        }
 
         allSegments.add(segmentName);
 
@@ -81,7 +115,8 @@ export const SegmentCrossTable = ({ startDate, endDate, type }: SegmentCrossTabl
         users: sortedUsers,
         segments: Array.from(allSegments).sort()
       };
-    }
+    },
+    enabled: !!businessSegments
   });
 
   if (isLoading) {
