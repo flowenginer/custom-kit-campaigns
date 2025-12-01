@@ -1131,7 +1131,7 @@ export const TaskDetailsDialog = ({
                       </TabsList>
                       
                       {task.task_layouts.map((layout, index) => (
-                        <TabsContent key={layout.id} value={`layout_${index + 1}`} className="mt-0">
+                        <TabsContent key={layout.id} value={`layout_${index + 1}`} className="mt-0 space-y-6">
                           <CustomizationViewer 
                             data={layout.customization_data}
                             campaignName={layout.campaign_name || undefined}
@@ -1146,41 +1146,107 @@ export const TaskDetailsDialog = ({
                             logoAction={task.logo_action}
                             logoDescription={task.logo_description}
                           />
+                          
+                          {/* Seção de Alterações dentro do mockup */}
+                          <Card className="border-2 border-dashed border-muted-foreground/30">
+                            <CardContent className="p-6">
+                              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                                <RefreshCcw className="h-5 w-5" />
+                                Alterações do Mockup {index + 1}
+                              </h3>
+                              <ChangeRequestsTab
+                                taskId={task.id}
+                                layoutId={layout.id}
+                                taskStatus={task.status}
+                                onChangeRequestAdded={onTaskUpdated}
+                                onClose={() => onOpenChange(false)}
+                                onSendForApproval={canSendApproval ? async () => {
+                                  await handleStatusChange('awaiting_approval');
+                                  onOpenChange(false);
+                                } : undefined}
+                              />
+                            </CardContent>
+                          </Card>
                         </TabsContent>
                       ))}
                     </Tabs>
                   ) : task.task_layouts && task.task_layouts.length === 1 ? (
-                    // LAYOUT ÚNICO - Exibir direto
-                    <CustomizationViewer 
-                      data={task.task_layouts[0].customization_data}
-                      campaignName={task.task_layouts[0].campaign_name || undefined}
-                      modelName={task.task_layouts[0].model_name || undefined}
-                      modelCode={task.model_code}
-                      modelImageFront={task.model_image_front}
-                      taskId={task.id}
-                      createdBy={task.created_by}
-                      currentUserId={currentUser?.id}
-                      isSalesperson={isSalesperson}
-                      onModelChange={onTaskUpdated}
-                      logoAction={task.logo_action}
-                      logoDescription={task.logo_description}
-                    />
+                    // LAYOUT ÚNICO - Exibir direto com seção de alterações
+                    <div className="space-y-6">
+                      <CustomizationViewer 
+                        data={task.task_layouts[0].customization_data}
+                        campaignName={task.task_layouts[0].campaign_name || undefined}
+                        modelName={task.task_layouts[0].model_name || undefined}
+                        modelCode={task.model_code}
+                        modelImageFront={task.model_image_front}
+                        taskId={task.id}
+                        createdBy={task.created_by}
+                        currentUserId={currentUser?.id}
+                        isSalesperson={isSalesperson}
+                        onModelChange={onTaskUpdated}
+                        logoAction={task.logo_action}
+                        logoDescription={task.logo_description}
+                      />
+                      
+                      {/* Seção de Alterações */}
+                      <Card className="border-2 border-dashed border-muted-foreground/30">
+                        <CardContent className="p-6">
+                          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                            <RefreshCcw className="h-5 w-5" />
+                            Alterações
+                          </h3>
+                          <ChangeRequestsTab
+                            taskId={task.id}
+                            layoutId={task.task_layouts[0].id}
+                            taskStatus={task.status}
+                            onChangeRequestAdded={onTaskUpdated}
+                            onClose={() => onOpenChange(false)}
+                            onSendForApproval={canSendApproval ? async () => {
+                              await handleStatusChange('awaiting_approval');
+                              onOpenChange(false);
+                            } : undefined}
+                          />
+                        </CardContent>
+                      </Card>
+                    </div>
                   ) : (
                     // FALLBACK - Dados antigos (antes da implementação de layouts)
-                    <CustomizationViewer 
-                      data={task.customization_data}
-                      campaignName={task.campaign_name}
-                      modelName={task.model_name}
-                      modelCode={task.model_code}
-                      modelImageFront={task.model_image_front}
-                      taskId={task.id}
-                      createdBy={task.created_by}
-                      currentUserId={currentUser?.id}
-                      isSalesperson={isSalesperson}
-                      onModelChange={onTaskUpdated}
-                      logoAction={task.logo_action}
-                      logoDescription={task.logo_description}
-                    />
+                    <div className="space-y-6">
+                      <CustomizationViewer 
+                        data={task.customization_data}
+                        campaignName={task.campaign_name}
+                        modelName={task.model_name}
+                        modelCode={task.model_code}
+                        modelImageFront={task.model_image_front}
+                        taskId={task.id}
+                        createdBy={task.created_by}
+                        currentUserId={currentUser?.id}
+                        isSalesperson={isSalesperson}
+                        onModelChange={onTaskUpdated}
+                        logoAction={task.logo_action}
+                        logoDescription={task.logo_description}
+                      />
+                      
+                      {/* Seção de Alterações - sem layoutId para compatibilidade */}
+                      <Card className="border-2 border-dashed border-muted-foreground/30">
+                        <CardContent className="p-6">
+                          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                            <RefreshCcw className="h-5 w-5" />
+                            Alterações
+                          </h3>
+                          <ChangeRequestsTab
+                            taskId={task.id}
+                            taskStatus={task.status}
+                            onChangeRequestAdded={onTaskUpdated}
+                            onClose={() => onOpenChange(false)}
+                            onSendForApproval={canSendApproval ? async () => {
+                              await handleStatusChange('awaiting_approval');
+                              onOpenChange(false);
+                            } : undefined}
+                          />
+                        </CardContent>
+                      </Card>
+                    </div>
                   )}
                 </>
               )}

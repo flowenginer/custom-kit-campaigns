@@ -616,6 +616,7 @@ export const NewLayoutRequestDialog = ({
             logoUrls: layout.uploadedLogoUrls || [],
             logoDescription: layout.logoDescription || null,
           },
+          scratchDescription: layout.isFromScratch ? layout.logoDescription : null,
         },
       }));
 
@@ -958,12 +959,53 @@ export const NewLayoutRequestDialog = ({
 
             {/* Badge informativo se for do zero */}
             {isFromScratch && selectedUniformType && (
-              <Alert className="bg-primary/5 border-primary">
-                <AlertDescription className="text-sm font-medium flex items-center gap-2">
-                  <span className="text-lg">🎨</span>
-                  <span>Criação do Zero - Designer criará layout sem modelo base</span>
-                </AlertDescription>
-              </Alert>
+              <>
+                <Alert className="bg-primary/5 border-primary">
+                  <AlertDescription className="text-sm font-medium flex items-center gap-2">
+                    <span className="text-lg">🎨</span>
+                    <span>Criação do Zero - Designer criará layout sem modelo base</span>
+                  </AlertDescription>
+                </Alert>
+                
+                {/* Campo de descrição para criação do zero */}
+                <div className="space-y-2">
+                  <Label>Descrição da Criação (opcional)</Label>
+                  <Textarea
+                    placeholder="Descreva como você imagina esse layout... Ex: Tema esportivo moderno com cores vibrantes, detalhes em gradiente..."
+                    value={layouts[currentLayoutIndex]?.logoDescription || ""}
+                    onChange={(e) => {
+                      const updatedLayouts = [...layouts];
+                      if (!updatedLayouts[currentLayoutIndex]) {
+                        updatedLayouts[currentLayoutIndex] = {
+                          id: `layout_${currentLayoutIndex}`,
+                          campaignId: "",
+                          campaignName: "Layout do Zero",
+                          uniformType: selectedUniformType,
+                          model: null,
+                          isFromScratch: true,
+                          quantity: quantity,
+                          customQuantity: customQuantity,
+                          frontCustomization: {},
+                          backCustomization: {},
+                          leftSleeveCustomization: {},
+                          rightSleeveCustomization: {},
+                          hasLogo: null,
+                          logoFiles: [],
+                          logoDescription: e.target.value,
+                        };
+                      } else {
+                        updatedLayouts[currentLayoutIndex].logoDescription = e.target.value;
+                      }
+                      setLayouts(updatedLayouts);
+                    }}
+                    rows={4}
+                    className="resize-none"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Quanto mais detalhes, melhor o designer poderá criar o layout ideal
+                  </p>
+                </div>
+              </>
             )}
 
             {/* Seletor de Quantidade - mostrar se tipo de uniforme selecionado (e modelo selecionado se NÃO for do zero) */}
@@ -1069,7 +1111,7 @@ export const NewLayoutRequestDialog = ({
                     rightSleeveCustomization: {},
                     hasLogo: null,
                     logoFiles: [],
-                    logoDescription: "",
+                    logoDescription: isFromScratch ? (layouts[currentLayoutIndex]?.logoDescription || "") : "",
                   };
 
                   const updatedLayouts = [...layouts];

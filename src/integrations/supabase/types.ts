@@ -285,6 +285,7 @@ export type Database = {
           created_by: string | null
           description: string
           id: string
+          layout_id: string | null
           resolved_at: string | null
           resolved_by: string | null
           task_id: string
@@ -295,6 +296,7 @@ export type Database = {
           created_by?: string | null
           description: string
           id?: string
+          layout_id?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
           task_id: string
@@ -305,11 +307,19 @@ export type Database = {
           created_by?: string | null
           description?: string
           id?: string
+          layout_id?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
           task_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "change_requests_layout_id_fkey"
+            columns: ["layout_id"]
+            isOneToOne: false
+            referencedRelation: "design_task_layouts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "change_requests_task_id_fkey"
             columns: ["task_id"]
