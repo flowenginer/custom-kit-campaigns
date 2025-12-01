@@ -821,24 +821,22 @@ export const NewLayoutRequestDialog = ({
             {!isFromScratch && (
               <div className="space-y-2">
                 <Label>Segmento/Campanha *</Label>
-                <ScrollArea className="h-[160px]">
-                  <div className="grid grid-cols-3 gap-2 pr-4">
-                    {campaigns.map((campaign) => (
-                      <Card
-                        key={campaign.id}
-                        className={`p-3 cursor-pointer transition-all hover:border-primary ${
-                          selectedCampaignId === campaign.id ? "border-primary ring-2 ring-primary" : ""
-                        }`}
-                        onClick={() => setSelectedCampaignId(campaign.id)}
-                      >
-                        <div className="flex flex-col items-center gap-1">
-                          <Megaphone className="h-6 w-6 text-primary" />
-                          <span className="text-xs font-medium text-center">{campaign.name}</span>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                </ScrollArea>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  {campaigns.map((campaign) => (
+                    <Card
+                      key={campaign.id}
+                      className={`p-3 cursor-pointer transition-all hover:border-primary ${
+                        selectedCampaignId === campaign.id ? "border-primary ring-2 ring-primary" : ""
+                      }`}
+                      onClick={() => setSelectedCampaignId(campaign.id)}
+                    >
+                      <div className="flex flex-col items-center gap-1">
+                        <Megaphone className="h-6 w-6 text-primary" />
+                        <span className="text-xs font-medium text-center">{campaign.name}</span>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -875,28 +873,26 @@ export const NewLayoutRequestDialog = ({
             {!isFromScratch && selectedUniformType && (
               <div className="space-y-2">
                 <Label>Modelo *</Label>
-                <ScrollArea className="h-[200px]">
-                  <div className="grid grid-cols-3 gap-2 pr-4">
-                    {filteredModels.map((model) => (
-                      <Card
-                        key={model.id}
-                        className={`p-2 cursor-pointer transition-all hover:border-primary ${
-                          selectedModel?.id === model.id ? "border-primary ring-2 ring-primary" : ""
-                        }`}
-                        onClick={() => setSelectedModel(model)}
-                      >
-                        <div className="flex flex-col items-center gap-1">
-                          <img
-                            src={model.photo_main}
-                            alt={model.name}
-                            className="w-full aspect-square object-contain rounded"
-                          />
-                          <span className="text-xs font-medium text-center">{model.name}</span>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                </ScrollArea>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  {filteredModels.map((model) => (
+                    <Card
+                      key={model.id}
+                      className={`p-2 cursor-pointer transition-all hover:border-primary ${
+                        selectedModel?.id === model.id ? "border-primary ring-2 ring-primary" : ""
+                      }`}
+                      onClick={() => setSelectedModel(model)}
+                    >
+                      <div className="flex flex-col items-center gap-1">
+                        <img
+                          src={model.photo_main}
+                          alt={model.name}
+                          className="w-full aspect-square object-contain rounded"
+                        />
+                        <span className="text-xs font-medium text-center">{model.name}</span>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -1170,53 +1166,51 @@ export const NewLayoutRequestDialog = ({
           <div className="space-y-4">
             <Label>Campanha *</Label>
             
-            <ScrollArea className="h-[250px]">
-              <div className="grid grid-cols-4 gap-3 pr-4">
-                {/* Botão "Criação do Zero" como primeiro item do grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {/* Botão "Criação do Zero" como primeiro item do grid */}
+              <Card
+                className={`p-4 cursor-pointer transition-all hover:border-green-500 hover:shadow-md border-2 ${
+                  isFromScratch ? "border-green-500 ring-2 ring-green-500 bg-green-50 dark:bg-green-950" : "border-green-500 bg-green-50 dark:bg-green-950"
+                }`}
+                onClick={() => {
+                  setIsFromScratch(true);
+                  setSelectedCampaignId("");
+                  setSelectedModel(null);
+                  setCurrentStep("uniform");
+                }}
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <Plus className="h-8 w-8 text-green-500" />
+                  <span className="text-sm font-medium text-center text-green-700 dark:text-green-300">
+                    Criação do Zero
+                  </span>
+                </div>
+              </Card>
+
+              {/* Campanhas existentes */}
+              {campaigns.map((campaign) => (
                 <Card
-                  className={`p-4 cursor-pointer transition-all hover:border-green-500 hover:shadow-md border-2 ${
-                    isFromScratch ? "border-green-500 ring-2 ring-green-500 bg-green-50 dark:bg-green-950" : "border-green-500 bg-green-50 dark:bg-green-950"
+                  key={campaign.id}
+                  className={`p-4 cursor-pointer transition-all hover:border-primary hover:shadow-md ${
+                    selectedCampaignId === campaign.id
+                      ? "border-primary ring-2 ring-primary"
+                      : ""
                   }`}
                   onClick={() => {
-                    setIsFromScratch(true);
-                    setSelectedCampaignId("");
-                    setSelectedModel(null);
+                    setIsFromScratch(false);
+                    setSelectedCampaignId(campaign.id);
                     setCurrentStep("uniform");
                   }}
                 >
                   <div className="flex flex-col items-center gap-2">
-                    <Plus className="h-8 w-8 text-green-500" />
-                    <span className="text-sm font-medium text-center text-green-700 dark:text-green-300">
-                      Criação do Zero
+                    <Megaphone className="h-8 w-8 text-primary" />
+                    <span className="text-sm font-medium text-center">
+                      {campaign.name}
                     </span>
                   </div>
                 </Card>
-
-                {/* Campanhas existentes */}
-                {campaigns.map((campaign) => (
-                  <Card
-                    key={campaign.id}
-                    className={`p-4 cursor-pointer transition-all hover:border-primary hover:shadow-md ${
-                      selectedCampaignId === campaign.id
-                        ? "border-primary ring-2 ring-primary"
-                        : ""
-                    }`}
-                    onClick={() => {
-                      setIsFromScratch(false);
-                      setSelectedCampaignId(campaign.id);
-                      setCurrentStep("uniform");
-                    }}
-                  >
-                    <div className="flex flex-col items-center gap-2">
-                      <Megaphone className="h-8 w-8 text-primary" />
-                      <span className="text-sm font-medium text-center">
-                        {campaign.name}
-                      </span>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </ScrollArea>
+              ))}
+            </div>
           </div>
         );
 
@@ -1846,7 +1840,7 @@ export const NewLayoutRequestDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5" />
