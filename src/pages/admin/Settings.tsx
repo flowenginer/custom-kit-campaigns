@@ -48,6 +48,7 @@ const Settings = () => {
   const [selectedRoles, setSelectedRoles] = useState<AppRole[]>([]);
   const [allowedKanbanColumns, setAllowedKanbanColumns] = useState<string[]>([]); // 🆕 Estado para colunas permitidas
   const [editFullName, setEditFullName] = useState(""); // 🆕 Estado para editar nome
+  const [editEmail, setEditEmail] = useState(""); // 🆕 Estado para editar e-mail
   
   // Password reset states
   const [selectedUserForReset, setSelectedUserForReset] = useState("");
@@ -265,7 +266,8 @@ const Settings = () => {
           user_id: selectedUser.id,
           roles: selectedRoles,
           allowed_kanban_columns: allowedKanbanColumns,
-          full_name: editFullName
+          full_name: editFullName,
+          new_email: editEmail !== selectedUser.email ? editEmail : undefined
         })
       });
 
@@ -380,12 +382,14 @@ const Settings = () => {
     setFullName("");
     setSelectedRoles([]);
     setEditFullName(""); // 🆕 Limpar nome de edição
+    setEditEmail(""); // 🆕 Limpar e-mail de edição
   };
 
   const openEditDialog = (user: User) => {
     setSelectedUser(user);
     setSelectedRoles(user.roles || []); // Garantir que roles seja um array
     setEditFullName(user.profile?.full_name || "");
+    setEditEmail(user.email || ""); // 🆕 Carregar e-mail atual
     
     // Carregar colunas permitidas
     setAllowedKanbanColumns(
@@ -812,6 +816,20 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                   onChange={(e) => setEditFullName(e.target.value)}
                   placeholder="Nome do usuário"
                 />
+              </div>
+              
+              <div>
+                <Label htmlFor="editEmail">E-mail</Label>
+                <Input
+                  id="editEmail"
+                  type="email"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  placeholder="usuario@empresa.com"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  ⚠️ Alterar o e-mail afetará o login do usuário
+                </p>
               </div>
             </div>
 
