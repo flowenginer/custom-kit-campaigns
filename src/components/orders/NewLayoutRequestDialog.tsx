@@ -133,7 +133,10 @@ export const NewLayoutRequestDialog = ({
 
   // Customization states
   const [frontCustomization, setFrontCustomization] = useState<{
-    logoType: 'none' | 'small_left' | 'large_center' | 'custom';
+    logoType: 'none' | 'selected';
+    hasSmallLogo: boolean;
+    hasLargeLogo: boolean;
+    hasCustom: boolean;
     textColor: string;
     text: string;
     logoUrl: string;
@@ -141,6 +144,9 @@ export const NewLayoutRequestDialog = ({
     customFile?: File | null;
   }>({
     logoType: "none",
+    hasSmallLogo: false,
+    hasLargeLogo: false,
+    hasCustom: false,
     textColor: "#000000",
     text: "",
     logoUrl: "",
@@ -694,6 +700,9 @@ export const NewLayoutRequestDialog = ({
     setSelectedCustomerId(null);
     setFrontCustomization({
       logoType: "none",
+      hasSmallLogo: false,
+      hasLargeLogo: false,
+      hasCustom: false,
       textColor: "#000000",
       text: "",
       logoUrl: "",
@@ -1172,6 +1181,9 @@ export const NewLayoutRequestDialog = ({
                     // Resetar personalizações para começar do zero
                     setFrontCustomization({
                       logoType: "none",
+                      hasSmallLogo: false,
+                      hasLargeLogo: false,
+                      hasCustom: false,
                       textColor: "#000000",
                       text: "",
                       logoUrl: "",

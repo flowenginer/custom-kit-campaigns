@@ -5,6 +5,7 @@ import { useState, useRef } from "react";
 import { Maximize2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface ShirtModel {
   id: string;
@@ -16,7 +17,10 @@ interface ShirtModel {
 }
 
 interface FrontCustomization {
-  logoType: 'none' | 'small_left' | 'large_center' | 'custom';
+  logoType: 'none' | 'selected';
+  hasSmallLogo: boolean;
+  hasLargeLogo: boolean;
+  hasCustom: boolean;
   textColor: string;
   text: string;
   logoUrl: string;
@@ -36,16 +40,17 @@ export const FrontEditor = ({ model, value, onChange, onNext }: FrontEditorProps
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   
   const getImageUrl = () => {
-    switch(value.logoType) {
-      case 'small_left':
-        return model.image_front_small_logo || model.image_front;
-      case 'large_center':
-        return model.image_front_large_logo || model.image_front;
-      case 'custom':
-        return model.image_front_clean || model.image_front;
-      default:
-        return model.image_front;
+    // Prioriza small logo, depois large logo, depois custom, senão padrão
+    if (value.hasSmallLogo && model.image_front_small_logo) {
+      return model.image_front_small_logo;
     }
+    if (value.hasLargeLogo && model.image_front_large_logo) {
+      return model.image_front_large_logo;
+    }
+    if (value.hasCustom && model.image_front_clean) {
+      return model.image_front_clean;
+    }
+    return model.image_front;
   };
 
   return (
@@ -95,7 +100,7 @@ export const FrontEditor = ({ model, value, onChange, onNext }: FrontEditorProps
           <div className="space-y-4">
             <Label className="text-base">Tipo de Logo</Label>
             <p className="text-sm text-muted-foreground">
-              Clique na opção desejada para continuar
+              Escolha as opções desejadas
             </p>
           <div className="space-y-3">
             <Button
@@ -106,49 +111,68 @@ export const FrontEditor = ({ model, value, onChange, onNext }: FrontEditorProps
                   : 'bg-red-600 hover:bg-red-700 text-white'
               }`}
               onClick={() => {
-                onChange({ ...value, logoType: 'none' });
+                onChange({ 
+                  ...value, 
+                  logoType: 'none',
+                  hasSmallLogo: false,
+                  hasLargeLogo: false,
+                  hasCustom: false
+                });
                 setTimeout(() => onNext(), 300);
               }}
             >
               🚫 Sem personalização
             </Button>
 
-            <Button
-              variant={value.logoType === 'small_left' ? 'default' : 'outline'}
-              className="w-full h-14 text-base justify-start"
-              onClick={() => {
-                onChange({ ...value, logoType: 'small_left' });
-                setTimeout(() => onNext(), 300);
-              }}
-            >
-              Logo pequena no peito esquerdo
-            </Button>
+            <div className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-muted/50">
+              <Checkbox
+                id="small_logo"
+                checked={value.hasSmallLogo}
+                onCheckedChange={(checked) => onChange({ 
+                  ...value, 
+                  hasSmallLogo: !!checked,
+                  logoType: checked ? 'selected' : (value.hasLargeLogo || value.hasCustom) ? 'selected' : 'none'
+                })}
+              />
+              <Label htmlFor="small_logo" className="text-base cursor-pointer flex-1">
+                Logo pequena no peito esquerdo
+              </Label>
+            </div>
               
-              <Button
-                variant={value.logoType === 'large_center' ? 'default' : 'outline'}
-                className="w-full h-14 text-base justify-start"
-                onClick={() => {
-                  onChange({ ...value, logoType: 'large_center' });
-                  setTimeout(() => onNext(), 300);
-                }}
-              >
+            <div className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-muted/50">
+              <Checkbox
+                id="large_logo"
+                checked={value.hasLargeLogo}
+                onCheckedChange={(checked) => onChange({ 
+                  ...value, 
+                  hasLargeLogo: !!checked,
+                  logoType: checked ? 'selected' : (value.hasSmallLogo || value.hasCustom) ? 'selected' : 'none'
+                })}
+              />
+              <Label htmlFor="large_logo" className="text-base cursor-pointer flex-1">
                 Logo grande no centro
-              </Button>
+              </Label>
+            </div>
               
-              <Button
-                variant={value.logoType === 'custom' ? 'default' : 'outline'}
-                className="w-full h-14 text-base justify-start"
-                onClick={() => {
-                  onChange({ ...value, logoType: 'custom' });
-                }}
-              >
+            <div className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-muted/50">
+              <Checkbox
+                id="custom_logo"
+                checked={value.hasCustom}
+                onCheckedChange={(checked) => onChange({ 
+                  ...value, 
+                  hasCustom: !!checked,
+                  logoType: checked ? 'selected' : (value.hasSmallLogo || value.hasLargeLogo) ? 'selected' : 'none'
+                })}
+              />
+              <Label htmlFor="custom_logo" className="text-base cursor-pointer flex-1">
                 Outras personalizações
-              </Button>
+              </Label>
+            </div>
             </div>
           </div>
 
           {/* Campos adicionais para "Outras personalizações" */}
-          {value.logoType === 'custom' && (
+          {value.hasCustom && (
             <div className="space-y-4 pt-4">
               <div className="space-y-2">
                 <Label htmlFor="customDescription" className="text-base">
@@ -193,17 +217,18 @@ export const FrontEditor = ({ model, value, onChange, onNext }: FrontEditorProps
                   </p>
                 )}
               </div>
-
-              <Button
-                onClick={() => {
-                  setTimeout(() => onNext(), 200);
-                }}
-                size="lg"
-                className="w-full h-14 text-lg"
-              >
-                Confirmar e Continuar
-              </Button>
             </div>
+          )}
+
+          {/* Botão Confirmar e Continuar */}
+          {(value.hasSmallLogo || value.hasLargeLogo || value.hasCustom) && (
+            <Button
+              onClick={() => onNext()}
+              size="lg"
+              className="w-full h-14 text-lg"
+            >
+              Confirmar e Continuar
+            </Button>
           )}
 
         </CardContent>
