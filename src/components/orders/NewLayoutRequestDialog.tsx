@@ -1665,11 +1665,13 @@ export const NewLayoutRequestDialog = ({
         );
 
       case "front":
+        const currentLayoutModelFront = layouts[currentLayoutIndex]?.model;
+        const currentLayoutIsFromScratchFront = layouts[currentLayoutIndex]?.isFromScratch;
         return (
           <div className="space-y-4">
-            {(selectedModel || isFromScratch) && (
+            {(currentLayoutModelFront || currentLayoutIsFromScratchFront) && (
               <FrontEditor
-                model={selectedModel || {
+                model={currentLayoutModelFront || {
                   id: 'scratch',
                   name: 'Criação do Zero',
                   image_front: '/placeholder.svg',
@@ -1689,11 +1691,13 @@ export const NewLayoutRequestDialog = ({
         );
 
       case "back":
+        const currentLayoutModelBack = layouts[currentLayoutIndex]?.model;
+        const currentLayoutIsFromScratchBack = layouts[currentLayoutIndex]?.isFromScratch;
         return (
           <div className="space-y-4">
-            {(selectedModel || isFromScratch) && (
+            {(currentLayoutModelBack || currentLayoutIsFromScratchBack) && (
               <BackEditor
-                model={selectedModel || {
+                model={currentLayoutModelBack || {
                   id: 'scratch',
                   name: 'Criação do Zero',
                   image_back: '/placeholder.svg'
@@ -1710,11 +1714,13 @@ export const NewLayoutRequestDialog = ({
         );
 
       case "sleeves_left":
+        const currentLayoutModelLeft = layouts[currentLayoutIndex]?.model;
+        const currentLayoutIsFromScratchLeft = layouts[currentLayoutIndex]?.isFromScratch;
         return (
           <div className="space-y-4">
-            {(selectedModel || isFromScratch) && (
+            {(currentLayoutModelLeft || currentLayoutIsFromScratchLeft) && (
               <SleeveEditor
-                model={selectedModel || {
+                model={currentLayoutModelLeft || {
                   id: 'scratch',
                   name: 'Criação do Zero',
                   image_left: '/placeholder.svg',
@@ -1733,11 +1739,13 @@ export const NewLayoutRequestDialog = ({
         );
 
       case "sleeves_right":
+        const currentLayoutModelRight = layouts[currentLayoutIndex]?.model;
+        const currentLayoutIsFromScratchRight = layouts[currentLayoutIndex]?.isFromScratch;
         return (
           <div className="space-y-4">
-            {(selectedModel || isFromScratch) && (
+            {(currentLayoutModelRight || currentLayoutIsFromScratchRight) && (
               <SleeveEditor
-                model={selectedModel || {
+                model={currentLayoutModelRight || {
                   id: 'scratch',
                   name: 'Criação do Zero',
                   image_left: '/placeholder.svg',
