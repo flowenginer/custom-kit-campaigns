@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +46,7 @@ const Creation = () => {
   const [tasks, setTasks] = useState<DesignTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<DesignTask | null>(null);
+  const selectedTaskRef = useRef<DesignTask | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTask, setActiveTask] = useState<DesignTask | null>(null);
   const [productionConfirmOpen, setProductionConfirmOpen] = useState(false);
@@ -98,6 +99,11 @@ const Creation = () => {
     refreshData,
     { interval: 60000, enabled: true }
   );
+
+  // Manter ref sincronizado com selectedTask
+  useEffect(() => {
+    selectedTaskRef.current = selectedTask;
+  }, [selectedTask]);
 
   useEffect(() => {
     loadTasks();
@@ -273,9 +279,10 @@ const Creation = () => {
 
       setTasks(formattedTasks);
 
-      // Atualizar tarefa selecionada se o modal estiver aberto
-      if (selectedTask) {
-        const updatedSelectedTask = formattedTasks.find(t => t.id === selectedTask.id);
+      // ✅ FIX: Usar ref para evitar stale closure
+      const currentSelectedTask = selectedTaskRef.current;
+      if (currentSelectedTask) {
+        const updatedSelectedTask = formattedTasks.find(t => t.id === currentSelectedTask.id);
         if (updatedSelectedTask) {
           setSelectedTask(updatedSelectedTask);
         }
