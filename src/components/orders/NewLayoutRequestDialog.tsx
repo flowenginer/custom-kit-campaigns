@@ -1821,7 +1821,7 @@ export const NewLayoutRequestDialog = ({
                         📤 Upload das Logos *
                       </Label>
                       {logoFiles.map((file, index) => (
-                        <div key={index} className="flex items-center gap-2 p-3 bg-white dark:bg-gray-800 rounded border border-blue-300">
+                        <div key={index} className="flex items-center gap-2 p-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded border border-blue-300">
                           <span className="text-sm flex-1 truncate">{file.name}</span>
                           <Button
                             type="button"

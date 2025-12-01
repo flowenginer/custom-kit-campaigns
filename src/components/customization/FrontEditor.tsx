@@ -154,7 +154,7 @@ export const FrontEditor = ({ model, value, onChange, onNext }: FrontEditorProps
                       placeholder="Descreva detalhes sobre a logo pequena no peito..."
                       value={value.smallLogoObservation || ""}
                       onChange={(e) => onChange({ ...value, smallLogoObservation: e.target.value })}
-                      className="min-h-[80px] text-base border-blue-300 focus:border-blue-500 bg-white dark:bg-gray-800"
+                      className="min-h-[80px] text-base border-blue-300 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                       rows={3}
                     />
                   </div>
@@ -213,7 +213,7 @@ export const FrontEditor = ({ model, value, onChange, onNext }: FrontEditorProps
                       placeholder="Descreva detalhes sobre a logo grande no centro..."
                       value={value.largeLogoObservation || ""}
                       onChange={(e) => onChange({ ...value, largeLogoObservation: e.target.value })}
-                      className="min-h-[80px] text-base border-blue-300 focus:border-blue-500 bg-white dark:bg-gray-800"
+                      className="min-h-[80px] text-base border-blue-300 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                       rows={3}
                     />
                   </div>
@@ -277,7 +277,7 @@ export const FrontEditor = ({ model, value, onChange, onNext }: FrontEditorProps
                   placeholder="Descreva detalhadamente como você quer a personalização..."
                   value={value.customDescription || ""}
                   onChange={(e) => onChange({ ...value, customDescription: e.target.value })}
-                  className="min-h-[100px] text-base border-blue-300 focus:border-blue-500 bg-white dark:bg-gray-800"
+                  className="min-h-[100px] text-base border-blue-300 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                   rows={4}
                 />
               </div>

@@ -481,7 +481,7 @@ export const CustomizationViewer = ({
                 </p>
                 
                 {logoDescription && (
-                  <div className="mt-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-amber-300 dark:border-amber-700">
+                  <div className="mt-3 p-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg border border-amber-300 dark:border-amber-700">
                     <Label className="text-xs text-amber-600 dark:text-amber-400 font-medium">
                       O que o cliente imagina:
                     </Label>
