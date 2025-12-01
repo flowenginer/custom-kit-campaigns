@@ -2,17 +2,26 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { ImageZoomModal } from "@/components/ui/image-zoom-modal";
-import { useState, useRef } from "react";
-import { Maximize2, Upload } from "lucide-react";
+import { useState, useRef, useMemo } from "react";
+import { Maximize2, Upload, Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { PAISES, ESTADOS_BRASILEIROS, CIDADES_BRASILEIRAS } from "@/lib/flagData";
 
 interface ShirtModel {
   id: string;
@@ -21,9 +30,15 @@ interface ShirtModel {
   image_right: string;
 }
 
+type FlagType = 'country' | 'state' | 'city';
+
 interface SleeveCustomization {
   flag: boolean;
+  flagType?: FlagType;
+  flagCountry?: string;
   flagState?: string;
+  flagCity?: string;
+  flagObservation?: string;
   flagUrl: string;
   logoSmall: boolean;
   logoFile?: File | null;
@@ -31,36 +46,6 @@ interface SleeveCustomization {
   text: boolean;
   textContent: string;
 }
-
-const ESTADOS_BRASILEIROS = [
-  { value: 'AC', label: 'Acre' },
-  { value: 'AL', label: 'Alagoas' },
-  { value: 'AP', label: 'Amapá' },
-  { value: 'AM', label: 'Amazonas' },
-  { value: 'BA', label: 'Bahia' },
-  { value: 'CE', label: 'Ceará' },
-  { value: 'DF', label: 'Distrito Federal' },
-  { value: 'ES', label: 'Espírito Santo' },
-  { value: 'GO', label: 'Goiás' },
-  { value: 'MA', label: 'Maranhão' },
-  { value: 'MT', label: 'Mato Grosso' },
-  { value: 'MS', label: 'Mato Grosso do Sul' },
-  { value: 'MG', label: 'Minas Gerais' },
-  { value: 'PA', label: 'Pará' },
-  { value: 'PB', label: 'Paraíba' },
-  { value: 'PR', label: 'Paraná' },
-  { value: 'PE', label: 'Pernambuco' },
-  { value: 'PI', label: 'Piauí' },
-  { value: 'RJ', label: 'Rio de Janeiro' },
-  { value: 'RN', label: 'Rio Grande do Norte' },
-  { value: 'RS', label: 'Rio Grande do Sul' },
-  { value: 'RO', label: 'Rondônia' },
-  { value: 'RR', label: 'Roraima' },
-  { value: 'SC', label: 'Santa Catarina' },
-  { value: 'SP', label: 'São Paulo' },
-  { value: 'SE', label: 'Sergipe' },
-  { value: 'TO', label: 'Tocantins' },
-];
 
 interface SleeveEditorProps {
   model: ShirtModel;
@@ -72,9 +57,34 @@ interface SleeveEditorProps {
 
 export const SleeveEditor = ({ model, side, value, onChange, onNext }: SleeveEditorProps) => {
   const [isZoomOpen, setIsZoomOpen] = useState(false);
+  const [countryOpen, setCountryOpen] = useState(false);
+  const [stateOpen, setStateOpen] = useState(false);
+  const [cityOpen, setCityOpen] = useState(false);
   const logoFileInputRef = useRef<HTMLInputElement | null>(null);
   const imageUrl = side === 'left' ? model.image_left : model.image_right;
   const title = side === 'left' ? 'Manga Esquerda' : 'Manga Direita';
+
+  const selectedCountryLabel = useMemo(() => {
+    return PAISES.find(p => p.value === value.flagCountry)?.label || "";
+  }, [value.flagCountry]);
+
+  const selectedStateLabel = useMemo(() => {
+    return ESTADOS_BRASILEIROS.find(e => e.value === value.flagState)?.label || "";
+  }, [value.flagState]);
+
+  const selectedCityLabel = useMemo(() => {
+    return CIDADES_BRASILEIRAS.find(c => c.value === value.flagCity)?.label || "";
+  }, [value.flagCity]);
+
+  const handleFlagTypeChange = (type: FlagType) => {
+    onChange({
+      ...value,
+      flagType: type,
+      flagCountry: undefined,
+      flagState: undefined,
+      flagCity: undefined,
+    });
+  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6 pb-4">
@@ -125,7 +135,15 @@ export const SleeveEditor = ({ model, side, value, onChange, onNext }: SleeveEdi
             <Label className="text-base">Quer adicionar bandeira?</Label>
             <RadioGroup 
               value={value.flag ? "sim" : "nao"}
-              onValueChange={(val) => onChange({ ...value, flag: val === "sim", flagState: val === "nao" ? undefined : value.flagState })}
+              onValueChange={(val) => onChange({ 
+                ...value, 
+                flag: val === "sim", 
+                flagType: val === "nao" ? undefined : value.flagType,
+                flagCountry: val === "nao" ? undefined : value.flagCountry,
+                flagState: val === "nao" ? undefined : value.flagState,
+                flagCity: val === "nao" ? undefined : value.flagCity,
+                flagObservation: val === "nao" ? undefined : value.flagObservation,
+              })}
               className="flex gap-4"
             >
               <div className="flex items-center space-x-2">
@@ -143,25 +161,201 @@ export const SleeveEditor = ({ model, side, value, onChange, onNext }: SleeveEdi
             </RadioGroup>
             
             {value.flag && (
-              <div className="ml-6 md:ml-8 space-y-2">
-                <Label htmlFor={`${side}-flag-state`} className="text-sm">
-                  Selecione o estado da bandeira
-                </Label>
-                <Select
-                  value={value.flagState || ""}
-                  onValueChange={(val) => onChange({ ...value, flagState: val })}
-                >
-                  <SelectTrigger id={`${side}-flag-state`} className="min-h-[48px]">
-                    <SelectValue placeholder="Escolha o estado..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ESTADOS_BRASILEIROS.map((estado) => (
-                      <SelectItem key={estado.value} value={estado.value}>
-                        {estado.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="ml-6 md:ml-8 space-y-4">
+                {/* Flag Type Selection */}
+                <div className="space-y-2">
+                  <Label className="text-sm">Tipo de bandeira</Label>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant={value.flagType === 'country' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => handleFlagTypeChange('country')}
+                      className="min-h-[40px]"
+                    >
+                      País
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={value.flagType === 'state' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => handleFlagTypeChange('state')}
+                      className="min-h-[40px]"
+                    >
+                      Estado
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={value.flagType === 'city' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => handleFlagTypeChange('city')}
+                      className="min-h-[40px]"
+                    >
+                      Cidade
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Country Dropdown */}
+                {value.flagType === 'country' && (
+                  <div className="space-y-2">
+                    <Label className="text-sm">Selecione o país</Label>
+                    <Popover open={countryOpen} onOpenChange={setCountryOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={countryOpen}
+                          className="w-full justify-between min-h-[48px]"
+                        >
+                          {value.flagCountry ? selectedCountryLabel : "Buscar país..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Buscar país..." />
+                          <CommandList>
+                            <CommandEmpty>Nenhum país encontrado.</CommandEmpty>
+                            <CommandGroup>
+                              {PAISES.map((pais) => (
+                                <CommandItem
+                                  key={pais.value}
+                                  value={pais.label}
+                                  onSelect={() => {
+                                    onChange({ ...value, flagCountry: pais.value });
+                                    setCountryOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      value.flagCountry === pais.value ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {pais.label}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                )}
+
+                {/* State Dropdown */}
+                {value.flagType === 'state' && (
+                  <div className="space-y-2">
+                    <Label className="text-sm">Selecione o estado</Label>
+                    <Popover open={stateOpen} onOpenChange={setStateOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={stateOpen}
+                          className="w-full justify-between min-h-[48px]"
+                        >
+                          {value.flagState ? selectedStateLabel : "Buscar estado..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Buscar estado..." />
+                          <CommandList>
+                            <CommandEmpty>Nenhum estado encontrado.</CommandEmpty>
+                            <CommandGroup>
+                              {ESTADOS_BRASILEIROS.map((estado) => (
+                                <CommandItem
+                                  key={estado.value}
+                                  value={estado.label}
+                                  onSelect={() => {
+                                    onChange({ ...value, flagState: estado.value });
+                                    setStateOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      value.flagState === estado.value ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {estado.label}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                )}
+
+                {/* City Dropdown */}
+                {value.flagType === 'city' && (
+                  <div className="space-y-2">
+                    <Label className="text-sm">Selecione a cidade</Label>
+                    <Popover open={cityOpen} onOpenChange={setCityOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={cityOpen}
+                          className="w-full justify-between min-h-[48px]"
+                        >
+                          {value.flagCity ? selectedCityLabel : "Buscar cidade..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Buscar cidade..." />
+                          <CommandList>
+                            <CommandEmpty>Nenhuma cidade encontrada.</CommandEmpty>
+                            <CommandGroup>
+                              {CIDADES_BRASILEIRAS.map((cidade) => (
+                                <CommandItem
+                                  key={cidade.value}
+                                  value={cidade.label}
+                                  onSelect={() => {
+                                    onChange({ ...value, flagCity: cidade.value });
+                                    setCityOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      value.flagCity === cidade.value ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {cidade.label}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                )}
+
+                {/* Flag Observation */}
+                {value.flagType && (
+                  <div className="space-y-2">
+                    <Label className="text-sm">Observação da bandeira (opcional)</Label>
+                    <Textarea
+                      placeholder="Adicione observações sobre a bandeira, caso necessário..."
+                      value={value.flagObservation || ""}
+                      onChange={(e) => onChange({ ...value, flagObservation: e.target.value })}
+                      className="min-h-[80px] text-base resize-none"
+                      maxLength={200}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {(value.flagObservation || "").length}/200 caracteres
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>
