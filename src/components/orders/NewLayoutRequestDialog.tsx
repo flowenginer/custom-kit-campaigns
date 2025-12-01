@@ -886,7 +886,7 @@ export const NewLayoutRequestDialog = ({
                     setLayouts(updatedLayouts);
                   }}
                   rows={4}
-                  className="resize-none bg-white dark:bg-gray-900 border-amber-300 dark:border-amber-700"
+                  className="resize-none bg-white dark:bg-gray-800 border-amber-300 dark:border-amber-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400"
                 />
                 <p className="text-xs text-amber-700 dark:text-amber-300">
                   💡 Quanto mais detalhes, melhor o designer poderá criar o layout ideal
