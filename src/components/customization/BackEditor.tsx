@@ -162,23 +162,23 @@ export const BackEditor = ({ model, value, onChange, onNext }: BackEditorProps) 
             </div>
             
             {value.logoLarge && (
-              <div className="ml-8 space-y-3 p-4 bg-muted/50 rounded-lg border">
+              <div className="ml-8 space-y-3 p-4 border-2 border-blue-500 rounded-lg bg-blue-50 dark:bg-blue-950">
                 <div className="space-y-2">
-                  <Label className="text-base">Observação (opcional)</Label>
+                  <Label className="text-base text-blue-700 dark:text-blue-300">Observação (opcional)</Label>
                   <Textarea
                     placeholder="Descreva detalhes sobre a logo grande nas costas..."
                     value={value.logoLargeObservation || ""}
                     onChange={(e) => onChange({ ...value, logoLargeObservation: e.target.value })}
-                    className="min-h-[80px] text-base"
+                    className="min-h-[80px] text-base border-blue-300 focus:border-blue-500 bg-white dark:bg-gray-800"
                     rows={3}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-base">Upload da Logo</Label>
+                  <Label className="text-base text-blue-700 dark:text-blue-300">📤 Upload da Logo</Label>
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full h-12"
+                    className="w-full h-12 border-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900"
                     onClick={() => logoLargeInputRef.current?.click()}
                   >
                     <Upload className="mr-2 h-4 w-4" />
@@ -195,7 +195,7 @@ export const BackEditor = ({ model, value, onChange, onNext }: BackEditorProps) 
                     }}
                   />
                   {value.logoLargeFile && (
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-blue-600 dark:text-blue-400">
                       Arquivo selecionado: {value.logoLargeFile.name}
                     </p>
                   )}
@@ -225,23 +225,23 @@ export const BackEditor = ({ model, value, onChange, onNext }: BackEditorProps) 
             </div>
             
             {value.logoNeck && (
-              <div className="ml-8 space-y-3 p-4 bg-muted/50 rounded-lg border">
+              <div className="ml-8 space-y-3 p-4 border-2 border-blue-500 rounded-lg bg-blue-50 dark:bg-blue-950">
                 <div className="space-y-2">
-                  <Label className="text-base">Observação (opcional)</Label>
+                  <Label className="text-base text-blue-700 dark:text-blue-300">Observação (opcional)</Label>
                   <Textarea
                     placeholder="Descreva detalhes sobre a logo na nuca..."
                     value={value.logoNeckObservation || ""}
                     onChange={(e) => onChange({ ...value, logoNeckObservation: e.target.value })}
-                    className="min-h-[80px] text-base"
+                    className="min-h-[80px] text-base border-blue-300 focus:border-blue-500 bg-white dark:bg-gray-800"
                     rows={3}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-base">Upload da Logo</Label>
+                  <Label className="text-base text-blue-700 dark:text-blue-300">📤 Upload da Logo</Label>
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full h-12"
+                    className="w-full h-12 border-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900"
                     onClick={() => logoNeckInputRef.current?.click()}
                   >
                     <Upload className="mr-2 h-4 w-4" />
@@ -258,7 +258,7 @@ export const BackEditor = ({ model, value, onChange, onNext }: BackEditorProps) 
                     }}
                   />
                   {value.logoNeckFile && (
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-blue-600 dark:text-blue-400">
                       Arquivo selecionado: {value.logoNeckFile.name}
                     </p>
                   )}
@@ -443,9 +443,9 @@ export const BackEditor = ({ model, value, onChange, onNext }: BackEditorProps) 
               </Label>
             </div>
             {value.hasCustomDescription && (
-              <div className="ml-8 space-y-3 p-4 bg-muted/50 rounded-lg border">
+              <div className="ml-8 space-y-3 p-4 border-2 border-blue-500 rounded-lg bg-blue-50 dark:bg-blue-950">
                 <div className="space-y-2">
-                  <Label htmlFor="customDescription" className="text-base">
+                  <Label htmlFor="customDescription" className="text-base text-blue-700 dark:text-blue-300">
                     Descreva a personalização desejada
                   </Label>
                   <Textarea
@@ -453,18 +453,18 @@ export const BackEditor = ({ model, value, onChange, onNext }: BackEditorProps) 
                     placeholder="Descreva detalhadamente como você quer a personalização..."
                     value={value.customDescription || ""}
                     onChange={(e) => onChange({ ...value, customDescription: e.target.value })}
-                    className="min-h-[100px] text-base"
+                    className="min-h-[100px] text-base border-blue-300 focus:border-blue-500 bg-white dark:bg-gray-800"
                     rows={4}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-base">Anexar arquivo (opcional)</Label>
+                  <Label className="text-base text-blue-700 dark:text-blue-300">📤 Anexar arquivo (opcional)</Label>
                   <div className="flex gap-2">
                     <Button
                       type="button"
                       variant="outline"
-                      className="flex-1 h-12"
+                      className="flex-1 h-12 border-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900"
                       onClick={() => fileInputRef.current?.click()}
                     >
                       <Upload className="mr-2 h-4 w-4" />
@@ -482,7 +482,7 @@ export const BackEditor = ({ model, value, onChange, onNext }: BackEditorProps) 
                     />
                   </div>
                   {value.customFile && (
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-blue-600 dark:text-blue-400">
                       Arquivo selecionado: {value.customFile.name}
                     </p>
                   )}

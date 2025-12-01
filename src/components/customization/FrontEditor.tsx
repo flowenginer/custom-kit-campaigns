@@ -147,23 +147,23 @@ export const FrontEditor = ({ model, value, onChange, onNext }: FrontEditorProps
               </div>
               
               {value.hasSmallLogo && (
-                <div className="ml-8 space-y-3 p-4 bg-muted/50 rounded-lg border">
+                <div className="ml-8 space-y-3 p-4 border-2 border-blue-500 rounded-lg bg-blue-50 dark:bg-blue-950">
                   <div className="space-y-2">
-                    <Label className="text-base">Observação (opcional)</Label>
+                    <Label className="text-base text-blue-700 dark:text-blue-300">Observação (opcional)</Label>
                     <Textarea
                       placeholder="Descreva detalhes sobre a logo pequena no peito..."
                       value={value.smallLogoObservation || ""}
                       onChange={(e) => onChange({ ...value, smallLogoObservation: e.target.value })}
-                      className="min-h-[80px] text-base"
+                      className="min-h-[80px] text-base border-blue-300 focus:border-blue-500 bg-white dark:bg-gray-800"
                       rows={3}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-base">Upload da Logo</Label>
+                    <Label className="text-base text-blue-700 dark:text-blue-300">📤 Upload da Logo</Label>
                     <Button
                       type="button"
                       variant="outline"
-                      className="w-full h-12"
+                      className="w-full h-12 border-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900"
                       onClick={() => smallLogoInputRef.current?.click()}
                     >
                       <Upload className="mr-2 h-4 w-4" />
@@ -180,7 +180,7 @@ export const FrontEditor = ({ model, value, onChange, onNext }: FrontEditorProps
                       }}
                     />
                     {value.smallLogoFile && (
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-blue-600 dark:text-blue-400">
                         Arquivo selecionado: {value.smallLogoFile.name}
                       </p>
                     )}
@@ -206,23 +206,23 @@ export const FrontEditor = ({ model, value, onChange, onNext }: FrontEditorProps
               </div>
               
               {value.hasLargeLogo && (
-                <div className="ml-8 space-y-3 p-4 bg-muted/50 rounded-lg border">
+                <div className="ml-8 space-y-3 p-4 border-2 border-blue-500 rounded-lg bg-blue-50 dark:bg-blue-950">
                   <div className="space-y-2">
-                    <Label className="text-base">Observação (opcional)</Label>
+                    <Label className="text-base text-blue-700 dark:text-blue-300">Observação (opcional)</Label>
                     <Textarea
                       placeholder="Descreva detalhes sobre a logo grande no centro..."
                       value={value.largeLogoObservation || ""}
                       onChange={(e) => onChange({ ...value, largeLogoObservation: e.target.value })}
-                      className="min-h-[80px] text-base"
+                      className="min-h-[80px] text-base border-blue-300 focus:border-blue-500 bg-white dark:bg-gray-800"
                       rows={3}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-base">Upload da Logo</Label>
+                    <Label className="text-base text-blue-700 dark:text-blue-300">📤 Upload da Logo</Label>
                     <Button
                       type="button"
                       variant="outline"
-                      className="w-full h-12"
+                      className="w-full h-12 border-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900"
                       onClick={() => largeLogoInputRef.current?.click()}
                     >
                       <Upload className="mr-2 h-4 w-4" />
@@ -239,7 +239,7 @@ export const FrontEditor = ({ model, value, onChange, onNext }: FrontEditorProps
                       }}
                     />
                     {value.largeLogoFile && (
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-blue-600 dark:text-blue-400">
                         Arquivo selecionado: {value.largeLogoFile.name}
                       </p>
                     )}
@@ -267,9 +267,9 @@ export const FrontEditor = ({ model, value, onChange, onNext }: FrontEditorProps
 
           {/* Campos adicionais para "Outras personalizações" */}
           {value.hasCustom && (
-            <div className="space-y-4 pt-4">
+            <div className="space-y-4 pt-4 p-4 border-2 border-blue-500 rounded-lg bg-blue-50 dark:bg-blue-950">
               <div className="space-y-2">
-                <Label htmlFor="customDescription" className="text-base">
+                <Label htmlFor="customDescription" className="text-base text-blue-700 dark:text-blue-300">
                   Descreva a personalização desejada
                 </Label>
                 <Textarea
@@ -277,18 +277,18 @@ export const FrontEditor = ({ model, value, onChange, onNext }: FrontEditorProps
                   placeholder="Descreva detalhadamente como você quer a personalização..."
                   value={value.customDescription || ""}
                   onChange={(e) => onChange({ ...value, customDescription: e.target.value })}
-                  className="min-h-[100px] text-base"
+                  className="min-h-[100px] text-base border-blue-300 focus:border-blue-500 bg-white dark:bg-gray-800"
                   rows={4}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label className="text-base">Anexar arquivo (opcional)</Label>
+                <Label className="text-base text-blue-700 dark:text-blue-300">📤 Anexar arquivo (opcional)</Label>
                 <div className="flex gap-2">
                   <Button
                     type="button"
                     variant="outline"
-                    className="flex-1 h-12"
+                    className="flex-1 h-12 border-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900"
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <Upload className="mr-2 h-4 w-4" />
@@ -306,7 +306,7 @@ export const FrontEditor = ({ model, value, onChange, onNext }: FrontEditorProps
                   />
                 </div>
                 {value.customFile && (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-blue-600 dark:text-blue-400">
                     Arquivo selecionado: {value.customFile.name}
                   </p>
                 )}
