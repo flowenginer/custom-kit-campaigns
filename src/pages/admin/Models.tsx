@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Plus, Trash2, Upload, ImageIcon, X, Pencil, LayoutGrid, LayoutList, Grid3x3, Grid2x2, Folder, FolderOpen, ChevronDown, ChevronRight } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
@@ -1933,142 +1934,163 @@ const Models = () => {
               </Card>
             )}
             
-            {/* Configurações Comuns */}
+            {/* Configurações do Lote */}
             {Object.keys(bulkGroupedModels).length > 0 && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Tag do Segmento* (aplicado a TODOS os modelos)</Label>
-                  <Select
-                    value={bulkSegmentId}
-                    onValueChange={setBulkSegmentId}
-                    disabled={bulkUploading}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a tag do segmento" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {segments.map((segment: any) => (
-                        <SelectItem key={segment.id} value={segment.id}>
-                          {segment.name} ({segment.segment_tag})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Tipo de Uniforme* (aplicado a TODOS os modelos)</Label>
-                  <Select
-                    value={bulkModelTag}
-                    onValueChange={setBulkModelTag}
-                    disabled={bulkUploading}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o tipo de uniforme" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="manga_longa">👕 Manga Longa</SelectItem>
-                      <SelectItem value="ziper">🧥 Zíper</SelectItem>
-                      <SelectItem value="manga_curta">👔 Manga Curta</SelectItem>
-                      <SelectItem value="regata">🎽 Regata</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {/* NOVAS OPÇÕES */}
-                <div className="border-t pt-4 space-y-4">
-                  <h3 className="font-semibold text-sm">Configurações Adicionais (Opcional)</h3>
-                  
-                  {/* Preço Base */}
-                  <div className="space-y-2">
-                    <Label htmlFor="bulkBasePrice">Preço Base (R$)</Label>
-                    <Input
-                      id="bulkBasePrice"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={bulkBasePrice}
-                      onChange={(e) => setBulkBasePrice(e.target.value)}
-                      placeholder="39.90"
-                      disabled={bulkUploading}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Será aplicado a todos os modelos criados
-                    </p>
-                  </div>
-                  
-                  {/* Aplicar Dimensões Padrão */}
-                  <div className="flex items-start space-x-3">
-                    <Checkbox
-                      id="bulkApplyDimensions"
-                      checked={bulkApplyDimensions}
-                      onCheckedChange={(checked) => setBulkApplyDimensions(checked as boolean)}
-                      disabled={bulkUploading || !defaultDimensionPreset}
-                    />
-                    <div className="space-y-1">
-                      <Label htmlFor="bulkApplyDimensions" className="cursor-pointer">
-                        Aplicar dimensões padrão do tipo ({bulkModelTag || 'selecione um tipo'})
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">⚙️ Configurações do Lote</CardTitle>
+                  <p className="text-xs text-muted-foreground">Configurações aplicadas a todos os modelos</p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Grid com 3 campos principais */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Tag do Segmento */}
+                    <div className="space-y-2">
+                      <Label className="text-sm flex items-center gap-1">
+                        Tag do Segmento
+                        <span className="text-destructive">*</span>
                       </Label>
-                      {defaultDimensionPreset && (
-                        <p className="text-xs text-muted-foreground">
-                          Peso: {defaultDimensionPreset.peso}kg | 
-                          Alt: {defaultDimensionPreset.altura}cm | 
-                          Larg: {defaultDimensionPreset.largura}cm | 
-                          Prof: {defaultDimensionPreset.profundidade}cm
-                        </p>
-                      )}
-                      {!defaultDimensionPreset && bulkModelTag && (
-                        <p className="text-xs text-amber-600">
-                          ⚠️ Nenhum preset padrão encontrado para este tipo
-                        </p>
-                      )}
+                      <Select
+                        value={bulkSegmentId}
+                        onValueChange={setBulkSegmentId}
+                        disabled={bulkUploading}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {segments.map((segment: any) => (
+                            <SelectItem key={segment.id} value={segment.id}>
+                              {segment.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    {/* Tipo de Uniforme */}
+                    <div className="space-y-2">
+                      <Label className="text-sm flex items-center gap-1">
+                        Tipo de Uniforme
+                        <span className="text-destructive">*</span>
+                      </Label>
+                      <Select
+                        value={bulkModelTag}
+                        onValueChange={setBulkModelTag}
+                        disabled={bulkUploading}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="manga_longa">👕 Manga Longa</SelectItem>
+                          <SelectItem value="ziper">🧥 Zíper</SelectItem>
+                          <SelectItem value="manga_curta">👔 Manga Curta</SelectItem>
+                          <SelectItem value="regata">🎽 Regata</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    {/* Preço Base */}
+                    <div className="space-y-2">
+                      <Label htmlFor="bulkBasePrice" className="text-sm">
+                        Preço Base (R$)
+                      </Label>
+                      <Input
+                        id="bulkBasePrice"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={bulkBasePrice}
+                        onChange={(e) => setBulkBasePrice(e.target.value)}
+                        placeholder="39.90"
+                        disabled={bulkUploading}
+                      />
                     </div>
                   </div>
+
+                  <Separator />
                   
-                  {/* Criar Variações Automáticas - Temporariamente desabilitado */}
-                  <div className="space-y-3 opacity-50">
+                  {/* Opções Adicionais */}
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium">Opções Adicionais</h4>
+                    
+                    {/* Aplicar Dimensões Padrão */}
                     <div className="flex items-start space-x-3">
+                      <Checkbox
+                        id="bulkApplyDimensions"
+                        checked={bulkApplyDimensions}
+                        onCheckedChange={(checked) => setBulkApplyDimensions(checked as boolean)}
+                        disabled={bulkUploading || !defaultDimensionPreset}
+                      />
+                      <div className="space-y-1 flex-1">
+                        <Label htmlFor="bulkApplyDimensions" className="cursor-pointer text-sm">
+                          Aplicar dimensões padrão automaticamente
+                        </Label>
+                        {defaultDimensionPreset && bulkModelTag && (
+                          <p className="text-xs text-muted-foreground">
+                            {bulkModelTag}: {defaultDimensionPreset.peso}kg • 
+                            {defaultDimensionPreset.altura}×{defaultDimensionPreset.largura}×{defaultDimensionPreset.profundidade}cm
+                          </p>
+                        )}
+                        {!defaultDimensionPreset && bulkModelTag && (
+                          <p className="text-xs text-amber-600">
+                            ⚠️ Nenhum preset encontrado para este tipo
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Criar Variações Automáticas - Em breve */}
+                    <div className="flex items-start space-x-3 opacity-50">
                       <Checkbox
                         id="bulkCreateVariations"
                         checked={false}
                         disabled={true}
                       />
-                      <div>
-                        <Label htmlFor="bulkCreateVariations" className="cursor-not-allowed text-muted-foreground">
+                      <div className="flex-1">
+                        <Label htmlFor="bulkCreateVariations" className="cursor-not-allowed text-muted-foreground text-sm">
                           Criar variações automáticas
                         </Label>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Em breve: Essa funcionalidade estará disponível após configurar atributos de variações
+                        <p className="text-xs text-muted-foreground">
+                          Em breve: tamanhos e gêneros
                         </p>
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Preview do SKU */}
                   {bulkModelTag && bulkSegmentId && Object.keys(bulkGroupedModels).length > 0 && (
-                    <div className="bg-muted p-3 rounded">
-                      <p className="text-xs font-medium mb-1">SKU será gerado automaticamente:</p>
-                      <p className="text-xs font-mono">
-                        {(() => {
-                          const selectedSegment = segments.find((s: any) => s.id === bulkSegmentId);
-                          const segmentTag = selectedSegment?.segment_tag || "";
-                          const firstModel = Object.keys(bulkGroupedModels).sort()[0];
-                          const typeAbbrev: Record<string, string> = {
-                            'manga_curta': 'MC',
-                            'manga_longa': 'ML',
-                            'regata': 'REG',
-                            'ziper': 'ZIP',
-                            'ziper_manga_longa': 'ZIP-ML',
-                          };
-                          const typeCode = typeAbbrev[bulkModelTag] || bulkModelTag.substring(0, 3).toUpperCase();
-                          const segmentCode = segmentTag.substring(0, 4).toUpperCase();
-                          return `${typeCode}-${segmentCode}-${firstModel.padStart(3, '0')}`;
-                        })()}, ...
-                      </p>
-                    </div>
+                    <>
+                      <Separator />
+                      <div className="bg-muted/50 p-3 rounded-md border">
+                        <p className="text-xs font-medium mb-1.5 text-muted-foreground">Preview do SKU:</p>
+                        <p className="text-sm font-mono font-medium">
+                          {(() => {
+                            const selectedSegment = segments.find((s: any) => s.id === bulkSegmentId);
+                            const segmentTag = selectedSegment?.segment_tag || "";
+                            const sortedModels = Object.keys(bulkGroupedModels).sort();
+                            const firstModel = sortedModels[0];
+                            const secondModel = sortedModels[1];
+                            const typeAbbrev: Record<string, string> = {
+                              'manga_curta': 'MC',
+                              'manga_longa': 'ML',
+                              'regata': 'REG',
+                              'ziper': 'ZIP',
+                              'ziper_manga_longa': 'ZIP-ML',
+                            };
+                            const typeCode = typeAbbrev[bulkModelTag] || bulkModelTag.substring(0, 3).toUpperCase();
+                            const segmentCode = segmentTag.substring(0, 4).toUpperCase();
+                            const firstSku = `${typeCode}-${segmentCode}-${firstModel.padStart(3, '0')}`;
+                            const secondSku = secondModel ? `${typeCode}-${segmentCode}-${secondModel.padStart(3, '0')}` : '...';
+                            return `${firstSku}, ${secondSku}, ...`;
+                          })()}
+                        </p>
+                      </div>
+                    </>
                   )}
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             )}
             
             {/* Progresso */}
