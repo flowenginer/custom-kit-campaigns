@@ -169,7 +169,7 @@ export const BackEditor = ({ model, value, onChange, onNext }: BackEditorProps) 
                     placeholder="Descreva detalhes sobre a logo grande nas costas..."
                     value={value.logoLargeObservation || ""}
                     onChange={(e) => onChange({ ...value, logoLargeObservation: e.target.value })}
-                    className="min-h-[80px] text-base border-blue-300 focus:border-blue-500 bg-white dark:bg-gray-800"
+                    className="min-h-[80px] text-base border-blue-300 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                     rows={3}
                   />
                 </div>
@@ -232,7 +232,7 @@ export const BackEditor = ({ model, value, onChange, onNext }: BackEditorProps) 
                     placeholder="Descreva detalhes sobre a logo na nuca..."
                     value={value.logoNeckObservation || ""}
                     onChange={(e) => onChange({ ...value, logoNeckObservation: e.target.value })}
-                    className="min-h-[80px] text-base border-blue-300 focus:border-blue-500 bg-white dark:bg-gray-800"
+                    className="min-h-[80px] text-base border-blue-300 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                     rows={3}
                   />
                 </div>
@@ -453,7 +453,7 @@ export const BackEditor = ({ model, value, onChange, onNext }: BackEditorProps) 
                     placeholder="Descreva detalhadamente como você quer a personalização..."
                     value={value.customDescription || ""}
                     onChange={(e) => onChange({ ...value, customDescription: e.target.value })}
-                    className="min-h-[100px] text-base border-blue-300 focus:border-blue-500 bg-white dark:bg-gray-800"
+                    className="min-h-[100px] text-base border-blue-300 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                     rows={4}
                   />
                 </div>
