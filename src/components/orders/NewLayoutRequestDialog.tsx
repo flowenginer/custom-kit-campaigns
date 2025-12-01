@@ -59,6 +59,8 @@ interface LayoutConfig {
   uniformType: string;
   model: any;
   isFromScratch: boolean;
+  quantity: string;
+  customQuantity: string;
   frontCustomization: any;
   backCustomization: any;
   leftSleeveCustomization: any;
@@ -343,13 +345,8 @@ export const NewLayoutRequestDialog = ({
 
   const handleSubmit = async () => {
     // Validações
-    if (!isFromScratch && (!selectedCampaignId || !selectedUniformType || !selectedModel)) {
-      toast.error("Selecione campanha, tipo de uniforme e modelo");
-      return;
-    }
-    
-    if (isFromScratch && !selectedUniformType) {
-      toast.error("Selecione o tipo de uniforme");
+    if (layoutCount === 0 || layouts.length === 0) {
+      toast.error("Configure pelo menos um layout");
       return;
     }
 
@@ -361,16 +358,6 @@ export const NewLayoutRequestDialog = ({
     const phoneDigits = customerPhone.replace(/\D/g, "");
     if (phoneDigits.length < 10 || phoneDigits.length > 11) {
       toast.error("Informe um WhatsApp válido com DDD");
-      return;
-    }
-
-    if (!quantity) {
-      toast.error("Selecione a quantidade");
-      return;
-    }
-
-    if (quantity === "custom" && (!customQuantity || parseInt(customQuantity) < 10)) {
-      toast.error("A quantidade mínima é 10 unidades");
       return;
     }
 
@@ -387,6 +374,12 @@ export const NewLayoutRequestDialog = ({
     setLoading(true);
 
     try {
+      // Calcular quantidade total somando todos os layouts
+      const totalQuantity = layouts.reduce((sum, layout) => {
+        const qty = layout.quantity === "custom" ? parseInt(layout.customQuantity) : parseInt(layout.quantity);
+        return sum + (qty || 0);
+      }, 0);
+
       // Upload de logos se fornecidas
       let uploadedLogoUrls: string[] = [];
       if (hasLogo === "sim" && logoFiles.length > 0) {
@@ -451,9 +444,12 @@ export const NewLayoutRequestDialog = ({
         return;
       }
 
-      // Calcular quantidade final
-      const finalQuantity =
-        quantity === "custom" ? parseInt(customQuantity) : parseInt(quantity);
+      // Usar o primeiro layout como base para campaign e model (para o order)
+      const firstLayout = layouts[0];
+      const isFromScratch = firstLayout.isFromScratch;
+      const selectedCampaignId = firstLayout.campaignId;
+      const selectedModel = firstLayout.model;
+      const selectedUniformType = firstLayout.uniformType;
 
       // Preparar dados de customização (remover File objects que não podem ser serializados)
       const customizationData = {
@@ -511,7 +507,7 @@ export const NewLayoutRequestDialog = ({
             phone: customerPhone,
             email: customerEmail || null,
           },
-          quantity: finalQuantity,
+          quantity: totalQuantity,
           customization: customizationData,
           hasLogo: hasLogo !== "sem_logo" && hasLogo !== "depois",
           logoUrls: uploadedLogoUrls,
@@ -558,7 +554,7 @@ export const NewLayoutRequestDialog = ({
       // Fluxo normal - criar diretamente
       const sessionId = `salesperson_${user.id}_${Date.now()}`;
 
-      // 1. Criar ORDER primeiro
+      // 1. Criar ORDER primeiro (com quantidade total)
       const { data: orderData, error: orderError } = await supabase
         .from("orders")
         .insert([{
@@ -567,8 +563,8 @@ export const NewLayoutRequestDialog = ({
           customer_name: customerName,
           customer_phone: customerPhone,
           customer_email: customerEmail || null,
-          quantity: finalQuantity,
-          model_id: isFromScratch ? null : selectedModel.id,
+          quantity: totalQuantity,
+          model_id: isFromScratch ? null : selectedModel?.id,
           customization_data: customizationData,
         }])
         .select()
@@ -588,7 +584,7 @@ export const NewLayoutRequestDialog = ({
           name: customerName,
           phone: customerPhone,
           email: customerEmail || null,
-          quantity: finalQuantity.toString(),
+          quantity: totalQuantity.toString(),
           order_id: orderData.id,
           created_by: user.id,
           created_by_salesperson: true,
@@ -604,7 +600,16 @@ export const NewLayoutRequestDialog = ({
 
       if (leadError) throw leadError;
 
-      // 3. Atualizar lead_id, customer_id e prioridade no design_task que foi criado pelo trigger
+      // 3. Buscar o design_task criado pelo trigger
+      const { data: taskData, error: taskFetchError } = await supabase
+        .from('design_tasks')
+        .select('id')
+        .eq('order_id', orderData.id)
+        .single();
+
+      if (taskFetchError) throw taskFetchError;
+
+      // 4. Atualizar lead_id, customer_id e prioridade no design_task
       const { error: updateTaskError } = await supabase
         .from('design_tasks')
         .update({ 
@@ -614,10 +619,41 @@ export const NewLayoutRequestDialog = ({
           created_by: user.id,
           created_by_salesperson: true,
         })
-        .eq('order_id', orderData.id);
+        .eq('id', taskData.id);
 
-      if (updateTaskError) {
-        console.error('Erro ao atualizar design_task:', updateTaskError);
+      if (updateTaskError) throw updateTaskError;
+
+      // 5. Criar design_task_layouts para cada layout configurado
+      const layoutsToInsert = layouts.map((layout, index) => ({
+        task_id: taskData.id,
+        layout_number: index + 1,
+        campaign_id: layout.isFromScratch ? null : layout.campaignId,
+        campaign_name: layout.campaignName,
+        uniform_type: layout.uniformType,
+        model_id: layout.isFromScratch ? null : layout.model?.id,
+        model_name: layout.isFromScratch ? null : layout.model?.name,
+        status: 'pending',
+        quantity: layout.quantity === "custom" ? parseInt(layout.customQuantity) : parseInt(layout.quantity),
+        customization_data: {
+          fromScratch: layout.isFromScratch,
+          uniformType: layout.uniformType,
+          model: layout.isFromScratch ? null : layout.model?.name,
+          front: layout.frontCustomization,
+          back: layout.backCustomization,
+          sleeves: {
+            left: layout.leftSleeveCustomization,
+            right: layout.rightSleeveCustomization,
+          },
+        },
+      }));
+
+      const { error: layoutsError } = await supabase
+        .from('design_task_layouts')
+        .insert(layoutsToInsert);
+
+      if (layoutsError) {
+        console.error('Erro ao criar layouts:', layoutsError);
+        throw layoutsError;
       }
 
       toast.success("Requisição criada com sucesso!");
@@ -906,6 +942,41 @@ export const NewLayoutRequestDialog = ({
               </Alert>
             )}
 
+            {/* Seletor de Quantidade - mostrar se tipo de uniforme selecionado (e modelo selecionado se NÃO for do zero) */}
+            {((isFromScratch && selectedUniformType) || (!isFromScratch && selectedModel)) && (
+              <div className="space-y-2">
+                <Label>Quantidade deste Layout *</Label>
+                <RadioGroup value={quantity} onValueChange={setQuantity}>
+                  <div className="grid grid-cols-3 gap-2">
+                    {["10", "20", "30", "40", "50", "60"].map((q) => (
+                      <div key={q} className="flex items-center space-x-2">
+                        <RadioGroupItem value={q} id={`qty-${q}`} />
+                        <Label htmlFor={`qty-${q}`} className="cursor-pointer">
+                          {q}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center space-x-2 mt-2">
+                    <RadioGroupItem value="custom" id="qty-custom" />
+                    <Label htmlFor="qty-custom" className="cursor-pointer">
+                      Outro
+                    </Label>
+                  </div>
+                </RadioGroup>
+                {quantity === "custom" && (
+                  <Input
+                    type="number"
+                    min="10"
+                    value={customQuantity}
+                    onChange={(e) => setCustomQuantity(e.target.value)}
+                    placeholder="Quantidade (mínimo 10)"
+                    className="mt-2"
+                  />
+                )}
+              </div>
+            )}
+
             {/* Action Buttons */}
             <div className="flex gap-2 pt-4">
               <Button
@@ -933,7 +1004,7 @@ export const NewLayoutRequestDialog = ({
                 onClick={() => {
                   // Validar se tem as informações necessárias
                   if (isFromScratch) {
-                    // Para layout do zero, só precisa do tipo de uniforme
+                    // Para layout do zero, só precisa do tipo de uniforme e quantidade
                     if (!selectedUniformType) {
                       toast.error("Selecione o tipo de uniforme");
                       return;
@@ -946,6 +1017,17 @@ export const NewLayoutRequestDialog = ({
                     }
                   }
 
+                  // Validar quantidade
+                  if (!quantity) {
+                    toast.error("Selecione a quantidade deste layout");
+                    return;
+                  }
+
+                  if (quantity === "custom" && (!customQuantity || parseInt(customQuantity) < 10)) {
+                    toast.error("A quantidade mínima é 10 unidades");
+                    return;
+                  }
+
                   // Salvar configuração do layout atual
                   const campaign = campaigns.find(c => c.id === selectedCampaignId);
                   const newLayout: LayoutConfig = {
@@ -955,6 +1037,8 @@ export const NewLayoutRequestDialog = ({
                     uniformType: selectedUniformType,
                     model: isFromScratch ? null : selectedModel,
                     isFromScratch: isFromScratch,
+                    quantity: quantity,
+                    customQuantity: customQuantity,
                     frontCustomization: {},
                     backCustomization: {},
                     leftSleeveCustomization: {},
@@ -964,6 +1048,10 @@ export const NewLayoutRequestDialog = ({
                   const updatedLayouts = [...layouts];
                   updatedLayouts[currentLayoutIndex] = newLayout;
                   setLayouts(updatedLayouts);
+
+                  // Resetar quantidade para o próximo layout
+                  setQuantity("");
+                  setCustomQuantity("");
 
                   // Avançar para próximo layout ou ir para dados do cliente
                   if (currentLayoutIndex + 1 < layoutCount) {
@@ -985,52 +1073,70 @@ export const NewLayoutRequestDialog = ({
         );
 
       case "review_layouts":
+        const totalQuantity = layouts.reduce((sum, layout) => {
+          const qty = layout.quantity === "custom" ? parseInt(layout.customQuantity) : parseInt(layout.quantity);
+          return sum + (qty || 0);
+        }, 0);
+
         return (
           <div className="space-y-4">
+            <Alert className="bg-primary/5 border-primary">
+              <AlertDescription className="font-semibold text-lg flex items-center justify-between">
+                <span>Total Geral:</span>
+                <span className="text-2xl text-primary">{totalQuantity} peças</span>
+              </AlertDescription>
+            </Alert>
+
             <div className="grid grid-cols-2 gap-3">
-              {layouts.map((layout, idx) => (
-                <Card key={layout.id} className="p-4">
-                  <div className="flex items-start gap-3">
-                    {layout.isFromScratch ? (
-                      <div className="w-20 h-20 flex items-center justify-center bg-primary/10 rounded">
-                        <Plus className="h-10 w-10 text-primary" />
-                      </div>
-                    ) : (
-                      <img
-                        src={layout.model?.photo_main}
-                        alt={layout.model?.name}
-                        className="w-20 h-20 object-contain rounded"
-                      />
-                    )}
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold">Layout {idx + 1}</h4>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setCurrentLayoutIndex(idx);
-                            setCurrentStep("setup_layout");
-                            setIsFromScratch(layout.isFromScratch || false);
-                            setSelectedCampaignId(layout.campaignId);
-                            setSelectedUniformType(layout.uniformType);
-                            setSelectedModel(layout.model);
-                          }}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <div className="text-xs space-y-1">
-                        <p><strong>Segmento:</strong> {layout.campaignName}</p>
-                        <p><strong>Tipo:</strong> {getLabel(layout.uniformType)}</p>
-                        {!layout.isFromScratch && layout.model && (
-                          <p><strong>Modelo:</strong> {layout.model.name}</p>
-                        )}
+              {layouts.map((layout, idx) => {
+                const layoutQty = layout.quantity === "custom" ? parseInt(layout.customQuantity) : parseInt(layout.quantity);
+                return (
+                  <Card key={layout.id} className="p-4">
+                    <div className="flex items-start gap-3">
+                      {layout.isFromScratch ? (
+                        <div className="w-20 h-20 flex items-center justify-center bg-primary/10 rounded">
+                          <Plus className="h-10 w-10 text-primary" />
+                        </div>
+                      ) : (
+                        <img
+                          src={layout.model?.photo_main}
+                          alt={layout.model?.name}
+                          className="w-20 h-20 object-contain rounded"
+                        />
+                      )}
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-semibold">Layout {idx + 1}</h4>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setCurrentLayoutIndex(idx);
+                              setCurrentStep("setup_layout");
+                              setIsFromScratch(layout.isFromScratch || false);
+                              setSelectedCampaignId(layout.campaignId);
+                              setSelectedUniformType(layout.uniformType);
+                              setSelectedModel(layout.model);
+                              setQuantity(layout.quantity);
+                              setCustomQuantity(layout.customQuantity);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="text-xs space-y-1">
+                          <p><strong>Segmento:</strong> {layout.campaignName}</p>
+                          <p><strong>Tipo:</strong> {getLabel(layout.uniformType)}</p>
+                          {!layout.isFromScratch && layout.model && (
+                            <p><strong>Modelo:</strong> {layout.model.name}</p>
+                          )}
+                          <p className="text-primary font-bold"><strong>Quantidade:</strong> {layoutQty} peças</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                );
+              })}
             </div>
             <div className="flex gap-2 pt-4">
               <Button variant="outline" onClick={() => setCurrentStep("customer")} className="flex-1">
@@ -1437,56 +1543,34 @@ export const NewLayoutRequestDialog = ({
                 disabled={!!selectedCustomerId}
               />
             </div>
-            <div className="space-y-2">
-              <Label>Quantidade *</Label>
-              <RadioGroup value={quantity} onValueChange={setQuantity}>
-                <div className="grid grid-cols-3 gap-2">
-                  {["10", "20", "30", "40", "50", "60"].map((q) => (
-                    <div key={q} className="flex items-center space-x-2">
-                      <RadioGroupItem value={q} id={`qty-${q}`} />
-                      <Label htmlFor={`qty-${q}`} className="cursor-pointer">
-                        {q}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex items-center space-x-2 mt-2">
-                  <RadioGroupItem value="custom" id="qty-custom" />
-                  <Label htmlFor="qty-custom" className="cursor-pointer">
-                    Outro
-                  </Label>
-                </div>
-              </RadioGroup>
-              {quantity === "custom" && (
-                <Input
-                  type="number"
-                  min="10"
-                  value={customQuantity}
-                  onChange={(e) => setCustomQuantity(e.target.value)}
-                  placeholder="Quantidade (mínimo 10)"
-                  className="mt-2"
-                />
-              )}
-            </div>
             <div className="flex gap-2">
               <Button 
                 variant="outline" 
-                onClick={() => setCurrentStep(isFromScratch ? "uniform" : "model")} 
+                onClick={() => {
+                  if (layoutCount > 1) {
+                    setCurrentStep("review_layouts");
+                  } else if (layouts.length > 0) {
+                    setCurrentStep("setup_layout");
+                  } else {
+                    setCurrentStep("quantity_layouts");
+                  }
+                }}
                 className="flex-1"
               >
                 Voltar
               </Button>
               <Button
-                onClick={() => setCurrentStep("front")}
-                disabled={
-                  !customerName.trim() ||
-                  !customerPhone ||
-                  !quantity ||
-                  (quantity === "custom" && !customQuantity)
-                }
+                onClick={() => {
+                  if (layoutCount > 1) {
+                    setCurrentStep("review_layouts");
+                  } else {
+                    setCurrentStep("front");
+                  }
+                }}
+                disabled={!customerName.trim() || !customerPhone}
                 className="flex-1"
               >
-                Continuar
+                {layoutCount > 1 ? "Revisar Layouts" : "Continuar"}
               </Button>
             </div>
           </div>

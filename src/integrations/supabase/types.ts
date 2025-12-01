@@ -915,6 +915,7 @@ export type Database = {
           layout_number: number
           model_id: string | null
           model_name: string | null
+          quantity: number | null
           status: string
           task_id: string
           uniform_type: string | null
@@ -932,6 +933,7 @@ export type Database = {
           layout_number: number
           model_id?: string | null
           model_name?: string | null
+          quantity?: number | null
           status?: string
           task_id: string
           uniform_type?: string | null
@@ -949,6 +951,7 @@ export type Database = {
           layout_number?: number
           model_id?: string | null
           model_name?: string | null
+          quantity?: number | null
           status?: string
           task_id?: string
           uniform_type?: string | null
