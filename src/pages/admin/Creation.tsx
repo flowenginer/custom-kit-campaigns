@@ -210,6 +210,26 @@ const Creation = () => {
 
       if (error) throw error;
 
+      // Buscar layouts associados às tarefas
+      const taskIds = data?.map(t => t.id) || [];
+      let layoutsByTaskId: Record<string, any[]> = {};
+      
+      if (taskIds.length > 0) {
+        const { data: layoutsData, error: layoutsError } = await supabase
+          .from('design_task_layouts')
+          .select('*')
+          .in('task_id', taskIds)
+          .order('layout_number', { ascending: true });
+
+        if (!layoutsError && layoutsData) {
+          layoutsByTaskId = layoutsData.reduce((acc, layout) => {
+            if (!acc[layout.task_id]) acc[layout.task_id] = [];
+            acc[layout.task_id].push(layout);
+            return acc;
+          }, {} as Record<string, any[]>);
+        }
+      }
+
       const formattedTasks: DesignTask[] = (data || []).map((task: any) => ({
         ...task,
         customer_name: task.orders?.customer_name,
@@ -234,6 +254,7 @@ const Creation = () => {
           : null,
         status_changed_at: task.status_changed_at,
         customer_id: task.customer_id,
+        task_layouts: layoutsByTaskId[task.id] || [],
       }));
 
       setTasks(formattedTasks);
