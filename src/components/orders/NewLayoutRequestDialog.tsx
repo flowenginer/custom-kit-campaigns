@@ -1737,28 +1737,70 @@ export const NewLayoutRequestDialog = ({
               
               <div className="grid grid-cols-1 gap-3">
                 {/* Opção 1: Sim, fazer upload agora */}
-                <Card 
-                  className={`cursor-pointer transition-all hover:border-primary ${
-                    hasLogo === 'sim' ? 'border-primary ring-2 ring-primary bg-primary/5' : ''
-                  }`}
-                  onClick={() => setHasLogo('sim')}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                        hasLogo === 'sim' ? 'border-primary bg-primary' : 'border-muted-foreground'
-                      }`}>
-                        {hasLogo === 'sim' && <Check className="h-3 w-3 text-white" />}
+                <div className="space-y-3">
+                  <Card 
+                    className={`cursor-pointer transition-all hover:border-primary ${
+                      hasLogo === 'sim' ? 'border-primary ring-2 ring-primary bg-primary/5' : ''
+                    }`}
+                    onClick={() => setHasLogo('sim')}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                          hasLogo === 'sim' ? 'border-primary bg-primary' : 'border-muted-foreground'
+                        }`}>
+                          {hasLogo === 'sim' && <Check className="h-3 w-3 text-white" />}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-base font-medium">✅ Sim, fazer upload agora</p>
+                          <p className="text-sm text-muted-foreground mt-0.5">
+                            O cliente já possui logo e vou anexar agora
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <p className="text-base font-medium">✅ Sim, fazer upload agora</p>
-                        <p className="text-sm text-muted-foreground mt-0.5">
-                          O cliente já possui logo e vou anexar agora
-                        </p>
-                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  {/* Upload logo - aparece logo abaixo quando "sim" é selecionado */}
+                  {hasLogo === "sim" && (
+                    <div className="ml-4 space-y-4 p-4 border-2 border-blue-500 rounded-lg bg-blue-50 dark:bg-blue-950">
+                      <Label className="text-base font-medium text-blue-700 dark:text-blue-300">
+                        📤 Upload das Logos *
+                      </Label>
+                      {logoFiles.map((file, index) => (
+                        <div key={index} className="flex items-center gap-2 p-3 bg-white dark:bg-gray-800 rounded border border-blue-300">
+                          <span className="text-sm flex-1 truncate">{file.name}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const newFiles = logoFiles.filter((_, i) => i !== index);
+                              setLogoFiles(newFiles);
+                            }}
+                          >
+                            ✕
+                          </Button>
+                        </div>
+                      ))}
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setLogoFiles([...logoFiles, file]);
+                            e.target.value = '';
+                          }
+                        }}
+                        className="mt-2 border-blue-300 focus:border-blue-500"
+                      />
+                      <p className="text-xs text-blue-600 dark:text-blue-400">
+                        Adicione uma logo por vez. Cada logo adicionada abre um novo campo.
+                      </p>
                     </div>
-                  </CardContent>
-                </Card>
+                  )}
+                </div>
 
                 {/* Opção 2: Enviar depois */}
                 <Card 
@@ -1849,44 +1891,6 @@ export const NewLayoutRequestDialog = ({
                 />
                 <p className="text-xs text-purple-600 dark:text-purple-400">
                   Essa descrição será exibida para o designer que vai criar a logo.
-                </p>
-              </div>
-            )}
-
-            {/* Upload apenas se "sim" */}
-            {hasLogo === "sim" && (
-              <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
-                <Label className="text-base font-medium">Upload das Logos *</Label>
-                {logoFiles.map((file, index) => (
-                  <div key={index} className="flex items-center gap-2 p-3 bg-background rounded border">
-                    <span className="text-sm flex-1 truncate">{file.name}</span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        const newFiles = logoFiles.filter((_, i) => i !== index);
-                        setLogoFiles(newFiles);
-                      }}
-                    >
-                      ✕
-                    </Button>
-                  </div>
-                ))}
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      setLogoFiles([...logoFiles, file]);
-                      e.target.value = '';
-                    }
-                  }}
-                  className="mt-2"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Adicione uma logo por vez. Cada logo adicionada abre um novo campo.
                 </p>
               </div>
             )}
