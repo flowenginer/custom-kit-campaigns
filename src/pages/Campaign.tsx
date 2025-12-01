@@ -21,6 +21,7 @@ import { WorkflowStep } from "@/types/workflow";
 import { useGlobalCampaignOverrides, useCampaignVisualOverrides } from "@/hooks/useCampaignVisualOverrides";
 import { detectDevice } from "@/lib/deviceDetection";
 import { useUniformTypes } from "@/hooks/useUniformTypes";
+import { BusinessSegmentSelector } from "@/components/campaign/BusinessSegmentSelector";
 
 // Importar imagens dos uniformes
 import mangaCurtaImg from "@/assets/uniforms/manga-curta.png";
@@ -49,14 +50,15 @@ const STEP_DEFINITIONS = [
   { id: 'select_type', label: 'Tipo', order: 0, enabled: true },
   { id: 'enter_name', label: 'Nome', order: 1, enabled: true },
   { id: 'enter_phone', label: 'WhatsApp', order: 2, enabled: true },
-  { id: 'select_quantity', label: 'Quantidade', order: 3, enabled: true },
-  { id: 'choose_model', label: 'Modelo', order: 4, enabled: true },
-  { id: 'customize_front', label: 'Frente', order: 5, enabled: true },
-  { id: 'customize_back', label: 'Costas', order: 6, enabled: true },
-  { id: 'customize_sleeves_left', label: 'Manga Esq.', order: 7, enabled: true },
-  { id: 'customize_sleeves_right', label: 'Manga Dir.', order: 8, enabled: true },
-  { id: 'upload_logos', label: 'Logos', order: 9, enabled: true },
-  { id: 'review', label: 'Revisão', order: 10, enabled: true }
+  { id: 'select_business_segment', label: 'Segmento', order: 3, enabled: false }, // Novo step para Adventure
+  { id: 'select_quantity', label: 'Quantidade', order: 4, enabled: true },
+  { id: 'choose_model', label: 'Modelo', order: 5, enabled: true },
+  { id: 'customize_front', label: 'Frente', order: 6, enabled: true },
+  { id: 'customize_back', label: 'Costas', order: 7, enabled: true },
+  { id: 'customize_sleeves_left', label: 'Manga Esq.', order: 8, enabled: true },
+  { id: 'customize_sleeves_right', label: 'Manga Dir.', order: 9, enabled: true },
+  { id: 'upload_logos', label: 'Logos', order: 10, enabled: true },
+  { id: 'review', label: 'Revisão', order: 11, enabled: true }
 ];
 
 const STORAGE_KEY = 'campaign_progress';
@@ -87,6 +89,13 @@ export default function Campaign() {
     quantity: null as number | 'custom' | null,
     customQuantity: null as number | null
   });
+  
+  // Business segment state (para campanhas Adventure)
+  const [businessSegmentId, setBusinessSegmentId] = useState<string | null>(null);
+  const [businessSegmentOther, setBusinessSegmentOther] = useState<string>('');
+  
+  // Verifica se é campanha Adventure
+  const isAdventureCampaign = campaign?.segment_tag === 'adventure_';
   
   // Estados de customização
   const [customizations, setCustomizations] = useState<any>({
@@ -170,19 +179,43 @@ export default function Campaign() {
 
   // Criar array dinâmico de steps habilitados do workflow_config
   const enabledSteps = useMemo(() => {
-    if (!campaign?.workflow_config) return STEP_DEFINITIONS;
+    let steps = STEP_DEFINITIONS;
     
-    const workflowSteps = campaign.workflow_config as WorkflowStep[];
+    if (campaign?.workflow_config) {
+      const workflowSteps = campaign.workflow_config as WorkflowStep[];
+      steps = workflowSteps
+        .filter(step => step.enabled)
+        .sort((a, b) => a.order - b.order)
+        .map(step => ({
+          ...step,
+          // Mapear IDs do workflow_config para IDs usados no código
+          id: ID_MAP[step.id] || step.id
+        }));
+    }
     
-    return workflowSteps
-      .filter(step => step.enabled)
-      .sort((a, b) => a.order - b.order)
-      .map(step => ({
-        ...step,
-        // Mapear IDs do workflow_config para IDs usados no código
-        id: ID_MAP[step.id] || step.id
-      }));
-  }, [campaign?.workflow_config]);
+    // Adicionar step de segmento de negócio para campanhas Adventure (após telefone)
+    if (isAdventureCampaign) {
+      const phoneStepIndex = steps.findIndex(s => s.id === 'enter_phone');
+      if (phoneStepIndex !== -1) {
+        const hasBusinessSegmentStep = steps.some(s => s.id === 'select_business_segment');
+        if (!hasBusinessSegmentStep) {
+          const businessSegmentStep = {
+            id: 'select_business_segment',
+            label: 'Segmento',
+            order: phoneStepIndex + 1,
+            enabled: true
+          };
+          steps = [
+            ...steps.slice(0, phoneStepIndex + 1),
+            businessSegmentStep,
+            ...steps.slice(phoneStepIndex + 1)
+          ];
+        }
+      }
+    }
+    
+    return steps;
+  }, [campaign?.workflow_config, isAdventureCampaign]);
 
   const currentStepId = enabledSteps[currentStep]?.id;
   const progress = ((currentStep + 1) / enabledSteps.length) * 100;
@@ -585,6 +618,9 @@ export default function Campaign() {
         device_os: deviceInfo.deviceOS,
         device_browser: deviceInfo.deviceBrowser,
         user_agent: deviceInfo.userAgent,
+        // Segmento de negócio (apenas para Adventure)
+        business_segment_id: businessSegmentId || null,
+        business_segment_other: businessSegmentOther || null,
         // Definir needs_logo e logo_action baseado na escolha de upload quando pedido completo
         ...(completed && {
           needs_logo: uploadChoice === 'depois',
@@ -668,6 +704,14 @@ export default function Campaign() {
       
       if (phoneDigits.length < 10 || phoneDigits.length > 11) {
         toast.error('Informe um número de WhatsApp válido com DDD');
+        return;
+      }
+    }
+
+    // Validação para segmento de negócio (Adventure)
+    if (currentStepId === 'select_business_segment') {
+      if (!businessSegmentId && !businessSegmentOther.trim()) {
+        toast.error('Selecione seu segmento de atuação');
         return;
       }
     }
@@ -1066,6 +1110,22 @@ export default function Campaign() {
               <p className="text-sm text-muted-foreground text-center mt-4">
                 {stepOverrides?.helpText || "Formato: (DDD) 00000-0000"}
               </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step: Select Business Segment (apenas Adventure) */}
+        {currentStepId === 'select_business_segment' && (
+          <Card className="themed-card max-w-2xl mx-auto shadow-lg">
+            <CardContent className="p-8">
+              <BusinessSegmentSelector
+                selectedSegmentId={businessSegmentId}
+                otherSegmentText={businessSegmentOther}
+                onSelectSegment={(segmentId, otherText) => {
+                  setBusinessSegmentId(segmentId);
+                  setBusinessSegmentOther(otherText);
+                }}
+              />
             </CardContent>
           </Card>
         )}

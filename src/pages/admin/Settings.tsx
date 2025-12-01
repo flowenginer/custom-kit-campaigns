@@ -10,12 +10,13 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { UserPlus, Trash2, Edit, KeyRound, Loader2, Code2, AlertCircle } from "lucide-react";
+import { UserPlus, Trash2, Edit, KeyRound, Loader2, Code2, AlertCircle, Building2 } from "lucide-react";
 import { UrgentReasonsManager } from "@/components/admin/UrgentReasonsManager";
 import { KanbanVisibilityManager } from "@/components/admin/KanbanVisibilityManager";
 import { MenuVisibilityManager } from "@/components/admin/MenuVisibilityManager";
 import { UniformTypesManager } from "@/components/admin/UniformTypesManager";
 import { MenuStructureManager } from "@/components/admin/MenuStructureManager";
+import { BusinessSegmentsManager } from "@/components/admin/BusinessSegmentsManager";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AppRole } from "@/hooks/useUserRole";
@@ -424,15 +425,16 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="users" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-8">
+        <TabsList className="grid w-full grid-cols-9">
           <TabsTrigger value="users">Usuários</TabsTrigger>
-          <TabsTrigger value="uniform-types">Tipos de Uniforme</TabsTrigger>
-          <TabsTrigger value="kanban">Visibilidade Kanban</TabsTrigger>
-          <TabsTrigger value="menu">Visibilidade Menu</TabsTrigger>
+          <TabsTrigger value="uniform-types">Tipos Uniforme</TabsTrigger>
+          <TabsTrigger value="business-segments"><Building2 className="w-4 h-4 mr-1 inline" />Segmentos</TabsTrigger>
+          <TabsTrigger value="kanban">Kanban</TabsTrigger>
+          <TabsTrigger value="menu">Menu</TabsTrigger>
           <TabsTrigger value="menu-structure">Estrutura Menu</TabsTrigger>
           <TabsTrigger value="password">Senha</TabsTrigger>
-          <TabsTrigger value="scripts"><Code2 className="w-4 h-4 mr-2 inline" />Scripts</TabsTrigger>
-          <TabsTrigger value="urgent-reasons"><AlertCircle className="w-4 h-4 mr-2 inline" />Motivos Urgência</TabsTrigger>
+          <TabsTrigger value="scripts"><Code2 className="w-4 h-4 mr-1 inline" />Scripts</TabsTrigger>
+          <TabsTrigger value="urgent-reasons"><AlertCircle className="w-4 h-4 mr-1 inline" />Urgência</TabsTrigger>
         </TabsList>
 
         {/* TAB: USUÁRIOS */}
@@ -784,6 +786,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         {/* TAB: MOTIVOS DE URGÊNCIA */}
         <TabsContent value="urgent-reasons" className="space-y-4">
           <UrgentReasonsManager />
+        </TabsContent>
+        
+        {/* TAB: SEGMENTOS DE NEGÓCIO */}
+        <TabsContent value="business-segments" className="space-y-4">
+          <BusinessSegmentsManager />
         </TabsContent>
       </Tabs>
 

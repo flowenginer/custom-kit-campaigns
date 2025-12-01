@@ -103,6 +103,39 @@ export type Database = {
         }
         Relationships: []
       }
+      business_segments: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          display_order: number | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       campaign_themes: {
         Row: {
           campaign_id: string
@@ -1329,6 +1362,8 @@ export type Database = {
           ab_test_id: string | null
           ab_variant: string | null
           attempt_number: number | null
+          business_segment_id: string | null
+          business_segment_other: string | null
           campaign_id: string | null
           completed: boolean | null
           created_at: string | null
@@ -1368,6 +1403,8 @@ export type Database = {
           ab_test_id?: string | null
           ab_variant?: string | null
           attempt_number?: number | null
+          business_segment_id?: string | null
+          business_segment_other?: string | null
           campaign_id?: string | null
           completed?: boolean | null
           created_at?: string | null
@@ -1407,6 +1444,8 @@ export type Database = {
           ab_test_id?: string | null
           ab_variant?: string | null
           attempt_number?: number | null
+          business_segment_id?: string | null
+          business_segment_other?: string | null
           campaign_id?: string | null
           completed?: boolean | null
           created_at?: string | null
@@ -1448,6 +1487,13 @@ export type Database = {
             columns: ["ab_test_id"]
             isOneToOne: false
             referencedRelation: "ab_tests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_business_segment_id_fkey"
+            columns: ["business_segment_id"]
+            isOneToOne: false
+            referencedRelation: "business_segments"
             referencedColumns: ["id"]
           },
           {
