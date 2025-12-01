@@ -18,8 +18,7 @@ import {
   useReorderBusinessSegments,
   BusinessSegment 
 } from "@/hooks/useBusinessSegments";
-
-const EMOJI_OPTIONS = ['🏢', '🌱', '🧺', '🏊', '🪨', '🧹', '🍽️', '🏗️', '🚗', '🐕', '💪', '🛒', '🏥', '✈️', '🎓', '🏨', '🏭', '⚡', '🌊', '🎨'];
+import { EmojiPicker } from "./EmojiPicker";
 
 export const BusinessSegmentsManager = () => {
   const { data: segments, isLoading } = useBusinessSegments();
@@ -163,23 +162,13 @@ export const BusinessSegmentsManager = () => {
               </DialogHeader>
               
               <div className="space-y-4">
-                <div>
+              <div>
                   <Label>Ícone</Label>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {EMOJI_OPTIONS.map(emoji => (
-                      <button
-                        key={emoji}
-                        type="button"
-                        className={`text-2xl p-2 rounded-lg border-2 transition-colors ${
-                          formData.icon === emoji 
-                            ? 'border-primary bg-primary/10' 
-                            : 'border-transparent hover:border-muted'
-                        }`}
-                        onClick={() => setFormData(prev => ({ ...prev, icon: emoji }))}
-                      >
-                        {emoji}
-                      </button>
-                    ))}
+                  <div className="mt-2">
+                    <EmojiPicker 
+                      value={formData.icon} 
+                      onChange={(emoji) => setFormData(prev => ({ ...prev, icon: emoji }))} 
+                    />
                   </div>
                 </div>
                 
@@ -317,21 +306,11 @@ export const BusinessSegmentsManager = () => {
             <div className="space-y-4">
               <div>
                 <Label>Ícone</Label>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {EMOJI_OPTIONS.map(emoji => (
-                    <button
-                      key={emoji}
-                      type="button"
-                      className={`text-2xl p-2 rounded-lg border-2 transition-colors ${
-                        formData.icon === emoji 
-                          ? 'border-primary bg-primary/10' 
-                          : 'border-transparent hover:border-muted'
-                      }`}
-                      onClick={() => setFormData(prev => ({ ...prev, icon: emoji }))}
-                    >
-                      {emoji}
-                    </button>
-                  ))}
+                <div className="mt-2">
+                  <EmojiPicker 
+                    value={formData.icon} 
+                    onChange={(emoji) => setFormData(prev => ({ ...prev, icon: emoji }))} 
+                  />
                 </div>
               </div>
               
