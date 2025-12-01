@@ -1718,7 +1718,27 @@ export const NewLayoutRequestDialog = ({
                 side="right"
                 value={rightSleeveCustomization}
                 onChange={(data) => setRightSleeveCustomization({ ...rightSleeveCustomization, ...data })}
-                onNext={() => setCurrentStep("logo")}
+                onNext={() => {
+                  // Salvar personalização do layout atual
+                  const updatedLayouts = [...layouts];
+                  updatedLayouts[currentLayoutIndex] = {
+                    ...updatedLayouts[currentLayoutIndex],
+                    frontCustomization,
+                    backCustomization,
+                    leftSleeveCustomization,
+                    rightSleeveCustomization,
+                  };
+                  setLayouts(updatedLayouts);
+
+                  // Se há mais layouts para personalizar, perguntar se quer copiar
+                  if (layoutCount > 1 && currentLayoutIndex + 1 < layoutCount) {
+                    setCurrentLayoutIndex(currentLayoutIndex + 1);
+                    setCurrentStep("copy_customization");
+                  } else {
+                    // Último ou único layout, ir para logo
+                    setCurrentStep("logo");
+                  }
+                }}
               />
             )}
             <Button variant="outline" onClick={() => setCurrentStep("sleeves_left")} className="w-full">
