@@ -902,6 +902,82 @@ export type Database = {
           },
         ]
       }
+      design_task_layouts: {
+        Row: {
+          campaign_id: string | null
+          campaign_name: string | null
+          client_approved_at: string | null
+          created_at: string | null
+          current_version: number | null
+          customization_data: Json | null
+          design_files: Json | null
+          id: string
+          layout_number: number
+          model_id: string | null
+          model_name: string | null
+          status: string
+          task_id: string
+          uniform_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          campaign_id?: string | null
+          campaign_name?: string | null
+          client_approved_at?: string | null
+          created_at?: string | null
+          current_version?: number | null
+          customization_data?: Json | null
+          design_files?: Json | null
+          id?: string
+          layout_number: number
+          model_id?: string | null
+          model_name?: string | null
+          status?: string
+          task_id: string
+          uniform_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          campaign_id?: string | null
+          campaign_name?: string | null
+          client_approved_at?: string | null
+          created_at?: string | null
+          current_version?: number | null
+          customization_data?: Json | null
+          design_files?: Json | null
+          id?: string
+          layout_number?: number
+          model_id?: string | null
+          model_name?: string | null
+          status?: string
+          task_id?: string
+          uniform_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "design_task_layouts_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "design_task_layouts_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "shirt_models"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "design_task_layouts_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "design_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       design_tasks: {
         Row: {
           assigned_at: string | null
