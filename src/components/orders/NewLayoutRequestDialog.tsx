@@ -26,8 +26,9 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, Plus, AlertTriangle, Check, Search, X, Megaphone } from "lucide-react";
+import { Loader2, Plus, AlertTriangle, Check, Search, X, Megaphone, Edit } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useDebounce } from "use-debounce";
 import { FrontEditor } from "@/components/customization/FrontEditor";
@@ -51,6 +52,18 @@ const UNIFORM_IMAGES: Record<string, string> = {
 };
 
 
+interface LayoutConfig {
+  id: string;
+  campaignId: string;
+  campaignName: string;
+  uniformType: string;
+  model: any;
+  frontCustomization: any;
+  backCustomization: any;
+  leftSleeveCustomization: any;
+  rightSleeveCustomization: any;
+}
+
 interface NewLayoutRequestDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -67,6 +80,11 @@ export const NewLayoutRequestDialog = ({
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [models, setModels] = useState<any[]>([]);
   const [filteredModels, setFilteredModels] = useState<any[]>([]);
+
+  // Multi-layout states
+  const [layoutCount, setLayoutCount] = useState(1);
+  const [layouts, setLayouts] = useState<LayoutConfig[]>([]);
+  const [currentLayoutIndex, setCurrentLayoutIndex] = useState(0);
 
   // Form states
   const [isFromScratch, setIsFromScratch] = useState(false);
@@ -94,17 +112,21 @@ export const NewLayoutRequestDialog = ({
   const [urgentReasonDialogOpen, setUrgentReasonDialogOpen] = useState(false);
   const [logoDescription, setLogoDescription] = useState<string>("");
   const [currentStep, setCurrentStep] = useState<
+    | "quantity_layouts"
+    | "setup_layout"
     | "campaign"
     | "uniform"
     | "model"
     | "customer"
+    | "review_layouts"
     | "front"
     | "back"
     | "sleeves_left"
     | "sleeves_right"
+    | "copy_customization"
     | "logo"
     | "notes"
-  >("campaign");
+  >("quantity_layouts");
 
   // Customization states
   const [frontCustomization, setFrontCustomization] = useState<{
@@ -610,6 +632,9 @@ export const NewLayoutRequestDialog = ({
   };
 
   const resetForm = () => {
+    setLayoutCount(1);
+    setLayouts([]);
+    setCurrentLayoutIndex(0);
     setIsFromScratch(false);
     setSelectedCampaignId("");
     setSelectedUniformType("");
@@ -626,7 +651,7 @@ export const NewLayoutRequestDialog = ({
     setUrgentReasonId("");
     setUrgentReasonText("");
     setLogoDescription("");
-    setCurrentStep("campaign");
+    setCurrentStep("quantity_layouts");
     setCustomerSearchTerm("");
     setCustomerSearchResults([]);
     setSelectedCustomerId(null);
@@ -683,8 +708,372 @@ export const NewLayoutRequestDialog = ({
     });
   };
 
+  const getStepTitle = () => {
+    if (currentStep === "quantity_layouts") return "Quantos mockups este cliente precisa?";
+    if (currentStep === "setup_layout") return `Configurar Layout ${currentLayoutIndex + 1} de ${layoutCount}`;
+    if (currentStep === "review_layouts") return "Revisar Todos os Layouts";
+    if (currentStep === "copy_customization") return "Copiar Personalização?";
+    if (currentStep === "customer") return "Dados do Cliente";
+    if (layoutCount > 1 && ["front", "back", "sleeves_left", "sleeves_right"].includes(currentStep)) {
+      return `Layout ${currentLayoutIndex + 1}/${layoutCount} - ${currentStep === "front" ? "Frente" : currentStep === "back" ? "Costas" : "Mangas"}`;
+    }
+    return "";
+  };
+
   const renderStepContent = () => {
     switch (currentStep) {
+      case "quantity_layouts":
+        return (
+          <div className="space-y-4">
+            <Label className="text-lg">Quantos mockups/layouts este cliente precisa?</Label>
+            <div className="grid grid-cols-4 gap-3">
+              {[1, 2, 3, 4].map((num) => (
+                <Card
+                  key={num}
+                  className={`p-6 cursor-pointer transition-all hover:border-primary hover:shadow-md ${
+                    layoutCount === num ? "border-primary ring-2 ring-primary bg-primary/5" : ""
+                  }`}
+                  onClick={() => {
+                    setLayoutCount(num);
+                    setLayouts([]);
+                    setCurrentLayoutIndex(0);
+                    setCurrentStep("setup_layout");
+                  }}
+                >
+                  <div className="flex flex-col items-center gap-2">
+                    <span className="text-4xl font-bold text-primary">{num}</span>
+                    <span className="text-sm font-medium text-center">
+                      {num === 1 ? "Layout" : "Layouts"}
+                    </span>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        );
+
+      case "setup_layout":
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Layout {currentLayoutIndex + 1} de {layoutCount}</h3>
+              <Badge variant="outline">{currentLayoutIndex + 1}/{layoutCount}</Badge>
+            </div>
+            
+            {/* Campaign Selection */}
+            <div className="space-y-2">
+              <Label>Segmento/Campanha *</Label>
+              <ScrollArea className="h-[200px]">
+                <div className="grid grid-cols-3 gap-2 pr-4">
+                  {campaigns.map((campaign) => (
+                    <Card
+                      key={campaign.id}
+                      className={`p-3 cursor-pointer transition-all hover:border-primary ${
+                        selectedCampaignId === campaign.id ? "border-primary ring-2 ring-primary" : ""
+                      }`}
+                      onClick={() => setSelectedCampaignId(campaign.id)}
+                    >
+                      <div className="flex flex-col items-center gap-1">
+                        <Megaphone className="h-6 w-6 text-primary" />
+                        <span className="text-xs font-medium text-center">{campaign.name}</span>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+
+            {/* Uniform Type Selection */}
+            {selectedCampaignId && (
+              <div className="space-y-2">
+                <Label>Tipo de Uniforme *</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {uniformTypes.map((type) => (
+                    <Card
+                      key={type.tag_value}
+                      className={`p-3 cursor-pointer transition-all hover:border-primary ${
+                        selectedUniformType === type.tag_value ? "border-primary ring-2 ring-primary" : ""
+                      }`}
+                      onClick={() => setSelectedUniformType(type.tag_value)}
+                    >
+                      <div className="flex flex-col items-center gap-1">
+                        <img
+                          src={UNIFORM_IMAGES[type.tag_value] || mangaCurtaImg}
+                          alt={getLabel(type.tag_value)}
+                          className="w-16 h-16 object-contain"
+                        />
+                        <span className="text-xs font-medium text-center">
+                          {getIcon(type.tag_value)} {getLabel(type.tag_value)}
+                        </span>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Model Selection */}
+            {selectedUniformType && (
+              <div className="space-y-2">
+                <Label>Modelo *</Label>
+                <ScrollArea className="h-[200px]">
+                  <div className="grid grid-cols-3 gap-2 pr-4">
+                    {filteredModels.map((model) => (
+                      <Card
+                        key={model.id}
+                        className={`p-2 cursor-pointer transition-all hover:border-primary ${
+                          selectedModel?.id === model.id ? "border-primary ring-2 ring-primary" : ""
+                        }`}
+                        onClick={() => setSelectedModel(model)}
+                      >
+                        <div className="flex flex-col items-center gap-1">
+                          <img
+                            src={model.photo_main}
+                            alt={model.name}
+                            className="w-full aspect-square object-contain rounded"
+                          />
+                          <span className="text-xs font-medium text-center">{model.name}</span>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (currentLayoutIndex > 0) {
+                    setCurrentLayoutIndex(currentLayoutIndex - 1);
+                    // Carregar dados do layout anterior
+                    const prevLayout = layouts[currentLayoutIndex - 1];
+                    if (prevLayout) {
+                      setSelectedCampaignId(prevLayout.campaignId);
+                      setSelectedUniformType(prevLayout.uniformType);
+                      setSelectedModel(prevLayout.model);
+                    }
+                  } else {
+                    setCurrentStep("quantity_layouts");
+                  }
+                }}
+                className="flex-1"
+              >
+                Voltar
+              </Button>
+              <Button
+                onClick={() => {
+                  if (!selectedCampaignId || !selectedUniformType || !selectedModel) {
+                    toast.error("Selecione campanha, tipo e modelo");
+                    return;
+                  }
+
+                  // Salvar configuração do layout atual
+                  const campaign = campaigns.find(c => c.id === selectedCampaignId);
+                  const newLayout: LayoutConfig = {
+                    id: `layout_${currentLayoutIndex}`,
+                    campaignId: selectedCampaignId,
+                    campaignName: campaign?.name || "",
+                    uniformType: selectedUniformType,
+                    model: selectedModel,
+                    frontCustomization: {},
+                    backCustomization: {},
+                    leftSleeveCustomization: {},
+                    rightSleeveCustomization: {},
+                  };
+
+                  const updatedLayouts = [...layouts];
+                  updatedLayouts[currentLayoutIndex] = newLayout;
+                  setLayouts(updatedLayouts);
+
+                  // Avançar para próximo layout ou ir para dados do cliente
+                  if (currentLayoutIndex + 1 < layoutCount) {
+                    setCurrentLayoutIndex(currentLayoutIndex + 1);
+                    setSelectedCampaignId("");
+                    setSelectedUniformType("");
+                    setSelectedModel(null);
+                  } else {
+                    setCurrentStep("customer");
+                  }
+                }}
+                className="flex-1"
+              >
+                {currentLayoutIndex + 1 < layoutCount ? "Próximo Layout" : "Ir para Dados do Cliente"}
+              </Button>
+            </div>
+          </div>
+        );
+
+      case "review_layouts":
+        return (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              {layouts.map((layout, idx) => (
+                <Card key={layout.id} className="p-4">
+                  <div className="flex items-start gap-3">
+                    <img
+                      src={layout.model.photo_main}
+                      alt={layout.model.name}
+                      className="w-20 h-20 object-contain rounded"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-semibold">Layout {idx + 1}</h4>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setCurrentLayoutIndex(idx);
+                            setCurrentStep("setup_layout");
+                            setSelectedCampaignId(layout.campaignId);
+                            setSelectedUniformType(layout.uniformType);
+                            setSelectedModel(layout.model);
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="text-xs space-y-1">
+                        <p><strong>Segmento:</strong> {layout.campaignName}</p>
+                        <p><strong>Tipo:</strong> {getLabel(layout.uniformType)}</p>
+                        <p><strong>Modelo:</strong> {layout.model.name}</p>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+            <div className="flex gap-2 pt-4">
+              <Button variant="outline" onClick={() => setCurrentStep("customer")} className="flex-1">
+                Voltar
+              </Button>
+              <Button
+                onClick={() => {
+                  setCurrentLayoutIndex(0);
+                  setCurrentStep("front");
+                }}
+                className="flex-1"
+              >
+                Iniciar Personalização
+              </Button>
+            </div>
+          </div>
+        );
+
+      case "copy_customization":
+        return (
+          <div className="space-y-4">
+            <div className="text-center space-y-4">
+              <h3 className="text-lg font-semibold">
+                Deseja aplicar a mesma personalização ao Layout {currentLayoutIndex + 1}?
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Você pode copiar toda a personalização do Layout {currentLayoutIndex} ou começar do zero.
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    // Copiar personalização do layout anterior
+                    const prevLayout = layouts[currentLayoutIndex - 1];
+                    setFrontCustomization(prevLayout.frontCustomization);
+                    setBackCustomization(prevLayout.backCustomization);
+                    setLeftSleeveCustomization(prevLayout.leftSleeveCustomization);
+                    setRightSleeveCustomization(prevLayout.rightSleeveCustomization);
+                    
+                    // Salvar no layout atual e avançar
+                    const updatedLayouts = [...layouts];
+                    updatedLayouts[currentLayoutIndex] = {
+                      ...updatedLayouts[currentLayoutIndex],
+                      frontCustomization: prevLayout.frontCustomization,
+                      backCustomization: prevLayout.backCustomization,
+                      leftSleeveCustomization: prevLayout.leftSleeveCustomization,
+                      rightSleeveCustomization: prevLayout.rightSleeveCustomization,
+                    };
+                    setLayouts(updatedLayouts);
+
+                    // Ir para próximo layout ou concluir
+                    if (currentLayoutIndex + 1 < layoutCount) {
+                      setCurrentLayoutIndex(currentLayoutIndex + 1);
+                      setCurrentStep("copy_customization");
+                    } else {
+                      setCurrentStep("logo");
+                    }
+                  }}
+                  className="flex-1"
+                >
+                  <Check className="h-4 w-4 mr-2" />
+                  Sim, Copiar Personalização
+                </Button>
+                <Button
+                  onClick={() => {
+                    // Resetar personalizações para começar do zero
+                    setFrontCustomization({
+                      logoType: "none",
+                      textColor: "#000000",
+                      text: "",
+                      logoUrl: "",
+                      customDescription: "",
+                      customFile: null,
+                    });
+                    setBackCustomization({
+                      logoLarge: false,
+                      logoUrl: "",
+                      logoNeck: false,
+                      name: false,
+                      nameText: "",
+                      whatsapp: false,
+                      whatsappText: "",
+                      instagram: false,
+                      instagramText: "",
+                      email: false,
+                      emailText: "",
+                      website: false,
+                      websiteText: "",
+                      hasSponsors: false,
+                      sponsorsLocation: "",
+                      sponsors: [],
+                      sponsorsLogosUrls: [],
+                      noCustomization: false,
+                      hasCustomDescription: false,
+                      customDescription: "",
+                      customFile: null,
+                    });
+                    setLeftSleeveCustomization({
+                      flag: false,
+                      flagState: undefined,
+                      flagUrl: "",
+                      logoSmall: false,
+                      logoFile: null,
+                      logoUrl: "",
+                      text: false,
+                      textContent: "",
+                    });
+                    setRightSleeveCustomization({
+                      flag: false,
+                      flagState: undefined,
+                      flagUrl: "",
+                      logoSmall: false,
+                      logoFile: null,
+                      logoUrl: "",
+                      text: false,
+                      textContent: "",
+                    });
+                    
+                    setCurrentStep("front");
+                  }}
+                  className="flex-1"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Não, Personalizar do Zero
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+
       case "campaign":
         return (
           <div className="space-y-4">
@@ -1362,22 +1751,6 @@ export const NewLayoutRequestDialog = ({
       default:
         return null;
     }
-  };
-
-  const getStepTitle = () => {
-    const titles = {
-      campaign: "Selecionar Campanha",
-      uniform: "Tipo de Uniforme",
-      model: "Escolher Modelo",
-      customer: "Dados do Cliente",
-      front: "Personalização - Frente",
-      back: "Personalização - Costas",
-      sleeves_left: "Personalização - Manga Esquerda",
-      sleeves_right: "Personalização - Manga Direita",
-      logo: "Logo do Cliente",
-      notes: "Observações",
-    };
-    return titles[currentStep] || "";
   };
 
   return (
