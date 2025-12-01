@@ -12,6 +12,25 @@ export type TaskStatus = DbTaskStatus | 'logo_needed';
 
 export type TaskPriority = 'normal' | 'urgent';
 
+export interface DesignTaskLayout {
+  id: string;
+  task_id: string;
+  layout_number: number;
+  campaign_id: string | null;
+  campaign_name: string | null;
+  uniform_type: string | null;
+  model_id: string | null;
+  model_name: string | null;
+  status: string;
+  quantity: number | null;
+  customization_data: any;
+  design_files: any[] | null;
+  current_version: number | null;
+  client_approved_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
 export interface DesignFile {
   version: number;
   url: string;
@@ -67,6 +86,7 @@ export interface DesignTask {
   creator_name?: string | null;
   logo_action?: 'designer_create' | 'waiting_client' | null;
   logo_description?: string | null;
+  task_layouts?: DesignTaskLayout[];
 }
 
 export interface DesignTaskHistory {

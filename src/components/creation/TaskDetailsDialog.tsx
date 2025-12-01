@@ -1111,20 +1111,78 @@ export const TaskDetailsDialog = ({
                   )}
                 </div>
               ) : (
-        <CustomizationViewer 
-          data={task.customization_data}
-          campaignName={task.campaign_name}
-          modelName={task.model_name}
-          modelCode={task.model_code}
-          modelImageFront={task.model_image_front}
-          taskId={task.id}
-          createdBy={task.created_by}
-          currentUserId={currentUser?.id}
-          isSalesperson={isSalesperson}
-          onModelChange={onTaskUpdated}
-          logoAction={task.logo_action}
-          logoDescription={task.logo_description}
-        />
+                // Contexto DESIGNER: Exibir layouts individuais em abas
+                <>
+                  {task.task_layouts && task.task_layouts.length > 1 ? (
+                    // MÚLTIPLOS LAYOUTS - Exibir abas para cada mockup
+                    <Tabs defaultValue="layout_1" className="space-y-4">
+                      <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${task.task_layouts.length}, 1fr)` }}>
+                        {task.task_layouts.map((layout, index) => (
+                          <TabsTrigger key={layout.id} value={`layout_${index + 1}`}>
+                            <Palette className="h-4 w-4 mr-2" />
+                            Mockup {index + 1}
+                            {layout.campaign_name && (
+                              <span className="ml-2 text-xs text-muted-foreground">
+                                ({layout.campaign_name})
+                              </span>
+                            )}
+                          </TabsTrigger>
+                        ))}
+                      </TabsList>
+                      
+                      {task.task_layouts.map((layout, index) => (
+                        <TabsContent key={layout.id} value={`layout_${index + 1}`} className="mt-0">
+                          <CustomizationViewer 
+                            data={layout.customization_data}
+                            campaignName={layout.campaign_name || undefined}
+                            modelName={layout.model_name || undefined}
+                            modelCode={task.model_code}
+                            modelImageFront={task.model_image_front}
+                            taskId={task.id}
+                            createdBy={task.created_by}
+                            currentUserId={currentUser?.id}
+                            isSalesperson={isSalesperson}
+                            onModelChange={onTaskUpdated}
+                            logoAction={task.logo_action}
+                            logoDescription={task.logo_description}
+                          />
+                        </TabsContent>
+                      ))}
+                    </Tabs>
+                  ) : task.task_layouts && task.task_layouts.length === 1 ? (
+                    // LAYOUT ÚNICO - Exibir direto
+                    <CustomizationViewer 
+                      data={task.task_layouts[0].customization_data}
+                      campaignName={task.task_layouts[0].campaign_name || undefined}
+                      modelName={task.task_layouts[0].model_name || undefined}
+                      modelCode={task.model_code}
+                      modelImageFront={task.model_image_front}
+                      taskId={task.id}
+                      createdBy={task.created_by}
+                      currentUserId={currentUser?.id}
+                      isSalesperson={isSalesperson}
+                      onModelChange={onTaskUpdated}
+                      logoAction={task.logo_action}
+                      logoDescription={task.logo_description}
+                    />
+                  ) : (
+                    // FALLBACK - Dados antigos (antes da implementação de layouts)
+                    <CustomizationViewer 
+                      data={task.customization_data}
+                      campaignName={task.campaign_name}
+                      modelName={task.model_name}
+                      modelCode={task.model_code}
+                      modelImageFront={task.model_image_front}
+                      taskId={task.id}
+                      createdBy={task.created_by}
+                      currentUserId={currentUser?.id}
+                      isSalesperson={isSalesperson}
+                      onModelChange={onTaskUpdated}
+                      logoAction={task.logo_action}
+                      logoDescription={task.logo_description}
+                    />
+                  )}
+                </>
               )}
             </TabsContent>
 
