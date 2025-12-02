@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Plus, Trash2, Upload, ImageIcon, X, Pencil, LayoutGrid, LayoutList, Grid3x3, Grid2x2, Folder, FolderOpen, ChevronDown, ChevronRight, User, Users } from "lucide-react";
+import { Plus, Trash2, Upload, ImageIcon, X, Pencil, LayoutGrid, LayoutList, Grid3x3, Grid2x2, Folder, FolderOpen, ChevronDown, ChevronRight, User, Users, AlertTriangle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -151,6 +151,17 @@ const Models = () => {
   const [bulkBasePrice, setBulkBasePrice] = useState("");
   const [bulkApplyDimensions, setBulkApplyDimensions] = useState(true);
   const [defaultDimensionPreset, setDefaultDimensionPreset] = useState<any>(null);
+
+  // Estados para detecção de duplicatas
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
+  const [duplicatesFound, setDuplicatesFound] = useState<{
+    modelNumber: string;
+    existingProduct: any;
+  }[]>([]);
+  const [pendingUpload, setPendingUpload] = useState<{
+    modelNumbers: string[];
+    segmentTag: string;
+  } | null>(null);
   
   // Constantes de tamanhos
   const ADULT_STANDARD_SIZES = ["PP", "P", "M", "G", "GG", "XG"];
@@ -524,42 +535,78 @@ const Models = () => {
     }
   };
 
-  const handleBulkUpload = async () => {
-    if (Object.keys(bulkGroupedModels).length === 0) {
-      toast.error("Nenhum modelo válido para criar");
-      return;
+  // Função para verificar duplicatas ANTES de criar modelos
+  const checkForDuplicates = async (
+    modelNumbers: string[], 
+    segmentTag: string, 
+    modelTag: string
+  ): Promise<{ modelNumber: string; existingProduct: any }[]> => {
+    // Gerar os nomes dos modelos que serão criados
+    const expectedNames = modelNumbers.map(num => 
+      generateModelName(segmentTag, modelTag, num)
+    );
+    
+    // Buscar produtos existentes com a mesma combinação segment_tag + model_tag
+    const { data: existingProducts } = await supabase
+      .from('shirt_models')
+      .select('id, name, sku, segment_tag, model_tag')
+      .eq('segment_tag', segmentTag)
+      .eq('model_tag', modelTag);
+    
+    if (!existingProducts || existingProducts.length === 0) {
+      return []; // Sem duplicatas
     }
     
-    if (!bulkSegmentId || !bulkModelTag) {
-      toast.error("Selecione o Segmento e o Tipo de Uniforme");
-      return;
-    }
+    // Filtrar produtos que têm nomes correspondentes
+    const duplicates: { modelNumber: string; existingProduct: any }[] = [];
     
+    existingProducts.forEach(product => {
+      // Extrair número do modelo do nome (ex: "Automotivo Ziper Modelo 01" → "01")
+      const match = product.name.match(/Modelo\s+(\d+)/i);
+      if (match) {
+        const existingNumber = match[1].padStart(2, '0');
+        // Verificar se esse número está na lista de upload
+        if (modelNumbers.includes(existingNumber)) {
+          duplicates.push({
+            modelNumber: existingNumber,
+            existingProduct: product
+          });
+        }
+      }
+    });
+    
+    return duplicates;
+  };
+
+  // Função principal de execução do upload (refatorada)
+  const executeUpload = async (
+    modelNumbers: string[], 
+    segmentTag: string,
+    startFromNumber?: number // Para opção "Continuar do próximo"
+  ) => {
     setBulkUploading(true);
     setBulkProgress(0);
     
-    const modelNumbers = Object.keys(bulkGroupedModels).sort();
     const totalModels = modelNumbers.length;
     let successCount = 0;
     let errorCount = 0;
     
     try {
       for (let i = 0; i < modelNumbers.length; i++) {
-        const modelNumber = modelNumbers[i];
-        const images = bulkGroupedModels[modelNumber];
+        const originalNumber = modelNumbers[i];
+        // Se startFromNumber foi fornecido, usar numeração sequencial a partir dele
+        const effectiveNumber = startFromNumber 
+          ? String(startFromNumber + i).padStart(2, '0')
+          : originalNumber;
         
-        // Recuperar segment_tag a partir do ID selecionado
-        const selectedSegment = segments.find((s: any) => s.id === bulkSegmentId);
-        const segmentTag = selectedSegment?.segment_tag || "";
-        
-        // Gerar nome do modelo inteligente
-        const modelName = generateModelName(segmentTag, bulkModelTag, modelNumber);
+        const images = bulkGroupedModels[originalNumber];
+        const modelName = generateModelName(segmentTag, bulkModelTag, effectiveNumber);
         
         setBulkCurrentModel(modelName);
         
         try {
           // Gerar SKU automático
-          const generatedSKU = generateSKU(bulkModelTag, segmentTag, modelNumber);
+          const generatedSKU = generateSKU(bulkModelTag, segmentTag, effectiveNumber);
           
           // Preparar dados do modelo
           const modelData: any = {
@@ -659,7 +706,6 @@ const Models = () => {
             
             // Masculino
             if (genderConfigs.masculino.enabled) {
-              // Tamanhos padrão
               genderConfigs.masculino.standardSizes.forEach(size => {
                 variationsToCreate.push({
                   model_id: model.id,
@@ -670,7 +716,6 @@ const Models = () => {
                   stock_quantity: 0
                 });
               });
-              // Tamanhos plus
               genderConfigs.masculino.plusSizes.forEach(size => {
                 variationsToCreate.push({
                   model_id: model.id,
@@ -685,7 +730,6 @@ const Models = () => {
             
             // Feminino
             if (genderConfigs.feminino.enabled) {
-              // Tamanhos padrão
               genderConfigs.feminino.standardSizes.forEach(size => {
                 variationsToCreate.push({
                   model_id: model.id,
@@ -696,7 +740,6 @@ const Models = () => {
                   stock_quantity: 0
                 });
               });
-              // Tamanhos plus
               genderConfigs.feminino.plusSizes.forEach(size => {
                 variationsToCreate.push({
                   model_id: model.id,
@@ -729,14 +772,14 @@ const Models = () => {
                 .insert(variationsToCreate);
               
               if (variationsError) {
-                console.error(`Erro ao criar variações do modelo ${modelNumber}:`, variationsError);
+                console.error(`Erro ao criar variações do modelo ${effectiveNumber}:`, variationsError);
               }
             }
           }
           
           successCount++;
         } catch (error: any) {
-          console.error(`Erro ao criar modelo ${modelNumber}:`, error);
+          console.error(`Erro ao criar modelo ${effectiveNumber}:`, error);
           errorCount++;
         }
         
@@ -760,19 +803,7 @@ const Models = () => {
       }
       
       // Fechar diálogo e resetar
-      setIsBulkUploadDialogOpen(false);
-      setBulkFiles([]);
-      setBulkGroupedModels({});
-      setBulkSegmentId("");
-      setBulkModelTag("");
-      setBulkBasePrice("");
-      setBulkApplyDimensions(true);
-      setBulkCreateVariations(false);
-      setGenderConfigs({
-        masculino: { enabled: true, standardSizes: [...ADULT_STANDARD_SIZES], standardPrice: '', plusSizes: [...ADULT_PLUS_SIZES], plusPrice: '' },
-        feminino: { enabled: true, standardSizes: [...ADULT_STANDARD_SIZES], standardPrice: '', plusSizes: [...ADULT_PLUS_SIZES], plusPrice: '' },
-        infantil: { enabled: false, sizes: [...INFANT_SIZES], price: '' }
-      });
+      resetBulkUploadState();
       
     } catch (error: any) {
       toast.error("Erro no upload em massa: " + error.message);
@@ -781,6 +812,145 @@ const Models = () => {
       setBulkProgress(0);
       setBulkCurrentModel("");
     }
+  };
+
+  // Função para resetar estados do upload em massa
+  const resetBulkUploadState = () => {
+    setIsBulkUploadDialogOpen(false);
+    setBulkFiles([]);
+    setBulkGroupedModels({});
+    setBulkSegmentId("");
+    setBulkModelTag("");
+    setBulkBasePrice("");
+    setBulkApplyDimensions(true);
+    setBulkCreateVariations(false);
+    setPendingUpload(null);
+    setDuplicatesFound([]);
+    setGenderConfigs({
+      masculino: { enabled: true, standardSizes: [...ADULT_STANDARD_SIZES], standardPrice: '', plusSizes: [...ADULT_PLUS_SIZES], plusPrice: '' },
+      feminino: { enabled: true, standardSizes: [...ADULT_STANDARD_SIZES], standardPrice: '', plusSizes: [...ADULT_PLUS_SIZES], plusPrice: '' },
+      infantil: { enabled: false, sizes: [...INFANT_SIZES], price: '' }
+    });
+  };
+
+  // Handler: Substituir produtos existentes
+  const handleReplaceExisting = async () => {
+    if (!pendingUpload || duplicatesFound.length === 0) return;
+    
+    setDuplicateDialogOpen(false);
+    setBulkUploading(true);
+    
+    try {
+      // 1. Excluir produtos duplicados existentes
+      const idsToDelete = duplicatesFound.map(d => d.existingProduct.id);
+      
+      for (const id of idsToDelete) {
+        // Excluir variações primeiro
+        await supabase
+          .from('shirt_model_variations')
+          .delete()
+          .eq('model_id', id);
+        
+        // Buscar segment_id do modelo
+        const modelToDelete = models.find(m => m.id === id);
+        
+        if (modelToDelete) {
+          // Excluir imagens do storage
+          const imageFields = ["photo_main", "image_front", "image_back", "image_right", "image_left"];
+          const filesToDelete = imageFields.map(field => 
+            `${modelToDelete.segment_id}/${id}/${field}.jpg`
+          );
+          
+          await supabase.storage
+            .from("shirt-models-images")
+            .remove(filesToDelete);
+        }
+        
+        // Excluir modelo
+        await supabase
+          .from('shirt_models')
+          .delete()
+          .eq('id', id);
+      }
+      
+      toast.success(`🗑️ ${idsToDelete.length} produto(s) antigo(s) removido(s)`);
+      
+      // 2. Criar novos produtos
+      await executeUpload(pendingUpload.modelNumbers, pendingUpload.segmentTag);
+      
+    } catch (error: any) {
+      toast.error("Erro ao substituir produtos: " + error.message);
+      setBulkUploading(false);
+    }
+  };
+
+  // Handler: Criar a partir do próximo número
+  const handleContinueFromNext = async () => {
+    if (!pendingUpload) return;
+    
+    setDuplicateDialogOpen(false);
+    
+    // Buscar o maior número de modelo existente para segment_tag + model_tag
+    const { data: existingModels } = await supabase
+      .from('shirt_models')
+      .select('name')
+      .eq('segment_tag', pendingUpload.segmentTag)
+      .eq('model_tag', bulkModelTag);
+    
+    let maxNumber = 0;
+    existingModels?.forEach(model => {
+      const match = model.name.match(/Modelo\s+(\d+)/i);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > maxNumber) maxNumber = num;
+      }
+    });
+    
+    const startFrom = maxNumber + 1;
+    
+    toast.info(`📝 Criando modelos a partir do número ${startFrom.toString().padStart(2, '0')}`);
+    
+    await executeUpload(pendingUpload.modelNumbers, pendingUpload.segmentTag, startFrom);
+  };
+
+  // Handler: Cancelar upload
+  const handleCancelUpload = () => {
+    setDuplicateDialogOpen(false);
+    setPendingUpload(null);
+    setDuplicatesFound([]);
+    toast.info("Upload cancelado");
+  };
+
+  // Função principal de upload em massa (agora com verificação de duplicatas)
+  const handleBulkUpload = async () => {
+    if (Object.keys(bulkGroupedModels).length === 0) {
+      toast.error("Nenhum modelo válido para criar");
+      return;
+    }
+    
+    if (!bulkSegmentId || !bulkModelTag) {
+      toast.error("Selecione o Segmento e o Tipo de Uniforme");
+      return;
+    }
+    
+    // Recuperar segment_tag a partir do ID selecionado
+    const selectedSegment = segments.find((s: any) => s.id === bulkSegmentId);
+    const segmentTag = selectedSegment?.segment_tag || "";
+    const modelNumbers = Object.keys(bulkGroupedModels).sort();
+    
+    // NOVA ETAPA: Verificar duplicatas ANTES de criar
+    const duplicates = await checkForDuplicates(modelNumbers, segmentTag, bulkModelTag);
+    
+    if (duplicates.length > 0) {
+      // Salvar contexto para uso posterior
+      setPendingUpload({ modelNumbers, segmentTag });
+      setDuplicatesFound(duplicates);
+      setDuplicateDialogOpen(true);
+      return; // Interromper - aguardar decisão do usuário
+    }
+    
+    // Sem duplicatas - prosseguir normalmente
+    await executeUpload(modelNumbers, segmentTag);
   };
 
   // Alternar seleção de um modelo individual
@@ -2846,6 +3016,71 @@ const Models = () => {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Conflito de Duplicatas */}
+      <Dialog open={duplicateDialogOpen} onOpenChange={setDuplicateDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-600">
+              <AlertTriangle className="h-5 w-5" />
+              Produtos Duplicados Detectados
+            </DialogTitle>
+            <DialogDescription>
+              Os seguintes modelos já existem no sistema e seriam criados novamente:
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="max-h-[200px] overflow-y-auto border rounded-lg p-3 bg-muted/50">
+            <ul className="space-y-2">
+              {duplicatesFound.map((dup, i) => (
+                <li key={i} className="flex items-center justify-between text-sm">
+                  <span className="font-medium">{dup.existingProduct.name}</span>
+                  <Badge variant="secondary">{dup.existingProduct.sku}</Badge>
+                </li>
+              ))}
+            </ul>
+          </div>
+          
+          <div className="space-y-3 mt-4">
+            <p className="text-sm font-medium">O que deseja fazer?</p>
+            
+            <div className="space-y-2">
+              <Button 
+                variant="destructive" 
+                className="w-full justify-start"
+                onClick={handleReplaceExisting}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Substituir produtos existentes
+                <span className="ml-auto text-xs opacity-70">
+                  (excluirá versões antigas)
+                </span>
+              </Button>
+              
+              <Button 
+                variant="default" 
+                className="w-full justify-start"
+                onClick={handleContinueFromNext}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Criar novos a partir do próximo número
+                <span className="ml-auto text-xs opacity-70">
+                  (mantém existentes)
+                </span>
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                className="w-full justify-start"
+                onClick={handleCancelUpload}
+              >
+                <X className="mr-2 h-4 w-4" />
+                Cancelar upload
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
