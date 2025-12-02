@@ -272,19 +272,21 @@ serve(async (req) => {
           }
         };
 
-        // Adicionar imagem do produto com ordem (CORREÇÃO: campo ordem é obrigatório)
-        if (model.photo_main) {
+        // Adicionar imagem do produto - PRIORIDADE: image_front (FRENTE) > photo_main
+        const imageForBling = model.image_front || model.photo_main;
+        if (imageForBling) {
           productPayload.midia = {
             imagens: {
               externas: [
                 { 
-                  link: model.photo_main,
+                  link: imageForBling,
                   ordem: 1  // Campo obrigatório para ordenação de imagens
                 }
               ]
             }
           };
-          console.log('[Bling] Adding product image with ordem:', model.photo_main);
+          console.log('[Bling] Using image for Bling:', imageForBling);
+          console.log('[Bling] Image source:', model.image_front ? 'image_front (FRENTE)' : 'photo_main');
         }
 
         // Adicionar variações se existirem (estrutura de GRADE do Bling)
@@ -309,13 +311,20 @@ serve(async (req) => {
           productPayload.formato = 'V'; // Produto pai com variações
           
           productPayload.variacoes = validVariations.map((v: any) => {
-            // Calcular preço da variação
+            // Calcular preço da variação - G1-G5 usam price_adjustment (R$99,90)
             let variationPrice = basePrice;
+            let priceSource = 'basePrice';
+            
             if (v.promotional_price && v.promotional_price > 0) {
               variationPrice = v.promotional_price;
+              priceSource = 'promotional_price';
             } else if (v.price_adjustment && v.price_adjustment > 0) {
               variationPrice = v.price_adjustment;
+              priceSource = 'price_adjustment';
             }
+            
+            // Log detalhado do preço por variação
+            console.log(`[Bling] Variation ${v.gender}-${v.size}: price=${variationPrice} (source: ${priceSource}), promo=${v.promotional_price}, adj=${v.price_adjustment}`);
 
             // Mapeamento de gênero
             const genderLower = (v.gender || '').toLowerCase();
@@ -460,11 +469,13 @@ serve(async (req) => {
             exported_by: user.id,
           });
 
+        const imageUsed = model.image_front || model.photo_main;
         return new Response(JSON.stringify({ 
           success: true, 
           bling_product_id: blingProductId,
           variations_count: hasVariations ? variations.length : 0,
-          has_image: !!model.photo_main,
+          has_image: !!imageUsed,
+          image_source: model.image_front ? 'image_front (FRENTE)' : 'photo_main',
           product_name: model.name,
           sku: model.sku || model.model_tag
         }), {
