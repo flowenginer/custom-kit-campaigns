@@ -302,7 +302,6 @@ serve(async (req) => {
               nome: `${v.size} - ${genderLabel}`,
               codigo: v.sku_suffix, // SKU completo já inclui SKU do produto + gênero + tamanho
               preco: variationPrice,
-              tipo: 'A', // Atributo
               situacao: 'A', // Ativo
               estrutura: { tipoEstoque: 'F' }
             };
