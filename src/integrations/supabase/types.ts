@@ -2635,6 +2635,10 @@ export type Database = {
         Returns: undefined
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      mark_lead_rejected_by_designer: {
+        Args: { p_lead_id: string }
+        Returns: undefined
+      }
       notify_customer_registered: {
         Args: { p_customer_name: string; p_task_id: string; p_user_id: string }
         Returns: undefined
