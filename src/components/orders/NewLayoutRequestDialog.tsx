@@ -270,6 +270,19 @@ export const NewLayoutRequestDialog = ({
     return hasAdventureLayout || currentCampaign?.segment_tag === 'adventure_';
   }, [layouts, campaigns, selectedCampaignId]);
 
+  // Check if should show business segment selector (Adventure OR Layout do Zero)
+  const showBusinessSegmentSelector = useMemo(() => {
+    // Show if current flow is from scratch
+    if (isFromScratch) return true;
+    
+    // Check if any layout is from scratch
+    const hasFromScratchLayout = layouts.some(layout => layout.isFromScratch);
+    if (hasFromScratchLayout) return true;
+    
+    // Also show for Adventure campaigns
+    return isAdventureCampaign;
+  }, [isFromScratch, layouts, isAdventureCampaign]);
+
   // Search customers
   useEffect(() => {
     if (debouncedSearchTerm.trim().length < 2) {
@@ -561,9 +574,9 @@ export const NewLayoutRequestDialog = ({
           hasLogo: firstLayout.hasLogo !== "sem_logo" && firstLayout.hasLogo !== "depois",
           logoUrls: firstLayout.uploadedLogoUrls || [],
           internalNotes,
-          // Business segment (for Adventure campaigns)
-          businessSegmentId: isAdventureCampaign ? businessSegmentId : null,
-          businessSegmentOther: isAdventureCampaign && businessSegmentId === 'other' ? businessSegmentOther : null,
+          // Business segment (for Adventure campaigns or Layout do Zero)
+          businessSegmentId: showBusinessSegmentSelector ? businessSegmentId : null,
+          businessSegmentOther: showBusinessSegmentSelector && businessSegmentId === 'other' ? businessSegmentOther : null,
         };
 
         const { error: pendingError } = await supabase
@@ -646,9 +659,9 @@ export const NewLayoutRequestDialog = ({
           uploaded_logo_url: firstLayout.uploadedLogoUrls && firstLayout.uploadedLogoUrls.length > 0 ? firstLayout.uploadedLogoUrls[0] : null,
           customization_summary: customizationData,
           completed: true,
-          // Business segment (for Adventure campaigns)
-          business_segment_id: isAdventureCampaign && businessSegmentId && businessSegmentId !== 'other' ? businessSegmentId : null,
-          business_segment_other: isAdventureCampaign && businessSegmentId === 'other' ? businessSegmentOther : null,
+          // Business segment (for Adventure campaigns or Layout do Zero)
+          business_segment_id: showBusinessSegmentSelector && businessSegmentId && businessSegmentId !== 'other' ? businessSegmentId : null,
+          business_segment_other: showBusinessSegmentSelector && businessSegmentId === 'other' ? businessSegmentOther : null,
         }])
         .select()
         .single();
@@ -1791,12 +1804,12 @@ export const NewLayoutRequestDialog = ({
               />
             </div>
 
-            {/* Business Segment Selector (Adventure campaigns only) */}
-            {isAdventureCampaign && (
+            {/* Business Segment Selector (Adventure campaigns or Layout do Zero) */}
+            {showBusinessSegmentSelector && (
               <div className="space-y-3 p-4 border rounded-lg bg-accent/30">
                 <Label className="flex items-center gap-2 text-base font-medium">
                   <Building2 className="h-4 w-4" />
-                  Segmento de Negócio do Cliente *
+                  Segmento de Atuação do Cliente *
                 </Label>
                 <p className="text-xs text-muted-foreground">
                   Selecione o segmento de atuação do cliente
@@ -1875,8 +1888,8 @@ export const NewLayoutRequestDialog = ({
                 disabled={
                   !customerName.trim() || 
                   !customerPhone || 
-                  (isAdventureCampaign && !businessSegmentId) ||
-                  (isAdventureCampaign && businessSegmentId === "other" && !businessSegmentOther.trim())
+                  (showBusinessSegmentSelector && !businessSegmentId) ||
+                  (showBusinessSegmentSelector && businessSegmentId === "other" && !businessSegmentOther.trim())
                 }
                 className="flex-1"
               >
