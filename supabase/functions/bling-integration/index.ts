@@ -231,6 +231,13 @@ serve(async (req) => {
 
         if (modelError) throw modelError;
 
+        // Buscar variações ativas do produto
+        const { data: variations } = await supabaseClient
+          .from('shirt_model_variations')
+          .select('*')
+          .eq('model_id', model_id)
+          .eq('is_active', true);
+
         // Buscar preço do produto
         const { data: pricing } = await supabaseClient
           .from('product_prices')
@@ -239,13 +246,16 @@ serve(async (req) => {
           .eq('is_active', true)
           .single();
 
-        const productPayload = {
+        const basePrice = pricing?.base_price || model.base_price || 0;
+        const hasVariations = variations && variations.length > 0;
+
+        const productPayload: any = {
           nome: model.name,
           codigo: model.sku || model.model_tag,
-          preco: pricing?.base_price || model.base_price || 0,
+          preco: basePrice,
           tipo: 'P', // Produto
           situacao: 'A', // Ativo
-          formato: 'S', // Simples
+          formato: hasVariations ? 'V' : 'S', // V = Com Variação, S = Simples
           descricaoComplementar: `Modelo: ${model.name}`,
           unidade: model.unidade || 'UN',
           pesoLiquido: model.peso || 0,
@@ -262,7 +272,45 @@ serve(async (req) => {
           }
         };
 
-        console.log('[Bling] Creating/updating product:', productPayload);
+        // Adicionar imagem do produto
+        if (model.photo_main) {
+          productPayload.midia = {
+            imagens: {
+              externas: [
+                { link: model.photo_main }
+              ]
+            }
+          };
+          console.log('[Bling] Adding product image:', model.photo_main);
+        }
+
+        // Adicionar variações se existirem
+        if (hasVariations) {
+          productPayload.variacoes = variations.map((v: any) => {
+            // Calcular preço da variação (ajuste substitui base, não soma)
+            let variationPrice = basePrice;
+            if (v.promotional_price && v.promotional_price > 0) {
+              variationPrice = v.promotional_price;
+            } else if (v.price_adjustment && v.price_adjustment > 0) {
+              variationPrice = v.price_adjustment;
+            }
+
+            const genderLabel = v.gender === 'male' ? 'Masculino' : 
+                               v.gender === 'female' ? 'Feminino' : 'Infantil';
+
+            return {
+              nome: `${v.size} - ${genderLabel}`,
+              codigo: `${model.sku || model.model_tag}-${v.sku_suffix || `${v.gender.charAt(0).toUpperCase()}-${v.size}`}`,
+              preco: variationPrice,
+              tipo: 'A', // Atributo
+              situacao: 'A', // Ativo
+              estrutura: { tipoEstoque: 'F' }
+            };
+          });
+          console.log(`[Bling] Adding ${variations.length} variations to product`);
+        }
+
+        console.log('[Bling] Creating/updating product:', JSON.stringify(productPayload, null, 2));
 
         // Verificar se produto já existe
         let blingProductId = model.bling_product_id;
@@ -280,6 +328,7 @@ serve(async (req) => {
             console.error('[Bling] Update error:', error);
             throw new Error(`Erro ao atualizar produto no Bling: ${error}`);
           }
+          console.log('[Bling] Product updated successfully');
         } else {
           // Criar novo produto
           const createResponse = await fetch(`${blingBaseUrl}/produtos`, {
@@ -296,6 +345,7 @@ serve(async (req) => {
 
           const result = await createResponse.json();
           blingProductId = result.data.id;
+          console.log('[Bling] Product created successfully with ID:', blingProductId);
         }
 
         // Atualizar shirt_models com ID do Bling
@@ -322,7 +372,9 @@ serve(async (req) => {
 
         return new Response(JSON.stringify({ 
           success: true, 
-          bling_product_id: blingProductId 
+          bling_product_id: blingProductId,
+          variations_count: hasVariations ? variations.length : 0,
+          has_image: !!model.photo_main
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
