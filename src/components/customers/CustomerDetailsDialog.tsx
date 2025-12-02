@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building2, User, Phone, Mail, MapPin, Calendar, DollarSign, Package, Users, UserX, UserCheck } from "lucide-react";
+import { Building2, User, Phone, Mail, MapPin, Calendar, DollarSign, Package, Users, UserX, UserCheck, Layers, FileText, Clock, CheckCircle2, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { TransferCustomerDialog } from "./TransferCustomerDialog";
@@ -31,6 +31,14 @@ interface Customer {
   created_by?: string | null;
 }
 
+interface CustomerStats {
+  totalLayouts: number;
+  totalCards: number;
+  closedOrders: number;
+  openCards: number;
+  totalRevenue: number;
+}
+
 interface CustomerDetailsDialogProps {
   customer: Customer | null;
   open: boolean;
@@ -46,6 +54,69 @@ export const CustomerDetailsDialog = ({
 }: CustomerDetailsDialogProps) => {
   const [showTransferDialog, setShowTransferDialog] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [stats, setStats] = useState<CustomerStats>({
+    totalLayouts: 0,
+    totalCards: 0,
+    closedOrders: 0,
+    openCards: 0,
+    totalRevenue: 0,
+  });
+
+  useEffect(() => {
+    if (customer && open) {
+      loadCustomerStats();
+    }
+  }, [customer, open]);
+
+  const loadCustomerStats = async () => {
+    if (!customer) return;
+    
+    setStatsLoading(true);
+    try {
+      // Buscar todos os cards do cliente
+      const { data: tasks, error: tasksError } = await supabase
+        .from("design_tasks")
+        .select("id, status, order_value")
+        .eq("customer_id", customer.id)
+        .is("deleted_at", null);
+
+      if (tasksError) throw tasksError;
+
+      const taskIds = tasks?.map(t => t.id) || [];
+      
+      // Buscar layouts dos cards
+      let totalLayouts = 0;
+      if (taskIds.length > 0) {
+        const { count, error: layoutsError } = await supabase
+          .from("design_task_layouts")
+          .select("*", { count: "exact", head: true })
+          .in("task_id", taskIds);
+        
+        if (layoutsError) throw layoutsError;
+        totalLayouts = count || 0;
+      }
+
+      // Calcular estatísticas
+      const closedOrders = tasks?.filter(t => t.status === "completed").length || 0;
+      const openCards = tasks?.filter(t => t.status !== "completed").length || 0;
+      const totalRevenue = tasks
+        ?.filter(t => t.status === "completed")
+        .reduce((sum, t) => sum + (t.order_value || 0), 0) || 0;
+
+      setStats({
+        totalLayouts,
+        totalCards: tasks?.length || 0,
+        closedOrders,
+        openCards,
+        totalRevenue,
+      });
+    } catch (error) {
+      console.error("Error loading customer stats:", error);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
 
   if (!customer) return null;
 
@@ -75,7 +146,7 @@ export const CustomerDetailsDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle className="text-2xl">{customer.name}</DialogTitle>
@@ -156,37 +227,82 @@ export const CustomerDetailsDialog = ({
             </div>
           </div>
 
-          {/* Estatísticas */}
-          <div className="grid grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-2 text-muted-foreground mb-1">
-                <Package className="w-4 h-4" />
-                <span className="text-xs">Pedidos</span>
+          {/* Estatísticas Detalhadas */}
+          <div className="space-y-3">
+            <h3 className="font-semibold flex items-center gap-2">
+              <Package className="w-4 h-4" />
+              Estatísticas
+            </h3>
+            
+            {statsLoading ? (
+              <div className="flex items-center justify-center p-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
-              <p className="text-2xl font-bold">{customer.total_orders || 0}</p>
-            </div>
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-2 text-muted-foreground mb-1">
-                <DollarSign className="w-4 h-4" />
-                <span className="text-xs">Faturamento</span>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {/* Layouts Solicitados */}
+                <div className="p-3 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                    <Layers className="w-4 h-4" />
+                    <span className="text-xs">Layouts</span>
+                  </div>
+                  <p className="text-xl font-bold">{stats.totalLayouts}</p>
+                </div>
+
+                {/* Cards Solicitados */}
+                <div className="p-3 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                    <FileText className="w-4 h-4" />
+                    <span className="text-xs">Cards Totais</span>
+                  </div>
+                  <p className="text-xl font-bold">{stats.totalCards}</p>
+                </div>
+
+                {/* Cards Abertos */}
+                <div className="p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
+                  <div className="flex items-center gap-2 text-amber-600 mb-1">
+                    <Clock className="w-4 h-4" />
+                    <span className="text-xs">Em Aberto</span>
+                  </div>
+                  <p className="text-xl font-bold text-amber-600">{stats.openCards}</p>
+                </div>
+
+                {/* Pedidos Fechados */}
+                <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/20">
+                  <div className="flex items-center gap-2 text-green-600 mb-1">
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span className="text-xs">Fechados</span>
+                  </div>
+                  <p className="text-xl font-bold text-green-600">{stats.closedOrders}</p>
+                </div>
+
+                {/* Faturamento */}
+                <div className="p-3 bg-primary/10 rounded-lg border border-primary/20 md:col-span-2">
+                  <div className="flex items-center gap-2 text-primary mb-1">
+                    <DollarSign className="w-4 h-4" />
+                    <span className="text-xs">Faturamento Total</span>
+                  </div>
+                  <p className="text-xl font-bold text-primary">
+                    R$ {stats.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+
+                {/* Cliente Desde */}
+                <div className="p-3 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                    <Calendar className="w-4 h-4" />
+                    <span className="text-xs">Cliente desde</span>
+                  </div>
+                  <p className="text-sm font-medium">
+                    {new Date(customer.created_at).toLocaleDateString("pt-BR")}
+                  </p>
+                </div>
               </div>
-              <p className="text-2xl font-bold text-green-600">
-                R$ {(customer.total_revenue || 0).toFixed(2)}
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-2 text-muted-foreground mb-1">
-                <Calendar className="w-4 h-4" />
-                <span className="text-xs">Cliente desde</span>
-              </div>
-              <p className="text-sm font-medium">
-                {new Date(customer.created_at).toLocaleDateString("pt-BR")}
-              </p>
-            </div>
+            )}
           </div>
 
           {/* Ações de Gerenciamento */}
-          <div className="flex gap-2 pt-4 border-t">
+          <div className="flex flex-wrap gap-2 pt-4 border-t">
             <Button
               variant="outline"
               onClick={() => setShowTransferDialog(true)}
