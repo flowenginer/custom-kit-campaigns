@@ -4,16 +4,24 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { DollarSign, X, Download, Barcode, Package, Loader2, CheckCircle2, AlertTriangle, XCircle, Trash2 } from "lucide-react";
+import { DollarSign, X, Download, Barcode, Package, Loader2, CheckCircle2, AlertTriangle, XCircle, Trash2, Tag } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 
 interface BulkActionsBarProps {
   selectedIds: string[];
   onClearSelection: () => void;
   onComplete: () => void;
   totalProducts?: number;
+}
+
+interface SelectedProduct {
+  id: string;
+  name: string;
+  sku: string | null;
+  base_price: number | null;
 }
 
 interface BlingResult {
@@ -40,6 +48,15 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [productsToDelete, setProductsToDelete] = useState<{ id: string; name: string; sku: string | null }[]>([]);
+  
+  // Estado para preço promocional
+  const [promoPriceDialog, setPromoPriceDialog] = useState(false);
+  const [promoPrice, setPromoPrice] = useState("");
+  const [promoLoading, setPromoLoading] = useState(false);
+  
+  // Estado para lista de produtos selecionados (usado em ambos os modais)
+  const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
 
   useEffect(() => {
     checkBlingSettings();
@@ -58,6 +75,51 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
     } catch (error) {
       console.error('Error checking Bling settings:', error);
     }
+  };
+
+  // Buscar dados dos produtos selecionados
+  const fetchSelectedProducts = async () => {
+    setLoadingProducts(true);
+    const { data } = await supabase
+      .from("shirt_models")
+      .select("id, name, sku, base_price")
+      .in("id", selectedIds);
+    
+    setSelectedProducts(data || []);
+    setLoadingProducts(false);
+  };
+
+  // Abrir modal de preço base
+  const openBasePriceDialog = async () => {
+    await fetchSelectedProducts();
+    setBulkPrice("");
+    setBulkPriceDialog(true);
+  };
+
+  // Abrir modal de preço promocional
+  const openPromoPriceDialog = async () => {
+    await fetchSelectedProducts();
+    setPromoPrice("");
+    setPromoPriceDialog(true);
+  };
+
+  // Formatar input de preço
+  const formatPriceInput = (value: string) => {
+    let cleaned = value.replace(/[^\d.]/g, '');
+    const parts = cleaned.split('.');
+    if (parts.length > 2) {
+      cleaned = parts[0] + '.' + parts.slice(1).join('');
+    }
+    if (parts[1]?.length > 2) {
+      cleaned = parts[0] + '.' + parts[1].substring(0, 2);
+    }
+    return cleaned;
+  };
+
+  // Formatar preço para exibição
+  const formatPrice = (price: number | null) => {
+    if (price === null || price === undefined) return "-";
+    return `R$ ${price.toFixed(2).replace('.', ',')}`;
   };
 
   // Abrir modal de exclusão e carregar nomes dos produtos
@@ -129,12 +191,21 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
   };
 
   const applyBulkPrice = async () => {
-    if (!bulkPrice || selectedIds.length === 0) return;
+    if (!bulkPrice || selectedIds.length === 0) {
+      toast.error("Por favor, insira um preço válido");
+      return;
+    }
+
+    const priceValue = parseFloat(bulkPrice);
+    if (isNaN(priceValue) || priceValue < 0.01 || priceValue > 9999.99) {
+      toast.error("Preço inválido. Use valores entre 0.01 e 9999.99");
+      return;
+    }
 
     setLoading(true);
     const { error } = await supabase
       .from("shirt_models")
-      .update({ base_price: parseFloat(bulkPrice) })
+      .update({ base_price: priceValue })
       .in("id", selectedIds);
 
     if (error) {
@@ -143,11 +214,60 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
       return;
     }
 
-    toast.success(`✅ Preço aplicado a ${selectedIds.length} produtos!`);
+    toast.success(`✅ Preço base atualizado em ${selectedIds.length} produto(s)!`);
     setBulkPriceDialog(false);
     setBulkPrice("");
     setLoading(false);
+    onClearSelection();
     onComplete();
+  };
+
+  // Aplicar preço promocional em lote (atualiza variações)
+  const applyPromoPrice = async () => {
+    const priceValue = promoPrice ? parseFloat(promoPrice) : null;
+    
+    if (promoPrice && (isNaN(priceValue!) || priceValue! < 0.01 || priceValue! > 9999.99)) {
+      toast.error("Preço inválido. Use valores entre 0.01 e 9999.99 ou deixe vazio para remover");
+      return;
+    }
+
+    // Validar se preço promocional é menor que preço base
+    if (priceValue !== null) {
+      const invalidProducts = selectedProducts.filter(
+        p => p.base_price !== null && priceValue >= p.base_price
+      );
+      
+      if (invalidProducts.length > 0) {
+        toast.error(`Preço promocional deve ser menor que o preço base. ${invalidProducts.length} produto(s) têm preço base menor ou igual.`);
+        return;
+      }
+    }
+
+    setPromoLoading(true);
+    
+    try {
+      // Atualizar todas as variações dos produtos selecionados
+      const { error } = await supabase
+        .from("shirt_model_variations")
+        .update({ promotional_price: priceValue })
+        .in("model_id", selectedIds);
+
+      if (error) throw error;
+
+      const message = priceValue === null 
+        ? `✅ Preço promocional removido de ${selectedIds.length} produto(s)!`
+        : `✅ Preço promocional atualizado em ${selectedIds.length} produto(s)!`;
+      
+      toast.success(message);
+      setPromoPriceDialog(false);
+      setPromoPrice("");
+      onClearSelection();
+      onComplete();
+    } catch (error: any) {
+      toast.error("Erro ao atualizar preço promocional: " + error.message);
+    } finally {
+      setPromoLoading(false);
+    }
   };
 
   const generateSKUs = async () => {
@@ -366,43 +486,16 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
           </Button>
 
           {/* Definir Preço Base */}
-          <Dialog open={bulkPriceDialog} onOpenChange={setBulkPriceDialog}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm">
-                <DollarSign className="mr-2 h-4 w-4" />
-                Preço Base
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Aplicar Preço Base em Lote</DialogTitle>
-                <DialogDescription>
-                  Aplicar preço base para {selectedIds.length} produto{selectedIds.length > 1 ? "s" : ""}
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label>Preço Base (R$)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={bulkPrice}
-                    onChange={(e) => setBulkPrice(e.target.value)}
-                    placeholder="Ex: 49.90"
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setBulkPriceDialog(false)}>
-                  Cancelar
-                </Button>
-                <Button onClick={applyBulkPrice} disabled={loading}>
-                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Aplicar
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Button variant="outline" size="sm" onClick={openBasePriceDialog}>
+            <DollarSign className="mr-2 h-4 w-4" />
+            Preço Base
+          </Button>
+
+          {/* Definir Preço Promocional */}
+          <Button variant="secondary" size="sm" onClick={openPromoPriceDialog}>
+            <Tag className="mr-2 h-4 w-4" />
+            Preço Promo
+          </Button>
 
           {/* Gerar SKU */}
           <Button 
@@ -610,6 +703,158 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
                 <Trash2 className="mr-2 h-4 w-4" />
               )}
               Excluir {productsToDelete.length} Produto(s)
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Preço Base */}
+      <Dialog open={bulkPriceDialog} onOpenChange={setBulkPriceDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-primary" />
+              Editar Preço Base
+            </DialogTitle>
+            <DialogDescription>
+              Você está editando o preço base de {selectedIds.length} produto(s) selecionado(s).
+            </DialogDescription>
+          </DialogHeader>
+
+          {loadingProducts ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <>
+              <div>
+                <Label className="text-xs text-muted-foreground">Produtos Selecionados:</Label>
+                <ScrollArea className="max-h-[160px] border rounded-lg p-2 bg-muted/30 mt-1">
+                  <ul className="space-y-1">
+                    {selectedProducts.map((product) => (
+                      <li key={product.id} className="flex items-center justify-between text-sm py-1">
+                        <span className="truncate max-w-[200px]">{product.name}</span>
+                        <Badge variant="outline" className="ml-2 font-mono text-xs">
+                          {formatPrice(product.base_price)}
+                        </Badge>
+                      </li>
+                    ))}
+                  </ul>
+                </ScrollArea>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="newBasePrice">Novo Preço Base *</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                  <Input
+                    id="newBasePrice"
+                    type="text"
+                    inputMode="decimal"
+                    value={bulkPrice}
+                    onChange={(e) => setBulkPrice(formatPriceInput(e.target.value))}
+                    placeholder="0.00"
+                    className="pl-10"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Formato: 00.00 (ex: 89.90)
+                </p>
+              </div>
+
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
+                <p className="text-sm text-amber-600 dark:text-amber-400 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  Esta ação atualizará o preço base de todos os produtos selecionados.
+                </p>
+              </div>
+            </>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkPriceDialog(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={applyBulkPrice} disabled={loading || loadingProducts || !bulkPrice}>
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Atualizar {selectedIds.length} Preço(s)
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Preço Promocional */}
+      <Dialog open={promoPriceDialog} onOpenChange={setPromoPriceDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Tag className="h-5 w-5 text-secondary" />
+              Editar Preço Promocional
+            </DialogTitle>
+            <DialogDescription>
+              Você está editando o preço promocional de {selectedIds.length} produto(s) selecionado(s).
+            </DialogDescription>
+          </DialogHeader>
+
+          {loadingProducts ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <>
+              <div>
+                <Label className="text-xs text-muted-foreground">Produtos Selecionados:</Label>
+                <ScrollArea className="max-h-[160px] border rounded-lg p-2 bg-muted/30 mt-1">
+                  <ul className="space-y-1">
+                    {selectedProducts.map((product) => (
+                      <li key={product.id} className="text-sm py-1">
+                        <div className="flex items-center justify-between">
+                          <span className="truncate max-w-[180px]">{product.name}</span>
+                          <Badge variant="outline" className="ml-2 font-mono text-xs">
+                            Base: {formatPrice(product.base_price)}
+                          </Badge>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </ScrollArea>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="newPromoPrice">Novo Preço Promocional</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                  <Input
+                    id="newPromoPrice"
+                    type="text"
+                    inputMode="decimal"
+                    value={promoPrice}
+                    onChange={(e) => setPromoPrice(formatPriceInput(e.target.value))}
+                    placeholder="0.00"
+                    className="pl-10"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Formato: 00.00 (ex: 49.90). Deixe vazio para remover preço promocional.
+                </p>
+              </div>
+
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+                <p className="text-sm text-blue-600 dark:text-blue-400 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  O preço promocional deve ser menor que o preço base para ser válido.
+                </p>
+              </div>
+            </>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPromoPriceDialog(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={applyPromoPrice} disabled={promoLoading || loadingProducts}>
+              {promoLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {promoPrice ? `Atualizar ${selectedIds.length} Preço(s)` : `Remover de ${selectedIds.length} Produto(s)`}
             </Button>
           </DialogFooter>
         </DialogContent>
