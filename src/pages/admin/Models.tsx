@@ -9,7 +9,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Plus, Trash2, Upload, ImageIcon, X, Pencil, LayoutGrid, LayoutList, Grid3x3, Grid2x2, Folder, FolderOpen, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Trash2, Upload, ImageIcon, X, Pencil, LayoutGrid, LayoutList, Grid3x3, Grid2x2, Folder, FolderOpen, ChevronDown, ChevronRight, User, Users } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -126,12 +127,75 @@ const Models = () => {
   const [bulkApplyDimensions, setBulkApplyDimensions] = useState(true);
   const [defaultDimensionPreset, setDefaultDimensionPreset] = useState<any>(null);
   
-  // Estados para criação automática de variações
+  // Constantes de tamanhos
+  const ADULT_STANDARD_SIZES = ["PP", "P", "M", "G", "GG", "XG"];
+  const ADULT_PLUS_SIZES = ["G1", "G2", "G3", "G4", "G5"];
+  const INFANT_SIZES = ["1 ANO", "2 ANOS", "4 ANOS", "6 ANOS", "8 ANOS", "10 ANOS", "12 ANOS", "14 ANOS"];
+
+  // Estados para criação automática de variações por gênero
   const [bulkCreateVariations, setBulkCreateVariations] = useState(false);
-  const [bulkVariationSizes, setBulkVariationSizes] = useState<string[]>(['PP', 'P', 'M', 'G', 'GG', 'XG', 'G1', 'G2', 'G3', 'G4']);
-  const [bulkVariationGender, setBulkVariationGender] = useState<string>('unissex');
-  const [bulkPromotionalPrice, setBulkPromotionalPrice] = useState<string>("");
-  const [bulkPromotionalPriceSpecial, setBulkPromotionalPriceSpecial] = useState<string>("");
+  const [genderConfigs, setGenderConfigs] = useState({
+    masculino: {
+      enabled: true,
+      standardSizes: [...ADULT_STANDARD_SIZES],
+      standardPrice: '',
+      plusSizes: [...ADULT_PLUS_SIZES],
+      plusPrice: ''
+    },
+    feminino: {
+      enabled: true,
+      standardSizes: [...ADULT_STANDARD_SIZES],
+      standardPrice: '',
+      plusSizes: [...ADULT_PLUS_SIZES],
+      plusPrice: ''
+    },
+    infantil: {
+      enabled: false,
+      sizes: [...INFANT_SIZES],
+      price: ''
+    }
+  });
+
+  // Função para calcular total de variações
+  const calculateTotalVariationsForBulk = () => {
+    let total = 0;
+    if (genderConfigs.masculino.enabled) {
+      total += genderConfigs.masculino.standardSizes.length + genderConfigs.masculino.plusSizes.length;
+    }
+    if (genderConfigs.feminino.enabled) {
+      total += genderConfigs.feminino.standardSizes.length + genderConfigs.feminino.plusSizes.length;
+    }
+    if (genderConfigs.infantil.enabled) {
+      total += genderConfigs.infantil.sizes.length;
+    }
+    return total;
+  };
+
+  // Helpers para manipular genderConfigs
+  const toggleGenderSize = (gender: 'masculino' | 'feminino', sizeType: 'standard' | 'plus', size: string) => {
+    const key = sizeType === 'standard' ? 'standardSizes' : 'plusSizes';
+    setGenderConfigs(prev => ({
+      ...prev,
+      [gender]: {
+        ...prev[gender],
+        [key]: prev[gender][key].includes(size)
+          ? prev[gender][key].filter((s: string) => s !== size)
+          : [...prev[gender][key], size]
+      }
+    }));
+  };
+
+  const toggleInfantSize = (size: string) => {
+    setGenderConfigs(prev => ({
+      ...prev,
+      infantil: {
+        ...prev.infantil,
+        sizes: prev.infantil.sizes.includes(size)
+          ? prev.infantil.sizes.filter(s => s !== size)
+          : [...prev.infantil.sizes, size]
+      }
+    }));
+  };
 
   // Estados para seleção múltipla
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
@@ -562,33 +626,83 @@ const Models = () => {
           if (updateError) throw updateError;
           
           // Criar variações automáticas se habilitado
-          if (bulkCreateVariations && bulkVariationSizes.length > 0) {
-            const standardSizes = ['PP', 'P', 'M', 'G', 'GG', 'XG'];
-            const specialSizes = ['G1', 'G2', 'G3', 'G4'];
+          if (bulkCreateVariations) {
+            const variationsToCreate: any[] = [];
             
-            const variationsToCreate = bulkVariationSizes.map(size => {
-              const isSpecialSize = specialSizes.includes(size);
-              const promotionalPrice = isSpecialSize 
-                ? (bulkPromotionalPriceSpecial ? parseFloat(bulkPromotionalPriceSpecial) : null)
-                : (bulkPromotionalPrice ? parseFloat(bulkPromotionalPrice) : null);
+            // Masculino
+            if (genderConfigs.masculino.enabled) {
+              // Tamanhos padrão
+              genderConfigs.masculino.standardSizes.forEach(size => {
+                variationsToCreate.push({
+                  model_id: model.id,
+                  size,
+                  gender: 'masculino',
+                  price_adjustment: genderConfigs.masculino.standardPrice ? parseFloat(genderConfigs.masculino.standardPrice) : 0,
+                  is_active: true,
+                  stock_quantity: 0
+                });
+              });
+              // Tamanhos plus
+              genderConfigs.masculino.plusSizes.forEach(size => {
+                variationsToCreate.push({
+                  model_id: model.id,
+                  size,
+                  gender: 'masculino',
+                  price_adjustment: genderConfigs.masculino.plusPrice ? parseFloat(genderConfigs.masculino.plusPrice) : 0,
+                  is_active: true,
+                  stock_quantity: 0
+                });
+              });
+            }
+            
+            // Feminino
+            if (genderConfigs.feminino.enabled) {
+              // Tamanhos padrão
+              genderConfigs.feminino.standardSizes.forEach(size => {
+                variationsToCreate.push({
+                  model_id: model.id,
+                  size,
+                  gender: 'feminino',
+                  price_adjustment: genderConfigs.feminino.standardPrice ? parseFloat(genderConfigs.feminino.standardPrice) : 0,
+                  is_active: true,
+                  stock_quantity: 0
+                });
+              });
+              // Tamanhos plus
+              genderConfigs.feminino.plusSizes.forEach(size => {
+                variationsToCreate.push({
+                  model_id: model.id,
+                  size,
+                  gender: 'feminino',
+                  price_adjustment: genderConfigs.feminino.plusPrice ? parseFloat(genderConfigs.feminino.plusPrice) : 0,
+                  is_active: true,
+                  stock_quantity: 0
+                });
+              });
+            }
+            
+            // Infantil
+            if (genderConfigs.infantil.enabled) {
+              genderConfigs.infantil.sizes.forEach(size => {
+                variationsToCreate.push({
+                  model_id: model.id,
+                  size,
+                  gender: 'infantil',
+                  price_adjustment: genderConfigs.infantil.price ? parseFloat(genderConfigs.infantil.price) : 0,
+                  is_active: true,
+                  stock_quantity: 0
+                });
+              });
+            }
+            
+            if (variationsToCreate.length > 0) {
+              const { error: variationsError } = await supabase
+                .from('shirt_model_variations')
+                .insert(variationsToCreate);
               
-              return {
-                model_id: model.id,
-                size: size,
-                gender: bulkVariationGender,
-                price_adjustment: 0,
-                promotional_price: promotionalPrice,
-                is_active: true,
-                stock_quantity: 0
-              };
-            });
-            
-            const { error: variationsError } = await supabase
-              .from('shirt_model_variations')
-              .insert(variationsToCreate);
-            
-            if (variationsError) {
-              console.error(`Erro ao criar variações do modelo ${modelNumber}:`, variationsError);
+              if (variationsError) {
+                console.error(`Erro ao criar variações do modelo ${modelNumber}:`, variationsError);
+              }
             }
           }
           
@@ -604,9 +718,10 @@ const Models = () => {
       
       // Feedback final
       if (successCount > 0) {
-        const variationsCount = bulkCreateVariations ? successCount * bulkVariationSizes.length : 0;
+        const totalVariations = bulkCreateVariations ? calculateTotalVariationsForBulk() : 0;
+        const totalCreated = successCount * totalVariations;
         const message = bulkCreateVariations 
-          ? `🎉 ${successCount} modelo(s) criado(s) com ${variationsCount} variações!`
+          ? `🎉 ${successCount} modelo(s) criado(s) com ${totalCreated} variações!`
           : `🎉 ${successCount} modelo(s) criado(s) com sucesso!`;
         toast.success(message);
         loadModels();
@@ -625,10 +740,11 @@ const Models = () => {
       setBulkBasePrice("");
       setBulkApplyDimensions(true);
       setBulkCreateVariations(false);
-      setBulkVariationSizes(['PP', 'P', 'M', 'G', 'GG', 'XG', 'G1', 'G2', 'G3', 'G4']);
-      setBulkVariationGender('unissex');
-      setBulkPromotionalPrice("");
-      setBulkPromotionalPriceSpecial("");
+      setGenderConfigs({
+        masculino: { enabled: true, standardSizes: [...ADULT_STANDARD_SIZES], standardPrice: '', plusSizes: [...ADULT_PLUS_SIZES], plusPrice: '' },
+        feminino: { enabled: true, standardSizes: [...ADULT_STANDARD_SIZES], standardPrice: '', plusSizes: [...ADULT_PLUS_SIZES], plusPrice: '' },
+        infantil: { enabled: false, sizes: [...INFANT_SIZES], price: '' }
+      });
       
     } catch (error: any) {
       toast.error("Erro no upload em massa: " + error.message);
@@ -2094,136 +2210,260 @@ const Models = () => {
                         onCheckedChange={(checked) => setBulkCreateVariations(checked as boolean)}
                         disabled={bulkUploading}
                       />
-                      <div className="flex-1 space-y-3">
-                        <Label htmlFor="bulkCreateVariations" className="cursor-pointer text-sm">
-                          Criar variações automáticas
+                      <div className="flex-1 space-y-4">
+                        <Label htmlFor="bulkCreateVariations" className="cursor-pointer text-sm font-medium">
+                          ✨ Criar variações automáticas
                         </Label>
                         
                         {bulkCreateVariations && (
-                          <div className="space-y-3 pl-1">
-                            {/* Seleção de Tamanhos Padrão */}
-                            <div className="space-y-2">
-                              <Label className="text-xs font-medium text-muted-foreground">Tamanhos Padrão (PP ao XG):</Label>
-                              <div className="flex flex-wrap gap-2">
-                                {['PP', 'P', 'M', 'G', 'GG', 'XG'].map((size) => (
-                                  <div key={size} className="flex items-center space-x-1.5">
-                                    <Checkbox
-                                      id={`size-${size}`}
-                                      checked={bulkVariationSizes.includes(size)}
-                                      onCheckedChange={(checked) => {
-                                        if (checked) {
-                                          setBulkVariationSizes([...bulkVariationSizes, size]);
-                                        } else {
-                                          setBulkVariationSizes(bulkVariationSizes.filter(s => s !== size));
-                                        }
-                                      }}
-                                      disabled={bulkUploading}
-                                    />
-                                    <Label htmlFor={`size-${size}`} className="text-xs cursor-pointer">
-                                      {size}
-                                    </Label>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                            
-                            {/* Seleção de Tamanhos Especiais */}
-                            <div className="space-y-2">
-                              <Label className="text-xs font-medium text-muted-foreground">Tamanhos Especiais (G1 ao G4):</Label>
-                              <div className="flex flex-wrap gap-2">
-                                {['G1', 'G2', 'G3', 'G4'].map((size) => (
-                                  <div key={size} className="flex items-center space-x-1.5">
-                                    <Checkbox
-                                      id={`size-${size}`}
-                                      checked={bulkVariationSizes.includes(size)}
-                                      onCheckedChange={(checked) => {
-                                        if (checked) {
-                                          setBulkVariationSizes([...bulkVariationSizes, size]);
-                                        } else {
-                                          setBulkVariationSizes(bulkVariationSizes.filter(s => s !== size));
-                                        }
-                                      }}
-                                      disabled={bulkUploading}
-                                    />
-                                    <Label htmlFor={`size-${size}`} className="text-xs cursor-pointer">
-                                      {size}
-                                    </Label>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                            
-                            {/* Seleção de Gênero */}
-                            <div className="space-y-2">
-                              <Label htmlFor="bulkVariationGender" className="text-xs font-medium text-muted-foreground">
-                                Gênero:
-                              </Label>
-                              <Select
-                                value={bulkVariationGender}
-                                onValueChange={setBulkVariationGender}
-                                disabled={bulkUploading}
-                              >
-                                <SelectTrigger className="h-8 text-xs">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="unissex">Unissex</SelectItem>
-                                  <SelectItem value="masculino">Masculino</SelectItem>
-                                  <SelectItem value="feminino">Feminino</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            
-                            {/* Preços Promocionais */}
-                            <div className="grid grid-cols-2 gap-3">
-                              <div className="space-y-2">
-                                <Label htmlFor="bulkPromotionalPrice" className="text-xs font-medium text-muted-foreground">
-                                  Preço Promo PP-XG (R$):
-                                </Label>
-                                <Input
-                                  id="bulkPromotionalPrice"
-                                  type="number"
-                                  step="0.01"
-                                  min="0"
-                                  value={bulkPromotionalPrice}
-                                  onChange={(e) => setBulkPromotionalPrice(e.target.value)}
-                                  placeholder="Ex: 49.90"
+                          <div className="space-y-4 border rounded-lg p-4 bg-muted/30">
+                            {/* MASCULINO */}
+                            <Collapsible defaultOpen={genderConfigs.masculino.enabled}>
+                              <div className="flex items-center justify-between">
+                                <CollapsibleTrigger className="flex items-center gap-2 hover:opacity-80">
+                                  <ChevronRight className="h-4 w-4 transition-transform data-[state=open]:rotate-90" />
+                                  <User className="h-4 w-4" />
+                                  <span className="text-sm font-medium">Masculino</span>
+                                </CollapsibleTrigger>
+                                <Switch
+                                  checked={genderConfigs.masculino.enabled}
+                                  onCheckedChange={(checked) => setGenderConfigs(prev => ({
+                                    ...prev,
+                                    masculino: { ...prev.masculino, enabled: checked }
+                                  }))}
                                   disabled={bulkUploading}
-                                  className="h-8 text-xs"
                                 />
                               </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="bulkPromotionalPriceSpecial" className="text-xs font-medium text-muted-foreground">
-                                  Preço Promo G1-G4 (R$):
-                                </Label>
-                                <Input
-                                  id="bulkPromotionalPriceSpecial"
-                                  type="number"
-                                  step="0.01"
-                                  min="0"
-                                  value={bulkPromotionalPriceSpecial}
-                                  onChange={(e) => setBulkPromotionalPriceSpecial(e.target.value)}
-                                  placeholder="Ex: 59.90"
+                              <CollapsibleContent className="mt-3 space-y-3 pl-6">
+                                {/* Tamanhos Padrão */}
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-muted-foreground">Tamanhos Padrão (PP-XG)</Label>
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      min="0"
+                                      value={genderConfigs.masculino.standardPrice}
+                                      onChange={(e) => setGenderConfigs(prev => ({
+                                        ...prev,
+                                        masculino: { ...prev.masculino, standardPrice: e.target.value }
+                                      }))}
+                                      placeholder="R$ Preço"
+                                      className="h-7 w-24 text-xs"
+                                      disabled={bulkUploading}
+                                    />
+                                  </div>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {ADULT_STANDARD_SIZES.map((size) => (
+                                      <Badge
+                                        key={size}
+                                        variant={genderConfigs.masculino.standardSizes.includes(size) ? "default" : "outline"}
+                                        className="cursor-pointer text-xs"
+                                        onClick={() => toggleGenderSize('masculino', 'standard', size)}
+                                      >
+                                        {size}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                                {/* Tamanhos Plus */}
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-muted-foreground">Tamanhos Plus (G1-G5)</Label>
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      min="0"
+                                      value={genderConfigs.masculino.plusPrice}
+                                      onChange={(e) => setGenderConfigs(prev => ({
+                                        ...prev,
+                                        masculino: { ...prev.masculino, plusPrice: e.target.value }
+                                      }))}
+                                      placeholder="R$ Preço"
+                                      className="h-7 w-24 text-xs"
+                                      disabled={bulkUploading}
+                                    />
+                                  </div>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {ADULT_PLUS_SIZES.map((size) => (
+                                      <Badge
+                                        key={size}
+                                        variant={genderConfigs.masculino.plusSizes.includes(size) ? "default" : "outline"}
+                                        className="cursor-pointer text-xs"
+                                        onClick={() => toggleGenderSize('masculino', 'plus', size)}
+                                      >
+                                        {size}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              </CollapsibleContent>
+                            </Collapsible>
+
+                            <Separator />
+
+                            {/* FEMININO */}
+                            <Collapsible defaultOpen={genderConfigs.feminino.enabled}>
+                              <div className="flex items-center justify-between">
+                                <CollapsibleTrigger className="flex items-center gap-2 hover:opacity-80">
+                                  <ChevronRight className="h-4 w-4 transition-transform data-[state=open]:rotate-90" />
+                                  <Users className="h-4 w-4" />
+                                  <span className="text-sm font-medium">Feminino</span>
+                                </CollapsibleTrigger>
+                                <Switch
+                                  checked={genderConfigs.feminino.enabled}
+                                  onCheckedChange={(checked) => setGenderConfigs(prev => ({
+                                    ...prev,
+                                    feminino: { ...prev.feminino, enabled: checked }
+                                  }))}
                                   disabled={bulkUploading}
-                                  className="h-8 text-xs"
                                 />
                               </div>
-                            </div>
-                            
+                              <CollapsibleContent className="mt-3 space-y-3 pl-6">
+                                {/* Tamanhos Padrão */}
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-muted-foreground">Tamanhos Padrão (PP-XG)</Label>
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      min="0"
+                                      value={genderConfigs.feminino.standardPrice}
+                                      onChange={(e) => setGenderConfigs(prev => ({
+                                        ...prev,
+                                        feminino: { ...prev.feminino, standardPrice: e.target.value }
+                                      }))}
+                                      placeholder="R$ Preço"
+                                      className="h-7 w-24 text-xs"
+                                      disabled={bulkUploading}
+                                    />
+                                  </div>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {ADULT_STANDARD_SIZES.map((size) => (
+                                      <Badge
+                                        key={size}
+                                        variant={genderConfigs.feminino.standardSizes.includes(size) ? "default" : "outline"}
+                                        className="cursor-pointer text-xs"
+                                        onClick={() => toggleGenderSize('feminino', 'standard', size)}
+                                      >
+                                        {size}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                                {/* Tamanhos Plus */}
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-muted-foreground">Tamanhos Plus (G1-G5)</Label>
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      min="0"
+                                      value={genderConfigs.feminino.plusPrice}
+                                      onChange={(e) => setGenderConfigs(prev => ({
+                                        ...prev,
+                                        feminino: { ...prev.feminino, plusPrice: e.target.value }
+                                      }))}
+                                      placeholder="R$ Preço"
+                                      className="h-7 w-24 text-xs"
+                                      disabled={bulkUploading}
+                                    />
+                                  </div>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {ADULT_PLUS_SIZES.map((size) => (
+                                      <Badge
+                                        key={size}
+                                        variant={genderConfigs.feminino.plusSizes.includes(size) ? "default" : "outline"}
+                                        className="cursor-pointer text-xs"
+                                        onClick={() => toggleGenderSize('feminino', 'plus', size)}
+                                      >
+                                        {size}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              </CollapsibleContent>
+                            </Collapsible>
+
+                            <Separator />
+
+                            {/* INFANTIL */}
+                            <Collapsible defaultOpen={genderConfigs.infantil.enabled}>
+                              <div className="flex items-center justify-between">
+                                <CollapsibleTrigger className="flex items-center gap-2 hover:opacity-80">
+                                  <ChevronRight className="h-4 w-4 transition-transform data-[state=open]:rotate-90" />
+                                  <span className="text-sm">👶</span>
+                                  <span className="text-sm font-medium">Infantil</span>
+                                </CollapsibleTrigger>
+                                <Switch
+                                  checked={genderConfigs.infantil.enabled}
+                                  onCheckedChange={(checked) => setGenderConfigs(prev => ({
+                                    ...prev,
+                                    infantil: { ...prev.infantil, enabled: checked }
+                                  }))}
+                                  disabled={bulkUploading}
+                                />
+                              </div>
+                              <CollapsibleContent className="mt-3 space-y-3 pl-6">
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-muted-foreground">Tamanhos Infantis</Label>
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      min="0"
+                                      value={genderConfigs.infantil.price}
+                                      onChange={(e) => setGenderConfigs(prev => ({
+                                        ...prev,
+                                        infantil: { ...prev.infantil, price: e.target.value }
+                                      }))}
+                                      placeholder="R$ Preço"
+                                      className="h-7 w-24 text-xs"
+                                      disabled={bulkUploading}
+                                    />
+                                  </div>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {INFANT_SIZES.map((size) => (
+                                      <Badge
+                                        key={size}
+                                        variant={genderConfigs.infantil.sizes.includes(size) ? "default" : "outline"}
+                                        className="cursor-pointer text-xs"
+                                        onClick={() => toggleInfantSize(size)}
+                                      >
+                                        {size}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              </CollapsibleContent>
+                            </Collapsible>
+
                             {/* Preview */}
-                            {bulkVariationSizes.length > 0 && (
-                              <div className="bg-primary/5 border border-primary/20 rounded-md p-2 space-y-1">
-                                <p className="text-xs text-primary font-medium">
-                                  ✨ Serão criadas {bulkVariationSizes.length} variações por modelo
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  • {bulkVariationSizes.filter(s => ['PP', 'P', 'M', 'G', 'GG', 'XG'].includes(s)).length} variações padrão (PP-XG)
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  • {bulkVariationSizes.filter(s => ['G1', 'G2', 'G3', 'G4'].includes(s)).length} variações especiais (G1-G4)
-                                </p>
-                                <p className="text-xs font-semibold text-primary mt-1">
-                                  Total: {Object.keys(bulkGroupedModels).length * bulkVariationSizes.length} variações
+                            {calculateTotalVariationsForBulk() > 0 && (
+                              <div className="bg-primary/5 border border-primary/20 rounded-md p-3 space-y-2 mt-4">
+                                <p className="text-xs text-primary font-medium">📊 Prévia das Variações:</p>
+                                {genderConfigs.masculino.enabled && (
+                                  <p className="text-xs text-muted-foreground">
+                                    • 👤 Masculino: {genderConfigs.masculino.standardSizes.length} padrão 
+                                    {genderConfigs.masculino.standardPrice && ` (R$ ${genderConfigs.masculino.standardPrice})`} + {genderConfigs.masculino.plusSizes.length} plus
+                                    {genderConfigs.masculino.plusPrice && ` (R$ ${genderConfigs.masculino.plusPrice})`}
+                                  </p>
+                                )}
+                                {genderConfigs.feminino.enabled && (
+                                  <p className="text-xs text-muted-foreground">
+                                    • 👩 Feminino: {genderConfigs.feminino.standardSizes.length} padrão 
+                                    {genderConfigs.feminino.standardPrice && ` (R$ ${genderConfigs.feminino.standardPrice})`} + {genderConfigs.feminino.plusSizes.length} plus
+                                    {genderConfigs.feminino.plusPrice && ` (R$ ${genderConfigs.feminino.plusPrice})`}
+                                  </p>
+                                )}
+                                {genderConfigs.infantil.enabled && (
+                                  <p className="text-xs text-muted-foreground">
+                                    • 👶 Infantil: {genderConfigs.infantil.sizes.length} tamanhos
+                                    {genderConfigs.infantil.price && ` (R$ ${genderConfigs.infantil.price})`}
+                                  </p>
+                                )}
+                                <p className="text-xs font-semibold text-primary pt-1 border-t border-primary/20">
+                                  Total: {calculateTotalVariationsForBulk()} variações × {Object.keys(bulkGroupedModels).length} modelo(s) = {Object.keys(bulkGroupedModels).length * calculateTotalVariationsForBulk()} variações
                                 </p>
                               </div>
                             )}
