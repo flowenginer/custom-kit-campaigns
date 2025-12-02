@@ -316,15 +316,18 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
     let totalUpdated = 0;
 
     try {
-      // Update standard sizes
+      // BUSINESS RULE: price_adjustment = ABSOLUTE final price (not a delta)
+      // Final price = price_adjustment directly (base_price on shirt_models is just reference)
+
+      // Update standard sizes - price_adjustment = the full standard price
       if (standardPrice !== null) {
         await supabase
           .from("shirt_model_variations")
-          .update({ price_adjustment: 0 })
+          .update({ price_adjustment: standardPrice })
           .in("model_id", selectedIds)
           .in("size", STANDARD_SIZES);
         
-        // Also update base_price on shirt_models for reference
+        // Update base_price on shirt_models for reference
         await supabase
           .from("shirt_models")
           .update({ base_price: standardPrice })
@@ -333,45 +336,24 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
         totalUpdated += currentTierPrices.standard.count;
       }
 
-      // Update plus sizes (using price_adjustment to add the difference)
+      // Update plus sizes - price_adjustment = the full plus price (not a delta)
       if (plusPrice !== null) {
-        // Get current base prices
-        const { data: models } = await supabase
-          .from("shirt_models")
-          .select("id, base_price")
-          .in("id", selectedIds);
-        
-        for (const model of models || []) {
-          const basePrice = standardPrice || model.base_price || 0;
-          const adjustment = plusPrice - basePrice;
-          
-          await supabase
-            .from("shirt_model_variations")
-            .update({ price_adjustment: adjustment })
-            .eq("model_id", model.id)
-            .in("size", PLUS_SIZES);
-        }
+        await supabase
+          .from("shirt_model_variations")
+          .update({ price_adjustment: plusPrice })
+          .in("model_id", selectedIds)
+          .in("size", PLUS_SIZES);
         
         totalUpdated += currentTierPrices.plus.count;
       }
 
-      // Update kids sizes
+      // Update kids sizes - price_adjustment = the full kids price (not a delta)
       if (kidsPrice !== null) {
-        const { data: models } = await supabase
-          .from("shirt_models")
-          .select("id, base_price")
-          .in("id", selectedIds);
-        
-        for (const model of models || []) {
-          const basePrice = standardPrice || model.base_price || 0;
-          const adjustment = kidsPrice - basePrice;
-          
-          await supabase
-            .from("shirt_model_variations")
-            .update({ price_adjustment: adjustment })
-            .eq("model_id", model.id)
-            .in("size", KIDS_SIZES);
-        }
+        await supabase
+          .from("shirt_model_variations")
+          .update({ price_adjustment: kidsPrice })
+          .in("model_id", selectedIds)
+          .in("size", KIDS_SIZES);
         
         totalUpdated += currentTierPrices.kids.count;
       }
