@@ -300,7 +300,7 @@ serve(async (req) => {
 
             return {
               nome: `${v.size} - ${genderLabel}`,
-              codigo: `${model.sku || model.model_tag}-${v.sku_suffix || `${v.gender.charAt(0).toUpperCase()}-${v.size}`}`,
+              codigo: v.sku_suffix, // SKU completo já inclui SKU do produto + gênero + tamanho
               preco: variationPrice,
               tipo: 'A', // Atributo
               situacao: 'A', // Ativo
