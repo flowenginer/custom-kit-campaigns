@@ -47,6 +47,31 @@ interface ShirtModel {
 
 type ViewMode = 'list' | 'small' | 'medium' | 'large';
 
+// Formata tag em nome legível (ex: "manga_longa" → "Manga Longa")
+const formatTagToName = (tag: string): string => {
+  if (!tag) return '';
+  return tag
+    .replace(/_+$/, '') // Remove underscores do final
+    .replace(/_/g, ' ')  // Substitui underscores por espaços
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .filter(word => word.length > 0)
+    .join(' ');
+};
+
+// Gera nome do modelo no formato: "Segmento Tipo Modelo XX"
+const generateModelName = (
+  segmentTag: string, 
+  modelTag: string, 
+  modelNumber: string
+): string => {
+  const segmentName = formatTagToName(segmentTag);
+  const typeName = formatTagToName(modelTag);
+  const numberPadded = modelNumber.padStart(2, '0');
+  
+  return `${segmentName} ${typeName} Modelo ${numberPadded}`;
+};
+
 const Models = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
