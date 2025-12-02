@@ -16,6 +16,7 @@ import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { DeleteReasonDialog } from "@/components/orders/DeleteReasonDialog";
 
 /**
  * Página EXCLUSIVA de Vendedores para gerenciar LEADS SEM LOGO
@@ -58,6 +59,7 @@ const Orders = () => {
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("pending");
+  const [deleteDialogTask, setDeleteDialogTask] = useState<DesignTask | null>(null);
 
   const refreshData = useCallback(async () => {
     await loadTasks();
@@ -438,29 +440,38 @@ const Orders = () => {
                 const reasonLabel = rejection ? REJECTION_REASONS[rejection.reason_type] || rejection.reason_type : 'Motivo não especificado';
                 
                 return (
-                    <Card key={task.id} className="border-red-500/50 bg-red-50 dark:bg-red-950/30">
+                    <Card key={task.id} className="border-red-400 dark:border-red-600 bg-red-50 dark:bg-red-950/40">
                     <CardContent className="p-4 space-y-4">
                       {/* Alert de rejeição */}
-                      <Alert className="bg-red-100 dark:bg-red-900/50 border-red-300 dark:border-red-700">
+                      <Alert className="bg-white dark:bg-gray-800 border-red-400 dark:border-red-600">
                         <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
-                        <AlertTitle className="text-red-800 dark:text-red-200">Tarefa Devolvida pelo Designer</AlertTitle>
-                        <AlertDescription className="space-y-2 text-red-700 dark:text-red-300">
-                          <p><strong>Motivo:</strong> {reasonLabel}</p>
+                        <AlertTitle className="text-red-700 dark:text-red-300 font-semibold">Tarefa Devolvida pelo Designer</AlertTitle>
+                        <AlertDescription className="space-y-1 text-gray-700 dark:text-gray-300">
+                          <p><span className="font-medium text-red-600 dark:text-red-400">Motivo:</span> {reasonLabel}</p>
                           {rejection?.reason_text && (
-                            <p><strong>Observação:</strong> {rejection.reason_text}</p>
+                            <p><span className="font-medium text-red-600 dark:text-red-400">Observação:</span> {rejection.reason_text}</p>
                           )}
                         </AlertDescription>
                       </Alert>
 
                       {/* Info da tarefa */}
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between flex-wrap gap-3">
                         <div>
-                          <h3 className="font-semibold">{task.customer_name}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {task.campaign_name} • {task.quantity} unidades
+                          <h3 className="font-semibold text-gray-900 dark:text-white">{task.customer_name}</h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {task.campaign_name || 'Layout do Zero'} • {task.quantity} unidades
                           </p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-red-400 text-red-600 hover:bg-red-50 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-950"
+                            onClick={() => setDeleteDialogTask(task)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Solicitar Exclusão
+                          </Button>
                           <Button
                             variant="outline"
                             size="sm"
@@ -501,6 +512,19 @@ const Orders = () => {
         onOpenChange={setNewRequestOpen}
         onSuccess={loadTasks}
       />
+
+      {/* ✅ Modal de Solicitar Exclusão */}
+      {deleteDialogTask && (
+        <DeleteReasonDialog
+          open={!!deleteDialogTask}
+          onOpenChange={(open) => !open && setDeleteDialogTask(null)}
+          taskId={deleteDialogTask.id}
+          onSuccess={() => {
+            setDeleteDialogTask(null);
+            loadTasks();
+          }}
+        />
+      )}
     </div>
   );
 };
