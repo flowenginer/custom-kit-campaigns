@@ -125,7 +125,9 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { action, data } = await req.json();
+    const body = await req.json();
+    const action = body.action;
+    const data = body.data || body; // Support both nested data and flat body
     
     // Buscar configurações do Bling da tabela company_settings
     const { data: settings, error: settingsError } = await supabaseClient
@@ -159,7 +161,7 @@ serve(async (req) => {
     switch (action) {
       case 'sync_product': {
         // Sincronizar produto do shirt_models para Bling
-        const { model_id } = data;
+        const model_id = data.model_id || data.product_id || body.product_id;
         
         const { data: model, error: modelError } = await supabaseClient
           .from('shirt_models')
