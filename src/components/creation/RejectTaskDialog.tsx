@@ -69,16 +69,10 @@ export const RejectTaskDialog = ({
 
       if (rejectionError) throw rejectionError;
 
-      // 2. Atualizar a lead para indicar que foi rejeitada
+      // 2. Atualizar a lead para indicar que foi rejeitada (usa função SECURITY DEFINER)
       if (task.lead_id) {
         const { error: leadError } = await supabase
-          .from('leads')
-          .update({
-            needs_logo: true,
-            logo_action: 'waiting_client',
-            salesperson_status: 'rejected_by_designer',
-          })
-          .eq('id', task.lead_id);
+          .rpc('mark_lead_rejected_by_designer', { p_lead_id: task.lead_id });
 
         if (leadError) {
           console.error('Error updating lead:', leadError);
