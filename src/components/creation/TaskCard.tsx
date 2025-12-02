@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { ShippingQuoteDialog } from "../orders/ShippingQuoteDialog";
 import { BlingExportButton } from "../orders/BlingExportButton";
 import { RequestCustomerRegistrationButton } from "../orders/RequestCustomerRegistrationButton";
+import { abbreviateProductName } from "@/lib/productNameAbbreviator";
 
 interface TaskCardProps {
   task: DesignTask;
@@ -206,11 +207,14 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
 
                 {/* COLUNA CENTRAL */}
                 <div className="space-y-1.5 flex flex-col items-center">
-                  {/* Modelo */}
-                  <div className="border border-border rounded px-2 py-1.5 bg-card flex items-center gap-1 w-full justify-center min-h-[32px]">
+                {/* Modelo */}
+                  <div 
+                    className="border border-border rounded px-2 py-1.5 bg-card flex items-center gap-1 w-full justify-center min-h-[32px]"
+                    title={task.model_name || 'N/A'}
+                  >
                     <span className="text-base">🎽</span>
                     <span className="font-medium text-card-foreground truncate" style={{ fontSize: `${fontSizes?.model || 10}px` }}>
-                      {task.model_name || 'N/A'}
+                      {abbreviateProductName(task.model_name) || 'N/A'}
                     </span>
                   </div>
 
