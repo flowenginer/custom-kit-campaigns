@@ -2196,11 +2196,19 @@ export const NewLayoutRequestDialog = ({
                 onClick={() => {
                   // Salvar dados de logo no layout atual
                   const updatedLayouts = [...layouts];
+                  const currentLayout = updatedLayouts[currentLayoutIndex];
+                  
+                  // Para layouts "do zero", preservar a descrição da criação existente
+                  // Só usa logoDescription do state se for "criar_logo"
+                  const finalLogoDescription = hasLogo === 'criar_logo' 
+                    ? logoDescription 
+                    : (currentLayout?.logoDescription || "");
+                  
                   updatedLayouts[currentLayoutIndex] = {
-                    ...updatedLayouts[currentLayoutIndex],
+                    ...currentLayout,
                     hasLogo: hasLogo,
                     logoFiles: logoFiles,
-                    logoDescription: logoDescription,
+                    logoDescription: finalLogoDescription,
                   };
                   setLayouts(updatedLayouts);
 
