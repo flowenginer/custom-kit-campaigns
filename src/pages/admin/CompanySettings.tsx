@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Building2, Package, Save, Boxes, Loader2, CheckCircle2, XCircle, Link2, Unlink } from "lucide-react";
+import { Building2, Package, Save, Boxes, Loader2, CheckCircle2, XCircle, Link2, Unlink, Copy } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -125,6 +125,22 @@ export default function CompanySettings() {
     }
   };
 
+  // Helper para gerar a URL base correta
+  const getBaseUrl = () => {
+    if (customDomain) {
+      const cleanDomain = customDomain.replace(/^https?:\/\//, '').replace(/\/$/, '');
+      return `https://${cleanDomain}`;
+    }
+    return window.location.origin;
+  };
+
+  const getBlingCallbackUrl = () => `${getBaseUrl()}/admin/company-settings`;
+
+  const handleCopyCallbackUrl = () => {
+    navigator.clipboard.writeText(getBlingCallbackUrl());
+    toast.success("URL copiada!");
+  };
+
   const handleBlingConnect = async () => {
     if (!blingClientId || !blingClientSecret) {
       toast.error("Configure o Client ID e Client Secret primeiro");
@@ -136,7 +152,7 @@ export default function CompanySettings() {
 
     setBlingConnecting(true);
     try {
-      const redirectUri = `${window.location.origin}/admin/company-settings`;
+      const redirectUri = getBlingCallbackUrl();
       
       const { data, error } = await supabase.functions.invoke('bling-oauth', {
         body: { 
@@ -168,7 +184,7 @@ export default function CompanySettings() {
   const handleBlingCallback = async (code: string) => {
     setBlingConnecting(true);
     try {
-      const redirectUri = `${window.location.origin}/admin/company-settings`;
+      const redirectUri = getBlingCallbackUrl();
       
       const { data, error } = await supabase.functions.invoke('bling-oauth', {
         body: { 
@@ -544,6 +560,34 @@ export default function CompanySettings() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* URL de Callback */}
+              <div className="space-y-3 p-4 border rounded-lg bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
+                <h4 className="font-medium text-amber-800 dark:text-amber-200">
+                  ⚠️ URL de Callback para cadastrar no Bling
+                </h4>
+                <p className="text-sm text-amber-700 dark:text-amber-300">
+                  Copie esta URL e cadastre como "URL de Callback" no painel de desenvolvedores do Bling:
+                </p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 bg-background border rounded px-3 py-2 text-sm font-mono break-all">
+                    {getBlingCallbackUrl()}
+                  </code>
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={handleCopyCallbackUrl}
+                    title="Copiar URL"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+                {!customDomain && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                    💡 Dica: Configure o "Domínio Personalizado" na aba Empresa para usar seu próprio domínio
+                  </p>
+                )}
+              </div>
+
               {/* Credenciais OAuth */}
               <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
                 <h4 className="font-medium">1. Configure as credenciais do aplicativo</h4>
