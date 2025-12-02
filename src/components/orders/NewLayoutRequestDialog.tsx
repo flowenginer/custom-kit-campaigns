@@ -419,6 +419,11 @@ export const NewLayoutRequestDialog = ({
         toast.error(`Descreva a logo para o Layout ${i + 1}`);
         return;
       }
+      // Validação obrigatória: descrição para layouts "do zero"
+      if (layout.isFromScratch && !layout.logoDescription?.trim()) {
+        toast.error(`Preencha a descrição da criação para o Layout ${i + 1}`);
+        return;
+      }
     }
 
     setLoading(true);
@@ -977,7 +982,7 @@ export const NewLayoutRequestDialog = ({
               <div className="space-y-2 p-4 border-2 border-amber-500 dark:border-amber-600 rounded-lg bg-amber-50 dark:bg-amber-950/50">
                 <Label className="flex items-center gap-2 text-amber-800 dark:text-amber-200 font-semibold">
                   <span className="text-lg">✏️</span>
-                  Descrição da Criação (opcional)
+                  Descrição da Criação <span className="text-red-500">*</span>
                 </Label>
                 <Textarea
                   placeholder="Descreva como você imagina esse layout... Ex: Tema esportivo moderno com cores vibrantes, detalhes em gradiente..."
