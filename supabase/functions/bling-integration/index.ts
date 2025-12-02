@@ -138,11 +138,15 @@ serve(async (req) => {
     const { data: settings, error: settingsError } = await supabaseClient
       .from('company_settings')
       .select('bling_enabled, bling_client_id, bling_client_secret')
-      .single();
+      .maybeSingle();
 
     if (settingsError) {
       console.error('[Bling] Error fetching settings:', settingsError);
       throw new Error('Erro ao buscar configurações do Bling');
+    }
+
+    if (!settings) {
+      throw new Error('Configure as credenciais do Bling em Configurações > Empresa.');
     }
 
     if (!settings?.bling_enabled) {
@@ -153,7 +157,7 @@ serve(async (req) => {
     const { data: tokenData, error: tokenError } = await supabaseAdmin
       .from('bling_oauth_tokens')
       .select('*')
-      .single();
+      .maybeSingle();
 
     if (tokenError || !tokenData?.access_token) {
       throw new Error('Bling não conectado. Conecte ao Bling em Configurações da Empresa.');
