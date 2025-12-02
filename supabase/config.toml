@@ -6,6 +6,9 @@ verify_jwt = false
 [functions.send-approval-webhook]
 verify_jwt = false
 
+[functions.send-layout-webhook]
+verify_jwt = false
+
 [functions.manage-users]
 verify_jwt = true
 
