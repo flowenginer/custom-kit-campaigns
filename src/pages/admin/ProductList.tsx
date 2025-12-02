@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Eye, Settings, Edit2, Package, DollarSign, Ruler } from "lucide-react";
+import { Eye, Settings, Package, Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { ProductDetailDrawer } from "@/components/products/ProductDetailDrawer";
 import { BulkActionsBar } from "@/components/products/BulkActionsBar";
@@ -53,9 +53,93 @@ export default function ProductList({ onSelectModel, onSwitchToVariations }: Pro
   const [availableTypes, setAvailableTypes] = useState<string[]>([]);
   const [availableSegments, setAvailableSegments] = useState<string[]>([]);
 
+  // Bling integration
+  const [blingEnabled, setBlingEnabled] = useState(false);
+  const [blingLoading, setBlingLoading] = useState(false);
+  const [unsyncedCount, setUnsyncedCount] = useState(0);
+
   useEffect(() => {
     loadProducts();
+    checkBlingSettings();
   }, []);
+
+  const checkBlingSettings = async () => {
+    // Verificar se Bling está habilitado
+    const { data: settings } = await supabase
+      .from("company_settings")
+      .select("bling_enabled")
+      .single();
+    
+    setBlingEnabled(settings?.bling_enabled || false);
+
+    // Contar produtos não sincronizados
+    const { count } = await supabase
+      .from("shirt_models")
+      .select("id", { count: "exact", head: true })
+      .is("bling_synced_at", null);
+    
+    setUnsyncedCount(count || 0);
+  };
+
+  const sendAllToBling = async () => {
+    setBlingLoading(true);
+    
+    try {
+      // Buscar todos os produtos não sincronizados
+      const { data: unsyncedProducts, error } = await supabase
+        .from("shirt_models")
+        .select("id, name, sku, base_price, peso, altura, largura, profundidade")
+        .is("bling_synced_at", null);
+
+      if (error) throw error;
+
+      if (!unsyncedProducts || unsyncedProducts.length === 0) {
+        toast.info("Todos os produtos já estão sincronizados!");
+        setBlingLoading(false);
+        return;
+      }
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      // Processar em lotes para não sobrecarregar
+      for (const product of unsyncedProducts) {
+        try {
+          const { error: syncError } = await supabase.functions.invoke("bling-integration", {
+            body: {
+              action: "sync_product",
+              product_id: product.id
+            }
+          });
+
+          if (syncError) {
+            console.error(`Erro ao sincronizar ${product.name}:`, syncError);
+            errorCount++;
+          } else {
+            successCount++;
+          }
+        } catch (err) {
+          console.error(`Erro ao sincronizar ${product.name}:`, err);
+          errorCount++;
+        }
+      }
+
+      if (errorCount === 0) {
+        toast.success(`✅ ${successCount} produtos enviados para o Bling com sucesso!`);
+      } else {
+        toast.warning(`${successCount} produtos sincronizados, ${errorCount} com erro`);
+      }
+
+      // Atualizar contagem
+      checkBlingSettings();
+      loadProducts();
+    } catch (err) {
+      console.error("Erro ao enviar para Bling:", err);
+      toast.error("Erro ao enviar produtos para o Bling");
+    } finally {
+      setBlingLoading(false);
+    }
+  };
 
   const loadProducts = async () => {
     setLoading(true);
@@ -257,9 +341,29 @@ export default function ProductList({ onSelectModel, onSwitchToVariations }: Pro
           </div>
           
           <div className="flex items-center justify-between">
-            <Button variant="outline" size="sm" onClick={clearFilters}>
-              Limpar Filtros
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={clearFilters}>
+                Limpar Filtros
+              </Button>
+              
+              {/* Botão Enviar TODOS para Bling */}
+              {blingEnabled && unsyncedCount > 0 && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={sendAllToBling}
+                  disabled={blingLoading}
+                  className="bg-orange-600 hover:bg-orange-700"
+                >
+                  {blingLoading ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4 mr-2" />
+                  )}
+                  Enviar Todos para Bling ({unsyncedCount})
+                </Button>
+              )}
+            </div>
             <span className="text-sm text-muted-foreground">
               Mostrando {filteredProducts.length} de {products.length} produtos
             </span>
