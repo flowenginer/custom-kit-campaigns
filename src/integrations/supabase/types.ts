@@ -2659,6 +2659,7 @@ export type Database = {
         Args: { p_customer_id: string; p_token: string }
         Returns: undefined
       }
+      format_tag_to_name: { Args: { tag: string }; Returns: string }
       get_user_roles: {
         Args: { _user_id: string }
         Returns: {
