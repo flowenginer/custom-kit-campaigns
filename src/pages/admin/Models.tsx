@@ -548,19 +548,22 @@ const Models = () => {
         const modelNumber = modelNumbers[i];
         const images = bulkGroupedModels[modelNumber];
         
-        setBulkCurrentModel(`Modelo ${modelNumber}`);
+        // Recuperar segment_tag a partir do ID selecionado
+        const selectedSegment = segments.find((s: any) => s.id === bulkSegmentId);
+        const segmentTag = selectedSegment?.segment_tag || "";
+        
+        // Gerar nome do modelo inteligente
+        const modelName = generateModelName(segmentTag, bulkModelTag, modelNumber);
+        
+        setBulkCurrentModel(modelName);
         
         try {
-          // Recuperar segment_tag a partir do ID selecionado
-          const selectedSegment = segments.find((s: any) => s.id === bulkSegmentId);
-          const segmentTag = selectedSegment?.segment_tag || "";
-          
           // Gerar SKU automático
           const generatedSKU = generateSKU(bulkModelTag, segmentTag, modelNumber);
           
           // Preparar dados do modelo
           const modelData: any = {
-            name: `Modelo ${modelNumber}`,
+            name: modelName,
             segment_tag: segmentTag,
             model_tag: bulkModelTag,
             segment_id: bulkSegmentId,
