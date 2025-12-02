@@ -148,8 +148,16 @@ export default function CompanySettings() {
       if (error) throw error;
       if (data.error) throw new Error(data.error);
 
-      // Redirecionar para Bling
-      window.location.href = data.auth_url;
+      // Redirecionar para Bling - usar window.open para evitar bloqueio de iframe
+      const authWindow = window.open(data.auth_url, '_blank');
+      if (!authWindow) {
+        toast.error("Popup bloqueado. Permita popups para este site.");
+        setBlingConnecting(false);
+        return;
+      }
+      
+      setBlingConnecting(false);
+      toast.info("Autorize no Bling e depois clique em 'Verificar Conexão'.", { duration: 10000 });
     } catch (error: any) {
       console.error("Error connecting to Bling:", error);
       toast.error(error.message || "Erro ao conectar ao Bling");
@@ -602,25 +610,44 @@ export default function CompanySettings() {
                   <div className="space-y-3">
                     <p className="text-sm text-muted-foreground">
                       Clique no botão abaixo para autorizar o acesso ao seu Bling. 
-                      Você será redirecionado para o site do Bling para fazer login e autorizar.
+                      Uma nova aba será aberta para você fazer login e autorizar.
                     </p>
-                    <Button 
-                      onClick={handleBlingConnect}
-                      disabled={blingConnecting || !blingClientId || !blingClientSecret}
-                      className="bg-blue-600 hover:bg-blue-700"
-                    >
-                      {blingConnecting ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Conectando...
-                        </>
-                      ) : (
-                        <>
-                          <Link2 className="h-4 w-4 mr-2" />
-                          Conectar ao Bling
-                        </>
-                      )}
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        onClick={handleBlingConnect}
+                        disabled={blingConnecting || !blingClientId || !blingClientSecret}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        {blingConnecting ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Conectando...
+                          </>
+                        ) : (
+                          <>
+                            <Link2 className="h-4 w-4 mr-2" />
+                            Conectar ao Bling
+                          </>
+                        )}
+                      </Button>
+                      <Button 
+                        onClick={checkBlingStatus}
+                        disabled={blingCheckingStatus}
+                        variant="outline"
+                      >
+                        {blingCheckingStatus ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Verificando...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 className="h-4 w-4 mr-2" />
+                            Verificar Conexão
+                          </>
+                        )}
+                      </Button>
+                    </div>
                     {(!blingClientId || !blingClientSecret) && (
                       <p className="text-xs text-amber-600">
                         ⚠️ Configure o Client ID e Client Secret primeiro
