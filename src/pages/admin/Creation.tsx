@@ -746,29 +746,57 @@ const Creation = () => {
         currentColors={columnColors}
       />
 
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Gestão de Criação</h1>
-          <p className="text-muted-foreground mt-1">
-            {tasks.length} tarefas • {inProgressCount} em andamento
-          </p>
-        </div>
-
-        <div className="flex gap-2 flex-wrap">
-          {/* Pesquisa por cliente ou número do pedido */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar cliente ou nº pedido..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 w-[220px]"
-            />
+      <div className="space-y-4">
+        {/* Linha 1: Título + Busca + Atualização + Configurações */}
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h1 className="text-3xl font-bold">Gestão de Criação</h1>
+            <p className="text-muted-foreground mt-1">
+              {tasks.length} tarefas • {inProgressCount} em andamento
+            </p>
           </div>
 
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Campo de Busca */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar cliente ou nº pedido..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 w-[220px]"
+              />
+            </div>
+
+            <RefreshIndicator 
+              lastUpdated={lastUpdated}
+              isRefreshing={isRefreshing}
+              onRefresh={refresh}
+            />
+
+            <CardFontEditor 
+              sizes={fontSizes}
+              updateSize={updateSize}
+              resetToDefaults={resetToDefaults}
+            />
+
+            {/* Toggle para recolher colunas vazias */}
+            <Button
+              variant={autoCollapseEmpty ? "default" : "outline"}
+              size="sm"
+              onClick={() => setAutoCollapseEmpty(!autoCollapseEmpty)}
+              title="Recolher colunas vazias automaticamente"
+            >
+              {autoCollapseEmpty ? "Colunas: Auto-recolher ✓" : "Colunas: Normal"}
+            </Button>
+          </div>
+        </div>
+
+        {/* Linha 2: Filtros */}
+        <div className="flex items-center gap-2 flex-wrap">
           {/* Filtro por Designer */}
           <Select value={designerFilter} onValueChange={setDesignerFilter}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="Designer" />
             </SelectTrigger>
             <SelectContent>
@@ -783,7 +811,7 @@ const Creation = () => {
 
           {/* Filtro por Vendedor */}
           <Select value={salespersonFilter} onValueChange={setSalespersonFilter}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="Vendedor" />
             </SelectTrigger>
             <SelectContent>
@@ -798,7 +826,7 @@ const Creation = () => {
 
           {/* Filtro de Prioridade */}
           <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="Prioridade" />
             </SelectTrigger>
             <SelectContent>
@@ -810,7 +838,7 @@ const Creation = () => {
 
           {/* Filtro de Ordenação */}
           <Select value={sortOption} onValueChange={setSortOption}>
-            <SelectTrigger className="w-[220px]">
+            <SelectTrigger className="w-[200px]">
               <ArrowUpDown className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Ordenar por" />
             </SelectTrigger>
@@ -834,31 +862,9 @@ const Creation = () => {
           {(searchQuery || designerFilter !== "all" || salespersonFilter !== "all" || priorityFilter !== "all" || sortOption !== "updated_at_desc") && (
             <Button variant="ghost" size="sm" onClick={clearAllFilters}>
               <X className="h-4 w-4 mr-1" />
-              Limpar
+              Limpar Filtros
             </Button>
           )}
-
-          <CardFontEditor 
-            sizes={fontSizes}
-            updateSize={updateSize}
-            resetToDefaults={resetToDefaults}
-          />
-
-          {/* Toggle para recolher colunas vazias */}
-          <Button
-            variant={autoCollapseEmpty ? "default" : "outline"}
-            size="sm"
-            onClick={() => setAutoCollapseEmpty(!autoCollapseEmpty)}
-            title="Recolher colunas vazias automaticamente"
-          >
-            {autoCollapseEmpty ? "Colunas: Auto-recolher ✓" : "Colunas: Normal"}
-          </Button>
-
-          <RefreshIndicator 
-            lastUpdated={lastUpdated}
-            isRefreshing={isRefreshing}
-            onRefresh={refresh}
-          />
         </div>
       </div>
 
