@@ -523,6 +523,8 @@ export type Database = {
       company_settings: {
         Row: {
           bling_api_key: string | null
+          bling_client_id: string | null
+          bling_client_secret: string | null
           bling_enabled: boolean | null
           bling_environment: string | null
           cep: string
@@ -547,6 +549,8 @@ export type Database = {
         }
         Insert: {
           bling_api_key?: string | null
+          bling_client_id?: string | null
+          bling_client_secret?: string | null
           bling_enabled?: boolean | null
           bling_environment?: string | null
           cep: string
@@ -571,6 +575,8 @@ export type Database = {
         }
         Update: {
           bling_api_key?: string | null
+          bling_client_id?: string | null
+          bling_client_secret?: string | null
           bling_enabled?: boolean | null
           bling_environment?: string | null
           cep?: string
