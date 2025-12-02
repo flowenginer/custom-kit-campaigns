@@ -305,14 +305,17 @@ serve(async (req) => {
             const genderLabel = (genderLower === 'masculino' || genderLower === 'male') ? 'Masculino' : 
                                (genderLower === 'feminino' || genderLower === 'female') ? 'Feminino' : 'Infantil';
 
-            // Variação simplificada - sem campos que causam conflito
-            // clonarDadosPai faz a variação herdar tipo/formato do pai
+            // IMPORTANTE: Cada variação PRECISA de tipo e formato próprios
+            // tipo: 'P' = Produto (obrigatório)
+            // formato: 'S' = Simples (variação não tem sub-variações)
             return {
               nome: `${v.size} - ${genderLabel}`,
               codigo: v.sku_suffix,
               preco: variationPrice,
+              tipo: 'P',      // Obrigatório para variação
+              formato: 'S',   // Simples (variação é um produto simples)
               situacao: 'A',
-              clonarDadosPai: true
+              unidade: 'UN'
             };
           });
           
