@@ -632,28 +632,24 @@ export const TaskDetailsDialog = ({
         mockupsCount: mockupsData.length
       });
 
-      // Send webhook
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-      const response = await fetch('https://nwh.techspacesports.com.br/webhook/events_criacao', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(webhookPayload),
-        signal: controller.signal
+      // Send webhook via Edge Function (to avoid CORS issues)
+      const { data, error } = await supabase.functions.invoke('send-layout-webhook', {
+        body: webhookPayload
       });
 
-      clearTimeout(timeoutId);
+      if (error) {
+        console.error('[WEBHOOK] Edge function error:', error);
+        throw new Error(error.message || 'Edge function failed');
+      }
 
-      if (!response.ok) {
-        throw new Error(`Webhook failed: ${response.status}`);
+      if (!data?.success) {
+        console.error('[WEBHOOK] Webhook failed:', data?.error);
+        throw new Error(data?.error || 'Webhook failed');
       }
 
       console.log('[WEBHOOK] Layout sent successfully:', {
         cardId: task.id,
-        status: response.status,
+        response: data,
         sentAt: new Date().toISOString()
       });
 
