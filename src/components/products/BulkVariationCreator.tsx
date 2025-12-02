@@ -222,6 +222,13 @@ export function BulkVariationCreator() {
 
       console.log(`[BulkVariation] ✓ ${products.length} produtos encontrados`);
 
+      // Função para gerar SKU da variação
+      const generateVariationSKU = (gender: string, size: string): string => {
+        const genderCode = gender === 'male' ? 'M' : gender === 'female' ? 'F' : 'I';
+        const sizeCode = size.replace(/\s+/g, '').replace('ANOS', 'A');
+        return `${genderCode}-${sizeCode}`;
+      };
+
       // Gerar variações
       const variations: any[] = [];
 
@@ -233,6 +240,7 @@ export function BulkVariationCreator() {
               model_id: product.id,
               size,
               gender: "male",
+              sku_suffix: generateVariationSKU("male", size),
               price_adjustment: masculino.standardPrice,
               stock_quantity: 0,
               is_active: true,
@@ -243,6 +251,7 @@ export function BulkVariationCreator() {
               model_id: product.id,
               size,
               gender: "male",
+              sku_suffix: generateVariationSKU("male", size),
               price_adjustment: masculino.plusPrice,
               stock_quantity: 0,
               is_active: true,
@@ -257,6 +266,7 @@ export function BulkVariationCreator() {
               model_id: product.id,
               size,
               gender: "female",
+              sku_suffix: generateVariationSKU("female", size),
               price_adjustment: feminino.standardPrice,
               stock_quantity: 0,
               is_active: true,
@@ -267,6 +277,7 @@ export function BulkVariationCreator() {
               model_id: product.id,
               size,
               gender: "female",
+              sku_suffix: generateVariationSKU("female", size),
               price_adjustment: feminino.plusPrice,
               stock_quantity: 0,
               is_active: true,
@@ -281,6 +292,7 @@ export function BulkVariationCreator() {
               model_id: product.id,
               size,
               gender: "infantil",
+              sku_suffix: generateVariationSKU("infantil", size),
               price_adjustment: infantil.price,
               stock_quantity: 0,
               is_active: true,

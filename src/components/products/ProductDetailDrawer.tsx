@@ -160,9 +160,16 @@ export function ProductDetailDrawer({ productId, open, onOpenChange, onUpdate }:
   };
 
   const calculateFinalPrice = (variation: Variation) => {
-    if (variation.promotional_price) return variation.promotional_price;
-    const basePrice = product?.base_price || 0;
-    return basePrice + variation.price_adjustment;
+    // Prioridade 1: Preço promocional
+    if (variation.promotional_price && variation.promotional_price > 0) {
+      return variation.promotional_price;
+    }
+    // Prioridade 2: Ajuste de preço substitui o preço base (não soma)
+    if (variation.price_adjustment && variation.price_adjustment > 0) {
+      return variation.price_adjustment;
+    }
+    // Fallback: Preço base do produto
+    return product?.base_price || 0;
   };
 
   const totalStock = variations.reduce((acc, v) => acc + v.stock_quantity, 0);
