@@ -134,8 +134,8 @@ serve(async (req) => {
     const action = body.action;
     const data = body.data || body;
     
-    // Buscar configurações do Bling
-    const { data: settings, error: settingsError } = await supabaseClient
+    // Buscar configurações do Bling (usando admin para bypass de RLS)
+    const { data: settings, error: settingsError } = await supabaseAdmin
       .from('company_settings')
       .select('bling_enabled, bling_client_id, bling_client_secret')
       .maybeSingle();
