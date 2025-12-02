@@ -223,7 +223,7 @@ serve(async (req) => {
         // Sincronizar produto do shirt_models para Bling
         const model_id = data.model_id || data.product_id || body.product_id;
         
-        const { data: model, error: modelError } = await supabaseClient
+        const { data: model, error: modelError } = await supabaseAdmin
           .from('shirt_models')
           .select('*')
           .eq('id', model_id)
@@ -232,14 +232,14 @@ serve(async (req) => {
         if (modelError) throw modelError;
 
         // Buscar variações ativas do produto
-        const { data: variations } = await supabaseClient
+        const { data: variations } = await supabaseAdmin
           .from('shirt_model_variations')
           .select('*')
           .eq('model_id', model_id)
           .eq('is_active', true);
 
         // Buscar preço do produto
-        const { data: pricing } = await supabaseClient
+        const { data: pricing } = await supabaseAdmin
           .from('product_prices')
           .select('*')
           .eq('model_tag', model.model_tag)
@@ -272,16 +272,19 @@ serve(async (req) => {
           }
         };
 
-        // Adicionar imagem do produto
+        // Adicionar imagem do produto com ordem (CORREÇÃO: campo ordem é obrigatório)
         if (model.photo_main) {
           productPayload.midia = {
             imagens: {
               externas: [
-                { link: model.photo_main }
+                { 
+                  link: model.photo_main,
+                  ordem: 1  // Campo obrigatório para ordenação de imagens
+                }
               ]
             }
           };
-          console.log('[Bling] Adding product image:', model.photo_main);
+          console.log('[Bling] Adding product image with ordem:', model.photo_main);
         }
 
         // Adicionar variações se existirem (estrutura de GRADE do Bling)
@@ -303,7 +306,6 @@ serve(async (req) => {
           console.log('[Bling] Grade attributes - Genders:', uniqueGenders, 'Sizes:', uniqueSizes);
           
           // Estrutura de variações com GRADE (atributos separados)
-          // Formato: produto pai formato='V', variações formato='S'
           productPayload.formato = 'V'; // Produto pai com variações
           
           productPayload.variacoes = validVariations.map((v: any) => {
@@ -346,11 +348,12 @@ serve(async (req) => {
 
         console.log('[Bling] Creating/updating product:', JSON.stringify(productPayload, null, 2));
 
-        // Verificar se produto já existe
+        // Verificar se produto já existe no Bling (pelo bling_product_id salvo)
         let blingProductId = model.bling_product_id;
         
         if (blingProductId) {
           // Atualizar produto existente
+          console.log('[Bling] Updating existing product with ID:', blingProductId);
           const updateResponse = await fetch(`${blingBaseUrl}/produtos/${blingProductId}`, {
             method: 'PUT',
             headers,
@@ -365,34 +368,87 @@ serve(async (req) => {
           console.log('[Bling] Product updated successfully');
         } else {
           // Criar novo produto
+          console.log('[Bling] Creating new product...');
           const createResponse = await fetch(`${blingBaseUrl}/produtos`, {
             method: 'POST',
             headers,
             body: JSON.stringify(productPayload),
           });
 
+          const responseText = await createResponse.text();
+          console.log('[Bling] Create response status:', createResponse.status);
+          console.log('[Bling] Create response body:', responseText);
+
           if (!createResponse.ok) {
-            const error = await createResponse.text();
-            console.error('[Bling] Create error:', error);
-            throw new Error(`Erro ao criar produto no Bling: ${error}`);
+            // Tentar parsear erro para verificar se é duplicado
+            try {
+              const errorData = JSON.parse(responseText);
+              console.log('[Bling] Error data parsed:', JSON.stringify(errorData, null, 2));
+              
+              // Verificar se é erro de produto duplicado (code: 4)
+              const isDuplicate = errorData?.error?.fields?.some((f: any) => f.code === 4) ||
+                                  responseText.includes('já cadastrado') ||
+                                  responseText.includes('código já existe');
+              
+              if (isDuplicate) {
+                console.log('[Bling] Product already exists in Bling (duplicate)');
+                
+                // Registrar tentativa de duplicação
+                await supabaseAdmin
+                  .from('erp_exports')
+                  .insert({
+                    integration_type: 'bling',
+                    export_type: 'product',
+                    entity_id: model_id,
+                    status: 'duplicate',
+                    error_message: 'Produto já existe no Bling',
+                    payload: productPayload,
+                    exported_by: user.id,
+                  });
+
+                return new Response(JSON.stringify({ 
+                  success: false,
+                  already_exists: true,
+                  sku: model.sku || model.model_tag,
+                  product_name: model.name,
+                  message: `Produto "${model.name}" (SKU: ${model.sku || model.model_tag}) já existe no Bling`
+                }), {
+                  status: 200, // Retorna 200 para não ser tratado como erro fatal
+                  headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                });
+              }
+            } catch (parseError) {
+              console.error('[Bling] Error parsing response:', parseError);
+            }
+            
+            throw new Error(`Erro ao criar produto no Bling: ${responseText}`);
           }
 
-          const result = await createResponse.json();
-          blingProductId = result.data.id;
+          const result = JSON.parse(responseText);
+          blingProductId = result.data?.id;
           console.log('[Bling] Product created successfully with ID:', blingProductId);
         }
 
-        // Atualizar shirt_models com ID do Bling
-        await supabaseClient
-          .from('shirt_models')
-          .update({
-            bling_product_id: blingProductId,
-            bling_synced_at: new Date().toISOString(),
-          })
-          .eq('id', model_id);
+        // Atualizar shirt_models com ID do Bling (usando admin para garantir permissão)
+        if (blingProductId) {
+          console.log('[Bling] Saving bling_product_id to database:', blingProductId);
+          const { error: updateError } = await supabaseAdmin
+            .from('shirt_models')
+            .update({
+              bling_product_id: blingProductId,
+              bling_synced_at: new Date().toISOString(),
+            })
+            .eq('id', model_id);
+          
+          if (updateError) {
+            console.error('[Bling] Error saving bling_product_id:', updateError);
+          } else {
+            console.log('[Bling] bling_product_id saved successfully');
+          }
+        }
 
-        // Registrar exportação
-        await supabaseClient
+        // Registrar exportação com sucesso
+        await supabaseAdmin
           .from('erp_exports')
           .insert({
             integration_type: 'bling',
@@ -408,7 +464,9 @@ serve(async (req) => {
           success: true, 
           bling_product_id: blingProductId,
           variations_count: hasVariations ? variations.length : 0,
-          has_image: !!model.photo_main
+          has_image: !!model.photo_main,
+          product_name: model.name,
+          sku: model.sku || model.model_tag
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -418,7 +476,7 @@ serve(async (req) => {
         // Exportar pedido para Bling
         const { task_id } = data;
         
-        const { data: task, error: taskError } = await supabaseClient
+        const { data: task, error: taskError } = await supabaseAdmin
           .from('design_tasks')
           .select(`
             *,
@@ -453,7 +511,7 @@ serve(async (req) => {
         };
 
         // Buscar produto/modelo
-        const { data: model } = await supabaseClient
+        const { data: model } = await supabaseAdmin
           .from('shirt_models')
           .select('*')
           .eq('id', order.model_id)
@@ -509,8 +567,8 @@ serve(async (req) => {
         const blingOrderId = orderResult.data.id;
         const blingOrderNumber = orderResult.data.numero;
 
-        // Atualizar task com dados do Bling
-        await supabaseClient
+        // Atualizar task com dados do Bling (usando admin)
+        await supabaseAdmin
           .from('design_tasks')
           .update({
             bling_order_id: blingOrderId,
@@ -519,7 +577,7 @@ serve(async (req) => {
           .eq('id', task_id);
 
         // Registrar exportação
-        await supabaseClient
+        await supabaseAdmin
           .from('erp_exports')
           .insert({
             integration_type: 'bling',
