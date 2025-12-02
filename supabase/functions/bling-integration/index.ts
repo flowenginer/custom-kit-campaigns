@@ -286,7 +286,12 @@ serve(async (req) => {
 
         // Adicionar variações se existirem
         if (hasVariations) {
-          productPayload.variacoes = variations.map((v: any) => {
+          // Filtrar variações válidas (com SKU e tamanho)
+          const validVariations = variations.filter((v: any) => v.sku_suffix && v.size);
+          
+          console.log(`[Bling] Processing ${validVariations.length} valid variations out of ${variations.length} total`);
+          
+          productPayload.variacoes = validVariations.map((v: any) => {
             // Calcular preço da variação (ajuste substitui base, não soma)
             let variationPrice = basePrice;
             if (v.promotional_price && v.promotional_price > 0) {
@@ -295,18 +300,24 @@ serve(async (req) => {
               variationPrice = v.price_adjustment;
             }
 
-            const genderLabel = v.gender === 'male' ? 'Masculino' : 
-                               v.gender === 'female' ? 'Feminino' : 'Infantil';
+            // Corrigir mapeamento de gênero (banco pode ter 'masculino', 'feminino', 'infantil', 'male', 'female')
+            const genderLower = (v.gender || '').toLowerCase();
+            const genderLabel = (genderLower === 'masculino' || genderLower === 'male') ? 'Masculino' : 
+                               (genderLower === 'feminino' || genderLower === 'female') ? 'Feminino' : 'Infantil';
 
+            // Variação simplificada - sem campos que causam conflito
+            // clonarDadosPai faz a variação herdar tipo/formato do pai
             return {
               nome: `${v.size} - ${genderLabel}`,
-              codigo: v.sku_suffix, // SKU completo já inclui SKU do produto + gênero + tamanho
+              codigo: v.sku_suffix,
               preco: variationPrice,
-              situacao: 'A', // Ativo
-              estrutura: { tipoEstoque: 'F' }
+              situacao: 'A',
+              clonarDadosPai: true
             };
           });
-          console.log(`[Bling] Adding ${variations.length} variations to product`);
+          
+          console.log(`[Bling] Adding ${validVariations.length} variations to product`);
+          console.log('[Bling] Sample variation:', JSON.stringify(productPayload.variacoes[0], null, 2));
         }
 
         console.log('[Bling] Creating/updating product:', JSON.stringify(productPayload, null, 2));
