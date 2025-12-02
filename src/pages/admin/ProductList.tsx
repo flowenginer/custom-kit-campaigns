@@ -44,6 +44,7 @@ export default function ProductList({ onSelectModel, onSwitchToVariations }: Pro
   
   // Seleção múltipla
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
   
   // Filtros
   const [filterType, setFilterType] = useState<string>("all");
@@ -292,12 +293,30 @@ export default function ProductList({ onSelectModel, onSwitchToVariations }: Pro
     } else {
       setSelectedIds(filteredProducts.map(p => p.id));
     }
+    setLastSelectedIndex(null);
   };
 
-  const toggleSelectProduct = (id: string) => {
-    setSelectedIds(prev => 
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    );
+  // Toggle com suporte a Shift+Click para seleção em range
+  const toggleSelectProduct = (id: string, index: number, event?: React.MouseEvent) => {
+    if (event?.shiftKey && lastSelectedIndex !== null) {
+      // SHIFT+CLICK: Selecionar range
+      const start = Math.min(lastSelectedIndex, index);
+      const end = Math.max(lastSelectedIndex, index);
+      
+      // Pegar todos os IDs no range
+      const rangeIds = filteredProducts.slice(start, end + 1).map(p => p.id);
+      
+      // Adicionar todos ao selection (merge com existente)
+      setSelectedIds(prev => [...new Set([...prev, ...rangeIds])]);
+    } else {
+      // CLICK NORMAL: Toggle individual
+      setSelectedIds(prev => 
+        prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+      );
+    }
+    
+    // Atualizar último índice selecionado
+    setLastSelectedIndex(index);
   };
 
   const openDetailDrawer = (productId: string) => {
@@ -475,7 +494,7 @@ export default function ProductList({ onSelectModel, onSwitchToVariations }: Pro
                 </TableCell>
               </TableRow>
             ) : (
-              filteredProducts.map((product) => {
+              filteredProducts.map((product, index) => {
                 const promoPrice = promotionalPrices[product.id];
                 const stock = stockCounts[product.id] || 0;
                 
@@ -487,7 +506,11 @@ export default function ProductList({ onSelectModel, onSwitchToVariations }: Pro
                     <TableCell>
                       <Checkbox
                         checked={selectedIds.includes(product.id)}
-                        onCheckedChange={() => toggleSelectProduct(product.id)}
+                        onCheckedChange={(checked) => {
+                          // Capturar evento nativo para detectar shift
+                          const nativeEvent = window.event as MouseEvent | undefined;
+                          toggleSelectProduct(product.id, index, nativeEvent as any);
+                        }}
                       />
                     </TableCell>
                     <TableCell>
@@ -582,8 +605,12 @@ export default function ProductList({ onSelectModel, onSwitchToVariations }: Pro
 
       <BulkActionsBar
         selectedIds={selectedIds}
-        onClearSelection={() => setSelectedIds([])}
+        onClearSelection={() => {
+          setSelectedIds([]);
+          setLastSelectedIndex(null);
+        }}
         onComplete={loadProducts}
+        totalProducts={filteredProducts.length}
       />
     </Card>
   );

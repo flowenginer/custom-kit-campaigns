@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { DollarSign, X, Download, Barcode, Package, Loader2, CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
+import { DollarSign, X, Download, Barcode, Package, Loader2, CheckCircle2, AlertTriangle, XCircle, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -13,6 +13,7 @@ interface BulkActionsBarProps {
   selectedIds: string[];
   onClearSelection: () => void;
   onComplete: () => void;
+  totalProducts?: number;
 }
 
 interface BlingResult {
@@ -23,7 +24,7 @@ interface BlingResult {
   message?: string;
 }
 
-export function BulkActionsBar({ selectedIds, onClearSelection, onComplete }: BulkActionsBarProps) {
+export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, totalProducts }: BulkActionsBarProps) {
   const [bulkPriceDialog, setBulkPriceDialog] = useState(false);
   const [bulkPrice, setBulkPrice] = useState("");
   const [loading, setLoading] = useState(false);
@@ -34,6 +35,11 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete }: Bu
   // Estado para relatório de envio ao Bling
   const [blingResultsDialog, setBlingResultsDialog] = useState(false);
   const [blingResults, setBlingResults] = useState<BlingResult[]>([]);
+  
+  // Estado para exclusão em lote
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [productsToDelete, setProductsToDelete] = useState<{ id: string; name: string; sku: string | null }[]>([]);
 
   useEffect(() => {
     checkBlingSettings();
@@ -51,6 +57,74 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete }: Bu
       }
     } catch (error) {
       console.error('Error checking Bling settings:', error);
+    }
+  };
+
+  // Abrir modal de exclusão e carregar nomes dos produtos
+  const openDeleteDialog = async () => {
+    const { data: products } = await supabase
+      .from("shirt_models")
+      .select("id, name, sku")
+      .in("id", selectedIds);
+    
+    setProductsToDelete(products || []);
+    setDeleteDialogOpen(true);
+  };
+
+  // Executar exclusão em lote
+  const handleBulkDelete = async () => {
+    setDeleteLoading(true);
+    
+    try {
+      // 1. Excluir variações dos produtos
+      const { error: varError } = await supabase
+        .from("shirt_model_variations")
+        .delete()
+        .in("model_id", selectedIds);
+      
+      if (varError) {
+        console.error("Erro ao excluir variações:", varError);
+      }
+      
+      // 2. Excluir imagens do storage para cada produto
+      for (const product of productsToDelete) {
+        const imageFields = ["photo_main", "image_front", "image_back", "image_right", "image_left"];
+        // Buscar segment_id do produto
+        const { data: modelData } = await supabase
+          .from("shirt_models")
+          .select("segment_id")
+          .eq("id", product.id)
+          .single();
+        
+        if (modelData?.segment_id) {
+          const filesToDelete = imageFields.map(field => 
+            `${modelData.segment_id}/${product.id}/${field}.jpg`
+          );
+          
+          await supabase.storage
+            .from("shirt-models-images")
+            .remove(filesToDelete);
+        }
+      }
+      
+      // 3. Excluir produtos
+      const { error: deleteError } = await supabase
+        .from("shirt_models")
+        .delete()
+        .in("id", selectedIds);
+      
+      if (deleteError) throw deleteError;
+      
+      toast.success(`✅ ${selectedIds.length} produto(s) excluído(s) com sucesso!`);
+      setDeleteDialogOpen(false);
+      onClearSelection();
+      onComplete();
+      
+    } catch (error: any) {
+      console.error("Erro ao excluir produtos:", error);
+      toast.error("Erro ao excluir produtos: " + error.message);
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -276,10 +350,20 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete }: Bu
       <Card className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 shadow-lg">
         <div className="flex items-center gap-3 p-4 flex-wrap justify-center">
           <span className="text-sm font-medium">
-            {selectedIds.length} produto{selectedIds.length > 1 ? "s" : ""} selecionado{selectedIds.length > 1 ? "s" : ""}
+            {selectedIds.length}{totalProducts ? ` de ${totalProducts}` : ""} produto{selectedIds.length > 1 ? "s" : ""} selecionado{selectedIds.length > 1 ? "s" : ""}
           </span>
 
           <div className="h-6 w-px bg-border hidden sm:block" />
+
+          {/* Excluir em Lote - PRIMEIRO BOTÃO */}
+          <Button 
+            variant="destructive" 
+            size="sm" 
+            onClick={openDeleteDialog}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Excluir
+          </Button>
 
           {/* Definir Preço Base */}
           <Dialog open={bulkPriceDialog} onOpenChange={setBulkPriceDialog}>
@@ -466,6 +550,66 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete }: Bu
           <DialogFooter>
             <Button onClick={() => setBlingResultsDialog(false)}>
               Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de Confirmação de Exclusão */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Confirmar Exclusão
+            </DialogTitle>
+            <DialogDescription>
+              Você está prestes a excluir {productsToDelete.length} produto(s):
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="max-h-[200px] border rounded-lg p-3 bg-muted/50">
+            <ul className="space-y-2">
+              {productsToDelete.map((product) => (
+                <li key={product.id} className="flex items-center justify-between text-sm">
+                  <span className="font-medium truncate max-w-[250px]">{product.name}</span>
+                  <code className="text-xs bg-muted px-2 py-0.5 rounded">
+                    {product.sku || "Sem SKU"}
+                  </code>
+                </li>
+              ))}
+            </ul>
+          </ScrollArea>
+
+          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 mt-2">
+            <p className="text-sm text-destructive font-medium flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              Esta ação não pode ser desfeita!
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Todos os dados, variações e imagens serão permanentemente removidos.
+            </p>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button 
+              variant="outline" 
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={deleteLoading}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleBulkDelete}
+              disabled={deleteLoading}
+            >
+              {deleteLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
+              )}
+              Excluir {productsToDelete.length} Produto(s)
             </Button>
           </DialogFooter>
         </DialogContent>
