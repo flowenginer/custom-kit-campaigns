@@ -202,8 +202,8 @@ export function BulkVariationCreator() {
     try {
       console.log(`[BulkVariation] 🚀 Iniciando criação em massa...`);
 
-      // Buscar produtos
-      let query = supabase.from("shirt_models").select("id");
+      // Buscar produtos com SKU
+      let query = supabase.from("shirt_models").select("id, sku");
 
       if (scope === "type" && selectedType) {
         query = query.eq("model_tag", selectedType);
@@ -222,17 +222,25 @@ export function BulkVariationCreator() {
 
       console.log(`[BulkVariation] ✓ ${products.length} produtos encontrados`);
 
-      // Função para gerar SKU da variação
-      const generateVariationSKU = (gender: string, size: string): string => {
+      // Função para gerar SKU COMPLETO da variação (SKU produto + gênero + tamanho)
+      const generateVariationSKU = (productSku: string, gender: string, size: string): string => {
         const genderCode = gender === 'male' ? 'M' : gender === 'female' ? 'F' : 'I';
-        const sizeCode = size.replace(/\s+/g, '').replace('ANOS', 'A');
-        return `${genderCode}-${sizeCode}`;
+        const sizeCode = size.replace(/\s+/g, '').replace('ANOS', 'A').replace('ANO', 'A').toUpperCase();
+        return `${productSku}-${genderCode}-${sizeCode}`;
       };
 
       // Gerar variações
       const variations: any[] = [];
 
       for (const product of products) {
+        const productSku = product.sku || '';
+        
+        // Skip se produto não tem SKU
+        if (!productSku) {
+          console.warn(`[BulkVariation] ⚠️ Produto ${product.id} sem SKU, pulando...`);
+          continue;
+        }
+
         // Masculino
         if (masculino.enabled) {
           for (const size of masculino.standardSizes) {
@@ -240,7 +248,7 @@ export function BulkVariationCreator() {
               model_id: product.id,
               size,
               gender: "male",
-              sku_suffix: generateVariationSKU("male", size),
+              sku_suffix: generateVariationSKU(productSku, "male", size),
               price_adjustment: masculino.standardPrice,
               stock_quantity: 0,
               is_active: true,
@@ -251,7 +259,7 @@ export function BulkVariationCreator() {
               model_id: product.id,
               size,
               gender: "male",
-              sku_suffix: generateVariationSKU("male", size),
+              sku_suffix: generateVariationSKU(productSku, "male", size),
               price_adjustment: masculino.plusPrice,
               stock_quantity: 0,
               is_active: true,
@@ -266,7 +274,7 @@ export function BulkVariationCreator() {
               model_id: product.id,
               size,
               gender: "female",
-              sku_suffix: generateVariationSKU("female", size),
+              sku_suffix: generateVariationSKU(productSku, "female", size),
               price_adjustment: feminino.standardPrice,
               stock_quantity: 0,
               is_active: true,
@@ -277,7 +285,7 @@ export function BulkVariationCreator() {
               model_id: product.id,
               size,
               gender: "female",
-              sku_suffix: generateVariationSKU("female", size),
+              sku_suffix: generateVariationSKU(productSku, "female", size),
               price_adjustment: feminino.plusPrice,
               stock_quantity: 0,
               is_active: true,
@@ -292,7 +300,7 @@ export function BulkVariationCreator() {
               model_id: product.id,
               size,
               gender: "infantil",
-              sku_suffix: generateVariationSKU("infantil", size),
+              sku_suffix: generateVariationSKU(productSku, "infantil", size),
               price_adjustment: infantil.price,
               stock_quantity: 0,
               is_active: true,
