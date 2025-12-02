@@ -284,15 +284,30 @@ serve(async (req) => {
           console.log('[Bling] Adding product image:', model.photo_main);
         }
 
-        // Adicionar variações se existirem
+        // Adicionar variações se existirem (estrutura de GRADE do Bling)
         if (hasVariations) {
           // Filtrar variações válidas (com SKU e tamanho)
           const validVariations = variations.filter((v: any) => v.sku_suffix && v.size);
           
           console.log(`[Bling] Processing ${validVariations.length} valid variations out of ${variations.length} total`);
           
+          // Extrair valores únicos para os atributos da grade
+          const uniqueGenders = [...new Set(validVariations.map((v: any) => {
+            const genderLower = (v.gender || '').toLowerCase();
+            return (genderLower === 'masculino' || genderLower === 'male') ? 'Masculino' : 
+                   (genderLower === 'feminino' || genderLower === 'female') ? 'Feminino' : 'Infantil';
+          }))];
+          
+          const uniqueSizes = [...new Set(validVariations.map((v: any) => v.size))];
+          
+          console.log('[Bling] Grade attributes - Genders:', uniqueGenders, 'Sizes:', uniqueSizes);
+          
+          // Estrutura de variações com GRADE (atributos separados)
+          // Formato: produto pai formato='V', variações formato='S'
+          productPayload.formato = 'V'; // Produto pai com variações
+          
           productPayload.variacoes = validVariations.map((v: any) => {
-            // Calcular preço da variação (ajuste substitui base, não soma)
+            // Calcular preço da variação
             let variationPrice = basePrice;
             if (v.promotional_price && v.promotional_price > 0) {
               variationPrice = v.promotional_price;
@@ -300,26 +315,32 @@ serve(async (req) => {
               variationPrice = v.price_adjustment;
             }
 
-            // Corrigir mapeamento de gênero (banco pode ter 'masculino', 'feminino', 'infantil', 'male', 'female')
+            // Mapeamento de gênero
             const genderLower = (v.gender || '').toLowerCase();
             const genderLabel = (genderLower === 'masculino' || genderLower === 'male') ? 'Masculino' : 
                                (genderLower === 'feminino' || genderLower === 'female') ? 'Feminino' : 'Infantil';
 
-            // IMPORTANTE: Cada variação PRECISA de tipo e formato próprios
-            // tipo: 'P' = Produto (obrigatório)
-            // formato: 'S' = Simples (variação não tem sub-variações)
+            // Estrutura da variação com atributos de grade
             return {
-              nome: `${v.size} - ${genderLabel}`,
+              nome: `${genderLabel} - ${v.size}`,
               codigo: v.sku_suffix,
               preco: variationPrice,
-              tipo: 'P',      // Obrigatório para variação
-              formato: 'S',   // Simples (variação é um produto simples)
+              tipo: 'P',
+              formato: 'S',
               situacao: 'A',
-              unidade: 'UN'
+              unidade: 'UN',
+              // GRADE: Atributos para criar colunas separadas no Bling
+              variacao: {
+                nome: `${genderLabel}:${v.size}`,
+                ordem: 1,
+                produtoPai: {
+                  cloneInfo: true
+                }
+              }
             };
           });
           
-          console.log(`[Bling] Adding ${validVariations.length} variations to product`);
+          console.log(`[Bling] Adding ${validVariations.length} variations with grade structure`);
           console.log('[Bling] Sample variation:', JSON.stringify(productPayload.variacoes[0], null, 2));
         }
 
