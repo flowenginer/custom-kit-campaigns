@@ -321,13 +321,13 @@ const AdminLayout = () => {
     <TooltipProvider>
       <SidebarProvider defaultOpen={true}>
         <div className="min-h-screen flex w-full">
-        <Sidebar collapsible="icon" className="bg-card border-r border-primary/20">
+        <Sidebar collapsible="icon" className="bg-card border-r border-primary/20 overflow-hidden">
           <SidebarHeader className="border-b p-6 space-y-4">
             <SidebarLogo />
             <SidebarControls />
           </SidebarHeader>
 
-          <SidebarContent className="py-4">
+          <SidebarContent className="py-4 overflow-y-auto overflow-x-hidden scrollbar-hide">
             <SidebarGroup>
               <SidebarGroupContent>
                 <SidebarMenu className="space-y-1">
