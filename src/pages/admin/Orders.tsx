@@ -438,13 +438,13 @@ const Orders = () => {
                 const reasonLabel = rejection ? REJECTION_REASONS[rejection.reason_type] || rejection.reason_type : 'Motivo não especificado';
                 
                 return (
-                  <Card key={task.id} className="border-amber-500/50 bg-amber-500/5">
+                    <Card key={task.id} className="border-red-500/50 bg-red-50 dark:bg-red-950/30">
                     <CardContent className="p-4 space-y-4">
                       {/* Alert de rejeição */}
-                      <Alert variant="destructive" className="bg-destructive/10 border-destructive/30">
-                        <AlertTriangle className="h-4 w-4" />
-                        <AlertTitle>Tarefa Devolvida pelo Designer</AlertTitle>
-                        <AlertDescription className="space-y-2">
+                      <Alert className="bg-red-100 dark:bg-red-900/50 border-red-300 dark:border-red-700">
+                        <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                        <AlertTitle className="text-red-800 dark:text-red-200">Tarefa Devolvida pelo Designer</AlertTitle>
+                        <AlertDescription className="space-y-2 text-red-700 dark:text-red-300">
                           <p><strong>Motivo:</strong> {reasonLabel}</p>
                           {rejection?.reason_text && (
                             <p><strong>Observação:</strong> {rejection.reason_text}</p>
