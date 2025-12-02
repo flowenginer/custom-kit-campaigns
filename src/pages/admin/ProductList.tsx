@@ -7,11 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Eye, Settings, Package, Upload, Loader2 } from "lucide-react";
+import { Eye, Settings, Package, Upload, Loader2, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { ProductDetailDrawer } from "@/components/products/ProductDetailDrawer";
 import { BulkActionsBar } from "@/components/products/BulkActionsBar";
-
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 interface ShirtModel {
   id: string;
   name: string;
@@ -133,6 +133,55 @@ export default function ProductList({ onSelectModel, onSwitchToVariations }: Pro
       // Atualizar contagem
       checkBlingSettings();
       loadProducts();
+    } catch (err) {
+      console.error("Erro ao enviar para Bling:", err);
+      toast.error("Erro ao enviar produtos para o Bling");
+    } finally {
+      setBlingLoading(false);
+    }
+  };
+
+  const sendSelectedToBling = async () => {
+    if (selectedIds.length === 0) {
+      toast.info("Selecione pelo menos um produto para enviar");
+      return;
+    }
+
+    setBlingLoading(true);
+    let successCount = 0;
+    let errorCount = 0;
+
+    try {
+      for (const productId of selectedIds) {
+        try {
+          const { error: syncError } = await supabase.functions.invoke("bling-integration", {
+            body: {
+              action: "sync_product",
+              product_id: productId
+            }
+          });
+
+          if (syncError) {
+            console.error(`Erro ao sincronizar ${productId}:`, syncError);
+            errorCount++;
+          } else {
+            successCount++;
+          }
+        } catch (err) {
+          console.error(`Erro ao sincronizar ${productId}:`, err);
+          errorCount++;
+        }
+      }
+
+      if (errorCount === 0) {
+        toast.success(`✅ ${successCount} produtos enviados para o Bling com sucesso!`);
+      } else {
+        toast.warning(`${successCount} produtos sincronizados, ${errorCount} com erro`);
+      }
+
+      checkBlingSettings();
+      loadProducts();
+      setSelectedIds([]);
     } catch (err) {
       console.error("Erro ao enviar para Bling:", err);
       toast.error("Erro ao enviar produtos para o Bling");
@@ -346,22 +395,42 @@ export default function ProductList({ onSelectModel, onSwitchToVariations }: Pro
                 Limpar Filtros
               </Button>
               
-              {/* Botão Enviar TODOS para Bling */}
-              {blingEnabled && unsyncedCount > 0 && (
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={sendAllToBling}
-                  disabled={blingLoading}
-                  className="bg-orange-600 hover:bg-orange-700"
-                >
-                  {blingLoading ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Upload className="h-4 w-4 mr-2" />
-                  )}
-                  Enviar Todos para Bling ({unsyncedCount})
-                </Button>
+              {/* Dropdown Enviar para Bling */}
+              {blingEnabled && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      disabled={blingLoading}
+                      className="bg-orange-600 hover:bg-orange-700"
+                    >
+                      {blingLoading ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Upload className="h-4 w-4 mr-2" />
+                      )}
+                      Enviar para Bling
+                      <ChevronDown className="h-4 w-4 ml-2" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem 
+                      onClick={sendAllToBling}
+                      disabled={unsyncedCount === 0}
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Enviar Todos ({unsyncedCount})
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={sendSelectedToBling}
+                      disabled={selectedIds.length === 0}
+                    >
+                      <Package className="h-4 w-4 mr-2" />
+                      Enviar Selecionados ({selectedIds.length})
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
             </div>
             <span className="text-sm text-muted-foreground">
