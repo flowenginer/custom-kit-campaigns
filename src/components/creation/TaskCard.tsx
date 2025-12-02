@@ -265,6 +265,7 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
                   <RequestCustomerRegistrationButton
                     taskId={task.id}
                     leadId={task.lead_id}
+                    taskData={task}
                   />
                 )}
 
@@ -289,6 +290,7 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
                       leadId={task.lead_id}
                       variant="outline"
                       label="Novo Cadastro"
+                      taskData={task}
                     />
                   </div>
                 )}
