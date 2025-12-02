@@ -896,7 +896,7 @@ export const TaskDetailsDialog = ({
         ) : (
           // INTERFACE COMPLETA DO DESIGNER
           <Tabs defaultValue="details" className="flex-1 overflow-hidden flex flex-col">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="details">
                 <FileText className="h-4 w-4 mr-2" />
                 Detalhes
@@ -904,17 +904,13 @@ export const TaskDetailsDialog = ({
               <TabsTrigger value="customization">
                 <Palette className="h-4 w-4 mr-2" />
                 Personalização
+                {hasUnresolvedChanges && (
+                  <span className="ml-1 flex h-2 w-2 rounded-full bg-red-600" />
+                )}
               </TabsTrigger>
               <TabsTrigger value="files">
                 <Upload className="h-4 w-4 mr-2" />
                 Enviar Mockup ({task.design_files.length})
-              </TabsTrigger>
-              <TabsTrigger value="changes">
-                <AlertCircle className="h-4 w-4 mr-2" />
-                Alterações
-                {hasUnresolvedChanges && (
-                  <span className="ml-1 flex h-2 w-2 rounded-full bg-red-600" />
-                )}
               </TabsTrigger>
               <TabsTrigger value="history">
                 <HistoryIcon className="h-4 w-4 mr-2" />
@@ -1603,18 +1599,6 @@ export const TaskDetailsDialog = ({
               </div>
             </TabsContent>
 
-            <TabsContent value="changes" className="mt-0">
-              <ChangeRequestsTab 
-                taskId={task.id}
-                taskStatus={task.status}
-                onChangeRequestAdded={checkUnresolvedChanges}
-                onClose={() => onOpenChange(false)}
-                onSendForApproval={async () => {
-                  await handleStatusChange('awaiting_approval');
-                  onOpenChange(false);
-                }}
-              />
-            </TabsContent>
 
             <TabsContent value="history" className="mt-0">
               <div className="space-y-4">
