@@ -110,6 +110,7 @@ export const TaskDetailsDialog = ({
   const [showModificationDialog, setShowModificationDialog] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [sendingLayout, setSendingLayout] = useState(false);
   
   const { roles, isSalesperson, isDesigner, isSuperAdmin, isAdmin } = useUserRole();
 
@@ -551,6 +552,132 @@ export const TaskDetailsDialog = ({
       setUploadProgress("");
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleSendLayoutToClient = async () => {
+    if (!task || !currentUser) return;
+
+    // Validation
+    if (!task.customer_phone) {
+      toast.error('Cliente não possui WhatsApp cadastrado');
+      return;
+    }
+
+    if (task.design_files.length === 0) {
+      toast.error('Nenhum mockup foi enviado ainda');
+      return;
+    }
+
+    setSendingLayout(true);
+
+    try {
+      // Get current user profile
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', currentUser.id)
+        .single();
+
+      // Prepare mockups data
+      const mockupsData = task.design_files.map(file => ({
+        file_name: `mockup_v${file.version}.png`,
+        file_url: file.url,
+        file_size: 'N/A',
+        uploaded_at: file.uploaded_at,
+        uploaded_by: task.designer_name || 'Designer'
+      }));
+
+      // Build webhook payload
+      const webhookPayload = {
+        event: "envio_layout",
+        card_id: task.id,
+        card_data: {
+          id: task.id,
+          customer_name: task.customer_name || '',
+          customer_phone: task.customer_phone || '',
+          customer_email: task.customer_email || null,
+          segment: task.campaign_name || '',
+          product_model: task.model_name || '',
+          product_code: task.model_code || '',
+          quantity: `${task.quantity || 0} unidades`,
+          priority: task.priority || 'normal',
+          version: `v${task.current_version}`,
+          salesperson: task.creator_name || '',
+          designer: task.designer_name || '',
+          created_at: task.created_at,
+          status: task.status,
+          column: task.status,
+        },
+        personalization: {
+          needs_logo_creation: task.needs_logo || false,
+          client_logo_description: task.logo_description || '',
+          frente: task.customization_data?.front || {},
+          costas: task.customization_data?.back || {},
+          mangas: task.customization_data?.sleeves || {}
+        },
+        mockups: mockupsData,
+        sent_by: {
+          user_id: currentUser.id,
+          user_name: userProfile?.full_name || 'Usuário',
+          user_role: isDesigner ? 'Designer' : 'Vendedor'
+        },
+        timestamp: new Date().toISOString()
+      };
+
+      console.log('[WEBHOOK] Sending layout to client:', {
+        cardId: task.id,
+        customer: task.customer_name,
+        phone: task.customer_phone,
+        mockupsCount: mockupsData.length
+      });
+
+      // Send webhook
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+      const response = await fetch('https://nwh.techspacesports.com.br/webhook/events_criacao', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(webhookPayload),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`Webhook failed: ${response.status}`);
+      }
+
+      console.log('[WEBHOOK] Layout sent successfully:', {
+        cardId: task.id,
+        status: response.status,
+        sentAt: new Date().toISOString()
+      });
+
+      // Add history entry
+      await supabase.from('design_task_history').insert({
+        task_id: task.id,
+        user_id: currentUser.id,
+        action: 'layout_sent',
+        notes: `📱 Layout enviado para o cliente via WhatsApp (${mockupsData.length} arquivo(s))`
+      });
+
+      toast.success('Layout enviado para o cliente com sucesso!');
+      onTaskUpdated();
+      
+    } catch (error: any) {
+      console.error('[WEBHOOK] Send layout error:', error);
+
+      if (error.name === 'AbortError') {
+        toast.error('Tempo esgotado. Tente novamente.');
+      } else {
+        toast.error('Erro ao enviar layout. Tente novamente.');
+      }
+    } finally {
+      setSendingLayout(false);
     }
   };
 
@@ -1597,6 +1724,57 @@ export const TaskDetailsDialog = ({
                   </p>
                 )}
               </div>
+
+              {/* Botão Enviar Layout para Cliente */}
+              {task.design_files.length > 0 && (isDesigner || isSalesperson || isAdmin || isSuperAdmin) && (
+                <Card className="border-2 border-primary/50 bg-primary/5">
+                  <CardContent className="p-4">
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-5 w-5 text-primary" />
+                        <span className="font-medium">Enviar para o Cliente</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Envie o(s) mockup(s) para o cliente aprovar via WhatsApp.
+                      </p>
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-muted-foreground">Cliente:</span>
+                        <span className="font-medium">{task.customer_name}</span>
+                        {task.customer_phone && (
+                          <>
+                            <span className="text-muted-foreground">•</span>
+                            <span>{task.customer_phone}</span>
+                          </>
+                        )}
+                      </div>
+                      <Button
+                        onClick={handleSendLayoutToClient}
+                        disabled={sendingLayout || !task.customer_phone}
+                        className="w-full"
+                        size="lg"
+                      >
+                        {sendingLayout ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Enviando...
+                          </>
+                        ) : (
+                          <>
+                            <Phone className="h-4 w-4 mr-2" />
+                            📱 Enviar Layout para Cliente
+                          </>
+                        )}
+                      </Button>
+                      {!task.customer_phone && (
+                        <p className="text-xs text-destructive flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" />
+                          Cliente sem WhatsApp cadastrado
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
 
 
