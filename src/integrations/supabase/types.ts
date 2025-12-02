@@ -103,6 +103,42 @@ export type Database = {
         }
         Relationships: []
       }
+      bling_oauth_tokens: {
+        Row: {
+          access_token: string
+          bling_user_info: Json | null
+          created_at: string
+          expires_at: string
+          id: string
+          refresh_token: string
+          scope: string | null
+          token_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token: string
+          bling_user_info?: Json | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          refresh_token: string
+          scope?: string | null
+          token_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          bling_user_info?: Json | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          refresh_token?: string
+          scope?: string | null
+          token_type?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       business_segments: {
         Row: {
           created_at: string | null

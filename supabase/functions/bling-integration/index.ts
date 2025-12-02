@@ -117,6 +117,11 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     );
 
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
     const authHeader = req.headers.get('Authorization')!;
     const token = authHeader.replace('Bearer ', '');
     const { data: { user } } = await supabaseClient.auth.getUser(token);
@@ -127,12 +132,12 @@ serve(async (req) => {
 
     const body = await req.json();
     const action = body.action;
-    const data = body.data || body; // Support both nested data and flat body
+    const data = body.data || body;
     
-    // Buscar configurações do Bling da tabela company_settings
+    // Buscar configurações do Bling
     const { data: settings, error: settingsError } = await supabaseClient
       .from('company_settings')
-      .select('bling_enabled, bling_api_key, bling_environment')
+      .select('bling_enabled, bling_client_id, bling_client_secret')
       .single();
 
     if (settingsError) {
@@ -141,19 +146,70 @@ serve(async (req) => {
     }
 
     if (!settings?.bling_enabled) {
-      throw new Error('Integração com Bling está desativada. Ative em Configurações da Empresa.');
+      throw new Error('Integração com Bling está desativada. Conecte ao Bling em Configurações da Empresa.');
     }
 
-    const blingApiKey = settings.bling_api_key;
+    // Buscar access token da tabela OAuth
+    const { data: tokenData, error: tokenError } = await supabaseAdmin
+      .from('bling_oauth_tokens')
+      .select('*')
+      .single();
 
-    if (!blingApiKey) {
-      throw new Error('Token da API do Bling não configurado. Configure em Configurações da Empresa.');
+    if (tokenError || !tokenData?.access_token) {
+      throw new Error('Bling não conectado. Conecte ao Bling em Configurações da Empresa.');
+    }
+
+    let accessToken = tokenData.access_token;
+
+    // Verificar se token expirou
+    if (new Date(tokenData.expires_at) < new Date()) {
+      console.log('[Bling] Token expired, refreshing...');
+      
+      // Tentar renovar o token
+      const refreshResponse = await fetch('https://www.bling.com.br/Api/v3/oauth/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': `Basic ${btoa(`${settings.bling_client_id}:${settings.bling_client_secret}`)}`,
+        },
+        body: new URLSearchParams({
+          grant_type: 'refresh_token',
+          refresh_token: tokenData.refresh_token,
+        }),
+      });
+
+      if (!refreshResponse.ok) {
+        // Token inválido, deletar e pedir reconexão
+        await supabaseAdmin
+          .from('bling_oauth_tokens')
+          .delete()
+          .eq('id', tokenData.id);
+        
+        throw new Error('Token do Bling expirou. Reconecte ao Bling em Configurações da Empresa.');
+      }
+
+      const newTokenData = await refreshResponse.json();
+      const expiresAt = new Date();
+      expiresAt.setSeconds(expiresAt.getSeconds() + newTokenData.expires_in);
+
+      // Atualizar tokens
+      await supabaseAdmin
+        .from('bling_oauth_tokens')
+        .update({
+          access_token: newTokenData.access_token,
+          refresh_token: newTokenData.refresh_token,
+          expires_at: expiresAt.toISOString(),
+        })
+        .eq('id', tokenData.id);
+
+      accessToken = newTokenData.access_token;
+      console.log('[Bling] Token refreshed successfully');
     }
 
     const blingBaseUrl = 'https://api.bling.com.br/Api/v3';
     const headers = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${blingApiKey}`,
+      'Authorization': `Bearer ${accessToken}`,
     };
 
     console.log(`[Bling Integration] Action: ${action}`, data);
