@@ -171,15 +171,9 @@ export const RequestCustomerRegistrationButton = ({
         cardId: taskId
       });
 
-      toast.success('Link enviado via WhatsApp com sucesso!');
+      toast.success('Dados enviados com sucesso! O cliente será notificado.');
       
-      // Open WhatsApp with message
-      const message = encodeURIComponent(
-        `Olá! Para finalizar seu pedido, precisamos que você complete seu cadastro através deste link: ${generatedLink}`
-      );
-      window.open(`https://wa.me/?text=${message}`, "_blank");
-      
-      // Close modal after success
+      // Close modal after success (NO WhatsApp redirect - webhook handles messaging)
       setTimeout(() => setOpen(false), 1000);
       
     } catch (error: any) {
