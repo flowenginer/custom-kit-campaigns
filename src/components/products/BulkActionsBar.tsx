@@ -2,9 +2,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { DollarSign, X, Download, Barcode, Package, Loader2, CheckCircle2, AlertTriangle, XCircle, Trash2, Tag } from "lucide-react";
+import { DollarSign, X, Download, Barcode, Package, Loader2, CheckCircle2, AlertTriangle, XCircle, Trash2, Tag, Shirt, Baby } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -22,6 +22,13 @@ interface SelectedProduct {
   name: string;
   sku: string | null;
   base_price: number | null;
+  variationCount: number;
+}
+
+interface PriceTierData {
+  standard: { price: number | null; promoPrice: number | null; count: number };
+  plus: { price: number | null; promoPrice: number | null; count: number };
+  kids: { price: number | null; promoPrice: number | null; count: number };
 }
 
 interface BlingResult {
@@ -32,9 +39,13 @@ interface BlingResult {
   message?: string;
 }
 
+// Size tier definitions
+const STANDARD_SIZES = ['PP', 'P', 'M', 'G', 'GG', 'XG'];
+const PLUS_SIZES = ['G1', 'G2', 'G3', 'G4', 'G5'];
+const KIDS_SIZES = ['1 ANO', '2 ANOS', '4 ANOS', '6 ANOS', '8 ANOS', '10 ANOS', '12 ANOS', '14 ANOS'];
+
 export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, totalProducts }: BulkActionsBarProps) {
   const [bulkPriceDialog, setBulkPriceDialog] = useState(false);
-  const [bulkPrice, setBulkPrice] = useState("");
   const [loading, setLoading] = useState(false);
   const [skuLoading, setSkuLoading] = useState(false);
   const [blingLoading, setBlingLoading] = useState(false);
@@ -51,12 +62,28 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
   
   // Estado para preço promocional
   const [promoPriceDialog, setPromoPriceDialog] = useState(false);
-  const [promoPrice, setPromoPrice] = useState("");
   const [promoLoading, setPromoLoading] = useState(false);
   
-  // Estado para lista de produtos selecionados (usado em ambos os modais)
+  // Estado para lista de produtos selecionados
   const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
+  
+  // Estado para preços por tier
+  const [priceTiers, setPriceTiers] = useState({
+    standard: '',
+    plus: '',
+    kids: ''
+  });
+  const [promoPriceTiers, setPromoPriceTiers] = useState({
+    standard: '',
+    plus: '',
+    kids: ''
+  });
+  const [currentTierPrices, setCurrentTierPrices] = useState<PriceTierData>({
+    standard: { price: null, promoPrice: null, count: 0 },
+    plus: { price: null, promoPrice: null, count: 0 },
+    kids: { price: null, promoPrice: null, count: 0 }
+  });
 
   useEffect(() => {
     checkBlingSettings();
@@ -77,29 +104,98 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
     }
   };
 
-  // Buscar dados dos produtos selecionados
-  const fetchSelectedProducts = async () => {
+  // Buscar dados dos produtos selecionados e preços por tier
+  const fetchSelectedProductsWithTiers = async () => {
     setLoadingProducts(true);
-    const { data } = await supabase
+    
+    // Buscar produtos
+    const { data: products } = await supabase
       .from("shirt_models")
       .select("id, name, sku, base_price")
       .in("id", selectedIds);
     
-    setSelectedProducts(data || []);
+    // Buscar variações para obter preços por tier
+    const { data: variations } = await supabase
+      .from("shirt_model_variations")
+      .select("model_id, size, price_adjustment, promotional_price")
+      .in("model_id", selectedIds);
+    
+    // Calcular contagem de variações por produto
+    const variationCountMap: Record<string, number> = {};
+    variations?.forEach(v => {
+      variationCountMap[v.model_id] = (variationCountMap[v.model_id] || 0) + 1;
+    });
+    
+    const productsWithCount = (products || []).map(p => ({
+      ...p,
+      variationCount: variationCountMap[p.id] || 0
+    }));
+    
+    setSelectedProducts(productsWithCount);
+    
+    // Calcular preços médios por tier
+    const tierData: PriceTierData = {
+      standard: { price: null, promoPrice: null, count: 0 },
+      plus: { price: null, promoPrice: null, count: 0 },
+      kids: { price: null, promoPrice: null, count: 0 }
+    };
+    
+    const standardPrices: number[] = [];
+    const standardPromos: number[] = [];
+    const plusPrices: number[] = [];
+    const plusPromos: number[] = [];
+    const kidsPrices: number[] = [];
+    const kidsPromos: number[] = [];
+    
+    variations?.forEach(v => {
+      const product = products?.find(p => p.id === v.model_id);
+      const basePrice = (product?.base_price || 0) + (v.price_adjustment || 0);
+      
+      if (STANDARD_SIZES.includes(v.size)) {
+        tierData.standard.count++;
+        standardPrices.push(basePrice);
+        if (v.promotional_price) standardPromos.push(v.promotional_price);
+      } else if (PLUS_SIZES.includes(v.size)) {
+        tierData.plus.count++;
+        plusPrices.push(basePrice);
+        if (v.promotional_price) plusPromos.push(v.promotional_price);
+      } else if (KIDS_SIZES.includes(v.size)) {
+        tierData.kids.count++;
+        kidsPrices.push(basePrice);
+        if (v.promotional_price) kidsPromos.push(v.promotional_price);
+      }
+    });
+    
+    // Calcular moda (preço mais comum) ou média
+    const getMostCommonPrice = (prices: number[]) => {
+      if (prices.length === 0) return null;
+      const counts: Record<number, number> = {};
+      prices.forEach(p => { counts[p] = (counts[p] || 0) + 1; });
+      return parseFloat(Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0]);
+    };
+    
+    tierData.standard.price = getMostCommonPrice(standardPrices);
+    tierData.standard.promoPrice = getMostCommonPrice(standardPromos);
+    tierData.plus.price = getMostCommonPrice(plusPrices);
+    tierData.plus.promoPrice = getMostCommonPrice(plusPromos);
+    tierData.kids.price = getMostCommonPrice(kidsPrices);
+    tierData.kids.promoPrice = getMostCommonPrice(kidsPromos);
+    
+    setCurrentTierPrices(tierData);
     setLoadingProducts(false);
   };
 
   // Abrir modal de preço base
   const openBasePriceDialog = async () => {
-    await fetchSelectedProducts();
-    setBulkPrice("");
+    await fetchSelectedProductsWithTiers();
+    setPriceTiers({ standard: '', plus: '', kids: '' });
     setBulkPriceDialog(true);
   };
 
   // Abrir modal de preço promocional
   const openPromoPriceDialog = async () => {
-    await fetchSelectedProducts();
-    setPromoPrice("");
+    await fetchSelectedProductsWithTiers();
+    setPromoPriceTiers({ standard: '', plus: '', kids: '' });
     setPromoPriceDialog(true);
   };
 
@@ -151,7 +247,6 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
       // 2. Excluir imagens do storage para cada produto
       for (const product of productsToDelete) {
         const imageFields = ["photo_main", "image_front", "image_back", "image_right", "image_left"];
-        // Buscar segment_id do produto
         const { data: modelData } = await supabase
           .from("shirt_models")
           .select("segment_id")
@@ -190,81 +285,204 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
     }
   };
 
-  const applyBulkPrice = async () => {
-    if (!bulkPrice || selectedIds.length === 0) {
-      toast.error("Por favor, insira um preço válido");
+  // Aplicar preço base por tier
+  const applyBulkPriceByTier = async () => {
+    const standardPrice = priceTiers.standard ? parseFloat(priceTiers.standard) : null;
+    const plusPrice = priceTiers.plus ? parseFloat(priceTiers.plus) : null;
+    const kidsPrice = priceTiers.kids ? parseFloat(priceTiers.kids) : null;
+
+    // Validar se pelo menos um tier tem preço
+    if (standardPrice === null && plusPrice === null && kidsPrice === null) {
+      toast.error("Por favor, insira pelo menos um preço");
       return;
     }
 
-    const priceValue = parseFloat(bulkPrice);
-    if (isNaN(priceValue) || priceValue < 0.01 || priceValue > 9999.99) {
-      toast.error("Preço inválido. Use valores entre 0.01 e 9999.99");
+    // Validar valores
+    const validatePrice = (price: number | null, label: string) => {
+      if (price !== null && (isNaN(price) || price < 0.01 || price > 9999.99)) {
+        toast.error(`Preço ${label} inválido. Use valores entre 0.01 e 9999.99`);
+        return false;
+      }
+      return true;
+    };
+
+    if (!validatePrice(standardPrice, 'padrão') || 
+        !validatePrice(plusPrice, 'plus') || 
+        !validatePrice(kidsPrice, 'infantil')) {
       return;
     }
 
     setLoading(true);
-    const { error } = await supabase
-      .from("shirt_models")
-      .update({ base_price: priceValue })
-      .in("id", selectedIds);
+    let totalUpdated = 0;
 
-    if (error) {
-      toast.error("Erro ao aplicar preço em lote");
-      setLoading(false);
-      return;
-    }
-
-    toast.success(`✅ Preço base atualizado em ${selectedIds.length} produto(s)!`);
-    setBulkPriceDialog(false);
-    setBulkPrice("");
-    setLoading(false);
-    onClearSelection();
-    onComplete();
-  };
-
-  // Aplicar preço promocional em lote (atualiza variações)
-  const applyPromoPrice = async () => {
-    const priceValue = promoPrice ? parseFloat(promoPrice) : null;
-    
-    if (promoPrice && (isNaN(priceValue!) || priceValue! < 0.01 || priceValue! > 9999.99)) {
-      toast.error("Preço inválido. Use valores entre 0.01 e 9999.99 ou deixe vazio para remover");
-      return;
-    }
-
-    // Validar se preço promocional é menor que preço base
-    if (priceValue !== null) {
-      const invalidProducts = selectedProducts.filter(
-        p => p.base_price !== null && priceValue >= p.base_price
-      );
-      
-      if (invalidProducts.length > 0) {
-        toast.error(`Preço promocional deve ser menor que o preço base. ${invalidProducts.length} produto(s) têm preço base menor ou igual.`);
-        return;
-      }
-    }
-
-    setPromoLoading(true);
-    
     try {
-      // Atualizar todas as variações dos produtos selecionados
-      const { error } = await supabase
-        .from("shirt_model_variations")
-        .update({ promotional_price: priceValue })
-        .in("model_id", selectedIds);
+      // Update standard sizes
+      if (standardPrice !== null) {
+        await supabase
+          .from("shirt_model_variations")
+          .update({ price_adjustment: 0 })
+          .in("model_id", selectedIds)
+          .in("size", STANDARD_SIZES);
+        
+        // Also update base_price on shirt_models for reference
+        await supabase
+          .from("shirt_models")
+          .update({ base_price: standardPrice })
+          .in("id", selectedIds);
+        
+        totalUpdated += currentTierPrices.standard.count;
+      }
 
-      if (error) throw error;
+      // Update plus sizes (using price_adjustment to add the difference)
+      if (plusPrice !== null) {
+        // Get current base prices
+        const { data: models } = await supabase
+          .from("shirt_models")
+          .select("id, base_price")
+          .in("id", selectedIds);
+        
+        for (const model of models || []) {
+          const basePrice = standardPrice || model.base_price || 0;
+          const adjustment = plusPrice - basePrice;
+          
+          await supabase
+            .from("shirt_model_variations")
+            .update({ price_adjustment: adjustment })
+            .eq("model_id", model.id)
+            .in("size", PLUS_SIZES);
+        }
+        
+        totalUpdated += currentTierPrices.plus.count;
+      }
 
-      const message = priceValue === null 
-        ? `✅ Preço promocional removido de ${selectedIds.length} produto(s)!`
-        : `✅ Preço promocional atualizado em ${selectedIds.length} produto(s)!`;
-      
-      toast.success(message);
-      setPromoPriceDialog(false);
-      setPromoPrice("");
+      // Update kids sizes
+      if (kidsPrice !== null) {
+        const { data: models } = await supabase
+          .from("shirt_models")
+          .select("id, base_price")
+          .in("id", selectedIds);
+        
+        for (const model of models || []) {
+          const basePrice = standardPrice || model.base_price || 0;
+          const adjustment = kidsPrice - basePrice;
+          
+          await supabase
+            .from("shirt_model_variations")
+            .update({ price_adjustment: adjustment })
+            .eq("model_id", model.id)
+            .in("size", KIDS_SIZES);
+        }
+        
+        totalUpdated += currentTierPrices.kids.count;
+      }
+
+      const tiersUpdated = [
+        standardPrice !== null ? 'padrão' : null,
+        plusPrice !== null ? 'plus' : null,
+        kidsPrice !== null ? 'infantil' : null
+      ].filter(Boolean).join(', ');
+
+      toast.success(`✅ Preços atualizados! ${selectedIds.length} produto(s), tamanhos: ${tiersUpdated}`);
+      setBulkPriceDialog(false);
+      setPriceTiers({ standard: '', plus: '', kids: '' });
       onClearSelection();
       onComplete();
     } catch (error: any) {
-      toast.error("Erro ao atualizar preço promocional: " + error.message);
+      toast.error("Erro ao atualizar preços: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Aplicar preço promocional por tier
+  const applyPromoPriceByTier = async () => {
+    const standardPromo = promoPriceTiers.standard ? parseFloat(promoPriceTiers.standard) : null;
+    const plusPromo = promoPriceTiers.plus ? parseFloat(promoPriceTiers.plus) : null;
+    const kidsPromo = promoPriceTiers.kids ? parseFloat(promoPriceTiers.kids) : null;
+
+    // Validar valores
+    const validatePrice = (price: number | null, label: string) => {
+      if (price !== null && (isNaN(price) || price < 0.01 || price > 9999.99)) {
+        toast.error(`Preço ${label} inválido. Use valores entre 0.01 e 9999.99`);
+        return false;
+      }
+      return true;
+    };
+
+    if (!validatePrice(standardPromo, 'padrão') || 
+        !validatePrice(plusPromo, 'plus') || 
+        !validatePrice(kidsPromo, 'infantil')) {
+      return;
+    }
+
+    // Validar se promo é menor que base
+    if (standardPromo !== null && currentTierPrices.standard.price !== null && 
+        standardPromo >= currentTierPrices.standard.price) {
+      toast.error(`Preço promo padrão deve ser menor que ${formatPrice(currentTierPrices.standard.price)}`);
+      return;
+    }
+    if (plusPromo !== null && currentTierPrices.plus.price !== null && 
+        plusPromo >= currentTierPrices.plus.price) {
+      toast.error(`Preço promo plus deve ser menor que ${formatPrice(currentTierPrices.plus.price)}`);
+      return;
+    }
+    if (kidsPromo !== null && currentTierPrices.kids.price !== null && 
+        kidsPromo >= currentTierPrices.kids.price) {
+      toast.error(`Preço promo infantil deve ser menor que ${formatPrice(currentTierPrices.kids.price)}`);
+      return;
+    }
+
+    setPromoLoading(true);
+    let totalUpdated = 0;
+
+    try {
+      // Update standard sizes promo
+      if (promoPriceTiers.standard !== '') {
+        await supabase
+          .from("shirt_model_variations")
+          .update({ promotional_price: standardPromo })
+          .in("model_id", selectedIds)
+          .in("size", STANDARD_SIZES);
+        
+        totalUpdated += currentTierPrices.standard.count;
+      }
+
+      // Update plus sizes promo
+      if (promoPriceTiers.plus !== '') {
+        await supabase
+          .from("shirt_model_variations")
+          .update({ promotional_price: plusPromo })
+          .in("model_id", selectedIds)
+          .in("size", PLUS_SIZES);
+        
+        totalUpdated += currentTierPrices.plus.count;
+      }
+
+      // Update kids sizes promo
+      if (promoPriceTiers.kids !== '') {
+        await supabase
+          .from("shirt_model_variations")
+          .update({ promotional_price: kidsPromo })
+          .in("model_id", selectedIds)
+          .in("size", KIDS_SIZES);
+        
+        totalUpdated += currentTierPrices.kids.count;
+      }
+
+      const hasUpdates = promoPriceTiers.standard !== '' || promoPriceTiers.plus !== '' || promoPriceTiers.kids !== '';
+      
+      if (hasUpdates) {
+        toast.success(`✅ Preços promocionais atualizados em ${selectedIds.length} produto(s)!`);
+      } else {
+        toast.info("Nenhuma alteração realizada");
+      }
+      
+      setPromoPriceDialog(false);
+      setPromoPriceTiers({ standard: '', plus: '', kids: '' });
+      onClearSelection();
+      onComplete();
+    } catch (error: any) {
+      toast.error("Erro ao atualizar preços promocionais: " + error.message);
     } finally {
       setPromoLoading(false);
     }
@@ -273,7 +491,6 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
   const generateSKUs = async () => {
     setSkuLoading(true);
     try {
-      // Buscar produtos selecionados que não têm SKU
       const { data: products, error: fetchError } = await supabase
         .from("shirt_models")
         .select("id, name, segment_tag, model_tag, sku")
@@ -289,13 +506,11 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
         return;
       }
 
-      // Buscar o maior número sequencial existente para cada combinação segment-model
       const { data: existingSkus } = await supabase
         .from("shirt_models")
         .select("sku")
         .not("sku", "is", null);
 
-      // Extrair números sequenciais existentes
       const skuCounters: Record<string, number> = {};
       existingSkus?.forEach(item => {
         if (item.sku) {
@@ -308,7 +523,6 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
         }
       });
 
-      // Gerar SKUs para cada produto
       const updates: { id: string; sku: string }[] = [];
       
       for (const product of productsWithoutSku) {
@@ -316,7 +530,6 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
         const model = (product.model_tag || "MOD").substring(0, 3).toUpperCase();
         const prefix = `${segment}-${model}`;
         
-        // Incrementar contador
         skuCounters[prefix] = (skuCounters[prefix] || 0) + 1;
         const seq = skuCounters[prefix].toString().padStart(3, "0");
         
@@ -326,7 +539,6 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
         });
       }
 
-      // Atualizar produtos em lote
       for (const update of updates) {
         const { error } = await supabase
           .from("shirt_models")
@@ -352,7 +564,6 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
     setBlingLoading(true);
     const results: BlingResult[] = [];
 
-    // Buscar nomes dos produtos para o relatório
     const { data: products } = await supabase
       .from("shirt_models")
       .select("id, name, sku, model_tag")
@@ -383,7 +594,6 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
               message: error.message || 'Erro desconhecido'
             });
           } else if (data?.already_exists) {
-            // Produto já existe no Bling
             results.push({
               id: productId,
               name: data.product_name || productName,
@@ -427,16 +637,13 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
         }
       }
 
-      // Calcular estatísticas
       const successCount = results.filter(r => r.status === 'success').length;
       const duplicateCount = results.filter(r => r.status === 'duplicate').length;
       const errorCount = results.filter(r => r.status === 'error').length;
 
-      // Salvar resultados e mostrar dialog
       setBlingResults(results);
       setBlingResultsDialog(true);
 
-      // Toast resumido
       if (successCount > 0 && duplicateCount === 0 && errorCount === 0) {
         toast.success(`✅ ${successCount} produto(s) enviado(s) com sucesso!`);
       } else if (successCount === 0 && duplicateCount > 0 && errorCount === 0) {
@@ -458,7 +665,6 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
     toast.info("Exportação em desenvolvimento");
   };
 
-  // Calcular estatísticas dos resultados
   const successResults = blingResults.filter(r => r.status === 'success');
   const duplicateResults = blingResults.filter(r => r.status === 'duplicate');
   const errorResults = blingResults.filter(r => r.status === 'error');
@@ -475,7 +681,7 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
 
           <div className="h-6 w-px bg-border hidden sm:block" />
 
-          {/* Excluir em Lote - PRIMEIRO BOTÃO */}
+          {/* Excluir em Lote */}
           <Button 
             variant="destructive" 
             size="sm" 
@@ -552,7 +758,6 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
             </DialogDescription>
           </DialogHeader>
 
-          {/* Resumo em Cards */}
           <div className="grid grid-cols-3 gap-4 mb-4">
             <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
               <CheckCircle2 className="h-5 w-5 text-green-500" />
@@ -577,10 +782,8 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
             </div>
           </div>
 
-          {/* Lista Detalhada */}
           <ScrollArea className="h-[300px] border rounded-lg">
             <div className="p-4 space-y-2">
-              {/* Sucesso */}
               {successResults.length > 0 && (
                 <div className="mb-4">
                   <h4 className="font-medium text-green-500 mb-2 flex items-center gap-2">
@@ -599,7 +802,6 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
                 </div>
               )}
 
-              {/* Duplicados */}
               {duplicateResults.length > 0 && (
                 <div className="mb-4">
                   <h4 className="font-medium text-yellow-500 mb-2 flex items-center gap-2">
@@ -617,7 +819,6 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
                 </div>
               )}
 
-              {/* Erros */}
               {errorResults.length > 0 && (
                 <div>
                   <h4 className="font-medium text-red-500 mb-2 flex items-center gap-2">
@@ -708,7 +909,7 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
         </DialogContent>
       </Dialog>
 
-      {/* Modal de Preço Base */}
+      {/* Modal de Preço Base com 3 Tiers */}
       <Dialog open={bulkPriceDialog} onOpenChange={setBulkPriceDialog}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -729,13 +930,13 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
             <>
               <div>
                 <Label className="text-xs text-muted-foreground">Produtos Selecionados:</Label>
-                <ScrollArea className="max-h-[160px] border rounded-lg p-2 bg-muted/30 mt-1">
+                <ScrollArea className="max-h-[100px] border rounded-lg p-2 bg-muted/30 mt-1">
                   <ul className="space-y-1">
                     {selectedProducts.map((product) => (
                       <li key={product.id} className="flex items-center justify-between text-sm py-1">
                         <span className="truncate max-w-[200px]">{product.name}</span>
-                        <Badge variant="outline" className="ml-2 font-mono text-xs">
-                          {formatPrice(product.base_price)}
+                        <Badge variant="outline" className="ml-2 text-xs">
+                          {product.variationCount} var.
                         </Badge>
                       </li>
                     ))}
@@ -743,29 +944,78 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
                 </ScrollArea>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="newBasePrice">Novo Preço Base *</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
-                  <Input
-                    id="newBasePrice"
-                    type="text"
-                    inputMode="decimal"
-                    value={bulkPrice}
-                    onChange={(e) => setBulkPrice(formatPriceInput(e.target.value))}
-                    placeholder="0.00"
-                    className="pl-10"
-                  />
+              <div className="space-y-4">
+                {/* Tamanhos Padrão */}
+                <div className="space-y-2 p-3 border rounded-lg bg-blue-500/5">
+                  <div className="flex items-center gap-2">
+                    <Shirt className="h-4 w-4 text-blue-500" />
+                    <Label className="font-medium">Tamanhos Padrão (PP, P, M, G, GG, XG)</Label>
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      value={priceTiers.standard}
+                      onChange={(e) => setPriceTiers(prev => ({ ...prev, standard: formatPriceInput(e.target.value) }))}
+                      placeholder={currentTierPrices.standard.price?.toFixed(2) || "0.00"}
+                      className="pl-10"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Preço atual: {formatPrice(currentTierPrices.standard.price)} ({currentTierPrices.standard.count} variações)
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Formato: 00.00 (ex: 89.90)
-                </p>
+
+                {/* Tamanhos Plus */}
+                <div className="space-y-2 p-3 border rounded-lg bg-purple-500/5">
+                  <div className="flex items-center gap-2">
+                    <Shirt className="h-4 w-4 text-purple-500" />
+                    <Label className="font-medium">Tamanhos Plus (G1, G2, G3, G4, G5)</Label>
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      value={priceTiers.plus}
+                      onChange={(e) => setPriceTiers(prev => ({ ...prev, plus: formatPriceInput(e.target.value) }))}
+                      placeholder={currentTierPrices.plus.price?.toFixed(2) || "0.00"}
+                      className="pl-10"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Preço atual: {formatPrice(currentTierPrices.plus.price)} ({currentTierPrices.plus.count} variações)
+                  </p>
+                </div>
+
+                {/* Tamanhos Infantis */}
+                <div className="space-y-2 p-3 border rounded-lg bg-green-500/5">
+                  <div className="flex items-center gap-2">
+                    <Baby className="h-4 w-4 text-green-500" />
+                    <Label className="font-medium">Tamanhos Infantis (1-14 ANOS)</Label>
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      value={priceTiers.kids}
+                      onChange={(e) => setPriceTiers(prev => ({ ...prev, kids: formatPriceInput(e.target.value) }))}
+                      placeholder={currentTierPrices.kids.price?.toFixed(2) || "0.00"}
+                      className="pl-10"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Preço atual: {formatPrice(currentTierPrices.kids.price)} ({currentTierPrices.kids.count} variações)
+                  </p>
+                </div>
               </div>
 
               <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
                 <p className="text-sm text-amber-600 dark:text-amber-400 flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4" />
-                  Esta ação atualizará o preço base de todos os produtos selecionados.
+                  Deixe campos vazios para manter o preço atual.
                 </p>
               </div>
             </>
@@ -775,15 +1025,18 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
             <Button variant="outline" onClick={() => setBulkPriceDialog(false)}>
               Cancelar
             </Button>
-            <Button onClick={applyBulkPrice} disabled={loading || loadingProducts || !bulkPrice}>
+            <Button 
+              onClick={applyBulkPriceByTier} 
+              disabled={loading || loadingProducts || (!priceTiers.standard && !priceTiers.plus && !priceTiers.kids)}
+            >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Atualizar {selectedIds.length} Preço(s)
+              Atualizar Preços
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Modal de Preço Promocional */}
+      {/* Modal de Preço Promocional com 3 Tiers */}
       <Dialog open={promoPriceDialog} onOpenChange={setPromoPriceDialog}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -804,14 +1057,14 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
             <>
               <div>
                 <Label className="text-xs text-muted-foreground">Produtos Selecionados:</Label>
-                <ScrollArea className="max-h-[160px] border rounded-lg p-2 bg-muted/30 mt-1">
+                <ScrollArea className="max-h-[100px] border rounded-lg p-2 bg-muted/30 mt-1">
                   <ul className="space-y-1">
                     {selectedProducts.map((product) => (
                       <li key={product.id} className="text-sm py-1">
                         <div className="flex items-center justify-between">
                           <span className="truncate max-w-[180px]">{product.name}</span>
-                          <Badge variant="outline" className="ml-2 font-mono text-xs">
-                            Base: {formatPrice(product.base_price)}
+                          <Badge variant="outline" className="ml-2 text-xs">
+                            {product.variationCount} var.
                           </Badge>
                         </div>
                       </li>
@@ -820,29 +1073,78 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
                 </ScrollArea>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="newPromoPrice">Novo Preço Promocional</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
-                  <Input
-                    id="newPromoPrice"
-                    type="text"
-                    inputMode="decimal"
-                    value={promoPrice}
-                    onChange={(e) => setPromoPrice(formatPriceInput(e.target.value))}
-                    placeholder="0.00"
-                    className="pl-10"
-                  />
+              <div className="space-y-4">
+                {/* Tamanhos Padrão */}
+                <div className="space-y-2 p-3 border rounded-lg bg-blue-500/5">
+                  <div className="flex items-center gap-2">
+                    <Shirt className="h-4 w-4 text-blue-500" />
+                    <Label className="font-medium">Tamanhos Padrão (PP, P, M, G, GG, XG)</Label>
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      value={promoPriceTiers.standard}
+                      onChange={(e) => setPromoPriceTiers(prev => ({ ...prev, standard: formatPriceInput(e.target.value) }))}
+                      placeholder="Deixe vazio para remover"
+                      className="pl-10"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Base: {formatPrice(currentTierPrices.standard.price)} | Promo atual: {formatPrice(currentTierPrices.standard.promoPrice)}
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Formato: 00.00 (ex: 49.90). Deixe vazio para remover preço promocional.
-                </p>
+
+                {/* Tamanhos Plus */}
+                <div className="space-y-2 p-3 border rounded-lg bg-purple-500/5">
+                  <div className="flex items-center gap-2">
+                    <Shirt className="h-4 w-4 text-purple-500" />
+                    <Label className="font-medium">Tamanhos Plus (G1, G2, G3, G4, G5)</Label>
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      value={promoPriceTiers.plus}
+                      onChange={(e) => setPromoPriceTiers(prev => ({ ...prev, plus: formatPriceInput(e.target.value) }))}
+                      placeholder="Deixe vazio para remover"
+                      className="pl-10"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Base: {formatPrice(currentTierPrices.plus.price)} | Promo atual: {formatPrice(currentTierPrices.plus.promoPrice)}
+                  </p>
+                </div>
+
+                {/* Tamanhos Infantis */}
+                <div className="space-y-2 p-3 border rounded-lg bg-green-500/5">
+                  <div className="flex items-center gap-2">
+                    <Baby className="h-4 w-4 text-green-500" />
+                    <Label className="font-medium">Tamanhos Infantis (1-14 ANOS)</Label>
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      value={promoPriceTiers.kids}
+                      onChange={(e) => setPromoPriceTiers(prev => ({ ...prev, kids: formatPriceInput(e.target.value) }))}
+                      placeholder="Deixe vazio para remover"
+                      className="pl-10"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Base: {formatPrice(currentTierPrices.kids.price)} | Promo atual: {formatPrice(currentTierPrices.kids.promoPrice)}
+                  </p>
+                </div>
               </div>
 
               <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
                 <p className="text-sm text-blue-600 dark:text-blue-400 flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4" />
-                  O preço promocional deve ser menor que o preço base para ser válido.
+                  O preço promocional deve ser menor que o preço base de cada grupo.
                 </p>
               </div>
             </>
@@ -852,9 +1154,9 @@ export function BulkActionsBar({ selectedIds, onClearSelection, onComplete, tota
             <Button variant="outline" onClick={() => setPromoPriceDialog(false)}>
               Cancelar
             </Button>
-            <Button onClick={applyPromoPrice} disabled={promoLoading || loadingProducts}>
+            <Button onClick={applyPromoPriceByTier} disabled={promoLoading || loadingProducts}>
               {promoLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {promoPrice ? `Atualizar ${selectedIds.length} Preço(s)` : `Remover de ${selectedIds.length} Produto(s)`}
+              Atualizar Promoções
             </Button>
           </DialogFooter>
         </DialogContent>
