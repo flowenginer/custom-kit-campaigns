@@ -33,6 +33,8 @@ export default function CompanySettings() {
   // Melhor Envio
   const [melhorEnvioToken, setMelhorEnvioToken] = useState("");
   const [melhorEnvioEnvironment, setMelhorEnvioEnvironment] = useState<"sandbox" | "production">("sandbox");
+  const [melhorEnvioTesting, setMelhorEnvioTesting] = useState(false);
+  const [melhorEnvioTestResult, setMelhorEnvioTestResult] = useState<{ success: boolean; data?: any; error?: string } | null>(null);
 
   // Bling OAuth
   const [blingClientId, setBlingClientId] = useState("");
@@ -244,6 +246,43 @@ export default function CompanySettings() {
     }
   };
 
+  const handleTestMelhorEnvio = async () => {
+    if (!melhorEnvioToken) {
+      toast.error("Configure o token do Melhor Envio primeiro");
+      return;
+    }
+
+    setMelhorEnvioTesting(true);
+    setMelhorEnvioTestResult(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('melhor-envio-integration', {
+        body: { 
+          action: 'test_connection',
+          data: {}
+        }
+      });
+
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+
+      setMelhorEnvioTestResult({
+        success: true,
+        data: data.data
+      });
+      toast.success("Conexão com Melhor Envio OK!");
+    } catch (error: any) {
+      console.error("Error testing Melhor Envio:", error);
+      setMelhorEnvioTestResult({
+        success: false,
+        error: error.message || "Erro ao conectar"
+      });
+      toast.error(error.message || "Erro ao testar conexão");
+    } finally {
+      setMelhorEnvioTesting(false);
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -293,6 +332,7 @@ export default function CompanySettings() {
         if (error) throw error;
       }
 
+      setMelhorEnvioTestResult(null); // Reset test result after save
       toast.success("Configurações salvas com sucesso!");
     } catch (error) {
       console.error("Error saving settings:", error);
@@ -502,7 +542,22 @@ export default function CompanySettings() {
         <TabsContent value="shipping" className="space-y-6 mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Integração Melhor Envio</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                🚚 Integração Melhor Envio
+                {melhorEnvioTestResult && (
+                  melhorEnvioTestResult.success ? (
+                    <Badge variant="default" className="bg-green-600">
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      Conectado
+                    </Badge>
+                  ) : (
+                    <Badge variant="destructive">
+                      <XCircle className="h-3 w-3 mr-1" />
+                      Erro
+                    </Badge>
+                  )
+                )}
+              </CardTitle>
               <CardDescription>Configure o token para cotação de frete em tempo real</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -524,13 +579,76 @@ export default function CompanySettings() {
                 <Textarea
                   id="melhorEnvioToken"
                   value={melhorEnvioToken}
-                  onChange={(e) => setMelhorEnvioToken(e.target.value)}
+                  onChange={(e) => {
+                    setMelhorEnvioToken(e.target.value);
+                    setMelhorEnvioTestResult(null);
+                  }}
                   placeholder="Cole aqui o token da API do Melhor Envio"
                   rows={3}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
                   Obtenha seu token em: https://melhorenvio.com.br/painel/gerenciar/tokens
                 </p>
+              </div>
+
+              {/* Botão Testar Conexão */}
+              <div className="space-y-3 p-4 border rounded-lg">
+                <h4 className="font-medium">Testar Conexão</h4>
+                <p className="text-sm text-muted-foreground">
+                  Salve as configurações e teste se o token está funcionando corretamente.
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={handleTestMelhorEnvio}
+                    disabled={melhorEnvioTesting || !melhorEnvioToken}
+                  >
+                    {melhorEnvioTesting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Testando...
+                      </>
+                    ) : (
+                      <>
+                        <Link2 className="h-4 w-4 mr-2" />
+                        Testar Conexão
+                      </>
+                    )}
+                  </Button>
+                </div>
+                
+                {melhorEnvioTestResult && (
+                  <div className={`mt-3 p-3 rounded-lg ${
+                    melhorEnvioTestResult.success 
+                      ? 'bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800' 
+                      : 'bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800'
+                  }`}>
+                    {melhorEnvioTestResult.success ? (
+                      <div className="text-green-700 dark:text-green-300">
+                        <p className="font-medium flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4" />
+                          Conexão bem-sucedida!
+                        </p>
+                        <p className="text-sm mt-1">Conta: {melhorEnvioTestResult.data?.email}</p>
+                        <p className="text-sm">Nome: {melhorEnvioTestResult.data?.name}</p>
+                      </div>
+                    ) : (
+                      <div className="text-red-700 dark:text-red-300">
+                        <p className="font-medium flex items-center gap-2">
+                          <XCircle className="h-4 w-4" />
+                          Erro na conexão
+                        </p>
+                        <p className="text-sm mt-1">{melhorEnvioTestResult.error}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {!melhorEnvioToken && (
+                  <p className="text-xs text-amber-600">
+                    ⚠️ Configure o token primeiro
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
