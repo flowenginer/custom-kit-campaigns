@@ -464,8 +464,8 @@ export const CustomizationViewer = ({
 
   return (
     <div className="space-y-6">
-      {/* Alerta de Criação do Zero */}
-      {data?.fromScratch && (
+      {/* Alerta de Criação do Zero - Mostra para fromScratch OU campanha Layout do Zero */}
+      {(data?.fromScratch || campaignName?.toLowerCase().includes('layout do zero')) && (
         <Card className="border-2 border-green-500 bg-green-50 dark:bg-green-950 shadow-lg">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
@@ -485,8 +485,8 @@ export const CustomizationViewer = ({
         </Card>
       )}
 
-      {/* Descrição da Criação - Sempre mostra para layouts do zero */}
-      {data?.fromScratch && (
+      {/* Descrição da Criação - Mostra para layouts do zero OU campanha Layout do Zero */}
+      {(data?.fromScratch || campaignName?.toLowerCase().includes('layout do zero')) && (
         <div className="border-2 border-amber-500 dark:border-amber-600 rounded-lg p-4 space-y-4 bg-amber-50 dark:bg-amber-950">
           <div className="flex items-center gap-2">
             <AlertCircle className="h-5 w-5 text-amber-700 dark:text-amber-400" />
@@ -499,6 +499,7 @@ export const CustomizationViewer = ({
               <p className="text-sm whitespace-pre-wrap text-gray-900 dark:text-white">
                 {transformedData.scratchDescription || 
                  transformedData.logo?.logoDescription || 
+                 logoDescription ||
                  "Nenhuma descrição foi informada para este layout."}
               </p>
             </div>
