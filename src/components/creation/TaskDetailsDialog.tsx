@@ -441,7 +441,7 @@ export const TaskDetailsDialog = ({
       
       if (primaryLogoUrl) {
         leadUpdateData.uploaded_logo_url = primaryLogoUrl;
-        leadUpdateData.logo_action = 'uploaded'; // Indicar que logo foi enviada
+        leadUpdateData.logo_action = null; // Logo já foi enviada, não precisa mais de ação
       }
 
       const { error: leadError } = await supabase
