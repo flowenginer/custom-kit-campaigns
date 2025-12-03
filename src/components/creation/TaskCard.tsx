@@ -161,9 +161,9 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
 
             {/* GRID 3 COLUNAS */}
             <CollapsibleContent className="animate-accordion-down">
-              <div className="grid grid-cols-3 gap-2">
+              <div className="flex gap-2">
                 {/* COLUNA ESQUERDA */}
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 shrink-0 w-auto max-w-[90px]">
                   {/* Segmento/Campanha - prioriza segmento real do cliente */}
                   <div className="border border-border rounded px-2 py-1.5 bg-card text-center min-h-[36px] flex items-center justify-center">
                     <span className="font-medium text-card-foreground truncate" style={{ fontSize: `${fontSizes?.segment || 12}px` }}>
@@ -206,7 +206,7 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
                 </div>
 
                 {/* COLUNA CENTRAL */}
-                <div className="space-y-1.5 flex flex-col items-center">
+                <div className="space-y-1.5 flex flex-col items-center flex-1 min-w-0">
                 {/* Modelo */}
                   <div 
                     className="border border-border rounded px-2 py-1.5 bg-card flex items-center gap-1 w-full justify-center min-h-[32px]"
@@ -220,11 +220,11 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
 
                   {/* Imagem - proporcional */}
                   {task.model_image_front ? (
-                    <div className="flex-1 flex items-center justify-center">
+                    <div className="flex-1 flex items-center justify-center w-full">
                       <img 
                         src={task.model_image_front} 
                         alt="Modelo" 
-                        className="w-full max-h-28 object-contain rounded"
+                        className="h-auto max-h-28 object-contain rounded"
                       />
                     </div>
                   ) : (
@@ -235,7 +235,7 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
                 </div>
 
                 {/* COLUNA DIREITA */}
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 shrink-0 w-auto max-w-[90px]">
                   {/* Nome do Vendedor */}
                   <div className="border border-border rounded px-2 py-1.5 bg-card text-center min-h-[36px] flex items-center justify-center">
                     <span className="font-bold text-teal-600 truncate" style={{ fontSize: `${fontSizes?.salesperson || 12}px` }}>
