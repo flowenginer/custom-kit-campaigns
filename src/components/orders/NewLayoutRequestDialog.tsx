@@ -930,15 +930,15 @@ export const NewLayoutRequestDialog = ({
             <div className="space-y-2">
               <Label>Segmento/Campanha *</Label>
               
-              {(selectedCampaignId || isFromScratch) ? (
+              {selectedCampaignId ? (
                 // Modo colapsado - mostra apenas o selecionado
                 <div className="flex items-center gap-2">
-                  <Card className="p-3 flex-1 border-primary ring-2 ring-primary">
+                  <Card className={`p-3 flex-1 ${isLayoutDoZeroCampaign ? 'border-green-500 ring-2 ring-green-500 bg-green-50 dark:bg-green-950' : 'border-primary ring-2 ring-primary'}`}>
                     <div className="flex items-center gap-2">
-                      {isFromScratch ? (
+                      {isLayoutDoZeroCampaign ? (
                         <>
                           <Plus className="h-5 w-5 text-green-500" />
-                          <span className="font-medium text-green-700 dark:text-green-300">Layout do Zero</span>
+                          <span className="font-medium text-green-700 dark:text-green-300">{campaigns.find(c => c.id === selectedCampaignId)?.name}</span>
                         </>
                       ) : (
                         <>
@@ -965,25 +965,28 @@ export const NewLayoutRequestDialog = ({
               ) : (
                 // Modo expandido - mostra grid completo
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                  {/* Botão Layout do Zero - estilo verde */}
-                  <Card
-                    className={`p-3 cursor-pointer transition-all hover:border-green-500 hover:shadow-md border-2 border-green-500 bg-green-50 dark:bg-green-950`}
-                    onClick={() => {
-                      setIsFromScratch(true);
-                      setSelectedCampaignId("");
-                      setSelectedModel(null);
-                    }}
-                  >
-                    <div className="flex flex-col items-center gap-1">
-                      <Plus className="h-6 w-6 text-green-500" />
-                      <span className="text-xs font-medium text-center text-green-700 dark:text-green-300">
-                        Layout do Zero
-                      </span>
-                    </div>
-                  </Card>
+                  {/* Campanha Layout do Zero - estilo verde na primeira posição */}
+                  {campaigns.filter(c => c.segment_tag === 'layout_do_zero').map((campaign) => (
+                    <Card
+                      key={campaign.id}
+                      className={`p-3 cursor-pointer transition-all hover:border-green-500 hover:shadow-md border-2 border-green-500 bg-green-50 dark:bg-green-950`}
+                      onClick={() => {
+                        setIsFromScratch(false);
+                        setSelectedCampaignId(campaign.id);
+                        setSelectedModel(null);
+                      }}
+                    >
+                      <div className="flex flex-col items-center gap-1">
+                        <Plus className="h-6 w-6 text-green-500" />
+                        <span className="text-xs font-medium text-center text-green-700 dark:text-green-300">
+                          {campaign.name}
+                        </span>
+                      </div>
+                    </Card>
+                  ))}
 
-                  {/* Campanhas/Segmentos */}
-                  {campaigns.map((campaign) => (
+                  {/* Outras Campanhas/Segmentos (exceto Layout do Zero) */}
+                  {campaigns.filter(c => c.segment_tag !== 'layout_do_zero').map((campaign) => (
                     <Card
                       key={campaign.id}
                       className="p-3 cursor-pointer transition-all hover:border-primary"
