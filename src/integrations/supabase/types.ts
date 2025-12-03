@@ -2125,6 +2125,72 @@ export type Database = {
         }
         Relationships: []
       }
+      quotes: {
+        Row: {
+          approved_at: string | null
+          approved_by_name: string | null
+          correction_notes: string | null
+          created_at: string | null
+          id: string
+          items: Json
+          sent_at: string | null
+          sent_by: string | null
+          status: string
+          task_id: string
+          token: string
+          total_amount: number
+          updated_at: string | null
+          valid_until: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by_name?: string | null
+          correction_notes?: string | null
+          created_at?: string | null
+          id?: string
+          items?: Json
+          sent_at?: string | null
+          sent_by?: string | null
+          status?: string
+          task_id: string
+          token: string
+          total_amount?: number
+          updated_at?: string | null
+          valid_until: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by_name?: string | null
+          correction_notes?: string | null
+          created_at?: string | null
+          id?: string
+          items?: Json
+          sent_at?: string | null
+          sent_by?: string | null
+          status?: string
+          task_id?: string
+          token?: string
+          total_amount?: number
+          updated_at?: string | null
+          valid_until?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotes_sent_by_fkey"
+            columns: ["sent_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "design_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_kanban_defaults: {
         Row: {
           allowed_columns: string[]

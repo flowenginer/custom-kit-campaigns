@@ -39,6 +39,7 @@ import ProductPricing from "./pages/admin/ProductPricing";
 import Customers from "./pages/admin/Customers";
 import CustomerRegister from "./pages/CustomerRegister";
 import Products from "./pages/admin/Products";
+import Quote from "./pages/Quote";
 
 // Componente para rastrear mudanças de rota em SPAs
 const AnalyticsTracker = () => {
@@ -77,6 +78,7 @@ const App = () => (
           <Route path="/c/:uniqueLink" element={<Campaign />} />
           <Route path="/c/:uniqueLink/upload-logos" element={<UploadLogos />} />
           <Route path="/customer-register/:token" element={<CustomerRegister />} />
+          <Route path="/quote/:token" element={<Quote />} />
           <Route path="/admin" element={<GlobalThemeProvider><AdminLayout /></GlobalThemeProvider>}>
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="traffic" element={<TrafficDashboard />} />
