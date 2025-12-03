@@ -270,18 +270,39 @@ export const NewLayoutRequestDialog = ({
     return hasAdventureLayout || currentCampaign?.segment_tag === 'adventure_';
   }, [layouts, campaigns, selectedCampaignId]);
 
+  // Check if selected campaign is "Layout do Zero" (segment_tag === 'layout_do_zero')
+  const isLayoutDoZeroCampaign = useMemo(() => {
+    const currentCampaign = campaigns.find(c => c.id === selectedCampaignId);
+    return currentCampaign?.segment_tag === 'layout_do_zero';
+  }, [campaigns, selectedCampaignId]);
+
+  // Check if any layout has a "Layout do Zero" campaign
+  const hasLayoutDoZeroLayout = useMemo(() => {
+    return layouts.some(layout => {
+      const campaign = campaigns.find(c => c.id === layout.campaignId);
+      return campaign?.segment_tag === 'layout_do_zero';
+    });
+  }, [layouts, campaigns]);
+
   // Check if should show business segment selector (Adventure OR Layout do Zero)
   const showBusinessSegmentSelector = useMemo(() => {
     // Show if current flow is from scratch
     if (isFromScratch) return true;
     
-    // Check if any layout is from scratch
-    const hasFromScratchLayout = layouts.some(layout => layout.isFromScratch);
-    if (hasFromScratchLayout) return true;
+    // Show if current campaign is "Layout do Zero"
+    if (isLayoutDoZeroCampaign) return true;
+    
+    // Check if any layout is from scratch or from "Layout do Zero" campaign
+    const hasFromScratchOrLayoutDoZero = layouts.some(layout => {
+      if (layout.isFromScratch) return true;
+      const campaign = campaigns.find(c => c.id === layout.campaignId);
+      return campaign?.segment_tag === 'layout_do_zero';
+    });
+    if (hasFromScratchOrLayoutDoZero) return true;
     
     // Also show for Adventure campaigns
     return isAdventureCampaign;
-  }, [isFromScratch, layouts, isAdventureCampaign]);
+  }, [isFromScratch, isLayoutDoZeroCampaign, layouts, campaigns, isAdventureCampaign]);
 
   // Search customers
   useEffect(() => {
@@ -419,8 +440,10 @@ export const NewLayoutRequestDialog = ({
         toast.error(`Descreva a logo para o Layout ${i + 1}`);
         return;
       }
-      // Validação obrigatória: descrição para layouts "do zero"
-      if (layout.isFromScratch && !layout.logoDescription?.trim()) {
+      // Validação obrigatória: descrição para layouts "do zero" ou campanha "Layout do Zero"
+      const layoutCampaign = campaigns.find(c => c.id === layout.campaignId);
+      const isLayoutDoZeroLayoutItem = layout.isFromScratch || layoutCampaign?.segment_tag === 'layout_do_zero';
+      if (isLayoutDoZeroLayoutItem && !layout.logoDescription?.trim()) {
         toast.error(`Preencha a descrição da criação para o Layout ${i + 1}`);
         return;
       }
@@ -977,8 +1000,8 @@ export const NewLayoutRequestDialog = ({
               )}
             </div>
 
-            {/* Descrição da Criação - Campo destacado logo após selecionar Layout do Zero */}
-            {isFromScratch && (
+            {/* Descrição da Criação - Campo destacado para Layout do Zero (botão ou campanha) */}
+            {(isFromScratch || isLayoutDoZeroCampaign) && (
               <div className="space-y-2 p-4 border-2 border-amber-500 dark:border-amber-600 rounded-lg bg-amber-50 dark:bg-amber-950/50">
                 <Label className="flex items-center gap-2 text-amber-800 dark:text-amber-200 font-semibold">
                   <span className="text-lg">✏️</span>
@@ -990,13 +1013,18 @@ export const NewLayoutRequestDialog = ({
                   onChange={(e) => {
                     const updatedLayouts = [...layouts];
                     if (!updatedLayouts[currentLayoutIndex]) {
+                      // Determine campaign info based on context
+                      const currentCampaign = campaigns.find(c => c.id === selectedCampaignId);
+                      const campaignId = isLayoutDoZeroCampaign ? selectedCampaignId : "";
+                      const campaignName = isLayoutDoZeroCampaign ? (currentCampaign?.name || "Layout do Zero") : "Layout do Zero";
+                      
                       updatedLayouts[currentLayoutIndex] = {
                         id: `layout_${currentLayoutIndex}`,
-                        campaignId: "",
-                        campaignName: "Layout do Zero",
+                        campaignId: campaignId,
+                        campaignName: campaignName,
                         uniformType: selectedUniformType || "",
                         model: null,
-                        isFromScratch: true,
+                        isFromScratch: isFromScratch, // Only true when using the button, not the campaign
                         quantity: quantity,
                         customQuantity: customQuantity,
                         frontCustomization: {},
