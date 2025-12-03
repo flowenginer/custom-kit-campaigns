@@ -463,21 +463,14 @@ export const TaskDetailsDialog = ({
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
 
-    // Validação de arquivos
+    // Validação de arquivos - aceita TODOS os tipos, apenas limita tamanho
     const files = Array.from(e.target.files);
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    const allowedExtensions = ['.pdf', '.png', '.jpg', '.jpeg', '.ai', '.psd', '.zip'];
+    const maxSize = 50 * 1024 * 1024; // 50MB
 
     for (const file of files) {
       if (file.size > maxSize) {
-        toast.error(`Arquivo ${file.name} é muito grande. Máximo: 10MB`);
-        e.target.value = '';
-        return;
-      }
-      
-      const fileExt = '.' + file.name.split('.').pop()?.toLowerCase();
-      if (!allowedExtensions.includes(fileExt)) {
-        toast.error(`Tipo de arquivo ${fileExt} não permitido`);
+        const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+        toast.error(`Arquivo ${file.name} muito grande (${sizeMB}MB). Máximo: 50MB`);
         e.target.value = '';
         return;
       }
@@ -823,15 +816,15 @@ export const TaskDetailsDialog = ({
   // Só bloquear quando está aguardando o cliente enviar a logo ("Vou enviar depois")
   const isWaitingClientLogo = task?.logo_action === 'waiting_client';
   
-  // Pode assumir: Designer ou Admin/SuperAdmin
+  // Pode assumir: Designer ou Admin/SuperAdmin (Admin bypassa restrição de logo)
   const canAssign = task?.status === 'pending' && 
                     !task?.assigned_to && 
-                    !isWaitingClientLogo &&
-                    (isDesigner || hasFullAccess) &&
+                    (hasFullAccess || (!isWaitingClientLogo && isDesigner)) &&
                     context === 'creation';
   
-  // Pode fazer upload: Designer atribuído ou Admin/SuperAdmin
-  const canUpload = (task?.status === 'in_progress' || task?.status === 'changes_requested') &&
+  // Pode fazer upload: Designer atribuído ou Admin/SuperAdmin (quando status permite)
+  const canUpload = (task?.status === 'in_progress' || task?.status === 'changes_requested' || 
+                    (hasFullAccess && task?.status === 'pending')) &&
                    (isDesigner || hasFullAccess) &&
                    context === 'creation' &&
                    !isVendorContext;
@@ -1215,20 +1208,24 @@ export const TaskDetailsDialog = ({
                       </div>
                       <Input 
                         type="file" 
-                        accept=".png,.jpg,.jpeg,.svg,.ai,.pdf"
+                        accept="*/*"
                         onChange={(e) => {
                           const file = e.target.files?.[0];
                           if (file) {
-                            if (file.size > 10 * 1024 * 1024) {
-                              toast.error("Arquivo muito grande. Máximo: 10MB");
+                            if (file.size > 50 * 1024 * 1024) {
+                              const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+                              toast.error(`Arquivo muito grande (${sizeMB}MB). Máximo: 50MB`);
                               return;
                             }
                             setLogoFile(file);
-                            toast.success("Logo selecionado!");
+                            toast.success("Arquivo selecionado!");
                           }
                         }}
                         disabled={logoUploading}
                       />
+                      <p className="text-xs text-muted-foreground">
+                        Qualquer formato (CDR, AI, EPS, PSD, PDF, PNG, ZIP...) • Máximo 50MB
+                      </p>
                       {logoFile && (
                         <div className="flex items-center gap-2 p-3 bg-accent rounded-md">
                           <Check className="h-4 w-4 text-green-600" />
@@ -1424,14 +1421,14 @@ export const TaskDetailsDialog = ({
                             Selecionar Arquivos do Mockup
                           </Label>
                           <p className="text-xs text-muted-foreground">
-                            PDF, PNG, JPG, AI, PSD ou ZIP • Múltiplos arquivos permitidos • Máximo 10MB cada
+                            Qualquer formato (CDR, AI, EPS, PSD, PDF, PNG, ZIP...) • Múltiplos arquivos • Máximo 50MB cada
                           </p>
                         </div>
                         
                         <Input 
                           id="mockup-upload"
                           type="file" 
-                          accept=".pdf,.png,.jpg,.jpeg,.ai,.psd,.zip"
+                          accept="*/*"
                           onChange={handleFileUpload}
                           multiple
                           disabled={uploading}

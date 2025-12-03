@@ -110,17 +110,12 @@ export const LogoSectionUploader = ({
   const handleFileChange = (sectionId: string, file: File | null) => {
     if (!file) return;
 
-    // Validação
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'application/pdf'];
+    // Validação de tamanho apenas - aceita TODOS os tipos de arquivo
+    const maxSize = 50 * 1024 * 1024; // 50MB
     
     if (file.size > maxSize) {
-      toast.error("Arquivo muito grande. Máximo 10MB");
-      return;
-    }
-
-    if (!allowedTypes.includes(file.type)) {
-      toast.error("Tipo de arquivo não permitido. Use PNG, JPG, SVG ou PDF");
+      const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+      toast.error(`Arquivo muito grande (${sizeMB}MB). Máximo: 50MB`);
       return;
     }
 
@@ -132,7 +127,7 @@ export const LogoSectionUploader = ({
 
     setSections(updatedSections);
     onLogoChange(updatedSections);
-    toast.success(`Logo selecionado para ${sections.find(s => s.id === sectionId)?.title}`);
+    toast.success(`Arquivo selecionado para ${sections.find(s => s.id === sectionId)?.title}`);
   };
 
   const removeFile = (sectionId: string) => {
@@ -291,7 +286,7 @@ export const LogoSectionUploader = ({
                     <Input 
                       id={`upload-${section.id}`}
                       type="file" 
-                      accept=".png,.jpg,.jpeg,.svg,.pdf"
+                      accept="*/*"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) handleFileChange(section.id, file);
@@ -302,7 +297,7 @@ export const LogoSectionUploader = ({
                       htmlFor={`upload-${section.id}`} 
                       className="text-xs text-muted-foreground mt-1 cursor-pointer block"
                     >
-                      PNG, JPG, SVG ou PDF • Máximo 10MB
+                      Qualquer formato (CDR, AI, EPS, PSD, PDF, PNG, ZIP...) • Máximo 50MB
                     </Label>
                   </div>
                 )
