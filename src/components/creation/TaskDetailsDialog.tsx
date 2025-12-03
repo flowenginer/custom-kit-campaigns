@@ -70,6 +70,7 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
   Eye,
   ArrowRightLeft,
   Edit
@@ -1261,150 +1262,126 @@ export const TaskDetailsDialog = ({
               ) : (
                 // Contexto DESIGNER: Exibir layouts individuais em abas
                 <>
-                  {task.task_layouts && task.task_layouts.length > 1 ? (
-                    // MÚLTIPLOS LAYOUTS - Exibir abas para cada mockup
-                    <Tabs defaultValue="layout_1" className="space-y-4">
-                      <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${task.task_layouts.length}, 1fr)` }}>
-                        {task.task_layouts.map((layout, index) => (
-                          <TabsTrigger key={layout.id} value={`layout_${index + 1}`}>
-                            <Palette className="h-4 w-4 mr-2" />
-                            Mockup {index + 1}
-                            {layout.campaign_name && (
-                              <span className="ml-2 text-xs text-muted-foreground">
-                                ({layout.campaign_name})
-                              </span>
-                            )}
-                          </TabsTrigger>
-                        ))}
-                      </TabsList>
-                      
-                      {task.task_layouts.map((layout, index) => (
-                        <TabsContent key={layout.id} value={`layout_${index + 1}`} className="mt-0 space-y-6">
-                          <CustomizationViewer 
-                            data={layout.customization_data}
-                            campaignName={layout.campaign_name || undefined}
-                            modelName={layout.model_name || undefined}
-                            modelCode={task.model_code}
-                            modelImageFront={(layout as any).model_image_front || task.model_image_front}
-                            taskId={task.id}
-                            createdBy={task.created_by}
-                            currentUserId={currentUser?.id}
-                            isSalesperson={isSalesperson}
-                            onModelChange={onTaskUpdated}
-                            logoAction={task.logo_action}
-                            logoDescription={task.logo_description}
-                            task={task}
-                            onTaskUpdated={onTaskUpdated}
-                          />
+                  {/* COLLAPSIBLE TOGGLE BUTTON */}
+                  <button 
+                    onClick={() => setOrderInfoExpanded(!orderInfoExpanded)}
+                    className="flex items-center gap-3 w-full p-4 mb-4 rounded-lg border border-primary/30 bg-gradient-to-r from-primary/10 to-primary/5 hover:from-primary/15 hover:to-primary/10 hover:border-primary/50 transition-all cursor-pointer"
+                  >
+                    {orderInfoExpanded ? (
+                      <ChevronDown className="h-5 w-5 text-primary" />
+                    ) : (
+                      <ChevronRight className="h-5 w-5 text-primary" />
+                    )}
+                    <span className="flex-1 text-left font-semibold text-foreground">
+                      Informações do Pedido
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {orderInfoExpanded ? 'Clique para ocultar' : 'Clique para expandir'}
+                    </span>
+                  </button>
+
+                  {/* COLLAPSIBLE CONTENT - Order Info */}
+                  {orderInfoExpanded && (
+                    <div className="animate-fade-in">
+                      {task.task_layouts && task.task_layouts.length > 1 ? (
+                        // MÚLTIPLOS LAYOUTS - Exibir abas para cada mockup
+                        <Tabs defaultValue="layout_1" className="space-y-4">
+                          <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${task.task_layouts.length}, 1fr)` }}>
+                            {task.task_layouts.map((layout, index) => (
+                              <TabsTrigger key={layout.id} value={`layout_${index + 1}`}>
+                                <Palette className="h-4 w-4 mr-2" />
+                                Mockup {index + 1}
+                                {layout.campaign_name && (
+                                  <span className="ml-2 text-xs text-muted-foreground">
+                                    ({layout.campaign_name})
+                                  </span>
+                                )}
+                              </TabsTrigger>
+                            ))}
+                          </TabsList>
                           
-                          {/* Seção de Alterações dentro do mockup */}
-                          <Card className="border-2 border-dashed border-muted-foreground/30">
-                            <CardContent className="p-6">
-                              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                                <RefreshCcw className="h-5 w-5" />
-                                Alterações do Mockup {index + 1}
-                              </h3>
-                              <ChangeRequestsTab
+                          {task.task_layouts.map((layout, index) => (
+                            <TabsContent key={layout.id} value={`layout_${index + 1}`} className="mt-0 space-y-6">
+                              <CustomizationViewer 
+                                data={layout.customization_data}
+                                campaignName={layout.campaign_name || undefined}
+                                modelName={layout.model_name || undefined}
+                                modelCode={task.model_code}
+                                modelImageFront={(layout as any).model_image_front || task.model_image_front}
                                 taskId={task.id}
-                                layoutId={layout.id}
-                                taskStatus={task.status}
-                                onChangeRequestAdded={onTaskUpdated}
-                                onClose={() => onOpenChange(false)}
-                                canAddChangeRequest={isSalesperson || isAdmin || isSuperAdmin}
-                                onSendForApproval={canSendApproval ? async () => {
-                                  await handleStatusChange('awaiting_approval');
-                                  onOpenChange(false);
-                                } : undefined}
+                                createdBy={task.created_by}
+                                currentUserId={currentUser?.id}
+                                isSalesperson={isSalesperson}
+                                onModelChange={onTaskUpdated}
+                                logoAction={task.logo_action}
+                                logoDescription={task.logo_description}
+                                task={task}
+                                onTaskUpdated={onTaskUpdated}
                               />
-                            </CardContent>
-                          </Card>
-                        </TabsContent>
-                      ))}
-                    </Tabs>
-                  ) : task.task_layouts && task.task_layouts.length === 1 ? (
-                    // LAYOUT ÚNICO - Exibir direto com seção de alterações
-                    <div className="space-y-6">
-                      <CustomizationViewer 
-                        data={task.task_layouts[0].customization_data}
-                        campaignName={task.task_layouts[0].campaign_name || undefined}
-                        modelName={task.task_layouts[0].model_name || undefined}
-                        modelCode={task.model_code}
-                        modelImageFront={(task.task_layouts[0] as any).model_image_front || task.model_image_front}
-                        taskId={task.id}
-                        createdBy={task.created_by}
-                        currentUserId={currentUser?.id}
-                        isSalesperson={isSalesperson}
-                        onModelChange={onTaskUpdated}
-                        logoAction={task.logo_action}
-                        logoDescription={task.logo_description}
-                        task={task}
-                        onTaskUpdated={onTaskUpdated}
-                      />
-                      
-                      {/* Seção de Alterações */}
-                      <Card className="border-2 border-dashed border-muted-foreground/30">
-                        <CardContent className="p-6">
-                          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                            <RefreshCcw className="h-5 w-5" />
-                            Alterações
-                          </h3>
-                          <ChangeRequestsTab
-                            taskId={task.id}
-                            layoutId={task.task_layouts[0].id}
-                            taskStatus={task.status}
-                            onChangeRequestAdded={onTaskUpdated}
-                            onClose={() => onOpenChange(false)}
-                            canAddChangeRequest={isSalesperson || isAdmin || isSuperAdmin}
-                            onSendForApproval={canSendApproval ? async () => {
-                              await handleStatusChange('awaiting_approval');
-                              onOpenChange(false);
-                            } : undefined}
-                          />
-                        </CardContent>
-                      </Card>
-                    </div>
-                  ) : (
-                    // FALLBACK - Dados antigos (antes da implementação de layouts)
-                    <div className="space-y-6">
-                      <CustomizationViewer 
-                        data={task.customization_data}
-                        campaignName={task.campaign_name}
-                        modelName={task.model_name}
-                        modelCode={task.model_code}
-                        modelImageFront={task.model_image_front}
-                        taskId={task.id}
-                        createdBy={task.created_by}
-                        currentUserId={currentUser?.id}
-                        isSalesperson={isSalesperson}
-                        onModelChange={onTaskUpdated}
-                        logoAction={task.logo_action}
-                        logoDescription={task.logo_description}
-                        task={task}
-                        onTaskUpdated={onTaskUpdated}
-                      />
-                      
-                      {/* Seção de Alterações - sem layoutId para compatibilidade */}
-                      <Card className="border-2 border-dashed border-muted-foreground/30">
-                        <CardContent className="p-6">
-                          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                            <RefreshCcw className="h-5 w-5" />
-                            Alterações
-                          </h3>
-                          <ChangeRequestsTab
-                            taskId={task.id}
-                            taskStatus={task.status}
-                            onChangeRequestAdded={onTaskUpdated}
-                            onClose={() => onOpenChange(false)}
-                            canAddChangeRequest={isSalesperson || isAdmin || isSuperAdmin}
-                            onSendForApproval={canSendApproval ? async () => {
-                              await handleStatusChange('awaiting_approval');
-                              onOpenChange(false);
-                            } : undefined}
-                          />
-                        </CardContent>
-                      </Card>
+                            </TabsContent>
+                          ))}
+                        </Tabs>
+                      ) : task.task_layouts && task.task_layouts.length === 1 ? (
+                        // LAYOUT ÚNICO
+                        <CustomizationViewer 
+                          data={task.task_layouts[0].customization_data}
+                          campaignName={task.task_layouts[0].campaign_name || undefined}
+                          modelName={task.task_layouts[0].model_name || undefined}
+                          modelCode={task.model_code}
+                          modelImageFront={(task.task_layouts[0] as any).model_image_front || task.model_image_front}
+                          taskId={task.id}
+                          createdBy={task.created_by}
+                          currentUserId={currentUser?.id}
+                          isSalesperson={isSalesperson}
+                          onModelChange={onTaskUpdated}
+                          logoAction={task.logo_action}
+                          logoDescription={task.logo_description}
+                          task={task}
+                          onTaskUpdated={onTaskUpdated}
+                        />
+                      ) : (
+                        // FALLBACK - Dados antigos
+                        <CustomizationViewer 
+                          data={task.customization_data}
+                          campaignName={task.campaign_name}
+                          modelName={task.model_name}
+                          modelCode={task.model_code}
+                          modelImageFront={task.model_image_front}
+                          taskId={task.id}
+                          createdBy={task.created_by}
+                          currentUserId={currentUser?.id}
+                          isSalesperson={isSalesperson}
+                          onModelChange={onTaskUpdated}
+                          logoAction={task.logo_action}
+                          logoDescription={task.logo_description}
+                          task={task}
+                          onTaskUpdated={onTaskUpdated}
+                        />
+                      )}
                     </div>
                   )}
+
+                  {/* ALTERAÇÕES - SEMPRE VISÍVEL */}
+                  <Card className="border-2 border-dashed border-muted-foreground/30 mt-6">
+                    <CardContent className="p-6">
+                      <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <RefreshCcw className="h-5 w-5" />
+                        Alterações
+                      </h3>
+                      <ChangeRequestsTab
+                        taskId={task.id}
+                        layoutId={task.task_layouts?.[0]?.id}
+                        taskStatus={task.status}
+                        onChangeRequestAdded={onTaskUpdated}
+                        onClose={() => onOpenChange(false)}
+                        canAddChangeRequest={isSalesperson || isAdmin || isSuperAdmin}
+                        onSendForApproval={canSendApproval ? async () => {
+                          await handleStatusChange('awaiting_approval');
+                          onOpenChange(false);
+                        } : undefined}
+                      />
+                    </CardContent>
+                  </Card>
                 </>
               )}
 
