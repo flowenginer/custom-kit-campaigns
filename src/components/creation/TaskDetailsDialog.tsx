@@ -1642,60 +1642,56 @@ export const TaskDetailsDialog = ({
                         }
 
                         // Card normal para mockups aprovados ou em processo de aprovação
+                        const isApproved = selectedApprovedMockups.has(file.url) || file.client_approved;
+                        
                         return (
                           <Card 
                             key={`${file.version}-${file.uploaded_at}`}
-                            className={selectedApprovedMockups.has(file.url) ? "border-2 border-green-500" : ""}
+                            className={`flex flex-col ${isApproved ? "border-2 border-green-500" : ""}`}
                           >
-                            <CardContent className="p-4 space-y-3">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2 flex-wrap">
+                            {/* TOP HEADER - Version badge + Download button ONLY */}
+                            <div className="flex items-center justify-between gap-2 p-3 bg-muted/50 border-b">
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center gap-2">
                                   <Badge variant={file.version === task.current_version ? "default" : "outline"}>
                                     v{file.version} {file.version === task.current_version && "(atual)"}
                                   </Badge>
-                                  
                                   {file.is_revision && (
-                                    <Badge variant="warning">
-                                      📝 Revisão
-                                    </Badge>
+                                    <Badge variant="warning">📝 Revisão</Badge>
                                   )}
-                                  
-                                  {file.client_approved && (
-                                    <Badge className="bg-green-100 text-green-700 border-green-300">
-                                      ✅ Aprovado pelo cliente
-                                    </Badge>
-                                  )}
-                                  
-                                  <span className="text-xs text-muted-foreground">
-                                    {format(new Date(file.uploaded_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                                  </span>
                                 </div>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={async () => {
-                                    try {
-                                      const response = await fetch(file.url);
-                                      const blob = await response.blob();
-                                      const url = window.URL.createObjectURL(blob);
-                                      const link = document.createElement('a');
-                                      link.href = url;
-                                      link.download = `mockup_v${file.version}_${new Date().getTime()}.png`;
-                                      document.body.appendChild(link);
-                                      link.click();
-                                      document.body.removeChild(link);
-                                      window.URL.revokeObjectURL(url);
-                                      toast.success("Download iniciado!");
-                                    } catch (error) {
-                                      toast.error("Erro ao baixar arquivo");
-                                    }
-                                  }}
-                                >
-                                  <Download className="h-4 w-4 mr-2" />
-                                  Baixar
-                                </Button>
+                                <span className="text-xs text-muted-foreground">
+                                  {format(new Date(file.uploaded_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                </span>
                               </div>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={async () => {
+                                  try {
+                                    const response = await fetch(file.url);
+                                    const blob = await response.blob();
+                                    const url = window.URL.createObjectURL(blob);
+                                    const link = document.createElement('a');
+                                    link.href = url;
+                                    link.download = `mockup_v${file.version}_${new Date().getTime()}.png`;
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    document.body.removeChild(link);
+                                    window.URL.revokeObjectURL(url);
+                                    toast.success("Download iniciado!");
+                                  } catch (error) {
+                                    toast.error("Erro ao baixar arquivo");
+                                  }
+                                }}
+                              >
+                                <Download className="h-4 w-4 mr-2" />
+                                Baixar
+                              </Button>
+                            </div>
 
+                            {/* MIDDLE SECTION - Mockup Preview */}
+                            <div className="flex-1 p-3 space-y-3">
                               {/* Observações do Designer */}
                               {file.notes && (
                                 <div className="p-3 bg-amber-50 dark:bg-amber-950 border-2 border-amber-500 dark:border-amber-600 rounded-lg">
@@ -1727,29 +1723,38 @@ export const TaskDetailsDialog = ({
                                   <ExternalLink className="h-8 w-8 text-white" />
                                 </div>
                               </div>
-                              
-                              {/* Checkbox para vendedor selecionar mockup aprovado */}
-                              {canSalespersonApprove && task.status === 'awaiting_approval' && (
-                                <div className="flex items-center gap-2 p-3 border rounded-lg bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
-                                  <Checkbox
-                                    id={`approve-${file.version}`}
-                                    checked={selectedApprovedMockups.has(file.url)}
-                                    onCheckedChange={(checked) => {
-                                      const newSet = new Set(selectedApprovedMockups);
-                                      if (checked) {
-                                        newSet.add(file.url);
-                                      } else {
-                                        newSet.delete(file.url);
-                                      }
-                                      setSelectedApprovedMockups(newSet);
-                                    }}
-                                  />
-                                  <Label htmlFor={`approve-${file.version}`} className="text-sm cursor-pointer font-medium text-green-700">
-                                    ✅ Mockup aprovado pelo cliente
-                                  </Label>
-                                </div>
-                              )}
-                            </CardContent>
+                            </div>
+                            
+                            {/* BOTTOM SECTION - Approval Checkbox (always visible) */}
+                            <label 
+                              className={`flex items-center gap-3 p-3 border-t cursor-pointer transition-colors ${
+                                isApproved 
+                                  ? "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800" 
+                                  : "bg-muted/30 hover:bg-muted/50"
+                              }`}
+                            >
+                              <Checkbox
+                                id={`approve-${file.version}-${file.uploaded_at}`}
+                                checked={isApproved}
+                                onCheckedChange={(checked) => {
+                                  const newSet = new Set(selectedApprovedMockups);
+                                  if (checked) {
+                                    newSet.add(file.url);
+                                  } else {
+                                    newSet.delete(file.url);
+                                  }
+                                  setSelectedApprovedMockups(newSet);
+                                }}
+                                disabled={!canSalespersonApprove && !isAdmin && !isSuperAdmin}
+                              />
+                              <span className={`text-sm font-medium flex-1 ${
+                                isApproved ? "text-green-700 dark:text-green-400" : "text-muted-foreground"
+                              }`}>
+                                {isApproved 
+                                  ? "✅ Mockup aprovado pelo cliente" 
+                                  : "Marcar como aprovado pelo cliente"}
+                              </span>
+                            </label>
                           </Card>
                         );
                       })}
