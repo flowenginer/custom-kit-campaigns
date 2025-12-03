@@ -1105,8 +1105,8 @@ export const NewLayoutRequestDialog = ({
               </div>
             )}
 
-            {/* Model Selection - mostrar apenas se NÃO for do zero */}
-            {!isFromScratch && selectedUniformType && (
+            {/* Model Selection - mostrar apenas se NÃO for do zero (botão ou campanha) */}
+            {!isFromScratch && !isLayoutDoZeroCampaign && selectedUniformType && (
               <div className="space-y-2">
                 <Label>Modelo *</Label>
                 
@@ -1156,8 +1156,8 @@ export const NewLayoutRequestDialog = ({
               </div>
             )}
 
-            {/* Badge informativo se for do zero */}
-            {isFromScratch && selectedUniformType && (
+            {/* Badge informativo se for do zero (botão ou campanha) */}
+            {(isFromScratch || isLayoutDoZeroCampaign) && selectedUniformType && (
               <Alert className="bg-primary/5 border-primary">
                 <AlertDescription className="text-sm font-medium flex items-center gap-2">
                   <span className="text-lg">🎨</span>
@@ -1166,8 +1166,8 @@ export const NewLayoutRequestDialog = ({
               </Alert>
             )}
 
-            {/* Seletor de Quantidade - mostrar se tipo de uniforme selecionado (e modelo selecionado se NÃO for do zero) */}
-            {((isFromScratch && selectedUniformType) || (!isFromScratch && selectedModel)) && (
+            {/* Seletor de Quantidade - mostrar se tipo de uniforme selecionado (e modelo selecionado se NÃO for do zero/layout do zero) */}
+            {((isFromScratch && selectedUniformType) || (isLayoutDoZeroCampaign && selectedUniformType) || (!isFromScratch && !isLayoutDoZeroCampaign && selectedModel)) && (
               <div className="space-y-2">
                 <Label>Quantidade deste Layout *</Label>
                 <RadioGroup value={quantity} onValueChange={setQuantity}>
@@ -1226,15 +1226,24 @@ export const NewLayoutRequestDialog = ({
               </Button>
               <Button
                 onClick={() => {
+                  // Check if current campaign is "Layout do Zero"
+                  const currentCampaign = campaigns.find(c => c.id === selectedCampaignId);
+                  const isLayoutDoZeroCamp = currentCampaign?.segment_tag === 'layout_do_zero';
+                  
                   // Validar se tem as informações necessárias
-                  if (isFromScratch) {
-                    // Para layout do zero, só precisa do tipo de uniforme e quantidade
+                  if (isFromScratch || isLayoutDoZeroCamp) {
+                    // Para layout do zero (botão ou campanha), só precisa do tipo de uniforme e quantidade
                     if (!selectedUniformType) {
                       toast.error("Selecione o tipo de uniforme");
                       return;
                     }
+                    // Validar descrição obrigatória para layout do zero (botão ou campanha)
+                    if (!layouts[currentLayoutIndex]?.logoDescription?.trim()) {
+                      toast.error("Preencha a descrição da criação");
+                      return;
+                    }
                   } else {
-                    // Para layout baseado em campanha, precisa de tudo
+                    // Para layout baseado em campanha normal, precisa de tudo
                     if (!selectedCampaignId || !selectedUniformType || !selectedModel) {
                       toast.error("Selecione campanha, tipo e modelo");
                       return;
@@ -1254,12 +1263,15 @@ export const NewLayoutRequestDialog = ({
 
                   // Salvar configuração do layout atual
                   const campaign = campaigns.find(c => c.id === selectedCampaignId);
+                  const isLayoutDoZero = campaign?.segment_tag === 'layout_do_zero';
+                  const shouldPreserveDescription = isFromScratch || isLayoutDoZero;
+                  
                   const newLayout: LayoutConfig = {
                     id: `layout_${currentLayoutIndex}`,
                     campaignId: isFromScratch ? "" : selectedCampaignId,
                     campaignName: isFromScratch ? "Layout do Zero" : (campaign?.name || ""),
                     uniformType: selectedUniformType,
-                    model: isFromScratch ? null : selectedModel,
+                    model: (isFromScratch || isLayoutDoZero) ? null : selectedModel,
                     isFromScratch: isFromScratch,
                     quantity: quantity,
                     customQuantity: customQuantity,
@@ -1269,7 +1281,7 @@ export const NewLayoutRequestDialog = ({
                     rightSleeveCustomization: {},
                     hasLogo: null,
                     logoFiles: [],
-                    logoDescription: isFromScratch ? (layouts[currentLayoutIndex]?.logoDescription || "") : "",
+                    logoDescription: shouldPreserveDescription ? (layouts[currentLayoutIndex]?.logoDescription || "") : "",
                   };
 
                   const updatedLayouts = [...layouts];
