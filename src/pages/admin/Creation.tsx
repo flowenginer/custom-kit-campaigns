@@ -341,6 +341,17 @@ const Creation = () => {
     }
   };
 
+  const handleCustomerNameUpdate = (taskId: string, newName: string) => {
+    // Atualizar estado local imediatamente (a atualização no BD já foi feita pelo TaskCard)
+    setTasks(prevTasks => 
+      prevTasks.map(task => 
+        task.id === taskId 
+          ? { ...task, customer_name: newName }
+          : task
+      )
+    );
+  };
+
   const handleProductionConfirm = async () => {
     if (!pendingProductionTask) return;
     
@@ -945,6 +956,9 @@ const Creation = () => {
                   onOrderNumberUpdate={handleOrderNumberUpdate}
                   isCollapsed={autoCollapseEmpty && column.tasks.length === 0}
                   autoCollapseEmpty={autoCollapseEmpty}
+                  canEditCustomerName={isSuperAdmin || isSalesperson}
+                  onCustomerNameUpdate={handleCustomerNameUpdate}
+                  isDesigner={isDesigner && !isSuperAdmin && !isAdmin}
                 />
               ))}
             </div>

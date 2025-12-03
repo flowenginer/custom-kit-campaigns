@@ -26,6 +26,9 @@ interface KanbanColumnProps {
   onOrderNumberUpdate?: (taskId: string, orderNumber: string) => void;
   isCollapsed?: boolean;
   autoCollapseEmpty?: boolean;
+  canEditCustomerName?: boolean;
+  onCustomerNameUpdate?: (taskId: string, newName: string) => void;
+  isDesigner?: boolean;
 }
 export const KanbanColumn = ({
   title,
@@ -44,7 +47,10 @@ export const KanbanColumn = ({
   onExpandAll,
   onOrderNumberUpdate,
   isCollapsed = false,
-  autoCollapseEmpty = false
+  autoCollapseEmpty = false,
+  canEditCustomerName = false,
+  onCustomerNameUpdate,
+  isDesigner = false
 }: KanbanColumnProps) => {
   const {
     setNodeRef,
@@ -140,6 +146,9 @@ export const KanbanColumn = ({
                   isCollapsed={collapsedCards.has(task.id)}
                   onToggleCollapse={() => onToggleCard(task.id)}
                   onOrderNumberUpdate={onOrderNumberUpdate}
+                  canEditCustomerName={canEditCustomerName}
+                  onCustomerNameUpdate={onCustomerNameUpdate}
+                  isDesigner={isDesigner}
                 />
               ))}
               
