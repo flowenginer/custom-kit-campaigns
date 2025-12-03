@@ -252,6 +252,9 @@ export default function CompanySettings() {
       return;
     }
 
+    // Salvar antes de testar
+    await handleSave();
+
     setMelhorEnvioTesting(true);
     setMelhorEnvioTestResult(null);
 
@@ -263,8 +266,13 @@ export default function CompanySettings() {
         }
       });
 
-      if (error) throw error;
-      if (data.error) throw new Error(data.error);
+      if (error) {
+        throw new Error(error.message || "Erro ao conectar com a função");
+      }
+      
+      if (data?.error) {
+        throw new Error(data.error);
+      }
 
       setMelhorEnvioTestResult({
         success: true,

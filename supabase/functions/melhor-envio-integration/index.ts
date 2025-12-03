@@ -433,8 +433,9 @@ serve(async (req) => {
   } catch (error) {
     console.error('[Melhor Envio Integration] Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      status: 400,
+    // Return 200 with error in body for better client handling
+    return new Response(JSON.stringify({ success: false, error: errorMessage }), {
+      status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
