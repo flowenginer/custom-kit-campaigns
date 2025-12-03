@@ -6,7 +6,7 @@ import { TaskCardSkeleton } from "@/components/creation/TaskCardSkeleton";
 import { TaskCard } from "@/components/creation/TaskCard";
 import { DesignTask } from "@/types/design-task";
 import { toast } from "sonner";
-import { PackageSearch, Plus, Trash2, AlertTriangle, RefreshCw } from "lucide-react";
+import { PackageSearch, Plus, Trash2, AlertTriangle, RefreshCw, Upload } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { NewLayoutRequestDialog } from "@/components/orders/NewLayoutRequestDialog";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -60,6 +60,7 @@ const Orders = () => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("pending");
   const [deleteDialogTask, setDeleteDialogTask] = useState<DesignTask | null>(null);
+  const [editingRejectedTask, setEditingRejectedTask] = useState(false);
 
   const refreshData = useCallback(async () => {
     await loadTasks();
@@ -218,6 +219,7 @@ const Orders = () => {
   };
 
   const handleTaskClick = (task: DesignTask) => {
+    setEditingRejectedTask(false);
     setSelectedTask(task);
     setDialogOpen(true);
   };
@@ -308,6 +310,12 @@ const Orders = () => {
       console.error("Error resending task:", error);
       toast.error("Erro ao reenviar tarefa");
     }
+  };
+
+  const handleEditRejectedTask = (task: DesignTask) => {
+    setEditingRejectedTask(true);
+    setSelectedTask(task);
+    setDialogOpen(true);
   };
 
   const currentTasks = activeTab === 'pending' ? tasks : rejectedTasks;
@@ -480,6 +488,14 @@ const Orders = () => {
                             Ver Detalhes
                           </Button>
                           <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleEditRejectedTask(task)}
+                          >
+                            <Upload className="h-4 w-4 mr-2" />
+                            Editar / Nova Logo
+                          </Button>
+                          <Button
                             size="sm"
                             onClick={() => handleResendToDesigner(task)}
                           >
@@ -501,9 +517,13 @@ const Orders = () => {
       <TaskDetailsDialog
         task={selectedTask}
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) setEditingRejectedTask(false);
+        }}
         onTaskUpdated={handleTaskUpdated}
         context="orders"
+        isEditingRejected={editingRejectedTask}
       />
 
       {/* ✅ Modal de Nova Requisição de Layout */}
