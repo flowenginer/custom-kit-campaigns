@@ -71,14 +71,24 @@ const Orders = () => {
     { interval: 60000, enabled: true }
   );
 
+  // Primeiro carregar o usuário
   useEffect(() => {
     const loadCurrentUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) setCurrentUserId(user.id);
     };
     loadCurrentUser();
-    loadTasks();
   }, []);
+
+  // Carregar tarefas APENAS quando temos as informações do usuário
+  // Para vendedores, precisamos esperar currentUserId para filtrar corretamente
+  useEffect(() => {
+    // Se é vendedor e currentUserId ainda não carregou, não fazer nada
+    if (isSalesperson && !isSuperAdmin && !isAdmin && currentUserId === null) {
+      return;
+    }
+    loadTasks();
+  }, [currentUserId, isSalesperson, isSuperAdmin, isAdmin]);
 
   const loadTasks = async () => {
     setLoading(true);

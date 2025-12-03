@@ -1027,6 +1027,7 @@ export const TaskDetailsDialog = ({
                 setLogoSections(sections);
               }}
               currentSections={logoSections}
+              forceShowUpload={isEditingRejected}
             />
 
             {/* Botão de Excluir para Vendedor Criador, Admins e Super Admins */}
