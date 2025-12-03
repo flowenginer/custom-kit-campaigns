@@ -817,18 +817,22 @@ export const TaskDetailsDialog = ({
   const isTaskCreator = task?.created_by === currentUser?.id;
   const isAssignedDesigner = task?.assigned_to === currentUser?.id;
   
+  // Super Admin tem acesso total a todas as funções
+  const hasFullAccess = isSuperAdmin || isAdmin;
+  
   // Só bloquear quando está aguardando o cliente enviar a logo ("Vou enviar depois")
   const isWaitingClientLogo = task?.logo_action === 'waiting_client';
   
+  // Pode assumir: Designer ou Admin/SuperAdmin
   const canAssign = task?.status === 'pending' && 
                     !task?.assigned_to && 
-                    !isWaitingClientLogo && // Bloquear APENAS quando aguardando cliente enviar logo
-                    isDesigner &&
+                    !isWaitingClientLogo &&
+                    (isDesigner || hasFullAccess) &&
                     context === 'creation';
   
-  // ✅ FASE 2: Corrigir lógica de upload - permitir qualquer designer na tarefa in_progress
+  // Pode fazer upload: Designer atribuído ou Admin/SuperAdmin
   const canUpload = (task?.status === 'in_progress' || task?.status === 'changes_requested') &&
-                   isDesigner &&
+                   (isDesigner || hasFullAccess) &&
                    context === 'creation' &&
                    !isVendorContext;
   
@@ -841,7 +845,8 @@ export const TaskDetailsDialog = ({
     // Permissões
     canAssign,
     canUpload,
-    canSendApproval: isAssignedDesigner && task?.status === 'in_progress',
+    hasFullAccess,
+    canSendApproval: (isAssignedDesigner || hasFullAccess) && task?.status === 'in_progress',
     
     // Estado da tarefa
     taskId: task?.id,
@@ -854,6 +859,8 @@ export const TaskDetailsDialog = ({
     isDesigner,
     isSalesperson,
     isAssignedDesigner,
+    isSuperAdmin,
+    isAdmin,
     
     // Contexto
     context,
@@ -867,48 +874,46 @@ export const TaskDetailsDialog = ({
     uploadPermissionBreakdown: {
       statusOK: task?.status === 'in_progress' || task?.status === 'changes_requested',
       isDesignerOK: isDesigner,
+      hasFullAccessOK: hasFullAccess,
       contextOK: context === 'creation',
       notVendorContextOK: !isVendorContext,
     }
   });
-  const canSendApproval = isAssignedDesigner && 
+  
+  // Pode enviar para aprovação: Designer atribuído ou Admin/SuperAdmin
+  const canSendApproval = (isAssignedDesigner || hasFullAccess) && 
                          (task?.status === 'in_progress' || task?.status === 'changes_requested');
-  const canRequestChanges = isAssignedDesigner && 
+  
+  // Pode solicitar alterações (como designer): Designer atribuído ou Admin/SuperAdmin
+  const canRequestChanges = (isAssignedDesigner || hasFullAccess) && 
                            task?.status === 'awaiting_approval';
-  // Designer NÃO pode aprovar - apenas vendedor/admin
-  const canSendProduction = isAssignedDesigner && 
+  
+  // Pode enviar para produção: Designer atribuído ou Admin/SuperAdmin
+  const canSendProduction = (isAssignedDesigner || hasFullAccess) && 
                            task?.status === 'approved';
   
-  // Permissões para vendedores
-  const canSalespersonApprove = (isSalesperson || isAdmin) && 
-                                isTaskCreator && 
+  // Permissões para vendedores - Admin/SuperAdmin também tem acesso
+  const canSalespersonApprove = (isSalesperson || hasFullAccess) && 
+                                (isTaskCreator || hasFullAccess) && 
                                 task?.status === 'awaiting_approval';
-  const canSalespersonRequestChanges = isSalesperson && 
-                                       isTaskCreator && 
+  const canSalespersonRequestChanges = (isSalesperson || hasFullAccess) && 
+                                       (isTaskCreator || hasFullAccess) && 
                                        task?.status === 'awaiting_approval';
 
-  // Pode transferir se:
-  // - Tarefa está atribuída a alguém (tem assigned_to)
-  // - E: é o designer atribuído OU é admin/super_admin
-  // - E: tarefa não está em 'completed'
+  // Pode transferir: Designer atribuído ou Admin/SuperAdmin
   const canTransfer = task?.assigned_to && 
-                      (task.assigned_to === currentUser?.id || isSuperAdmin || isAdmin) &&
+                      (task.assigned_to === currentUser?.id || hasFullAccess) &&
                       task.status !== 'completed' &&
                       context === 'creation';
 
-  // Designer pode recusar tarefa se:
-  // - Tarefa está pendente ou em progresso
-  // - É designer
-  // - Contexto é 'creation'
-  // - Se a tarefa está atribuída a ele, pode devolver
-  // - Se a tarefa não está atribuída, pode recusar
+  // Pode recusar tarefa: Designer ou Admin/SuperAdmin
   const canReject = (task?.status === 'pending' || task?.status === 'in_progress') && 
-                    isDesigner &&
+                    (isDesigner || hasFullAccess) &&
                     context === 'creation' &&
-                    (!task?.assigned_to || task?.assigned_to === currentUser?.id);
+                    (!task?.assigned_to || task?.assigned_to === currentUser?.id || hasFullAccess);
 
-  // Designer pode solicitar exclusão se está atribuído a ele
-  const canDesignerRequestDelete = isAssignedDesigner && 
+  // Pode solicitar exclusão: Designer atribuído ou Admin/SuperAdmin
+  const canDesignerRequestDelete = (isAssignedDesigner || hasFullAccess) && 
                                    task?.status !== 'completed' &&
                                    context === 'creation';
 
