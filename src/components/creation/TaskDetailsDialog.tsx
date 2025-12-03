@@ -1475,28 +1475,28 @@ export const TaskDetailsDialog = ({
                 <div className="space-y-6 pt-6 border-t mt-6">
                   {/* Upload de Mockup - Apenas para Designer */}
                   {canUpload && (
-                    <Card className="border-2 border-dashed hover:border-primary transition-colors">
+                    <Card className="border-2 border-blue-500 dark:border-blue-600 bg-blue-50 dark:bg-blue-950 hover:border-blue-600 transition-colors">
                       <CardContent className="p-6 space-y-4">
-                        <h3 className="text-lg font-semibold flex items-center gap-2">
-                          <Upload className="h-5 w-5" />
+                        <h3 className="text-lg font-semibold flex items-center gap-2 text-blue-900 dark:text-blue-100">
+                          <Upload className="h-5 w-5 text-blue-700 dark:text-blue-400" />
                           Upload de Mockup
                         </h3>
                         
                         {task.status === 'changes_requested' && (
-                          <div className="flex items-center gap-2 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                            <RefreshCcw className="h-4 w-4 text-orange-600 flex-shrink-0" />
-                            <span className="text-sm text-orange-700 font-medium">
+                          <div className="flex items-center gap-2 p-3 bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-700 rounded-lg">
+                            <RefreshCcw className="h-4 w-4 text-orange-600 dark:text-orange-400 flex-shrink-0" />
+                            <span className="text-sm text-orange-700 dark:text-orange-300 font-medium">
                               Enviando mockup de revisão (alterações solicitadas)
                             </span>
                           </div>
                         )}
                         
                         <div className="text-center space-y-2">
-                          <Upload className="h-12 w-12 mx-auto text-muted-foreground" />
-                          <Label htmlFor="mockup-upload" className="text-lg font-medium cursor-pointer">
+                          <Upload className="h-12 w-12 mx-auto text-blue-600 dark:text-blue-400" />
+                          <Label htmlFor="mockup-upload" className="text-lg font-medium cursor-pointer text-blue-800 dark:text-blue-200">
                             Selecionar Arquivos do Mockup
                           </Label>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-blue-600 dark:text-blue-400">
                             Qualquer formato (CDR, AI, EPS, PSD, PDF, PNG, ZIP...) • Múltiplos arquivos • Máximo 50MB cada
                           </p>
                         </div>
@@ -1513,9 +1513,9 @@ export const TaskDetailsDialog = ({
 
                         {/* Preview dos arquivos selecionados */}
                         {pendingFiles.length > 0 && (
-                          <div className="space-y-2 p-4 bg-primary/5 border-2 border-primary rounded-lg">
+                          <div className="space-y-2 p-4 bg-blue-100 dark:bg-blue-900 border-2 border-blue-400 dark:border-blue-600 rounded-lg">
                             <div className="flex items-center justify-between">
-                              <Label className="text-sm font-medium">
+                              <Label className="text-sm font-medium text-blue-800 dark:text-blue-200">
                                 📁 {pendingFiles.length} arquivo(s) selecionado(s)
                               </Label>
                               <Button
@@ -1523,16 +1523,17 @@ export const TaskDetailsDialog = ({
                                 size="sm"
                                 onClick={() => setPendingFiles([])}
                                 disabled={uploading}
+                                className="text-blue-700 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-100"
                               >
                                 <X className="h-4 w-4" />
                               </Button>
                             </div>
                             <div className="space-y-1">
                               {pendingFiles.map((file, idx) => (
-                                <div key={idx} className="flex items-center gap-2 text-sm">
-                                  <FileText className="h-4 w-4 text-primary" />
+                                <div key={idx} className="flex items-center gap-2 text-sm text-blue-800 dark:text-blue-200">
+                                  <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                                   <span className="flex-1 truncate">{file.name}</span>
-                                  <span className="text-xs text-muted-foreground">
+                                  <span className="text-xs text-blue-600 dark:text-blue-400">
                                     {(file.size / 1024 / 1024).toFixed(2)} MB
                                   </span>
                                 </div>
