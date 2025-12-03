@@ -23,6 +23,7 @@ interface LogoSectionUploaderProps {
   onAllLogosReady: (sections: LogoSection[]) => void;
   onLogoChange: (sections: LogoSection[]) => void;
   currentSections?: LogoSection[];
+  forceShowUpload?: boolean; // 🆕 Forçar exibição de upload mesmo sem customizationData
 }
 
 export const LogoSectionUploader = ({
@@ -30,10 +31,23 @@ export const LogoSectionUploader = ({
   onAllLogosReady,
   onLogoChange,
   currentSections,
+  forceShowUpload = false,
 }: LogoSectionUploaderProps) => {
   
   // Analisar customization_data e identificar quais logos são necessárias
   const identifyRequiredLogos = (): LogoSection[] => {
+    // 🆕 Se forceShowUpload, criar seção genérica de upload
+    if (forceShowUpload) {
+      return [{
+        id: 'generic',
+        title: 'Nova Logo / Arquivo',
+        required: true,
+        file: null,
+        uploaded: false,
+        fieldPath: 'front.logoUrl'
+      }];
+    }
+
     const sections: LogoSection[] = [];
 
     // FRENTE
