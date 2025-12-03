@@ -78,6 +78,7 @@ import {
 import { ModificationRequestDialog } from "@/components/orders/ModificationRequestDialog";
 import { BusinessSegmentField } from "./BusinessSegmentField";
 import { extractUniformType } from "@/lib/utils";
+import { MockupVersionSelectorModal } from "./MockupVersionSelectorModal";
 
 interface TaskDetailsDialogProps {
   task: DesignTask | null;
@@ -115,6 +116,8 @@ export const TaskDetailsDialog = ({
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [sendingLayout, setSendingLayout] = useState(false);
   const [orderInfoExpanded, setOrderInfoExpanded] = useState(true);
+  const [alteracoesExpanded, setAlteracoesExpanded] = useState(true);
+  const [showVersionSelector, setShowVersionSelector] = useState(false);
   
   const { roles, isSalesperson, isDesigner, isSuperAdmin, isAdmin } = useUserRole();
 
@@ -552,7 +555,8 @@ export const TaskDetailsDialog = ({
     }
   };
 
-  const handleSendLayoutToClient = async () => {
+  // Open version selector modal
+  const handleSendLayoutToClientClick = () => {
     if (!task || !currentUser) return;
 
     // Validation
@@ -566,6 +570,15 @@ export const TaskDetailsDialog = ({
       return;
     }
 
+    // Open modal to select versions
+    setShowVersionSelector(true);
+  };
+
+  // Send selected versions to client
+  const handleSendLayoutToClient = async (selectedFiles: any[]) => {
+    if (!task || !currentUser) return;
+
+    setShowVersionSelector(false);
     setSendingLayout(true);
 
     try {
@@ -576,14 +589,17 @@ export const TaskDetailsDialog = ({
         .eq('id', currentUser.id)
         .single();
 
-      // Prepare mockups data
-      const mockupsData = task.design_files.map(file => ({
+      // Prepare mockups data from SELECTED files only
+      const mockupsData = selectedFiles.map(file => ({
         file_name: `mockup_v${file.version}.png`,
         file_url: file.url,
         file_size: 'N/A',
         uploaded_at: file.uploaded_at,
         uploaded_by: task.designer_name || 'Designer'
       }));
+
+      // Get unique versions sent
+      const versionsSent = [...new Set(selectedFiles.map(f => f.version))].sort((a, b) => b - a);
 
       // Build webhook payload
       const webhookPayload = {
@@ -655,10 +671,10 @@ export const TaskDetailsDialog = ({
         task_id: task.id,
         user_id: currentUser.id,
         action: 'layout_sent',
-        notes: `📱 Layout enviado para o cliente via WhatsApp (${mockupsData.length} arquivo(s))`
+        notes: `📱 Layout enviado para o cliente via WhatsApp - Versões: ${versionsSent.map(v => `v${v}`).join(', ')} (${mockupsData.length} arquivo(s))`
       });
 
-      toast.success('Layout enviado para o cliente com sucesso!');
+      toast.success(`Layout enviado! Versões: ${versionsSent.map(v => `v${v}`).join(', ')}`);
       onTaskUpdated();
       
     } catch (error: any) {
@@ -1370,25 +1386,43 @@ export const TaskDetailsDialog = ({
                     </div>
                   )}
 
-                  {/* ALTERAÇÕES - SEMPRE VISÍVEL */}
+                  {/* ALTERAÇÕES - COLLAPSIBLE */}
                   <Card className="border-2 border-dashed border-muted-foreground/30 mt-6">
-                    <CardContent className="p-6">
-                      <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <CardContent className="p-0">
+                      <button 
+                        onClick={() => setAlteracoesExpanded(!alteracoesExpanded)}
+                        className="flex items-center gap-3 w-full p-4 rounded-t-lg hover:bg-muted/50 transition-all cursor-pointer"
+                      >
+                        {alteracoesExpanded ? (
+                          <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                        ) : (
+                          <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                        )}
                         <RefreshCcw className="h-5 w-5" />
-                        Alterações
-                      </h3>
-                      <ChangeRequestsTab
-                        taskId={task.id}
-                        layoutId={task.task_layouts?.[0]?.id}
-                        taskStatus={task.status}
-                        onChangeRequestAdded={onTaskUpdated}
-                        onClose={() => onOpenChange(false)}
-                        canAddChangeRequest={isSalesperson || isAdmin || isSuperAdmin}
-                        onSendForApproval={canSendApproval ? async () => {
-                          await handleStatusChange('awaiting_approval');
-                          onOpenChange(false);
-                        } : undefined}
-                      />
+                        <span className="flex-1 text-left font-semibold text-foreground">
+                          Alterações
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {alteracoesExpanded ? 'Clique para ocultar' : 'Clique para expandir'}
+                        </span>
+                      </button>
+                      
+                      {alteracoesExpanded && (
+                        <div className="p-6 pt-0 animate-fade-in">
+                          <ChangeRequestsTab
+                            taskId={task.id}
+                            layoutId={task.task_layouts?.[0]?.id}
+                            taskStatus={task.status}
+                            onChangeRequestAdded={onTaskUpdated}
+                            onClose={() => onOpenChange(false)}
+                            canAddChangeRequest={isSalesperson || isAdmin || isSuperAdmin}
+                            onSendForApproval={canSendApproval ? async () => {
+                              await handleStatusChange('awaiting_approval');
+                              onOpenChange(false);
+                            } : undefined}
+                          />
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </>
@@ -1527,10 +1561,11 @@ export const TaskDetailsDialog = ({
                     </Card>
                   )}
 
-                  {/* Lista de Mockups Enviados */}
+                  {/* Lista de Mockups Enviados - 3-column grid */}
                   {task.design_files.length > 0 && (
                     <div className="space-y-3">
                       <Label className="text-lg font-semibold">Mockups Enviados</Label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {[...task.design_files].reverse().map((file) => {
                         // Se está em modo colapsado (já aprovado) e o mockup não foi aprovado
                         if (showCollapsedView && file.client_approved === false) {
@@ -1718,6 +1753,7 @@ export const TaskDetailsDialog = ({
                           </Card>
                         );
                       })}
+                      </div>
                     </div>
                   )}
 
@@ -1750,7 +1786,7 @@ export const TaskDetailsDialog = ({
                             )}
                           </div>
                           <Button
-                            onClick={handleSendLayoutToClient}
+                            onClick={handleSendLayoutToClientClick}
                             disabled={sendingLayout || !task.customer_phone}
                             className="w-full"
                             size="lg"
@@ -2093,6 +2129,15 @@ export const TaskDetailsDialog = ({
           currentUserId={currentUser.id}
         />
       )}
+
+      {/* Version Selector Modal for sending layout to client */}
+      <MockupVersionSelectorModal
+        open={showVersionSelector}
+        onOpenChange={setShowVersionSelector}
+        mockupVersions={task.design_files}
+        currentVersion={task.current_version}
+        onConfirm={handleSendLayoutToClient}
+      />
     </Dialog>
   );
 };
