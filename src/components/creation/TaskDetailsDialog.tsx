@@ -897,13 +897,20 @@ export const TaskDetailsDialog = ({
                       context === 'creation';
 
   // Designer pode recusar tarefa se:
-  // - Tarefa está pendente e não atribuída
+  // - Tarefa está pendente ou em progresso
   // - É designer
   // - Contexto é 'creation'
-  const canReject = task?.status === 'pending' && 
-                    !task?.assigned_to && 
+  // - Se a tarefa está atribuída a ele, pode devolver
+  // - Se a tarefa não está atribuída, pode recusar
+  const canReject = (task?.status === 'pending' || task?.status === 'in_progress') && 
                     isDesigner &&
-                    context === 'creation';
+                    context === 'creation' &&
+                    (!task?.assigned_to || task?.assigned_to === currentUser?.id);
+
+  // Designer pode solicitar exclusão se está atribuído a ele
+  const canDesignerRequestDelete = isAssignedDesigner && 
+                                   task?.status !== 'completed' &&
+                                   context === 'creation';
 
   return (
     <Dialog 
@@ -1834,7 +1841,7 @@ export const TaskDetailsDialog = ({
             // DESIGNER - Footer com todos os botões
             <div className="flex justify-between w-full">
               <div>
-                {((isSalesperson && isTaskCreator) || isSuperAdmin || isAdmin) && (
+                {((isSalesperson && isTaskCreator) || isSuperAdmin || isAdmin || canDesignerRequestDelete) && (
                   <Button 
                     variant="destructive" 
                     onClick={handleDeleteTask}
