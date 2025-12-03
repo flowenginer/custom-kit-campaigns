@@ -51,3 +51,59 @@ export const formatSegmentTag = (tag: string | null | undefined): string => {
     .filter(word => word.length > 0)
     .join(' ');
 };
+
+// Extrair tipo de uniforme do código do produto ou nome do modelo
+export const extractUniformType = (
+  modelName: string | null | undefined,
+  modelCode: string | null | undefined,
+  campaignName?: string | null
+): string => {
+  // Se for Layout do Zero
+  if (campaignName?.toLowerCase().includes('layout do zero') || 
+      modelName?.toLowerCase().includes('layout do zero')) {
+    return 'Layout do Zero';
+  }
+
+  // Método 1: Extrair do código do produto (mais confiável)
+  if (modelCode) {
+    const parts = modelCode.split('-');
+    if (parts.length >= 2) {
+      const typeCode = parts[1].toUpperCase();
+      const codeMap: Record<string, string> = {
+        'MC': 'Manga Curta',
+        'ML': 'Manga Longa',
+        'MLZ': 'Manga Longa Zíper',
+        'REG': 'Regata',
+        'ZIP': 'Zíper',
+        'ZP': 'Zíper',
+      };
+      if (codeMap[typeCode]) {
+        return codeMap[typeCode];
+      }
+    }
+  }
+
+  // Método 2: Extrair do nome do modelo
+  if (modelName) {
+    const name = modelName.toLowerCase();
+    
+    // Verificar padrões específicos (ordem importa - mais específico primeiro)
+    if (name.includes('manga longa ziper') || name.includes('manga longa zíper')) {
+      return 'Manga Longa Zíper';
+    }
+    if (name.includes('manga longa')) {
+      return 'Manga Longa';
+    }
+    if (name.includes('manga curta')) {
+      return 'Manga Curta';
+    }
+    if (name.includes('regata')) {
+      return 'Regata';
+    }
+    if (name.includes('ziper') || name.includes('zíper')) {
+      return 'Zíper';
+    }
+  }
+
+  return 'Não definido';
+};
