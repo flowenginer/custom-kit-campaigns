@@ -75,6 +75,7 @@ import {
 } from "lucide-react";
 import { ModificationRequestDialog } from "@/components/orders/ModificationRequestDialog";
 import { BusinessSegmentField } from "./BusinessSegmentField";
+import { extractUniformType } from "@/lib/utils";
 
 interface TaskDetailsDialogProps {
   task: DesignTask | null;
@@ -1097,6 +1098,14 @@ export const TaskDetailsDialog = ({
                     <div>
                       <Label className="text-xs text-muted-foreground">Campanha</Label>
                       <p className="text-sm font-medium">{task.campaign_name || 'N/A'}</p>
+                    </div>
+                    
+                    {/* Tipo de Uniforme */}
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Tipo de Uniforme</Label>
+                      <p className="text-sm font-medium">
+                        {extractUniformType(task.model_name, task.model_code, task.campaign_name)}
+                      </p>
                     </div>
                     
                     {/* Segmento do Cliente - editável */}
