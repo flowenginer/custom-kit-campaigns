@@ -87,6 +87,7 @@ interface TaskDetailsDialogProps {
   onOpenChange: (open: boolean) => void;
   onTaskUpdated: () => void;
   context?: 'orders' | 'creation';
+  isEditingRejected?: boolean;
 }
 
 export const TaskDetailsDialog = ({
@@ -95,6 +96,7 @@ export const TaskDetailsDialog = ({
   onOpenChange,
   onTaskUpdated,
   context = 'creation',
+  isEditingRejected = false,
 }: TaskDetailsDialogProps) => {
   const [history, setHistory] = useState<DesignTaskHistory[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -805,10 +807,10 @@ export const TaskDetailsDialog = ({
   const statusBadge = getStatusBadge(task.status);
   const priorityBadge = getPriorityBadge(task.priority);
   
-  // Identificar contexto do vendedor (precisa de logo e ainda não foi enviado)
+  // Identificar contexto do vendedor (precisa de logo e ainda não foi enviado OU editando tarefa rejeitada)
   const isVendorContext = (isSalesperson || isSuperAdmin || isAdmin) && 
                           context === 'orders' && 
-                          task?.needs_logo === true;
+                          (task?.needs_logo === true || isEditingRejected);
   
   console.log('🔍 TaskDetailsDialog Debug:', {
     context,

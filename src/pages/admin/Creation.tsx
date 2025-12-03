@@ -535,7 +535,11 @@ const Creation = () => {
     }
     
     // Vendedor vê APENAS suas próprias tarefas criadas
+    // IMPORTANTE: Se currentUserId ainda não foi carregado, não mostrar nenhuma tarefa
     if (isSalesperson && !isDesigner) {
+      if (!currentUserId) {
+        return []; // Aguardar currentUserId ser carregado
+      }
       return tasks.filter(task => task.created_by === currentUserId);
     }
     
