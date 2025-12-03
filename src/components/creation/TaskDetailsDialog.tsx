@@ -869,7 +869,7 @@ export const TaskDetailsDialog = ({
     }
   });
   const canSendApproval = isAssignedDesigner && 
-                         task?.status === 'in_progress';
+                         (task?.status === 'in_progress' || task?.status === 'changes_requested');
   const canRequestChanges = isAssignedDesigner && 
                            task?.status === 'awaiting_approval';
   // Designer NÃO pode aprovar - apenas vendedor/admin
@@ -1731,7 +1731,7 @@ export const TaskDetailsDialog = ({
               </div>
 
               {/* Botão Enviar Layout para Cliente */}
-              {task.design_files.length > 0 && (isDesigner || isSalesperson || isAdmin || isSuperAdmin) && (
+              {task.design_files.length > 0 && (isSalesperson || isAdmin || isSuperAdmin) && (
                 <Card className="border-2 border-primary/50 bg-primary/5">
                   <CardContent className="p-4">
                     <div className="flex flex-col gap-3">
