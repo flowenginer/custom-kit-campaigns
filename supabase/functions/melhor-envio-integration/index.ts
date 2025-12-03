@@ -70,10 +70,38 @@ serve(async (req) => {
     console.log(`[Melhor Envio] Action: ${action}, Environment: ${environment}`, data);
 
     switch (action) {
+      case 'test_connection': {
+        // Testar conexão com Melhor Envio
+        const testResponse = await fetch(`${baseUrl}/me`, {
+          method: 'GET',
+          headers,
+        });
+
+        if (!testResponse.ok) {
+          const error = await testResponse.text();
+          console.error('[Melhor Envio] Test connection error:', error);
+          throw new Error('Falha ao conectar com Melhor Envio. Verifique se o token está correto.');
+        }
+
+        const userData = await testResponse.json();
+        
+        return new Response(JSON.stringify({ 
+          success: true, 
+          data: {
+            email: userData.email,
+            name: `${userData.firstname} ${userData.lastname}`,
+            document: userData.document,
+          }
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
       case 'calculate_shipping': {
         // Calcular frete
-        const { task_id } = data;
+        const { task_id, customer_id } = data;
         
+        // Buscar task com layouts
         const { data: task, error: taskError } = await supabaseClient
           .from('design_tasks')
           .select(`
@@ -86,19 +114,66 @@ serve(async (req) => {
 
         if (taskError) throw taskError;
 
-        const order = task.orders;
-        const customer = task.customers;
-
-        // Buscar dados do produto
-        const { data: model } = await supabaseClient
-          .from('shirt_models')
-          .select('*')
-          .eq('id', order.model_id)
-          .single();
-
-        if (!model) {
-          throw new Error('Modelo não encontrado');
+        // Se não tem customer na task, buscar pelo customer_id passado
+        let customer = task.customers;
+        if (!customer && customer_id) {
+          const { data: customerData } = await supabaseClient
+            .from('customers')
+            .select('*')
+            .eq('id', customer_id)
+            .single();
+          customer = customerData;
         }
+
+        if (!customer) {
+          throw new Error('Cliente não encontrado. Vincule um cliente ao pedido primeiro.');
+        }
+
+        if (!customer.cep) {
+          throw new Error('CEP do cliente não cadastrado.');
+        }
+
+        // Buscar layouts para pegar os modelos e calcular dimensões/peso totais
+        const { data: layouts } = await supabaseClient
+          .from('design_task_layouts')
+          .select('*, shirt_models:model_id(*)')
+          .eq('task_id', task_id);
+
+        let totalWeight = 0;
+        let maxWidth = 25;
+        let maxHeight = 25;
+        let maxLength = 5;
+        let totalQuantity = 0;
+        let insuranceValue = task.order_value || 100;
+
+        if (layouts && layouts.length > 0) {
+          for (const layout of layouts) {
+            const model = layout.shirt_models;
+            const qty = layout.quantity || 1;
+            totalQuantity += qty;
+            
+            if (model) {
+              totalWeight += (model.peso || 0.38) * qty;
+              maxWidth = Math.max(maxWidth, model.largura || 25);
+              maxHeight = Math.max(maxHeight, model.altura || 25);
+              maxLength += (model.profundidade || 2) * qty;
+            } else {
+              // Dimensões padrão se não tiver modelo
+              totalWeight += 0.38 * qty;
+              maxLength += 2 * qty;
+            }
+          }
+        } else if (task.orders) {
+          // Fallback para order antigo
+          const order = task.orders;
+          totalQuantity = order.quantity || 1;
+          totalWeight = 0.38 * totalQuantity;
+          maxLength = 2 * totalQuantity;
+        }
+
+        // Garantir valores mínimos
+        totalWeight = Math.max(totalWeight, 0.3);
+        maxLength = Math.min(maxLength, 100); // Máximo 100cm
 
         const quotePayload = {
           from: {
@@ -108,13 +183,13 @@ serve(async (req) => {
             postal_code: customer.cep.replace(/\D/g, ''),
           },
           products: [{
-            id: model.id,
-            width: model.largura || 20,
-            height: model.altura || 10,
-            length: model.profundidade || 30,
-            weight: model.peso || 0.5,
-            insurance_value: task.order_value || 100,
-            quantity: order.quantity,
+            id: task_id,
+            width: maxWidth,
+            height: maxHeight,
+            length: maxLength,
+            weight: totalWeight,
+            insurance_value: insuranceValue,
+            quantity: 1,
           }],
           options: {
             receipt: false,
