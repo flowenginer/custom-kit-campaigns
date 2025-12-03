@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useUniformTypes } from "@/hooks/useUniformTypes";
-import { cn } from "@/lib/utils";
+import { cn, extractUniformType } from "@/lib/utils";
 import { BusinessSegmentField } from "./BusinessSegmentField";
 import { DesignTask } from "@/types/design-task";
 
@@ -585,6 +585,14 @@ export const CustomizationViewer = ({
                     <p className="text-sm font-medium bg-muted p-2 rounded">{campaignName}</p>
                   </div>
                 )}
+                
+                {/* Tipo de Uniforme */}
+                <div>
+                  <Label className="text-xs text-muted-foreground">Tipo de Uniforme</Label>
+                  <p className="text-sm font-medium bg-muted p-2 rounded">
+                    {extractUniformType(modelName, modelCode, campaignName)}
+                  </p>
+                </div>
                 
                 {/* Segmento do Cliente - Editável */}
                 {task && onTaskUpdated && (
