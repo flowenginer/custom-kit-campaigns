@@ -40,6 +40,9 @@ interface Quote {
   status: string;
   items: QuoteItem[];
   total_amount: number;
+  subtotal_before_discount: number;
+  discount_type: string | null;
+  discount_value: number;
   valid_until: string;
   correction_notes: string | null;
   approved_at: string | null;
@@ -112,7 +115,10 @@ const Quote = () => {
 
       setQuote({
         ...data,
-        items: (data.items || []) as unknown as QuoteItem[]
+        items: (data.items || []) as unknown as QuoteItem[],
+        subtotal_before_discount: Number(data.subtotal_before_discount) || Number(data.total_amount),
+        discount_type: data.discount_type || null,
+        discount_value: Number(data.discount_value) || 0
       } as Quote);
     } catch (err) {
       console.error("Error loading quote:", err);
@@ -364,7 +370,24 @@ const Quote = () => {
 
         {/* Total */}
         <Card className="mb-6 bg-primary/5 border-primary/20">
-          <CardContent className="py-6">
+          <CardContent className="py-6 space-y-3">
+            {quote.discount_type && quote.discount_value > 0 && (
+              <>
+                <div className="flex items-center justify-between text-muted-foreground">
+                  <span>Subtotal</span>
+                  <span>{formatCurrency(quote.subtotal_before_discount)}</span>
+                </div>
+                <div className="flex items-center justify-between text-green-600">
+                  <span>
+                    Desconto ({quote.discount_type === 'percentage' 
+                      ? `${quote.discount_value}%` 
+                      : formatCurrency(quote.discount_value)})
+                  </span>
+                  <span>-{formatCurrency(quote.subtotal_before_discount - Number(quote.total_amount))}</span>
+                </div>
+                <Separator />
+              </>
+            )}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <DollarSign className="h-8 w-8 text-primary" />

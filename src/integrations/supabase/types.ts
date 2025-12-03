@@ -2131,11 +2131,14 @@ export type Database = {
           approved_by_name: string | null
           correction_notes: string | null
           created_at: string | null
+          discount_type: string | null
+          discount_value: number | null
           id: string
           items: Json
           sent_at: string | null
           sent_by: string | null
           status: string
+          subtotal_before_discount: number | null
           task_id: string
           token: string
           total_amount: number
@@ -2147,11 +2150,14 @@ export type Database = {
           approved_by_name?: string | null
           correction_notes?: string | null
           created_at?: string | null
+          discount_type?: string | null
+          discount_value?: number | null
           id?: string
           items?: Json
           sent_at?: string | null
           sent_by?: string | null
           status?: string
+          subtotal_before_discount?: number | null
           task_id: string
           token: string
           total_amount?: number
@@ -2163,11 +2169,14 @@ export type Database = {
           approved_by_name?: string | null
           correction_notes?: string | null
           created_at?: string | null
+          discount_type?: string | null
+          discount_value?: number | null
           id?: string
           items?: Json
           sent_at?: string | null
           sent_by?: string | null
           status?: string
+          subtotal_before_discount?: number | null
           task_id?: string
           token?: string
           total_amount?: number
