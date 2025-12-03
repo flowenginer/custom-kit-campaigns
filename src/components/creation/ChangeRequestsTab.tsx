@@ -19,9 +19,10 @@ interface ChangeRequestsTabProps {
   onChangeRequestAdded?: () => void;
   onClose?: () => void;
   onSendForApproval?: () => void;
+  canAddChangeRequest?: boolean; // Nova prop: controla visibilidade do formulário
 }
 
-export const ChangeRequestsTab = ({ taskId, taskStatus, layoutId, onChangeRequestAdded, onClose, onSendForApproval }: ChangeRequestsTabProps) => {
+export const ChangeRequestsTab = ({ taskId, taskStatus, layoutId, onChangeRequestAdded, onClose, onSendForApproval, canAddChangeRequest = true }: ChangeRequestsTabProps) => {
   const [changeRequests, setChangeRequests] = useState<ChangeRequest[]>([]);
   const [description, setDescription] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -218,67 +219,69 @@ export const ChangeRequestsTab = ({ taskId, taskStatus, layoutId, onChangeReques
 
   return (
     <div className="space-y-6">
-      {/* Formulário para nova alteração */}
-      <div className="border-2 border-amber-500 dark:border-amber-600 rounded-lg p-4 space-y-4 bg-amber-50 dark:bg-amber-950">
-        <div className="flex items-center gap-2">
-          <AlertCircle className="h-5 w-5 text-amber-700 dark:text-amber-400" />
-          <h3 className="font-semibold text-amber-900 dark:text-amber-100">Solicitar Nova Alteração</h3>
-        </div>
-
-        <div className="space-y-2">
-          <Label className="text-amber-700 dark:text-amber-300">Descreva a alteração solicitada pelo cliente</Label>
-          <Textarea
-            placeholder="Ex: Trocar a logo do lado direito pela nova logo do patrocinador..."
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={4}
-            className="resize-none border-amber-300 dark:border-amber-700 focus:border-amber-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-white"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label>Anexar arquivos (logos, referências, etc.)</Label>
+      {/* Formulário para nova alteração - apenas para vendedores/admins */}
+      {canAddChangeRequest && (
+        <div className="border-2 border-amber-500 dark:border-amber-600 rounded-lg p-4 space-y-4 bg-amber-50 dark:bg-amber-950">
           <div className="flex items-center gap-2">
-            <Input
-              type="file"
-              multiple
-              accept="image/*,.pdf,.ai,.psd"
-              onChange={handleFileSelect}
-              className="flex-1"
-            />
-            <Button variant="outline" size="icon" asChild>
-              <label htmlFor="file-upload" className="cursor-pointer">
-                <Paperclip className="h-4 w-4" />
-              </label>
-            </Button>
+            <AlertCircle className="h-5 w-5 text-amber-700 dark:text-amber-400" />
+            <h3 className="font-semibold text-amber-900 dark:text-amber-100">Solicitar Nova Alteração</h3>
           </div>
-          
-          {files.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-2">
-              {files.map((file, index) => (
-                <Badge key={index} variant="secondary" className="gap-1">
-                  {file.name}
-                  <button
-                    onClick={() => removeFile(index)}
-                    className="ml-1 hover:text-destructive"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
-              ))}
-            </div>
-          )}
-        </div>
 
-        <Button 
-          onClick={handleAddChangeRequest}
-          disabled={uploading || !description.trim()}
-          className="w-full"
-        >
-          <Upload className="h-4 w-4 mr-2" />
-          {uploading ? "Adicionando..." : "Adicionar Alteração"}
-        </Button>
-      </div>
+          <div className="space-y-2">
+            <Label className="text-amber-700 dark:text-amber-300">Descreva a alteração solicitada pelo cliente</Label>
+            <Textarea
+              placeholder="Ex: Trocar a logo do lado direito pela nova logo do patrocinador..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={4}
+              className="resize-none border-amber-300 dark:border-amber-700 focus:border-amber-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-white"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Anexar arquivos (logos, referências, etc.)</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                type="file"
+                multiple
+                accept="image/*,.pdf,.ai,.psd"
+                onChange={handleFileSelect}
+                className="flex-1"
+              />
+              <Button variant="outline" size="icon" asChild>
+                <label htmlFor="file-upload" className="cursor-pointer">
+                  <Paperclip className="h-4 w-4" />
+                </label>
+              </Button>
+            </div>
+            
+            {files.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {files.map((file, index) => (
+                  <Badge key={index} variant="secondary" className="gap-1">
+                    {file.name}
+                    <button
+                      onClick={() => removeFile(index)}
+                      className="ml-1 hover:text-destructive"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <Button 
+            onClick={handleAddChangeRequest}
+            disabled={uploading || !description.trim()}
+            className="w-full"
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            {uploading ? "Adicionando..." : "Adicionar Alteração"}
+          </Button>
+        </div>
+      )}
 
       {/* Histórico de alterações */}
       <div className="space-y-3">
