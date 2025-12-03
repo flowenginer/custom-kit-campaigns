@@ -673,19 +673,57 @@ const Creation = () => {
     return Array.from(new Map(salespersons.map(s => [s.id, s])).values());
   }, [tasks]);
 
+  // Helper function to check if a task has logos in its layouts
+  const taskHasLogosInLayouts = (task: DesignTask): boolean => {
+    if (!task.task_layouts || task.task_layouts.length === 0) return false;
+    
+    return task.task_layouts.some((layout: any) => {
+      const customization = layout.customization_data;
+      if (!customization) return false;
+      
+      // Check logo section
+      const logoUrls = customization.logo?.logoUrls;
+      if (Array.isArray(logoUrls) && logoUrls.length > 0 && logoUrls.some((url: string) => url)) {
+        return true;
+      }
+      
+      // Check front logos
+      if (customization.front?.smallLogoFileUrl || customization.front?.largeLogoFileUrl) {
+        return true;
+      }
+      
+      // Check back logos
+      if (customization.back?.logoLargeFileUrl || customization.back?.logoNeckFileUrl) {
+        return true;
+      }
+      
+      return false;
+    });
+  };
+
   const columns = [
     {
       title: "Leads sem Logo",
       status: "logo_needed" as const,
       icon: Inbox,
-      tasks: applyAllFilters(tasks.filter(t => t.needs_logo === true && t.logo_action === 'waiting_client')),
+      // Only show tasks that need logo AND don't have logos in layouts yet
+      tasks: applyAllFilters(tasks.filter(t => 
+        t.needs_logo === true && 
+        t.logo_action === 'waiting_client' && 
+        !taskHasLogosInLayouts(t)
+      )),
     },
     {
       title: "Novos Com Logo",
       status: "pending" as const,
       icon: Inbox,
+      // Include tasks that are pending AND (don't need logo OR have logos in layouts)
       tasks: applyAllFilters(tasks.filter(t => 
-        t.status === "pending" && (!t.needs_logo || t.logo_action !== 'waiting_client')
+        t.status === "pending" && (
+          !t.needs_logo || 
+          t.logo_action !== 'waiting_client' || 
+          taskHasLogosInLayouts(t)
+        )
       )),
     },
     {
