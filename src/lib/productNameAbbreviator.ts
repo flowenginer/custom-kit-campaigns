@@ -9,6 +9,8 @@ export const abbreviateProductName = (fullName: string | null | undefined): stri
   
   // Segment abbreviations (longer phrases first to avoid partial matches)
   const segmentMap: Record<string, string> = {
+    'Layout Do Zero': 'LAYO',
+    'Layout do Zero': 'LAYO',
     'Energia Solar': 'EN SOL',
     'En Solar': 'EN SOL',
     'Construção Civil': 'CONST',
@@ -27,6 +29,7 @@ export const abbreviateProductName = (fullName: string | null | undefined): stri
     'Turismo': 'TUR',
     'Futevôlei': 'FTV',
     'Futevolei': 'FTV',
+    'Lavanderia': 'LAV',
   };
   
   // Shirt type abbreviations (longer phrases first - MLZ before ML)
