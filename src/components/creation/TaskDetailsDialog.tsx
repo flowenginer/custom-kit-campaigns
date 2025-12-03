@@ -79,6 +79,7 @@ import { ModificationRequestDialog } from "@/components/orders/ModificationReque
 import { BusinessSegmentField } from "./BusinessSegmentField";
 import { extractUniformType } from "@/lib/utils";
 import { MockupVersionSelectorModal } from "./MockupVersionSelectorModal";
+import { QuoteSection } from "@/components/quotes/QuoteSection";
 
 interface TaskDetailsDialogProps {
   task: DesignTask | null;
@@ -1817,6 +1818,17 @@ export const TaskDetailsDialog = ({
                         </div>
                       </CardContent>
                     </Card>
+                  )}
+
+                  {/* Quote Section - Visible to Salespersons and Admins */}
+                  {(isSalesperson || isSuperAdmin || isAdmin) && task.status !== 'pending' && (
+                    <QuoteSection
+                      taskId={task.id}
+                      customerName={task.customer_name || "Cliente"}
+                      customerPhone={task.customer_phone}
+                      isSalesperson={isSalesperson}
+                      isAdmin={isAdmin || isSuperAdmin}
+                    />
                   )}
                 </div>
               )}
