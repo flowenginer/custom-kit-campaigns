@@ -6,27 +6,42 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { QuotePreviewModal } from "./QuotePreviewModal";
+import { QuoteEditorModal } from "./QuoteEditorModal";
 import { 
   FileText, 
   Eye, 
-  Send, 
   CheckCircle, 
   AlertCircle,
   Clock,
   RefreshCcw,
   CreditCard,
   Copy,
-  Loader2
+  Loader2,
+  Send,
+  Pencil
 } from "lucide-react";
+
+interface QuoteItem {
+  layout_id: string;
+  product_name: string;
+  segment_tag: string;
+  model_tag: string;
+  product_image: string;
+  unit_price: number;
+  quantity: number;
+  subtotal: number;
+}
 
 interface Quote {
   id: string;
   task_id: string;
   token: string;
   status: string;
-  items: any[];
+  items: QuoteItem[];
   total_amount: number;
+  subtotal_before_discount: number;
+  discount_type: string | null;
+  discount_value: number;
   valid_until: string;
   correction_notes: string | null;
   approved_at: string | null;
@@ -52,12 +67,13 @@ export const QuoteSection = ({
 }: QuoteSectionProps) => {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [showEditorModal, setShowEditorModal] = useState(false);
+  const [customDomain, setCustomDomain] = useState<string | null>(null);
 
   useEffect(() => {
     loadQuote();
+    loadCustomDomain();
     
-    // Subscribe to realtime updates
     const channel = supabase
       .channel(`quote-${taskId}`)
       .on(
@@ -79,6 +95,18 @@ export const QuoteSection = ({
     };
   }, [taskId]);
 
+  const loadCustomDomain = async () => {
+    try {
+      const { data } = await supabase
+        .from("company_settings")
+        .select("custom_domain")
+        .single();
+      setCustomDomain(data?.custom_domain || null);
+    } catch (error) {
+      setCustomDomain(null);
+    }
+  };
+
   const loadQuote = async () => {
     setLoading(true);
     try {
@@ -92,7 +120,6 @@ export const QuoteSection = ({
 
       if (error) throw error;
 
-      // Check if expired
       if (data && isPast(new Date(data.valid_until)) && data.status === 'sent') {
         await supabase
           .from("quotes")
@@ -104,7 +131,10 @@ export const QuoteSection = ({
       if (data) {
         setQuote({
           ...data,
-          items: (data.items || []) as unknown as any[]
+          items: (data.items || []) as unknown as QuoteItem[],
+          discount_type: data.discount_type || null,
+          discount_value: Number(data.discount_value) || 0,
+          subtotal_before_discount: Number(data.subtotal_before_discount) || Number(data.total_amount)
         } as Quote);
       } else {
         setQuote(null);
@@ -124,29 +154,20 @@ export const QuoteSection = ({
 
   const handleCopyLink = () => {
     if (quote?.token) {
-      const url = `${window.location.origin}/quote/${quote.token}`;
+      const baseUrl = customDomain ? `https://${customDomain}` : window.location.origin;
+      const url = `${baseUrl}/quote/${quote.token}`;
       navigator.clipboard.writeText(url);
       toast.success("Link copiado!");
     }
   };
 
-  const handleGenerateNewQuote = async () => {
-    // If there's an existing quote in certain states, delete it first
-    if (quote && ['draft', 'expired', 'correction_requested'].includes(quote.status)) {
-      await supabase
-        .from("quotes")
-        .delete()
-        .eq("id", quote.id);
-    }
-    setShowPreviewModal(true);
-  };
-
-  const canGenerateQuote = isSalesperson || isAdmin;
-  const canViewQuote = quote !== null;
+  const canManageQuote = isSalesperson || isAdmin;
   const isApproved = quote?.status === 'approved';
   const isCorrectionRequested = quote?.status === 'correction_requested';
   const isExpired = quote?.status === 'expired';
   const isSent = quote?.status === 'sent';
+  const isDraft = quote?.status === 'draft';
+  const hasDiscount = quote?.discount_type && quote.discount_value > 0;
 
   if (loading) {
     return (
@@ -168,16 +189,16 @@ export const QuoteSection = ({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Status display */}
           {quote ? (
             <div className="space-y-3">
-              {/* Status Badge */}
+              {/* Status Badge and Total */}
               <div className="flex items-center justify-between">
                 <Badge 
                   variant={
                     isApproved ? "default" : 
                     isCorrectionRequested ? "secondary" : 
                     isExpired ? "destructive" : 
+                    isDraft ? "outline" :
                     "outline"
                   }
                   className={isApproved ? "bg-green-600" : ""}
@@ -206,12 +227,21 @@ export const QuoteSection = ({
                       Enviado
                     </>
                   )}
-                  {quote.status === 'draft' && "Rascunho"}
+                  {isDraft && "Rascunho"}
                 </Badge>
                 <span className="text-lg font-bold text-primary">
                   {formatCurrency(Number(quote.total_amount))}
                 </span>
               </div>
+
+              {/* Discount Info */}
+              {hasDiscount && (
+                <p className="text-xs text-green-600">
+                  Desconto aplicado: {quote.discount_type === 'percentage' 
+                    ? `${quote.discount_value}%` 
+                    : formatCurrency(quote.discount_value)}
+                </p>
+              )}
 
               {/* Approval Info */}
               {isApproved && quote.approved_at && (
@@ -252,13 +282,22 @@ export const QuoteSection = ({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setShowPreviewModal(true)}
+                  onClick={() => setShowEditorModal(true)}
                 >
-                  <Eye className="h-4 w-4 mr-1" />
-                  Ver Orçamento
+                  {canManageQuote && !isApproved ? (
+                    <>
+                      <Pencil className="h-4 w-4 mr-1" />
+                      Editar
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="h-4 w-4 mr-1" />
+                      Ver Orçamento
+                    </>
+                  )}
                 </Button>
 
-                {isSent && (
+                {(isSent || isDraft) && quote.token && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -266,16 +305,6 @@ export const QuoteSection = ({
                   >
                     <Copy className="h-4 w-4 mr-1" />
                     Copiar Link
-                  </Button>
-                )}
-
-                {(isExpired || isCorrectionRequested) && canGenerateQuote && (
-                  <Button
-                    size="sm"
-                    onClick={handleGenerateNewQuote}
-                  >
-                    <RefreshCcw className="h-4 w-4 mr-1" />
-                    Novo Orçamento
                   </Button>
                 )}
 
@@ -293,16 +322,15 @@ export const QuoteSection = ({
               </div>
             </div>
           ) : (
-            // No quote exists yet
             <div className="text-center py-4">
               <FileText className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
               <p className="text-sm text-muted-foreground mb-4">
                 Nenhum orçamento gerado ainda
               </p>
-              {canGenerateQuote && (
-                <Button onClick={() => setShowPreviewModal(true)}>
+              {canManageQuote && (
+                <Button onClick={() => setShowEditorModal(true)}>
                   <FileText className="h-4 w-4 mr-2" />
-                  Gerar Orçamento
+                  Criar Orçamento
                 </Button>
               )}
             </div>
@@ -310,14 +338,14 @@ export const QuoteSection = ({
         </CardContent>
       </Card>
 
-      {/* Quote Preview Modal */}
-      <QuotePreviewModal
-        open={showPreviewModal}
-        onOpenChange={setShowPreviewModal}
+      <QuoteEditorModal
+        open={showEditorModal}
+        onOpenChange={setShowEditorModal}
         taskId={taskId}
         customerName={customerName}
         customerPhone={customerPhone}
-        onQuoteSent={loadQuote}
+        existingQuote={quote}
+        onQuoteUpdated={loadQuote}
       />
     </>
   );
