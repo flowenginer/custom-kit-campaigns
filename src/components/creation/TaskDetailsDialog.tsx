@@ -69,6 +69,7 @@ import {
   Phone,
   AlertCircle,
   ChevronDown,
+  ChevronUp,
   Eye,
   ArrowRightLeft,
   Edit
@@ -112,6 +113,7 @@ export const TaskDetailsDialog = ({
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [sendingLayout, setSendingLayout] = useState(false);
+  const [orderInfoExpanded, setOrderInfoExpanded] = useState(true);
   
   const { roles, isSalesperson, isDesigner, isSuperAdmin, isAdmin } = useUserRole();
 
@@ -1020,7 +1022,7 @@ export const TaskDetailsDialog = ({
         ) : (
           // INTERFACE COMPLETA DO DESIGNER
           <Tabs defaultValue="details" className="flex-1 overflow-hidden flex flex-col">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="details">
                 <FileText className="h-4 w-4 mr-2" />
                 Detalhes
@@ -1028,13 +1030,16 @@ export const TaskDetailsDialog = ({
               <TabsTrigger value="customization">
                 <Palette className="h-4 w-4 mr-2" />
                 Personalização
-                {hasUnresolvedChanges && (
-                  <span className="ml-1 flex h-2 w-2 rounded-full bg-red-600" />
+                {(hasUnresolvedChanges || task.design_files.length > 0) && (
+                  <span className="ml-1 flex items-center gap-1">
+                    {task.design_files.length > 0 && (
+                      <span className="text-xs text-muted-foreground">({task.design_files.length})</span>
+                    )}
+                    {hasUnresolvedChanges && (
+                      <span className="flex h-2 w-2 rounded-full bg-red-600" />
+                    )}
+                  </span>
                 )}
-              </TabsTrigger>
-              <TabsTrigger value="files">
-                <Upload className="h-4 w-4 mr-2" />
-                Enviar Mockup ({task.design_files.length})
               </TabsTrigger>
               <TabsTrigger value="history">
                 <HistoryIcon className="h-4 w-4 mr-2" />
@@ -1305,6 +1310,7 @@ export const TaskDetailsDialog = ({
                                 taskStatus={task.status}
                                 onChangeRequestAdded={onTaskUpdated}
                                 onClose={() => onOpenChange(false)}
+                                canAddChangeRequest={isSalesperson || isAdmin || isSuperAdmin}
                                 onSendForApproval={canSendApproval ? async () => {
                                   await handleStatusChange('awaiting_approval');
                                   onOpenChange(false);
@@ -1348,6 +1354,7 @@ export const TaskDetailsDialog = ({
                             taskStatus={task.status}
                             onChangeRequestAdded={onTaskUpdated}
                             onClose={() => onOpenChange(false)}
+                            canAddChangeRequest={isSalesperson || isAdmin || isSuperAdmin}
                             onSendForApproval={canSendApproval ? async () => {
                               await handleStatusChange('awaiting_approval');
                               onOpenChange(false);
@@ -1388,6 +1395,7 @@ export const TaskDetailsDialog = ({
                             taskStatus={task.status}
                             onChangeRequestAdded={onTaskUpdated}
                             onClose={() => onOpenChange(false)}
+                            canAddChangeRequest={isSalesperson || isAdmin || isSuperAdmin}
                             onSendForApproval={canSendApproval ? async () => {
                               await handleStatusChange('awaiting_approval');
                               onOpenChange(false);
@@ -1399,158 +1407,275 @@ export const TaskDetailsDialog = ({
                   )}
                 </>
               )}
-            </TabsContent>
 
-            <TabsContent value="files" className="space-y-4 mt-0">
-              {/* ✅ FASE 4: Melhor feedback visual do upload de mockup */}
-              {canUpload && (
-                <Card className="border-2 border-dashed hover:border-primary transition-colors">
-                  <CardContent className="p-6 space-y-4">
-                    {task.status === 'changes_requested' && (
-                      <div className="flex items-center gap-2 p-3 bg-orange-50 border border-orange-200 rounded-lg mb-4">
-                        <RefreshCcw className="h-4 w-4 text-orange-600 flex-shrink-0" />
-                        <span className="text-sm text-orange-700 font-medium">
-                          Enviando mockup de revisão (alterações solicitadas)
-                        </span>
-                      </div>
-                    )}
-                    
-                    <div className="text-center space-y-2">
-                      <Upload className="h-12 w-12 mx-auto text-muted-foreground" />
-                      <Label htmlFor="mockup-upload" className="text-lg font-medium cursor-pointer">
-                        Selecionar Arquivos do Mockup
-                      </Label>
-                      <p className="text-xs text-muted-foreground">
-                        PDF, PNG, JPG, AI, PSD ou ZIP • Múltiplos arquivos permitidos • Máximo 10MB cada
-                      </p>
-                    </div>
-                    
-                    <Input 
-                      id="mockup-upload"
-                      type="file" 
-                      accept=".pdf,.png,.jpg,.jpeg,.ai,.psd,.zip"
-                      onChange={handleFileUpload}
-                      multiple
-                      disabled={uploading}
-                      className="cursor-pointer"
-                    />
-
-                    {/* Preview dos arquivos selecionados */}
-                    {pendingFiles.length > 0 && (
-                      <div className="space-y-2 p-4 bg-primary/5 border-2 border-primary rounded-lg">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-sm font-medium">
-                            📁 {pendingFiles.length} arquivo(s) selecionado(s)
+              {/* SEÇÃO DE MOCKUPS - Movido do tab "Enviar Mockup" */}
+              {!isVendorContext && (
+                <div className="space-y-6 pt-6 border-t mt-6">
+                  {/* Upload de Mockup - Apenas para Designer */}
+                  {canUpload && (
+                    <Card className="border-2 border-dashed hover:border-primary transition-colors">
+                      <CardContent className="p-6 space-y-4">
+                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                          <Upload className="h-5 w-5" />
+                          Upload de Mockup
+                        </h3>
+                        
+                        {task.status === 'changes_requested' && (
+                          <div className="flex items-center gap-2 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                            <RefreshCcw className="h-4 w-4 text-orange-600 flex-shrink-0" />
+                            <span className="text-sm text-orange-700 font-medium">
+                              Enviando mockup de revisão (alterações solicitadas)
+                            </span>
+                          </div>
+                        )}
+                        
+                        <div className="text-center space-y-2">
+                          <Upload className="h-12 w-12 mx-auto text-muted-foreground" />
+                          <Label htmlFor="mockup-upload" className="text-lg font-medium cursor-pointer">
+                            Selecionar Arquivos do Mockup
                           </Label>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setPendingFiles([])}
-                            disabled={uploading}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
+                          <p className="text-xs text-muted-foreground">
+                            PDF, PNG, JPG, AI, PSD ou ZIP • Múltiplos arquivos permitidos • Máximo 10MB cada
+                          </p>
                         </div>
-                        <div className="space-y-1">
-                          {pendingFiles.map((file, idx) => (
-                            <div key={idx} className="flex items-center gap-2 text-sm">
-                              <FileText className="h-4 w-4 text-primary" />
-                              <span className="flex-1 truncate">{file.name}</span>
-                              <span className="text-xs text-muted-foreground">
-                                {(file.size / 1024 / 1024).toFixed(2)} MB
-                              </span>
+                        
+                        <Input 
+                          id="mockup-upload"
+                          type="file" 
+                          accept=".pdf,.png,.jpg,.jpeg,.ai,.psd,.zip"
+                          onChange={handleFileUpload}
+                          multiple
+                          disabled={uploading}
+                          className="cursor-pointer"
+                        />
+
+                        {/* Preview dos arquivos selecionados */}
+                        {pendingFiles.length > 0 && (
+                          <div className="space-y-2 p-4 bg-primary/5 border-2 border-primary rounded-lg">
+                            <div className="flex items-center justify-between">
+                              <Label className="text-sm font-medium">
+                                📁 {pendingFiles.length} arquivo(s) selecionado(s)
+                              </Label>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setPendingFiles([])}
+                                disabled={uploading}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <div className="space-y-1">
+                              {pendingFiles.map((file, idx) => (
+                                <div key={idx} className="flex items-center gap-2 text-sm">
+                                  <FileText className="h-4 w-4 text-primary" />
+                                  <span className="flex-1 truncate">{file.name}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {(file.size / 1024 / 1024).toFixed(2)} MB
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        <div className="space-y-2 p-4 border-2 border-amber-500 dark:border-amber-600 rounded-lg bg-amber-50 dark:bg-amber-950">
+                          <Label className="text-base font-medium text-amber-700 dark:text-amber-300">
+                            📝 Notas desta versão (opcional)
+                          </Label>
+                          <Textarea 
+                            placeholder="Adicione observações sobre esta versão do mockup..."
+                            value={uploadNotes}
+                            onChange={(e) => setUploadNotes(e.target.value)}
+                            disabled={uploading}
+                            className="min-h-[80px] border-amber-300 dark:border-amber-700 focus:border-amber-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-white"
+                          />
+                          <p className="text-xs text-amber-600 dark:text-amber-400">
+                            Essas notas serão visíveis junto com os arquivos enviados.
+                          </p>
+                        </div>
+
+                        {/* Botão de enviar */}
+                        <Button
+                          onClick={handleSubmitMockup}
+                          disabled={uploading || pendingFiles.length === 0}
+                          className="w-full"
+                          size="lg"
+                        >
+                          {uploading ? (
+                            <>
+                              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                              {uploadProgress}
+                            </>
+                          ) : (
+                            <>
+                              <Send className="h-5 w-5 mr-2" />
+                              📤 Enviar Mockup
+                            </>
+                          )}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Preview dos mockups enviados (antes de fechar o dialog) */}
+                  {uploadedPreviews.length > 0 && (
+                    <Card>
+                      <CardContent className="p-4">
+                        <Label className="mb-3 block">Mockups Prontos para Enviar ao Cliente</Label>
+                        <div className="grid grid-cols-3 gap-3">
+                          {uploadedPreviews.map((preview, idx) => (
+                            <div key={idx} className="relative">
+                              <img 
+                                src={preview.url} 
+                                alt={preview.name}
+                                className="w-full h-32 object-cover rounded border cursor-pointer hover:border-primary transition-colors"
+                                onClick={() => window.open(preview.url, '_blank')}
+                                title="Clique para ver em tamanho completo"
+                              />
+                              <p className="text-xs mt-1 truncate" title={preview.name}>{preview.name}</p>
                             </div>
                           ))}
                         </div>
-                      </div>
-                    )}
-                    
-                    <div className="space-y-2 p-4 border-2 border-amber-500 dark:border-amber-600 rounded-lg bg-amber-50 dark:bg-amber-950">
-                      <Label className="text-base font-medium text-amber-700 dark:text-amber-300">
-                        📝 Notas desta versão (opcional)
-                      </Label>
-                      <Textarea 
-                        placeholder="Adicione observações sobre esta versão do mockup..."
-                        value={uploadNotes}
-                        onChange={(e) => setUploadNotes(e.target.value)}
-                        disabled={uploading}
-                        className="min-h-[80px] border-amber-300 dark:border-amber-700 focus:border-amber-500 bg-white text-gray-900 dark:bg-gray-800 dark:text-white"
-                      />
-                      <p className="text-xs text-amber-600 dark:text-amber-400">
-                        Essas notas serão visíveis junto com os arquivos enviados.
-                      </p>
-                    </div>
+                      </CardContent>
+                    </Card>
+                  )}
 
-                    {/* Botão de enviar */}
-                    <Button
-                      onClick={handleSubmitMockup}
-                      disabled={uploading || pendingFiles.length === 0}
-                      className="w-full"
-                      size="lg"
-                    >
-                      {uploading ? (
-                        <>
-                          <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                          {uploadProgress}
-                        </>
-                      ) : (
-                        <>
-                          <Send className="h-5 w-5 mr-2" />
-                          📤 Enviar Mockup
-                        </>
-                      )}
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
+                  {/* Lista de Mockups Enviados */}
+                  {task.design_files.length > 0 && (
+                    <div className="space-y-3">
+                      <Label className="text-lg font-semibold">Mockups Enviados</Label>
+                      {[...task.design_files].reverse().map((file) => {
+                        // Se está em modo colapsado (já aprovado) e o mockup não foi aprovado
+                        if (showCollapsedView && file.client_approved === false) {
+                          return (
+                            <Collapsible key={`${file.version}-${file.uploaded_at}`}>
+                              <Card className="opacity-60 border-muted">
+                                <CollapsibleTrigger asChild>
+                                  <CardContent className="p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-2">
+                                        <Badge variant="outline">v{file.version}</Badge>
+                                        {file.is_revision && (
+                                          <Badge variant="warning">📝 Revisão</Badge>
+                                        )}
+                                        <span className="text-sm text-muted-foreground">Mockup não aprovado</span>
+                                      </div>
+                                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                    </div>
+                                  </CardContent>
+                                </CollapsibleTrigger>
+                                <CollapsibleContent>
+                                  <CardContent className="p-4 pt-0 space-y-3">
+                                    {file.notes && (
+                                      <div className="p-3 bg-amber-50 dark:bg-amber-950 border-2 border-amber-500 dark:border-amber-600 rounded-lg">
+                                        <p className="text-sm text-amber-900 dark:text-amber-100">
+                                          <strong>📝 Observações do Designer:</strong> {file.notes}
+                                        </p>
+                                      </div>
+                                    )}
+                                    
+                                    <div 
+                                      className="relative w-full h-48 bg-muted rounded-lg overflow-hidden cursor-pointer group"
+                                      onClick={() => window.open(file.url, '_blank')}
+                                    >
+                                      <img 
+                                        src={file.url} 
+                                        alt={`Mockup v${file.version}`}
+                                        className="w-full h-full object-contain group-hover:scale-105 transition-transform"
+                                      />
+                                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                        <ExternalLink className="h-8 w-8 text-white" />
+                                      </div>
+                                    </div>
+                                    
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm"
+                                      onClick={async () => {
+                                        try {
+                                          const response = await fetch(file.url);
+                                          const blob = await response.blob();
+                                          const url = window.URL.createObjectURL(blob);
+                                          const link = document.createElement('a');
+                                          link.href = url;
+                                          link.download = `mockup_v${file.version}_${new Date().getTime()}.png`;
+                                          document.body.appendChild(link);
+                                          link.click();
+                                          document.body.removeChild(link);
+                                          window.URL.revokeObjectURL(url);
+                                          toast.success("Download iniciado!");
+                                        } catch (error) {
+                                          toast.error("Erro ao baixar arquivo");
+                                        }
+                                      }}
+                                    >
+                                      <Download className="h-4 w-4 mr-2" />
+                                      Baixar
+                                    </Button>
+                                  </CardContent>
+                                </CollapsibleContent>
+                              </Card>
+                            </Collapsible>
+                          );
+                        }
 
-              {/* Preview dos mockups enviados (antes de fechar o dialog) */}
-              {uploadedPreviews.length > 0 && (
-                <Card>
-                  <CardContent className="p-4">
-                    <Label className="mb-3 block">Mockups Prontos para Enviar ao Cliente</Label>
-                    <div className="grid grid-cols-3 gap-3">
-                      {uploadedPreviews.map((preview, idx) => (
-                        <div key={idx} className="relative">
-                          <img 
-                            src={preview.url} 
-                            alt={preview.name}
-                            className="w-full h-32 object-cover rounded border cursor-pointer hover:border-primary transition-colors"
-                            onClick={() => window.open(preview.url, '_blank')}
-                            title="Clique para ver em tamanho completo"
-                          />
-                          <p className="text-xs mt-1 truncate" title={preview.name}>{preview.name}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              <div className="space-y-3">
-                <Label>Mockups Enviados</Label>
-                {[...task.design_files].reverse().map((file) => {
-                  // Se está em modo colapsado (já aprovado) e o mockup não foi aprovado
-                  if (showCollapsedView && file.client_approved === false) {
-                    return (
-                      <Collapsible key={`${file.version}-${file.uploaded_at}`}>
-                        <Card className="opacity-60 border-muted">
-                          <CollapsibleTrigger asChild>
-                            <CardContent className="p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+                        // Card normal para mockups aprovados ou em processo de aprovação
+                        return (
+                          <Card 
+                            key={`${file.version}-${file.uploaded_at}`}
+                            className={selectedApprovedMockups.has(file.url) ? "border-2 border-green-500" : ""}
+                          >
+                            <CardContent className="p-4 space-y-3">
                               <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <Badge variant="outline">v{file.version}</Badge>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <Badge variant={file.version === task.current_version ? "default" : "outline"}>
+                                    v{file.version} {file.version === task.current_version && "(atual)"}
+                                  </Badge>
+                                  
                                   {file.is_revision && (
-                                    <Badge variant="warning">📝 Revisão</Badge>
+                                    <Badge variant="warning">
+                                      📝 Revisão
+                                    </Badge>
                                   )}
-                                  <span className="text-sm text-muted-foreground">Mockup não aprovado</span>
+                                  
+                                  {file.client_approved && (
+                                    <Badge className="bg-green-100 text-green-700 border-green-300">
+                                      ✅ Aprovado pelo cliente
+                                    </Badge>
+                                  )}
+                                  
+                                  <span className="text-xs text-muted-foreground">
+                                    {format(new Date(file.uploaded_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                  </span>
                                 </div>
-                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={async () => {
+                                    try {
+                                      const response = await fetch(file.url);
+                                      const blob = await response.blob();
+                                      const url = window.URL.createObjectURL(blob);
+                                      const link = document.createElement('a');
+                                      link.href = url;
+                                      link.download = `mockup_v${file.version}_${new Date().getTime()}.png`;
+                                      document.body.appendChild(link);
+                                      link.click();
+                                      document.body.removeChild(link);
+                                      window.URL.revokeObjectURL(url);
+                                      toast.success("Download iniciado!");
+                                    } catch (error) {
+                                      toast.error("Erro ao baixar arquivo");
+                                    }
+                                  }}
+                                >
+                                  <Download className="h-4 w-4 mr-2" />
+                                  Baixar
+                                </Button>
                               </div>
-                            </CardContent>
-                          </CollapsibleTrigger>
-                          <CollapsibleContent>
-                            <CardContent className="p-4 pt-0 space-y-3">
+
+                              {/* Observações do Designer */}
                               {file.notes && (
                                 <div className="p-3 bg-amber-50 dark:bg-amber-950 border-2 border-amber-500 dark:border-amber-600 rounded-lg">
                                   <p className="text-sm text-amber-900 dark:text-amber-100">
@@ -1558,7 +1683,8 @@ export const TaskDetailsDialog = ({
                                   </p>
                                 </div>
                               )}
-                              
+
+                              {/* Preview Visual do Mockup */}
                               <div 
                                 className="relative w-full h-48 bg-muted rounded-lg overflow-hidden cursor-pointer group"
                                 onClick={() => window.open(file.url, '_blank')}
@@ -1567,218 +1693,105 @@ export const TaskDetailsDialog = ({
                                   src={file.url} 
                                   alt={`Mockup v${file.version}`}
                                   className="w-full h-full object-contain group-hover:scale-105 transition-transform"
+                                  onError={(e) => {
+                                    const target = e.currentTarget;
+                                    target.style.display = 'none';
+                                    const parent = target.parentElement;
+                                    if (parent) {
+                                      parent.innerHTML = '<div class="flex items-center justify-center h-full"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg></div>';
+                                    }
+                                  }}
                                 />
                                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
                                   <ExternalLink className="h-8 w-8 text-white" />
                                 </div>
                               </div>
                               
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={async () => {
-                                  try {
-                                    const response = await fetch(file.url);
-                                    const blob = await response.blob();
-                                    const url = window.URL.createObjectURL(blob);
-                                    const link = document.createElement('a');
-                                    link.href = url;
-                                    link.download = `mockup_v${file.version}_${new Date().getTime()}.png`;
-                                    document.body.appendChild(link);
-                                    link.click();
-                                    document.body.removeChild(link);
-                                    window.URL.revokeObjectURL(url);
-                                    toast.success("Download iniciado!");
-                                  } catch (error) {
-                                    toast.error("Erro ao baixar arquivo");
-                                  }
-                                }}
-                              >
-                                <Download className="h-4 w-4 mr-2" />
-                                Baixar
-                              </Button>
+                              {/* Checkbox para vendedor selecionar mockup aprovado */}
+                              {canSalespersonApprove && task.status === 'awaiting_approval' && (
+                                <div className="flex items-center gap-2 p-3 border rounded-lg bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
+                                  <Checkbox
+                                    id={`approve-${file.version}`}
+                                    checked={selectedApprovedMockups.has(file.url)}
+                                    onCheckedChange={(checked) => {
+                                      const newSet = new Set(selectedApprovedMockups);
+                                      if (checked) {
+                                        newSet.add(file.url);
+                                      } else {
+                                        newSet.delete(file.url);
+                                      }
+                                      setSelectedApprovedMockups(newSet);
+                                    }}
+                                  />
+                                  <Label htmlFor={`approve-${file.version}`} className="text-sm cursor-pointer font-medium text-green-700">
+                                    ✅ Mockup aprovado pelo cliente
+                                  </Label>
+                                </div>
+                              )}
                             </CardContent>
-                          </CollapsibleContent>
-                        </Card>
-                      </Collapsible>
-                    );
-                  }
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  )}
 
-                  // Card normal para mockups aprovados ou em processo de aprovação
-                  console.log('🔍 Mockup Debug:', {
-                    version: file.version,
-                    hasNotes: !!file.notes,
-                    notesContent: file.notes,
-                    notesType: typeof file.notes
-                  });
-                  
-                  return (
-                    <Card 
-                      key={`${file.version}-${file.uploaded_at}`}
-                      className={selectedApprovedMockups.has(file.url) ? "border-2 border-green-500" : ""}
-                    >
-                      <CardContent className="p-4 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <Badge variant={file.version === task.current_version ? "default" : "outline"}>
-                              v{file.version} {file.version === task.current_version && "(atual)"}
-                            </Badge>
-                            
-                            {file.is_revision && (
-                              <Badge variant="warning">
-                                📝 Revisão
-                              </Badge>
-                            )}
-                            
-                            {file.client_approved && (
-                              <Badge className="bg-green-100 text-green-700 border-green-300">
-                                ✅ Aprovado pelo cliente
-                              </Badge>
-                            )}
-                            
-                            <span className="text-xs text-muted-foreground">
-                              {format(new Date(file.uploaded_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                            </span>
+                  {task.design_files.length === 0 && !canUpload && (
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                      Nenhum mockup enviado ainda
+                    </p>
+                  )}
+
+                  {/* Botão Enviar Layout para Cliente - Apenas para Vendedor */}
+                  {task.design_files.length > 0 && (isSalesperson || isAdmin || isSuperAdmin) && (
+                    <Card className="border-2 border-primary/50 bg-primary/5">
+                      <CardContent className="p-4">
+                        <div className="flex flex-col gap-3">
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-5 w-5 text-primary" />
+                            <span className="font-medium">Enviar para o Cliente</span>
                           </div>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={async () => {
-                              try {
-                                const response = await fetch(file.url);
-                                const blob = await response.blob();
-                                const url = window.URL.createObjectURL(blob);
-                                const link = document.createElement('a');
-                                link.href = url;
-                                link.download = `mockup_v${file.version}_${new Date().getTime()}.png`;
-                                document.body.appendChild(link);
-                                link.click();
-                                document.body.removeChild(link);
-                                window.URL.revokeObjectURL(url);
-                                toast.success("Download iniciado!");
-                              } catch (error) {
-                                toast.error("Erro ao baixar arquivo");
-                              }
-                            }}
+                          <p className="text-sm text-muted-foreground">
+                            Envie o(s) mockup(s) para o cliente aprovar via WhatsApp.
+                          </p>
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="text-muted-foreground">Cliente:</span>
+                            <span className="font-medium">{task.customer_name}</span>
+                            {task.customer_phone && (
+                              <>
+                                <span className="text-muted-foreground">•</span>
+                                <span>{task.customer_phone}</span>
+                              </>
+                            )}
+                          </div>
+                          <Button
+                            onClick={handleSendLayoutToClient}
+                            disabled={sendingLayout || !task.customer_phone}
+                            className="w-full"
+                            size="lg"
                           >
-                            <Download className="h-4 w-4 mr-2" />
-                            Baixar
+                            {sendingLayout ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Enviando...
+                              </>
+                            ) : (
+                              <>
+                                <Phone className="h-4 w-4 mr-2" />
+                                📱 Enviar Layout para Cliente
+                              </>
+                            )}
                           </Button>
-                        </div>
-
-                        {/* Observações do Designer - Movido para cima */}
-                        {file.notes && (
-                          <div className="p-3 bg-amber-50 dark:bg-amber-950 border-2 border-amber-500 dark:border-amber-600 rounded-lg">
-                            <p className="text-sm text-amber-900 dark:text-amber-100">
-                              <strong>📝 Observações do Designer:</strong> {file.notes}
+                          {!task.customer_phone && (
+                            <p className="text-xs text-destructive flex items-center gap-1">
+                              <AlertCircle className="h-3 w-3" />
+                              Cliente sem WhatsApp cadastrado
                             </p>
-                          </div>
-                        )}
-
-                        {/* Preview Visual do Mockup */}
-                        <div 
-                          className="relative w-full h-48 bg-muted rounded-lg overflow-hidden cursor-pointer group"
-                          onClick={() => window.open(file.url, '_blank')}
-                        >
-                          <img 
-                            src={file.url} 
-                            alt={`Mockup v${file.version}`}
-                            className="w-full h-full object-contain group-hover:scale-105 transition-transform"
-                            onError={(e) => {
-                              const target = e.currentTarget;
-                              target.style.display = 'none';
-                              const parent = target.parentElement;
-                              if (parent) {
-                                parent.innerHTML = '<div class="flex items-center justify-center h-full"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg></div>';
-                              }
-                            }}
-                          />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                            <ExternalLink className="h-8 w-8 text-white" />
-                          </div>
+                          )}
                         </div>
-                        
-                        {/* Checkbox para vendedor selecionar mockup aprovado */}
-                        {canSalespersonApprove && task.status === 'awaiting_approval' && (
-                          <div className="flex items-center gap-2 p-3 border rounded-lg bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
-                            <Checkbox
-                              id={`approve-${file.version}`}
-                              checked={selectedApprovedMockups.has(file.url)}
-                              onCheckedChange={(checked) => {
-                                const newSet = new Set(selectedApprovedMockups);
-                                if (checked) {
-                                  newSet.add(file.url);
-                                } else {
-                                  newSet.delete(file.url);
-                                }
-                                setSelectedApprovedMockups(newSet);
-                              }}
-                            />
-                            <Label htmlFor={`approve-${file.version}`} className="text-sm cursor-pointer font-medium text-green-700">
-                              ✅ Mockup aprovado pelo cliente
-                            </Label>
-                          </div>
-                        )}
                       </CardContent>
                     </Card>
-                  );
-                })}
-                {task.design_files.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-8">
-                    Nenhum arquivo enviado ainda
-                  </p>
-                )}
-              </div>
-
-              {/* Botão Enviar Layout para Cliente */}
-              {task.design_files.length > 0 && (isSalesperson || isAdmin || isSuperAdmin) && (
-                <Card className="border-2 border-primary/50 bg-primary/5">
-                  <CardContent className="p-4">
-                    <div className="flex flex-col gap-3">
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-5 w-5 text-primary" />
-                        <span className="font-medium">Enviar para o Cliente</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Envie o(s) mockup(s) para o cliente aprovar via WhatsApp.
-                      </p>
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="text-muted-foreground">Cliente:</span>
-                        <span className="font-medium">{task.customer_name}</span>
-                        {task.customer_phone && (
-                          <>
-                            <span className="text-muted-foreground">•</span>
-                            <span>{task.customer_phone}</span>
-                          </>
-                        )}
-                      </div>
-                      <Button
-                        onClick={handleSendLayoutToClient}
-                        disabled={sendingLayout || !task.customer_phone}
-                        className="w-full"
-                        size="lg"
-                      >
-                        {sendingLayout ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Enviando...
-                          </>
-                        ) : (
-                          <>
-                            <Phone className="h-4 w-4 mr-2" />
-                            📱 Enviar Layout para Cliente
-                          </>
-                        )}
-                      </Button>
-                      {!task.customer_phone && (
-                        <p className="text-xs text-destructive flex items-center gap-1">
-                          <AlertCircle className="h-3 w-3" />
-                          Cliente sem WhatsApp cadastrado
-                        </p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+                  )}
+                </div>
               )}
             </TabsContent>
 
