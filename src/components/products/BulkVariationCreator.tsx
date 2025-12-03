@@ -337,6 +337,30 @@ export function BulkVariationCreator() {
       }
 
       console.log(`[BulkVariation] ✅ Concluído! ${created} criadas, ${skipped} já existiam`);
+
+      // Atualizar base_price dos produtos com o menor preço das variações
+      const basePrice = Math.min(
+        masculino.enabled && masculino.standardPrice > 0 ? masculino.standardPrice : Infinity,
+        feminino.enabled && feminino.standardPrice > 0 ? feminino.standardPrice : Infinity,
+        infantil.enabled && infantil.price > 0 ? infantil.price : Infinity
+      );
+
+      if (basePrice !== Infinity && basePrice > 0) {
+        const productIds = products.filter(p => p.sku).map(p => p.id);
+        
+        // Atualizar base_price de todos os produtos que ainda não têm preço
+        const { error: updateError } = await supabase
+          .from("shirt_models")
+          .update({ base_price: basePrice })
+          .in("id", productIds)
+          .is("base_price", null);
+
+        if (updateError) {
+          console.error("[BulkVariation] ⚠️ Erro ao atualizar base_price:", updateError);
+        } else {
+          console.log(`[BulkVariation] ✓ base_price atualizado para R$ ${basePrice}`);
+        }
+      }
       
       if (created > 0) {
         toast.success(`✅ ${created} variações criadas com sucesso!${skipped > 0 ? ` (${skipped} já existiam)` : ""}`);

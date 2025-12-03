@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Eye, Settings, Package, Upload, Loader2, ChevronDown } from "lucide-react";
+import { Eye, Settings, Package, Upload, Loader2, ChevronDown, RefreshCw, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { ProductDetailDrawer } from "@/components/products/ProductDetailDrawer";
 import { BulkActionsBar } from "@/components/products/BulkActionsBar";
@@ -58,6 +58,10 @@ export default function ProductList({ onSelectModel, onSwitchToVariations }: Pro
   const [blingEnabled, setBlingEnabled] = useState(false);
   const [blingLoading, setBlingLoading] = useState(false);
   const [unsyncedCount, setUnsyncedCount] = useState(0);
+  
+  // Preços
+  const [priceFixLoading, setPriceFixLoading] = useState(false);
+  const [productsWithoutPrice, setProductsWithoutPrice] = useState(0);
 
   useEffect(() => {
     loadProducts();
@@ -191,6 +195,92 @@ export default function ProductList({ onSelectModel, onSwitchToVariations }: Pro
     }
   };
 
+  const recalculatePricesFromVariations = async () => {
+    setPriceFixLoading(true);
+    
+    // Preços padrão por tipo de modelo (baseado no histórico de preços)
+    const defaultPricesByType: Record<string, number> = {
+      manga_curta: 59.9,
+      manga_longa: 79.9,
+      regata: 44.9,
+      ziper: 89.9,
+    };
+    
+    try {
+      // Buscar produtos sem base_price
+      const { data: productsWithoutPriceData, error: productsError } = await supabase
+        .from("shirt_models")
+        .select("id, name, model_tag")
+        .is("base_price", null);
+
+      if (productsError) throw productsError;
+      if (!productsWithoutPriceData || productsWithoutPriceData.length === 0) {
+        toast.info("Todos os produtos já têm preço definido");
+        setPriceFixLoading(false);
+        return;
+      }
+
+      const productIds = productsWithoutPriceData.map(p => p.id);
+
+      // Buscar variações com preços para esses produtos
+      const { data: variations, error: variationsError } = await supabase
+        .from("shirt_model_variations")
+        .select("model_id, price_adjustment")
+        .in("model_id", productIds)
+        .gt("price_adjustment", 0);
+
+      if (variationsError) throw variationsError;
+
+      // Agrupar por produto e pegar o menor preço
+      const minPriceByProduct: Record<string, number> = {};
+      variations?.forEach(v => {
+        if (!minPriceByProduct[v.model_id] || v.price_adjustment < minPriceByProduct[v.model_id]) {
+          minPriceByProduct[v.model_id] = v.price_adjustment;
+        }
+      });
+
+      // Atualizar produtos com preços encontrados nas variações OU usar preço padrão por tipo
+      let updated = 0;
+      let usedDefault = 0;
+      
+      for (const product of productsWithoutPriceData) {
+        let price = minPriceByProduct[product.id];
+        
+        // Se não tem preço nas variações, usar preço padrão do tipo
+        if (!price && product.model_tag) {
+          price = defaultPricesByType[product.model_tag];
+          if (price) usedDefault++;
+        }
+        
+        if (price) {
+          const { error: updateError } = await supabase
+            .from("shirt_models")
+            .update({ base_price: price })
+            .eq("id", product.id);
+
+          if (!updateError) {
+            updated++;
+          }
+        }
+      }
+
+      if (updated > 0) {
+        const msg = usedDefault > 0 
+          ? `✅ ${updated} produtos atualizados! (${usedDefault} com preço padrão do tipo)`
+          : `✅ ${updated} produtos atualizados com preços das variações!`;
+        toast.success(msg);
+        loadProducts();
+      } else {
+        toast.info("Nenhum produto tinha variações com preços ou tipo definido para importar preço padrão");
+      }
+    } catch (err) {
+      console.error("Erro ao recalcular preços:", err);
+      toast.error("Erro ao recalcular preços");
+    } finally {
+      setPriceFixLoading(false);
+    }
+  };
+
   const loadProducts = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -205,6 +295,10 @@ export default function ProductList({ onSelectModel, onSwitchToVariations }: Pro
     }
 
     setProducts(data || []);
+    
+    // Contar produtos sem preço
+    const withoutPrice = (data || []).filter(p => !p.base_price).length;
+    setProductsWithoutPrice(withoutPrice);
     
     if (data) {
       const ids = data.map(p => p.id);
@@ -413,6 +507,24 @@ export default function ProductList({ onSelectModel, onSwitchToVariations }: Pro
               <Button variant="outline" size="sm" onClick={clearFilters}>
                 Limpar Filtros
               </Button>
+              
+              {/* Botão Corrigir Preços */}
+              {productsWithoutPrice > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={recalculatePricesFromVariations}
+                  disabled={priceFixLoading}
+                  className="border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950"
+                >
+                  {priceFixLoading ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                  )}
+                  Corrigir Preços ({productsWithoutPrice})
+                </Button>
+              )}
               
               {/* Dropdown Enviar para Bling */}
               {blingEnabled && (
