@@ -1820,8 +1820,8 @@ export const TaskDetailsDialog = ({
                     </Card>
                   )}
 
-                  {/* Quote Section - Visible to Salespersons and Admins */}
-                  {(isSalesperson || isSuperAdmin || isAdmin) && task.status !== 'pending' && (
+                  {/* Quote Section - Only visible to Salespersons and Admins when status is approved */}
+                  {(isSalesperson || isSuperAdmin || isAdmin) && !isDesigner && task.status === 'approved' && (
                     <QuoteSection
                       taskId={task.id}
                       customerName={task.customer_name || "Cliente"}

@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DesignTask } from "@/types/design-task";
 import { useDraggable } from '@dnd-kit/core';
-import { Shirt, User, ChevronDown, ChevronUp, Truck, Package, UserPlus } from "lucide-react";
+import { Shirt, User, ChevronDown, ChevronUp, Truck, Package, UserPlus, Pencil, Check, X } from "lucide-react";
 import { ElapsedTimer } from "./ElapsedTimer";
 import { CardFontSizes } from "@/hooks/useCardFontSizes";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
@@ -15,6 +15,7 @@ import { ShippingQuoteDialog } from "../orders/ShippingQuoteDialog";
 import { BlingExportButton } from "../orders/BlingExportButton";
 import { RequestCustomerRegistrationButton } from "../orders/RequestCustomerRegistrationButton";
 import { abbreviateProductName } from "@/lib/productNameAbbreviator";
+import { Input } from "@/components/ui/input";
 
 interface TaskCardProps {
   task: DesignTask;
@@ -29,6 +30,9 @@ interface TaskCardProps {
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
   onOrderNumberUpdate?: (taskId: string, orderNumber: string) => void;
+  canEditCustomerName?: boolean;
+  onCustomerNameUpdate?: (taskId: string, newName: string) => void;
+  isDesigner?: boolean;
 }
 
 const getCreatorType = (task: DesignTask): string => {
@@ -44,9 +48,21 @@ const getPriorityConfig = (priority: string) => {
   return configs[priority as keyof typeof configs] || configs.normal;
 };
 
-export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onToggleCollapse, onOrderNumberUpdate }: TaskCardProps) => {
+export const TaskCard = ({ 
+  task, 
+  onClick, 
+  fontSizes, 
+  isCollapsed = false, 
+  onToggleCollapse, 
+  onOrderNumberUpdate,
+  canEditCustomerName = false,
+  onCustomerNameUpdate,
+  isDesigner = false
+}: TaskCardProps) => {
   const [localOrderNumber, setLocalOrderNumber] = useState(task.order_number || '');
   const [showShippingDialog, setShowShippingDialog] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState(task.customer_name || '');
   
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task.id,
@@ -86,6 +102,48 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
     }
   };
 
+  const handleSaveCustomerName = async () => {
+    if (!editedName.trim() || editedName === task.customer_name) {
+      setIsEditingName(false);
+      setEditedName(task.customer_name || '');
+      return;
+    }
+
+    try {
+      // Update orders table
+      const { error } = await supabase
+        .from("orders")
+        .update({ customer_name: editedName.trim() })
+        .eq("id", task.order_id);
+
+      if (error) throw error;
+
+      // Also update the lead if exists
+      if (task.lead_id) {
+        await supabase
+          .from("leads")
+          .update({ name: editedName.trim() })
+          .eq("id", task.lead_id);
+      }
+
+      toast.success("Nome do cliente atualizado!");
+      setIsEditingName(false);
+      
+      if (onCustomerNameUpdate) {
+        onCustomerNameUpdate(task.id, editedName.trim());
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar nome:", error);
+      toast.error("Erro ao atualizar nome do cliente");
+      setEditedName(task.customer_name || '');
+    }
+  };
+
+  const handleCancelEditName = () => {
+    setIsEditingName(false);
+    setEditedName(task.customer_name || '');
+  };
+
   return (
     <div ref={setNodeRef} style={style} {...listeners} {...attributes}>
       <Card 
@@ -118,11 +176,59 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
             <div className="relative">
               <div 
                 className="border-2 border-border rounded-lg px-3 py-2 bg-card text-center shadow-sm cursor-pointer"
-                onClick={onClick}
+                onClick={isEditingName ? undefined : onClick}
               >
-                <span className="font-bold text-card-foreground" style={{ fontSize: `${fontSizes?.customerName || 14}px` }}>{task.customer_name}</span>
+                {isEditingName ? (
+                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    <Input
+                      value={editedName}
+                      onChange={(e) => setEditedName(e.target.value)}
+                      className="text-center font-bold"
+                      style={{ fontSize: `${fontSizes?.customerName || 14}px` }}
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveCustomerName();
+                        if (e.key === 'Escape') handleCancelEditName();
+                      }}
+                    />
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-green-600 hover:text-green-700"
+                      onClick={handleSaveCustomerName}
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-red-600 hover:text-red-700"
+                      onClick={handleCancelEditName}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="font-bold text-card-foreground" style={{ fontSize: `${fontSizes?.customerName || 14}px` }}>{task.customer_name}</span>
+                    {canEditCustomerName && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsEditingName(true);
+                          setEditedName(task.customer_name || '');
+                        }}
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                )}
                 {/* Campo de número do pedido quando status = approved */}
-                {task.status === 'approved' && onOrderNumberUpdate && (
+                {task.status === 'approved' && onOrderNumberUpdate && !isEditingName && (
                   <div className="mt-2 flex items-center justify-center gap-2" onClick={(e) => e.stopPropagation()}>
                     <span className="text-xs text-muted-foreground">📝 Pedido:</span>
                     <input
@@ -136,7 +242,7 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
                   </div>
                 )}
                 {/* Exibir número do pedido quando preenchido (fora do status approved) */}
-                {task.order_number && task.status !== 'approved' && (
+                {task.order_number && task.status !== 'approved' && !isEditingName && (
                   <div className="mt-2 flex items-center justify-center">
                     <Badge variant="outline" className="bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700 font-medium">
                       📝 Pedido: {task.order_number}
@@ -261,11 +367,11 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
               </div>
             </CollapsibleContent>
 
-            {/* Botões de Ação - Mostrar quando cliente cadastrado OU status approved */}
-            {!isCollapsed && (task.customer_id || task.status === 'approved') && (
+            {/* Botões de Ação - Apenas para status approved E não designers */}
+            {!isCollapsed && !isDesigner && task.status === 'approved' && (
               <div className="px-3 pb-3 space-y-2">
-                {/* Cliente SEM cadastro E status approved: apenas Solicitar Cadastro */}
-                {!task.customer_id && task.status === 'approved' && (
+                {/* Cliente SEM cadastro: apenas Solicitar Cadastro */}
+                {!task.customer_id && (
                   <RequestCustomerRegistrationButton
                     taskId={task.id}
                     leadId={task.lead_id}
@@ -299,16 +405,14 @@ export const TaskCard = ({ task, onClick, fontSizes, isCollapsed = false, onTogg
                   </div>
                 )}
 
-                {/* Exportar Bling - sempre disponível quando status = approved */}
-                {task.status === 'approved' && (
-                  <BlingExportButton
-                    taskId={task.id}
-                    orderId={task.order_id}
-                    onExportSuccess={() => {
-                      toast.success("Pedido exportado com sucesso!");
-                    }}
-                  />
-                )}
+                {/* Exportar Bling */}
+                <BlingExportButton
+                  taskId={task.id}
+                  orderId={task.order_id}
+                  onExportSuccess={() => {
+                    toast.success("Pedido exportado com sucesso!");
+                  }}
+                />
               </div>
             )}
           </CardContent>
