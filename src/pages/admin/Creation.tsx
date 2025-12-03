@@ -65,6 +65,10 @@ const Creation = () => {
     const saved = localStorage.getItem('kanban-auto-collapse-empty');
     return saved ? JSON.parse(saved) : false;
   });
+  const [showColorTheme, setShowColorTheme] = useState<boolean>(() => {
+    const saved = localStorage.getItem('kanban-show-color-theme');
+    return saved ? JSON.parse(saved) : true;
+  });
   const [columnColors, setColumnColors] = useState<string[]>(() => {
     const saved = localStorage.getItem('kanban-column-colors');
     return saved ? JSON.parse(saved) : [];
@@ -150,6 +154,10 @@ const Creation = () => {
   useEffect(() => {
     localStorage.setItem('kanban-auto-collapse-empty', JSON.stringify(autoCollapseEmpty));
   }, [autoCollapseEmpty]);
+
+  useEffect(() => {
+    localStorage.setItem('kanban-show-color-theme', JSON.stringify(showColorTheme));
+  }, [showColorTheme]);
 
   const handleColorsChange = (colors: string[]) => {
     setColumnColors(colors);
@@ -794,10 +802,12 @@ const Creation = () => {
 
   return (
     <div className="p-8 space-y-6">
-      <ColorThemePanel 
-        onColorsChange={handleColorsChange}
-        currentColors={columnColors}
-      />
+      {showColorTheme && (
+        <ColorThemePanel 
+          onColorsChange={handleColorsChange}
+          currentColors={columnColors}
+        />
+      )}
 
       <div className="space-y-4">
         {/* Linha 1: Título + Busca + Atualização + Configurações */}
@@ -841,6 +851,16 @@ const Creation = () => {
               title="Recolher colunas vazias automaticamente"
             >
               {autoCollapseEmpty ? "Colunas: Auto-recolher ✓" : "Colunas: Normal"}
+            </Button>
+
+            {/* Toggle para tema das colunas */}
+            <Button
+              variant={showColorTheme ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowColorTheme(!showColorTheme)}
+              title="Mostrar/ocultar tema das colunas"
+            >
+              {showColorTheme ? "Tema: Visível ✓" : "Tema: Oculto"}
             </Button>
           </div>
         </div>
