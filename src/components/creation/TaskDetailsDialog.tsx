@@ -364,6 +364,7 @@ export const TaskDetailsDialog = ({
     try {
       // Upload de todas as logos e construir customization_data atualizado
       const uploadedUrls: Record<string, string> = {};
+      let primaryLogoUrl: string | null = null;
       
       for (const section of logoSections) {
         if (section.file) {
@@ -382,6 +383,11 @@ export const TaskDetailsDialog = ({
             .getPublicUrl(filePath);
 
           uploadedUrls[section.fieldPath] = publicUrl;
+          
+          // Guardar a primeira URL como logo principal
+          if (!primaryLogoUrl) {
+            primaryLogoUrl = publicUrl;
+          }
         }
       }
 
@@ -409,6 +415,16 @@ export const TaskDetailsDialog = ({
         current[keys[keys.length - 1]] = url;
       }
 
+      // 🆕 Se estamos no modo forceShowUpload (tarefa rejeitada), 
+      // garantir que front.logoType seja 'custom' para exibir a logo
+      if (isEditingRejected && primaryLogoUrl) {
+        if (!updatedCustomization.front) {
+          updatedCustomization.front = {};
+        }
+        updatedCustomization.front.logoType = 'custom';
+        updatedCustomization.front.logoUrl = primaryLogoUrl;
+      }
+
       // Atualizar pedido com customization_data atualizado
       const { error: orderUpdateError } = await supabase
         .from('orders')
@@ -417,13 +433,20 @@ export const TaskDetailsDialog = ({
 
       if (orderUpdateError) throw orderUpdateError;
 
-      // Atualizar lead
+      // 🆕 Atualizar lead com a URL da logo e remover status de rejeitado
+      const leadUpdateData: any = {
+        needs_logo: false,
+        salesperson_status: 'sent_to_designer'
+      };
+      
+      if (primaryLogoUrl) {
+        leadUpdateData.uploaded_logo_url = primaryLogoUrl;
+        leadUpdateData.logo_action = 'uploaded'; // Indicar que logo foi enviada
+      }
+
       const { error: leadError } = await supabase
         .from('leads')
-        .update({
-          needs_logo: false,
-          salesperson_status: 'sent_to_designer'
-        })
+        .update(leadUpdateData)
         .eq('id', task.lead_id);
 
       if (leadError) throw leadError;
@@ -438,16 +461,31 @@ export const TaskDetailsDialog = ({
 
       if (taskError) throw taskError;
 
+      // 🆕 Se for tarefa rejeitada, marcar rejeição como resolvida
+      if (isEditingRejected) {
+        await supabase
+          .from('task_rejections')
+          .update({ 
+            resolved: true, 
+            resolved_at: new Date().toISOString(),
+            resolved_by: currentUser.id
+          })
+          .eq('task_id', task.id)
+          .eq('resolved', false);
+      }
+
       // Adicionar histórico
       await supabase
         .from('design_task_history')
         .insert([{
           task_id: task.id,
           user_id: currentUser.id,
-          action: 'sent_to_designer',
+          action: isEditingRejected ? 'resent_after_rejection' : 'sent_to_designer',
           old_status: task.status as DbTaskStatus,
           new_status: 'pending' as DbTaskStatus,
-          notes: `${logoSections.length} logo(s) enviada(s). Tarefa encaminhada para o designer.`
+          notes: isEditingRejected 
+            ? `Nova logo enviada após rejeição. Tarefa reenviada para o designer.`
+            : `${logoSections.length} logo(s) enviada(s). Tarefa encaminhada para o designer.`
         }]);
 
       toast.success("Logos enviadas! Tarefa encaminhada para o designer.");
