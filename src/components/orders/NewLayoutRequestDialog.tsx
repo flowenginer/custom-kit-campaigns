@@ -683,7 +683,8 @@ export const NewLayoutRequestDialog = ({
           created_by_salesperson: true,
           needs_logo: firstLayout.hasLogo === "depois" || firstLayout.hasLogo === "sem_logo",
           logo_action: firstLayout.hasLogo === "depois" ? "waiting_client" : (firstLayout.hasLogo === "criar_logo" ? "designer_create" : null),
-          logo_description: firstLayout.hasLogo === "criar_logo" ? firstLayout.logoDescription : null,
+          // Preencher logo_description para "criar_logo" OU para campanhas "Layout do Zero"
+          logo_description: (firstLayout.hasLogo === "criar_logo" || firstLayout.campaignName?.toLowerCase().includes('layout do zero')) ? firstLayout.logoDescription : null,
           uploaded_logo_url: firstLayout.uploadedLogoUrls && firstLayout.uploadedLogoUrls.length > 0 ? firstLayout.uploadedLogoUrls[0] : null,
           customization_summary: customizationData,
           completed: true,
@@ -763,7 +764,8 @@ export const NewLayoutRequestDialog = ({
             logoUrls: layout.uploadedLogoUrls || [],
             logoDescription: layout.logoDescription || null,
           },
-          scratchDescription: layout.isFromScratch ? layout.logoDescription : null,
+          // Preencher scratchDescription para layouts "do zero" (botão) OU campanha "Layout do Zero"
+          scratchDescription: (layout.isFromScratch || layout.campaignName?.toLowerCase().includes('layout do zero')) ? layout.logoDescription : null,
         },
       }));
 

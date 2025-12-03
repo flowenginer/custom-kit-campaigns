@@ -162,8 +162,8 @@ export const TaskCard = ({
                   ✓ Cliente Cadastrado
                 </Badge>
               )}
-              {/* Badge de Criação do Zero */}
-              {task.customization_data?.fromScratch && (
+              {/* Badge de Criação do Zero - mostra para fromScratch OU campanha Layout do Zero */}
+              {(task.customization_data?.fromScratch || task.campaign_name?.toLowerCase().includes('layout do zero')) && (
                 <Badge className="bg-green-600 text-white rounded-full px-4 py-1 font-semibold shadow-md" style={{ fontSize: `${fontSizes?.badge || 12}px` }}>
                   🎨 Criação do Zero
                 </Badge>

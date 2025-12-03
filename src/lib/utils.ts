@@ -58,11 +58,7 @@ export const extractUniformType = (
   modelCode: string | null | undefined,
   campaignName?: string | null
 ): string => {
-  // Se for Layout do Zero
-  if (campaignName?.toLowerCase().includes('layout do zero') || 
-      modelName?.toLowerCase().includes('layout do zero')) {
-    return 'Layout do Zero';
-  }
+  // Nota: Mesmo para campanhas "Layout do Zero", precisamos extrair o tipo real do uniforme
 
   // Método 1: Extrair do código do produto (mais confiável)
   if (modelCode) {
