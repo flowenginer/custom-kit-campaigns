@@ -24,6 +24,7 @@ import {
   TrendingUp
 } from "lucide-react";
 import { SizeGridSelector, SizeGrid, createEmptySizeGrid, calculateGridTotal, calculatePlusSizeCount } from "@/components/quotes/SizeGridSelector";
+import { SizeGridViewer } from "@/components/quotes/SizeGridViewer";
 import logoSS from "@/assets/logo-ss.png";
 
 interface QuoteItem {
@@ -682,15 +683,11 @@ const Quote = () => {
                   />
                 )}
 
-                {/* Show filled grid for approved/correction requested quotes */}
+                {/* Show filled grid for approved/correction requested quotes - Compact Mode */}
                 {(isApproved || isCorrectionRequested) && sizeSelections[index] && calculateGridTotal(sizeSelections[index]) > 0 && (
-                  <SizeGridSelector
-                    itemIndex={index}
-                    productName={item.product_name}
-                    requiredQuantity={item.quantity}
+                  <SizeGridViewer
                     sizeGrid={sizeSelections[index]}
-                    onChange={() => {}}
-                    disabled
+                    compactMode={true}
                   />
                 )}
 
