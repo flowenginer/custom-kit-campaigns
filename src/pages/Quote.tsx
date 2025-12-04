@@ -528,7 +528,7 @@ const Quote = () => {
   const unitPrice = quote.items[0]?.unit_price || 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted py-6 px-2 sm:px-4">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8 px-2">
@@ -617,14 +617,14 @@ const Quote = () => {
         </Card>
 
         {/* Quote Items */}
-        <Card className="mb-6">
-          <CardHeader>
+        <Card className="mb-4">
+          <CardHeader className="px-3 sm:px-6">
             <CardTitle className="text-base flex items-center gap-2">
               <Package className="h-5 w-5" />
               Itens do Orçamento
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 px-3 sm:px-6">
             {(quote.items as QuoteItem[]).map((item, index) => (
               <div key={index} className="space-y-4">
                 {/* Mobile-optimized item layout */}

@@ -3,8 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { AlertCircle, CheckCircle, Plus, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
+import { CheckCircle, Plus, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
 
 export interface SizeGrid {
   masculino: Record<string, number>;
@@ -122,23 +121,15 @@ export const SizeGridSelector = ({
           className={`flex items-center justify-between p-3 bg-muted/30 cursor-pointer ${disabled ? 'cursor-default' : ''}`}
           onClick={() => toggleSection(gender)}
         >
-          <div className="flex items-center gap-3">
-            <Checkbox 
-              checked={isExpanded}
-              onCheckedChange={() => toggleSection(gender)}
-              disabled={disabled}
-              className="data-[state=checked]:bg-primary"
-            />
-            <div className="flex items-center gap-2">
-              <span className={`w-2.5 h-2.5 rounded-full ${colorClass}`}></span>
-              <span className="font-medium text-sm uppercase tracking-wide">{label}</span>
-            </div>
+          <div className="flex items-center gap-2">
+            <span className={`w-2.5 h-2.5 rounded-full ${colorClass}`}></span>
+            <span className="font-medium text-sm uppercase tracking-wide">{label}</span>
           </div>
           <div className="flex items-center gap-2">
             {isExpanded ? (
-              <ChevronUp className="h-4 w-4 text-muted-foreground" />
+              <ChevronUp className="h-5 w-5 text-muted-foreground" />
             ) : (
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              <ChevronDown className="h-5 w-5 text-muted-foreground" />
             )}
           </div>
         </div>
