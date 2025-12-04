@@ -10,15 +10,13 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { UserPlus, Trash2, Edit, KeyRound, Loader2, Code2, AlertCircle, Building2, Truck } from "lucide-react";
+import { UserPlus, Trash2, Edit, KeyRound, Loader2, Code2, AlertCircle, Building2 } from "lucide-react";
 import { UrgentReasonsManager } from "@/components/admin/UrgentReasonsManager";
 import { KanbanVisibilityManager } from "@/components/admin/KanbanVisibilityManager";
 import { MenuVisibilityManager } from "@/components/admin/MenuVisibilityManager";
 import { UniformTypesManager } from "@/components/admin/UniformTypesManager";
 import { MenuStructureManager } from "@/components/admin/MenuStructureManager";
 import { BusinessSegmentsManager } from "@/components/admin/BusinessSegmentsManager";
-import { ShippingCarriersManager } from "@/components/admin/ShippingCarriersManager";
-import { ShippingPanel } from "@/components/admin/ShippingPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AppRole } from "@/hooks/useUserRole";
@@ -434,7 +432,6 @@ const Settings = () => {
           <TabsTrigger value="kanban">Kanban</TabsTrigger>
           <TabsTrigger value="menu">Menu</TabsTrigger>
           <TabsTrigger value="menu-structure">Estrutura Menu</TabsTrigger>
-          <TabsTrigger value="shipping"><Truck className="w-4 h-4 mr-1 inline" />Envios</TabsTrigger>
           <TabsTrigger value="password">Senha</TabsTrigger>
           <TabsTrigger value="scripts"><Code2 className="w-4 h-4 mr-1 inline" />Scripts</TabsTrigger>
           <TabsTrigger value="urgent-reasons"><AlertCircle className="w-4 h-4 mr-1 inline" />Urgência</TabsTrigger>
@@ -796,21 +793,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <BusinessSegmentsManager />
         </TabsContent>
 
-        {/* TAB: ENVIOS / TRANSPORTADORAS */}
-        <TabsContent value="shipping" className="space-y-4">
-          <Tabs defaultValue="panel" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="panel">Painel de Envios</TabsTrigger>
-              <TabsTrigger value="carriers">Transportadoras</TabsTrigger>
-            </TabsList>
-            <TabsContent value="panel">
-              <ShippingPanel />
-            </TabsContent>
-            <TabsContent value="carriers">
-              <ShippingCarriersManager />
-            </TabsContent>
-          </Tabs>
-        </TabsContent>
       </Tabs>
 
       {/* Dialog: Editar Usuário */}

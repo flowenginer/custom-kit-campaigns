@@ -40,6 +40,8 @@ import Customers from "./pages/admin/Customers";
 import CustomerRegister from "./pages/CustomerRegister";
 import Products from "./pages/admin/Products";
 import Quote from "./pages/Quote";
+import MelhorEnvio from "./pages/admin/MelhorEnvio";
+import Bling from "./pages/admin/Bling";
 
 // Componente para rastrear mudanças de rota em SPAs
 const AnalyticsTracker = () => {
@@ -106,6 +108,8 @@ const App = () => (
             <Route path="company-settings" element={<CompanySettings />} />
             <Route path="product-pricing" element={<ProductPricing />} />
             <Route path="customers" element={<Customers />} />
+            <Route path="melhor-envio" element={<MelhorEnvio />} />
+            <Route path="bling" element={<Bling />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
