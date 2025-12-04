@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -20,9 +20,11 @@ import {
   RefreshCcw,
   Clock,
   FileText,
-  Truck
+  Truck,
+  Plus,
+  TrendingUp
 } from "lucide-react";
-import { SizeGridSelector, SizeGrid, createEmptySizeGrid, calculateGridTotal } from "@/components/quotes/SizeGridSelector";
+import { SizeGridSelector, SizeGrid, createEmptySizeGrid, calculateGridTotal, calculatePlusSizeCount } from "@/components/quotes/SizeGridSelector";
 
 interface QuoteItem {
   layout_id: string;
@@ -63,6 +65,8 @@ interface Quote {
   selected_shipping?: ShippingOption | null;
   shipping_value?: number;
 }
+
+const PLUS_SIZE_ADDITIONAL = 10; // R$10 por peça plus size
 
 const Quote = () => {
   const { token } = useParams<{ token: string }>();
@@ -170,6 +174,42 @@ const Quote = () => {
     setLoading(false);
   };
 
+  // Dynamic calculations
+  const dynamicTotals = useMemo(() => {
+    if (!quote) return { plusSizeCount: 0, plusSizeTotal: 0, extraQuantity: 0, extraQuantityTotal: 0, totalSelectedQuantity: 0 };
+    
+    let totalPlusSizeCount = 0;
+    let totalExtraQuantity = 0;
+    let totalSelectedQuantity = 0;
+    
+    quote.items.forEach((item, index) => {
+      const grid = sizeSelections[index];
+      if (!grid) return;
+      
+      const gridTotal = calculateGridTotal(grid);
+      const plusCount = calculatePlusSizeCount(grid);
+      
+      totalSelectedQuantity += gridTotal;
+      totalPlusSizeCount += plusCount;
+      
+      // Quantidade excedente para este item
+      if (gridTotal > item.quantity) {
+        totalExtraQuantity += gridTotal - item.quantity;
+      }
+    });
+    
+    // Usar o preço unitário do primeiro item para unidades extras
+    const unitPrice = quote.items[0]?.unit_price || 0;
+    
+    return {
+      plusSizeCount: totalPlusSizeCount,
+      plusSizeTotal: totalPlusSizeCount * PLUS_SIZE_ADDITIONAL,
+      extraQuantity: totalExtraQuantity,
+      extraQuantityTotal: totalExtraQuantity * unitPrice,
+      totalSelectedQuantity
+    };
+  }, [quote, sizeSelections]);
+
   const handleSizeGridChange = async (itemIndex: number, grid: SizeGrid) => {
     setSizeSelections(prev => ({ ...prev, [itemIndex]: grid }));
     
@@ -254,8 +294,9 @@ const Quote = () => {
       }
       
       const total = calculateGridTotal(grid);
-      if (total !== item.quantity) {
-        toast.error(`A grade do Layout ${i + 1} deve ter exatamente ${item.quantity} unidades (atual: ${total})`);
+      // Agora permite exceder, mas não pode ser menor
+      if (total < item.quantity) {
+        toast.error(`O Layout ${i + 1} precisa ter pelo menos ${item.quantity} unidades (atual: ${total})`);
         return false;
       }
     }
@@ -291,10 +332,13 @@ const Quote = () => {
     return quote.shipping_options?.find(opt => opt.id === selectedShippingId) || null;
   };
 
-  const calculateTotalWithShipping = (): number => {
+  const calculateFinalTotal = (): number => {
     if (!quote) return 0;
     const selectedShipping = getSelectedShipping();
-    return Number(quote.total_amount) + (selectedShipping?.price || 0);
+    const baseTotal = Number(quote.total_amount);
+    const shippingValue = selectedShipping?.price || 0;
+    
+    return baseTotal + dynamicTotals.plusSizeTotal + dynamicTotals.extraQuantityTotal + shippingValue;
   };
 
   const hasShippingOptions = quote?.shipping_options && quote.shipping_options.length > 0;
@@ -321,7 +365,7 @@ const Quote = () => {
     setSubmitting(true);
     try {
       const selectedShipping = getSelectedShipping();
-      const totalWithShipping = calculateTotalWithShipping();
+      const finalTotal = calculateFinalTotal();
       
       const { error: updateError } = await supabase
         .from("quotes")
@@ -330,39 +374,49 @@ const Quote = () => {
           approved_at: new Date().toISOString(),
           approved_by_name: approverName.trim(),
           selected_shipping: selectedShipping as any,
-          shipping_value: selectedShipping?.price || 0
+          shipping_value: selectedShipping?.price || 0,
+          total_amount: finalTotal // Atualizar com valor final
         })
         .eq("id", quote!.id);
 
       if (updateError) throw updateError;
 
-      // Update design_tasks with shipping info
+      // Update design_tasks with shipping info and final value
       await supabase
         .from("design_tasks")
         .update({
           shipping_option: selectedShipping as any,
-          shipping_value: selectedShipping?.price || 0
+          shipping_value: selectedShipping?.price || 0,
+          order_value: finalTotal
         })
         .eq("id", quote!.task_id);
 
-      // Send webhook with size grids and shipping
+      // Send webhook with complete data
       const webhookPayload = {
         event: 'quote_approved',
         quote: {
           id: quote!.id,
           task_id: quote!.task_id,
           customer_name: customerName,
-          total_amount: totalWithShipping,
+          original_quantity: quote!.items.reduce((acc, item) => acc + item.quantity, 0),
+          final_quantity: dynamicTotals.totalSelectedQuantity,
+          extra_quantity: dynamicTotals.extraQuantity,
+          extra_quantity_total: dynamicTotals.extraQuantityTotal,
+          plus_size_count: dynamicTotals.plusSizeCount,
+          plus_size_total: dynamicTotals.plusSizeTotal,
           products_total: quote!.total_amount,
           shipping_value: selectedShipping?.price || 0,
           shipping_option: selectedShipping,
+          final_total: finalTotal,
           approved_by: approverName.trim(),
           approved_at: new Date().toISOString()
         },
         items: quote!.items.map((item, index) => ({
           layout_id: item.layout_id,
           product_name: item.product_name,
-          quantity: item.quantity,
+          original_quantity: item.quantity,
+          selected_quantity: calculateGridTotal(sizeSelections[index] || createEmptySizeGrid()),
+          plus_size_count: calculatePlusSizeCount(sizeSelections[index] || createEmptySizeGrid()),
           unit_price: item.unit_price,
           subtotal: item.subtotal,
           size_grid: sizeSelections[index] || {}
@@ -388,7 +442,8 @@ const Quote = () => {
         ...prev, 
         status: 'approved', 
         approved_at: new Date().toISOString(),
-        approved_by_name: approverName.trim()
+        approved_by_name: approverName.trim(),
+        total_amount: finalTotal
       } : null);
     } catch (err) {
       console.error("Error approving quote:", err);
@@ -433,17 +488,19 @@ const Quote = () => {
   const isCorrectionRequested = quote.status === 'correction_requested';
   const canTakeAction = !isExpired && !isApproved && !isCorrectionRequested;
 
-  // Check if all size grids are complete
+  // Check if all size grids meet minimum quantity
   const areAllGridsComplete = () => {
     if (!quote) return false;
     return quote.items.every((item, index) => {
       const grid = sizeSelections[index];
       if (!grid) return false;
-      return calculateGridTotal(grid) === item.quantity;
+      return calculateGridTotal(grid) >= item.quantity;
     });
   };
 
   const allGridsComplete = areAllGridsComplete();
+  const originalQuantity = quote.items.reduce((acc, item) => acc + item.quantity, 0);
+  const unitPrice = quote.items[0]?.unit_price || 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted py-8 px-4">
@@ -559,7 +616,7 @@ const Quote = () => {
                         <p className="font-medium">{formatCurrency(item.unit_price)}</p>
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Quantidade:</span>
+                        <span className="text-muted-foreground">Quantidade mínima:</span>
                         <p className="font-medium">{item.quantity} un.</p>
                       </div>
                     </div>
@@ -582,6 +639,7 @@ const Quote = () => {
                     requiredQuantity={item.quantity}
                     sizeGrid={sizeSelections[index] || createEmptySizeGrid()}
                     onChange={(grid) => handleSizeGridChange(index, grid)}
+                    allowOverflow={true}
                   />
                 )}
 
@@ -687,14 +745,36 @@ const Quote = () => {
           </Card>
         )}
 
-        {/* Total */}
+        {/* Dynamic Total with Breakdown */}
         <Card className="mb-6 bg-primary/5 border-primary/20">
           <CardContent className="py-6 space-y-3">
-            {/* Subtotal dos produtos */}
+            {/* Subtotal dos produtos base */}
             <div className="flex items-center justify-between text-muted-foreground">
-              <span>Produtos</span>
+              <span>Produtos ({originalQuantity} un)</span>
               <span>{formatCurrency(quote.subtotal_before_discount)}</span>
             </div>
+            
+            {/* Unidades Adicionais */}
+            {dynamicTotals.extraQuantity > 0 && canTakeAction && (
+              <div className="flex items-center justify-between text-blue-600">
+                <span className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Unidades Adicionais ({dynamicTotals.extraQuantity} un × {formatCurrency(unitPrice)})
+                </span>
+                <span>+{formatCurrency(dynamicTotals.extraQuantityTotal)}</span>
+              </div>
+            )}
+            
+            {/* Adicional Plus Size */}
+            {dynamicTotals.plusSizeCount > 0 && canTakeAction && (
+              <div className="flex items-center justify-between text-purple-600">
+                <span className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4" />
+                  Plus Size ({dynamicTotals.plusSizeCount} un × R$ 10,00)
+                </span>
+                <span>+{formatCurrency(dynamicTotals.plusSizeTotal)}</span>
+              </div>
+            )}
             
             {/* Desconto */}
             {quote.discount_type && quote.discount_value > 0 && (
@@ -737,9 +817,18 @@ const Quote = () => {
                 <span className="text-xl font-semibold">TOTAL</span>
               </div>
               <span className="text-3xl font-bold text-primary">
-                {formatCurrency(calculateTotalWithShipping())}
+                {formatCurrency(calculateFinalTotal())}
               </span>
             </div>
+            
+            {/* Summary of extras when taking action */}
+            {canTakeAction && (dynamicTotals.extraQuantity > 0 || dynamicTotals.plusSizeCount > 0) && (
+              <div className="text-xs text-muted-foreground text-center pt-2 border-t">
+                Total de peças: {dynamicTotals.totalSelectedQuantity} 
+                {dynamicTotals.extraQuantity > 0 && ` (+${dynamicTotals.extraQuantity} extras)`}
+                {dynamicTotals.plusSizeCount > 0 && ` • ${dynamicTotals.plusSizeCount} plus size`}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -753,7 +842,7 @@ const Quote = () => {
               </h3>
               <div className="text-xs text-muted-foreground mt-1 space-y-1">
                 {!allGridsComplete && (
-                  <p>• Preencha a grade de tamanhos de todos os itens</p>
+                  <p>• Preencha a grade de tamanhos com pelo menos a quantidade mínima</p>
                 )}
                 {hasShippingOptions && !selectedShippingId && (
                   <p>• Selecione uma opção de frete</p>
