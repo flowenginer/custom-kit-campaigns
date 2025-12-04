@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { format, isPast } from "date-fns";
@@ -21,6 +20,7 @@ import {
   Clock,
   FileText
 } from "lucide-react";
+import { SizeGridSelector, SizeGrid, createEmptySizeGrid, calculateGridTotal } from "@/components/quotes/SizeGridSelector";
 
 interface QuoteItem {
   layout_id: string;
@@ -59,6 +59,7 @@ const Quote = () => {
   const [showCorrectionForm, setShowCorrectionForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sizeSelections, setSizeSelections] = useState<Record<number, SizeGrid>>({});
 
   useEffect(() => {
     if (token) {
@@ -113,18 +114,77 @@ const Quote = () => {
         }
       }
 
-      setQuote({
+      const quoteData = {
         ...data,
         items: (data.items || []) as unknown as QuoteItem[],
         subtotal_before_discount: Number(data.subtotal_before_discount) || Number(data.total_amount),
         discount_type: data.discount_type || null,
         discount_value: Number(data.discount_value) || 0
-      } as Quote);
+      } as Quote;
+
+      setQuote(quoteData);
+
+      // Load existing size selections
+      const { data: existingSelections } = await supabase
+        .from("quote_size_selections")
+        .select("*")
+        .eq("quote_id", data.id);
+
+      // Initialize size selections
+      const initialSelections: Record<number, SizeGrid> = {};
+      quoteData.items.forEach((_, index) => {
+        const existing = existingSelections?.find(s => s.item_index === index);
+        initialSelections[index] = existing?.size_grid 
+          ? (existing.size_grid as unknown as SizeGrid)
+          : createEmptySizeGrid();
+      });
+      setSizeSelections(initialSelections);
+
     } catch (err) {
       console.error("Error loading quote:", err);
       setError("Erro ao carregar orçamento");
     }
     setLoading(false);
+  };
+
+  const handleSizeGridChange = async (itemIndex: number, grid: SizeGrid) => {
+    setSizeSelections(prev => ({ ...prev, [itemIndex]: grid }));
+    
+    if (!quote) return;
+
+    const totalQuantity = calculateGridTotal(grid);
+    const item = quote.items[itemIndex];
+
+    // Upsert size selection - first try to find existing
+    const { data: existing } = await supabase
+      .from("quote_size_selections")
+      .select("id")
+      .eq("quote_id", quote.id)
+      .eq("item_index", itemIndex)
+      .maybeSingle();
+
+    const gridJson = JSON.parse(JSON.stringify(grid));
+
+    if (existing) {
+      await supabase
+        .from("quote_size_selections")
+        .update({
+          size_grid: gridJson,
+          total_quantity: totalQuantity
+        })
+        .eq("id", existing.id);
+    } else {
+      const insertData = {
+        quote_id: quote.id,
+        item_index: itemIndex,
+        layout_id: item.layout_id || null,
+        size_grid: gridJson,
+        total_quantity: totalQuantity
+      };
+      await supabase
+        .from("quote_size_selections")
+        .insert(insertData as any);
+    }
   };
 
   const handleRequestCorrection = async () => {
@@ -158,7 +218,33 @@ const Quote = () => {
     setSubmitting(false);
   };
 
+  const validateSizeGrids = (): boolean => {
+    if (!quote) return false;
+    
+    for (let i = 0; i < quote.items.length; i++) {
+      const item = quote.items[i];
+      const grid = sizeSelections[i];
+      
+      if (!grid) {
+        toast.error(`Por favor, preencha a grade de tamanhos do Layout ${i + 1}`);
+        return false;
+      }
+      
+      const total = calculateGridTotal(grid);
+      if (total !== item.quantity) {
+        toast.error(`A grade do Layout ${i + 1} deve ter exatamente ${item.quantity} unidades (atual: ${total})`);
+        return false;
+      }
+    }
+    return true;
+  };
+
   const handleApprove = async () => {
+    // Validate size grids
+    if (!validateSizeGrids()) {
+      return;
+    }
+
     const approverName = prompt("Por favor, informe seu nome para confirmar a aprovação:");
     
     if (!approverName?.trim()) {
@@ -178,6 +264,38 @@ const Quote = () => {
         .eq("id", quote!.id);
 
       if (updateError) throw updateError;
+
+      // Send webhook with size grids
+      const webhookPayload = {
+        event: 'quote_approved',
+        quote: {
+          id: quote!.id,
+          task_id: quote!.task_id,
+          customer_name: customerName,
+          total_amount: quote!.total_amount,
+          approved_by: approverName.trim(),
+          approved_at: new Date().toISOString()
+        },
+        items: quote!.items.map((item, index) => ({
+          layout_id: item.layout_id,
+          product_name: item.product_name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          subtotal: item.subtotal,
+          size_grid: sizeSelections[index] || {}
+        })),
+        timestamp: new Date().toISOString()
+      };
+
+      try {
+        await fetch('https://nwh.techspacesports.com.br/webhook/events_criacao', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(webhookPayload)
+        });
+      } catch (webhookError) {
+        console.error("Webhook error:", webhookError);
+      }
 
       toast.success("Orçamento aprovado!", {
         description: "Obrigado! O vendedor será notificado"
@@ -322,7 +440,7 @@ const Quote = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             {(quote.items as QuoteItem[]).map((item, index) => (
-              <div key={index}>
+              <div key={index} className="space-y-4">
                 <div className="flex gap-4">
                   {/* Product Image */}
                   <div className="w-24 h-24 rounded-lg bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
@@ -360,6 +478,30 @@ const Quote = () => {
                     </p>
                   </div>
                 </div>
+
+                {/* Size Grid Selector */}
+                {canTakeAction && (
+                  <SizeGridSelector
+                    itemIndex={index}
+                    productName={item.product_name}
+                    requiredQuantity={item.quantity}
+                    sizeGrid={sizeSelections[index] || createEmptySizeGrid()}
+                    onChange={(grid) => handleSizeGridChange(index, grid)}
+                  />
+                )}
+
+                {/* Show filled grid for approved/correction requested quotes */}
+                {(isApproved || isCorrectionRequested) && sizeSelections[index] && calculateGridTotal(sizeSelections[index]) > 0 && (
+                  <SizeGridSelector
+                    itemIndex={index}
+                    productName={item.product_name}
+                    requiredQuantity={item.quantity}
+                    sizeGrid={sizeSelections[index]}
+                    onChange={() => {}}
+                    disabled
+                  />
+                )}
+
                 {index < (quote.items as QuoteItem[]).length - 1 && (
                   <Separator className="mt-4" />
                 )}
