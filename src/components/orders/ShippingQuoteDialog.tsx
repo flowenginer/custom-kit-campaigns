@@ -172,13 +172,23 @@ export const ShippingQuoteDialog = ({
     }
   };
 
+  // Generate short token (8 chars alphanumeric)
+  const generateShortToken = () => {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < 8; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  };
+
   const handleSendToCustomer = async () => {
     if (options.length === 0) return;
 
     setSendingToCustomer(true);
     try {
-      // Generate unique token
-      const token = crypto.randomUUID();
+      // Generate short token for cleaner URL
+      const token = generateShortToken();
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 48); // 48h expiration
 
