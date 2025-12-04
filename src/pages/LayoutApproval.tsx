@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Check, MessageSquare, Upload, X, Loader2, ZoomIn, Image as ImageIcon } from 'lucide-react';
+import { Check, MessageSquare, Upload, X, Loader2, ZoomIn, Image as ImageIcon, ThumbsDown } from 'lucide-react';
 import { ImageZoomModal } from '@/components/ui/image-zoom-modal';
+import { Badge } from '@/components/ui/badge';
 
 interface ApprovalData {
   id: string;
@@ -40,17 +41,25 @@ interface ApprovalData {
   };
 }
 
+interface MockupStatus {
+  version: number;
+  status: 'pending' | 'approved' | 'rejected' | 'changes_requested';
+  changeDescription?: string;
+}
+
 export default function LayoutApproval() {
   const { token } = useParams<{ token: string }>();
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  const [submitting, setSubmitting] = useState<number | null>(null);
   const [data, setData] = useState<ApprovalData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [showChangeForm, setShowChangeForm] = useState(false);
+  const [zoomImage, setZoomImage] = useState<string | null>(null);
+  const [mockupStatuses, setMockupStatuses] = useState<MockupStatus[]>([]);
+  const [activeChangeForm, setActiveChangeForm] = useState<number | null>(null);
   const [changeDescription, setChangeDescription] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [zoomImage, setZoomImage] = useState<string | null>(null);
+  const [allSubmitted, setAllSubmitted] = useState(false);
 
   useEffect(() => {
     if (token) {
@@ -62,7 +71,6 @@ export default function LayoutApproval() {
     try {
       setLoading(true);
       
-      // Fetch approval link with related data
       const { data: linkData, error: linkError } = await supabase
         .from('layout_approval_links')
         .select('*')
@@ -74,13 +82,11 @@ export default function LayoutApproval() {
         return;
       }
 
-      // Check expiration
       if (new Date(linkData.expires_at) < new Date()) {
         setError('Este link expirou. Por favor, solicite um novo link.');
         return;
       }
 
-      // Fetch task data
       const { data: taskData, error: taskError } = await supabase
         .from('design_tasks')
         .select(`
@@ -105,7 +111,6 @@ export default function LayoutApproval() {
         return;
       }
 
-      // If there's a layout_id, fetch layout data
       let layoutData = null;
       if (linkData.layout_id) {
         const { data: layout } = await supabase
@@ -116,7 +121,7 @@ export default function LayoutApproval() {
         layoutData = layout;
       }
 
-      setData({
+      const approvalData: ApprovalData = {
         ...linkData,
         task: {
           id: taskData.id,
@@ -128,7 +133,13 @@ export default function LayoutApproval() {
           campaign: taskData.campaigns as any,
           layout: layoutData || undefined,
         },
-      });
+      };
+
+      setData(approvalData);
+
+      // Initialize mockup statuses
+      const mockups = getMockupsFromData(approvalData);
+      setMockupStatuses(mockups.map(m => ({ version: m.version, status: 'pending' })));
 
     } catch (err) {
       console.error('Error loading approval data:', err);
@@ -138,12 +149,11 @@ export default function LayoutApproval() {
     }
   };
 
-  const getAllMockups = (): { url: string; version: number }[] => {
+  const getMockupsFromData = (approvalData: ApprovalData): { url: string; version: number }[] => {
     const mockups: { url: string; version: number }[] = [];
     
-    // First check layout-specific design files
-    if (data?.task.layout?.design_files) {
-      const files = data.task.layout.design_files as any[];
+    if (approvalData?.task.layout?.design_files) {
+      const files = approvalData.task.layout.design_files as any[];
       files
         .filter((f: any) => f.url)
         .sort((a: any, b: any) => (b.version || 0) - (a.version || 0))
@@ -152,9 +162,8 @@ export default function LayoutApproval() {
         });
     }
 
-    // If no layout files, check task-level design files
-    if (mockups.length === 0 && data?.task.design_files) {
-      const files = data.task.design_files as any[];
+    if (mockups.length === 0 && approvalData?.task.design_files) {
+      const files = approvalData.task.design_files as any[];
       files
         .filter((f: any) => f.url)
         .sort((a: any, b: any) => (b.version || 0) - (a.version || 0))
@@ -166,64 +175,35 @@ export default function LayoutApproval() {
     return mockups;
   };
 
-  const handleApprove = async () => {
-    if (!data) return;
-    
-    setSubmitting(true);
-    try {
-      // Update approval link
-      await supabase
-        .from('layout_approval_links')
-        .update({ approved_at: new Date().toISOString() })
-        .eq('id', data.id);
+  const getAllMockups = (): { url: string; version: number }[] => {
+    if (!data) return [];
+    return getMockupsFromData(data);
+  };
 
-      // Update layout status if exists
-      if (data.layout_id) {
-        await supabase
-          .from('design_task_layouts')
-          .update({ 
-            status: 'approved',
-            client_approved_at: new Date().toISOString()
-          })
-          .eq('id', data.layout_id);
-      }
+  const handleApproveMockup = (version: number) => {
+    setMockupStatuses(prev => 
+      prev.map(m => m.version === version ? { ...m, status: 'approved' } : m)
+    );
+    toast.success(`Versão ${version} aprovada!`);
+  };
 
-      // Update task status
-      await supabase
-        .from('design_tasks')
-        .update({ 
-          status: 'approved',
-          client_approved_at: new Date().toISOString()
-        })
-        .eq('id', data.task_id);
+  const handleRejectMockup = (version: number) => {
+    setMockupStatuses(prev => 
+      prev.map(m => m.version === version ? { ...m, status: 'rejected' } : m)
+    );
+    toast.info(`Versão ${version} recusada.`);
+  };
 
-      // Log history
-      await supabase
-        .from('design_task_history')
-        .insert({
-          task_id: data.task_id,
-          action: 'client_approved',
-          old_status: data.task.status as any,
-          new_status: 'approved',
-          notes: 'Layout aprovado pelo cliente via link de aprovação'
-        });
-
-      toast.success('Layout aprovado com sucesso!');
-      
-      // Reload data to show updated state
-      loadApprovalData();
-    } catch (err) {
-      console.error('Error approving:', err);
-      toast.error('Erro ao aprovar. Por favor, tente novamente.');
-    } finally {
-      setSubmitting(false);
-    }
+  const handleRequestChangeMockup = (version: number) => {
+    setActiveChangeForm(version);
+    setChangeDescription('');
+    setFiles([]);
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
-      const validFiles = newFiles.filter(f => f.size <= 10 * 1024 * 1024); // 10MB max
+      const validFiles = newFiles.filter(f => f.size <= 10 * 1024 * 1024);
       if (validFiles.length < newFiles.length) {
         toast.error('Alguns arquivos excedem 10MB e foram ignorados.');
       }
@@ -242,7 +222,7 @@ export default function LayoutApproval() {
       .replace(/[^a-zA-Z0-9.-]/g, '_');
   };
 
-  const handleRequestChange = async () => {
+  const submitChangeRequest = async (version: number) => {
     if (!data || !changeDescription.trim()) {
       toast.error('Por favor, descreva as alterações necessárias.');
       return;
@@ -250,7 +230,6 @@ export default function LayoutApproval() {
 
     setUploading(true);
     try {
-      // Upload files if any
       const attachments: { name: string; url: string }[] = [];
       
       for (const file of files) {
@@ -270,61 +249,116 @@ export default function LayoutApproval() {
         }
       }
 
-      // Create change request
       await supabase
         .from('change_requests')
         .insert({
           task_id: data.task_id,
           layout_id: data.layout_id,
-          description: changeDescription,
+          description: `[Versão ${version}] ${changeDescription}`,
           attachments,
           source: 'client',
-          created_by: null // Public/client request
+          created_by: null
         });
 
-      // Update approval link
-      await supabase
-        .from('layout_approval_links')
-        .update({ changes_requested_at: new Date().toISOString() })
-        .eq('id', data.id);
+      setMockupStatuses(prev => 
+        prev.map(m => m.version === version ? { ...m, status: 'changes_requested', changeDescription } : m)
+      );
 
-      // Update layout status if exists
-      if (data.layout_id) {
-        await supabase
-          .from('design_task_layouts')
-          .update({ status: 'changes_requested' })
-          .eq('id', data.layout_id);
-      }
-
-      // Update task status
-      await supabase
-        .from('design_tasks')
-        .update({ status: 'changes_requested' })
-        .eq('id', data.task_id);
-
-      // Log history
-      await supabase
-        .from('design_task_history')
-        .insert({
-          task_id: data.task_id,
-          action: 'client_changes_requested',
-          old_status: data.task.status as any,
-          new_status: 'changes_requested',
-          notes: `Cliente solicitou alterações: ${changeDescription.substring(0, 100)}...`
-        });
-
-      toast.success('Solicitação de alteração enviada com sucesso!');
-      
-      // Reset form and reload
+      toast.success(`Solicitação de alteração para versão ${version} enviada!`);
+      setActiveChangeForm(null);
       setChangeDescription('');
       setFiles([]);
-      setShowChangeForm(false);
-      loadApprovalData();
     } catch (err) {
       console.error('Error requesting change:', err);
       toast.error('Erro ao enviar solicitação. Por favor, tente novamente.');
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleSubmitAll = async () => {
+    if (!data) return;
+    
+    const pendingCount = mockupStatuses.filter(m => m.status === 'pending').length;
+    if (pendingCount > 0) {
+      toast.error(`Você ainda tem ${pendingCount} versão(ões) sem decisão.`);
+      return;
+    }
+
+    setSubmitting(-1);
+    try {
+      const approved = mockupStatuses.filter(m => m.status === 'approved');
+      const rejected = mockupStatuses.filter(m => m.status === 'rejected');
+      const changesRequested = mockupStatuses.filter(m => m.status === 'changes_requested');
+
+      // Build summary
+      const summary = [
+        approved.length > 0 ? `✅ Aprovadas: v${approved.map(m => m.version).join(', v')}` : '',
+        rejected.length > 0 ? `❌ Recusadas: v${rejected.map(m => m.version).join(', v')}` : '',
+        changesRequested.length > 0 ? `🔄 Alterações: v${changesRequested.map(m => m.version).join(', v')}` : '',
+      ].filter(Boolean).join(' | ');
+
+      // Update approval link
+      if (approved.length > 0 && rejected.length === 0 && changesRequested.length === 0) {
+        await supabase
+          .from('layout_approval_links')
+          .update({ approved_at: new Date().toISOString() })
+          .eq('id', data.id);
+      } else if (changesRequested.length > 0 || rejected.length > 0) {
+        await supabase
+          .from('layout_approval_links')
+          .update({ changes_requested_at: new Date().toISOString() })
+          .eq('id', data.id);
+      }
+
+      // Determine task status based on majority decision
+      let newStatus = data.task.status;
+      if (approved.length === mockupStatuses.length) {
+        newStatus = 'approved';
+      } else if (changesRequested.length > 0 || rejected.length > 0) {
+        newStatus = 'changes_requested';
+      }
+
+      // Update task status
+      await supabase
+        .from('design_tasks')
+        .update({ 
+          status: newStatus as any,
+          ...(newStatus === 'approved' ? { client_approved_at: new Date().toISOString() } : {})
+        })
+        .eq('id', data.task_id);
+
+      // Log history with detailed summary
+      await supabase
+        .from('design_task_history')
+        .insert({
+          task_id: data.task_id,
+          action: 'client_feedback_submitted',
+          old_status: data.task.status as any,
+          new_status: newStatus as any,
+          notes: `Feedback do cliente via link: ${summary}`
+        });
+
+      toast.success('Feedback enviado com sucesso!');
+      setAllSubmitted(true);
+    } catch (err) {
+      console.error('Error submitting:', err);
+      toast.error('Erro ao enviar feedback. Por favor, tente novamente.');
+    } finally {
+      setSubmitting(null);
+    }
+  };
+
+  const getStatusBadge = (status: MockupStatus['status']) => {
+    switch (status) {
+      case 'approved':
+        return <Badge className="bg-green-500 text-white">Aprovado</Badge>;
+      case 'rejected':
+        return <Badge className="bg-red-500 text-white">Recusado</Badge>;
+      case 'changes_requested':
+        return <Badge className="bg-amber-500 text-white">Alteração Solicitada</Badge>;
+      default:
+        return <Badge variant="outline">Aguardando Decisão</Badge>;
     }
   };
 
@@ -358,9 +392,41 @@ export default function LayoutApproval() {
   if (!data) return null;
 
   const mockups = getAllMockups();
-  const isAlreadyApproved = !!data.approved_at;
-  const isAlreadyRequested = !!data.changes_requested_at;
-  const latestVersion = mockups.length > 0 ? mockups[0].version : 1;
+
+  if (allSubmitted) {
+    const approved = mockupStatuses.filter(m => m.status === 'approved');
+    const rejected = mockupStatuses.filter(m => m.status === 'rejected');
+    const changesRequested = mockupStatuses.filter(m => m.status === 'changes_requested');
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted py-8 px-4">
+        <div className="max-w-2xl mx-auto">
+          <Card className="border-green-500/50 bg-green-500/5">
+            <CardContent className="pt-6 text-center">
+              <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Check className="h-8 w-8 text-green-600" />
+              </div>
+              <h2 className="text-xl font-semibold mb-4">Feedback Enviado!</h2>
+              <div className="text-left space-y-2 mb-4">
+                {approved.length > 0 && (
+                  <p className="text-green-600">✅ Aprovadas: Versões {approved.map(m => m.version).join(', ')}</p>
+                )}
+                {rejected.length > 0 && (
+                  <p className="text-red-600">❌ Recusadas: Versões {rejected.map(m => m.version).join(', ')}</p>
+                )}
+                {changesRequested.length > 0 && (
+                  <p className="text-amber-600">🔄 Alterações solicitadas: Versões {changesRequested.map(m => m.version).join(', ')}</p>
+                )}
+              </div>
+              <p className="text-muted-foreground text-sm">
+                Nossa equipe foi notificada e entrará em contato em breve.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted py-8 px-4">
@@ -369,7 +435,7 @@ export default function LayoutApproval() {
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold mb-2">Aprovação de Layout</h1>
           <p className="text-muted-foreground">
-            Visualize e aprove os mockups do seu pedido
+            Avalie cada mockup individualmente: aprove, solicite alterações ou recuse
           </p>
         </div>
 
@@ -387,54 +453,200 @@ export default function LayoutApproval() {
                   {data.task.layout?.campaign_name || data.task.campaign?.name || '-'}
                 </p>
               </div>
-              {data.task.layout && (
-                <>
-                  <div>
-                    <span className="text-muted-foreground">Modelo:</span>
-                    <p className="font-medium">{data.task.layout.model_name || '-'}</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Tipo:</span>
-                    <p className="font-medium">{data.task.layout.uniform_type || '-'}</p>
-                  </div>
-                </>
-              )}
               <div>
-                <span className="text-muted-foreground">Versões:</span>
-                <p className="font-medium">{mockups.length} mockup(s)</p>
+                <span className="text-muted-foreground">Total de Mockups:</span>
+                <p className="font-medium">{mockups.length}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Decisões Pendentes:</span>
+                <p className="font-medium">{mockupStatuses.filter(m => m.status === 'pending').length}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Mockups Gallery */}
+        {/* Mockups Gallery with Individual Actions */}
         {mockups.length > 0 ? (
-          <div className="space-y-4 mb-6">
-            {mockups.map((mockup, index) => (
-              <Card key={mockup.version}>
-                <CardContent className="pt-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-medium bg-primary text-primary-foreground px-3 py-1 rounded-full">
-                      Versão {mockup.version}
-                      {index === 0 && ' (mais recente)'}
-                    </span>
-                  </div>
-                  <div 
-                    className="relative cursor-zoom-in group"
-                    onClick={() => setZoomImage(mockup.url)}
-                  >
-                    <img
-                      src={mockup.url}
-                      alt={`Mockup versão ${mockup.version}`}
-                      className="w-full h-auto rounded-lg border"
-                    />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg flex items-center justify-center">
-                      <ZoomIn className="h-12 w-12 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="space-y-6 mb-6">
+            {mockups.map((mockup, index) => {
+              const statusInfo = mockupStatuses.find(m => m.version === mockup.version);
+              const currentStatus = statusInfo?.status || 'pending';
+              const isShowingChangeForm = activeChangeForm === mockup.version;
+
+              return (
+                <Card key={mockup.version} className={
+                  currentStatus === 'approved' ? 'border-green-500/50' :
+                  currentStatus === 'rejected' ? 'border-red-500/50' :
+                  currentStatus === 'changes_requested' ? 'border-amber-500/50' : ''
+                }>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm font-medium bg-primary text-primary-foreground px-3 py-1 rounded-full">
+                        Versão {mockup.version}
+                        {index === 0 && ' (mais recente)'}
+                      </span>
+                      {getStatusBadge(currentStatus)}
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    
+                    <div 
+                      className="relative cursor-zoom-in group mb-4"
+                      onClick={() => setZoomImage(mockup.url)}
+                    >
+                      <img
+                        src={mockup.url}
+                        alt={`Mockup versão ${mockup.version}`}
+                        className="w-full h-auto rounded-lg border"
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg flex items-center justify-center">
+                        <ZoomIn className="h-12 w-12 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                    </div>
+
+                    {/* Action buttons for each mockup */}
+                    {currentStatus === 'pending' && !isShowingChangeForm && (
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <Button
+                          className="flex-1"
+                          onClick={() => handleApproveMockup(mockup.version)}
+                        >
+                          <Check className="h-4 w-4 mr-2" />
+                          Aprovar
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => handleRequestChangeMockup(mockup.version)}
+                        >
+                          <MessageSquare className="h-4 w-4 mr-2" />
+                          Solicitar Alteração
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          className="flex-1"
+                          onClick={() => handleRejectMockup(mockup.version)}
+                        >
+                          <ThumbsDown className="h-4 w-4 mr-2" />
+                          Recusar
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Change request form */}
+                    {isShowingChangeForm && (
+                      <div className="space-y-4 border-t pt-4 mt-4">
+                        <div>
+                          <label className="text-sm font-medium mb-2 block">
+                            Descreva as alterações necessárias para a versão {mockup.version}:
+                          </label>
+                          <Textarea
+                            placeholder="Ex: Alterar a cor do logo, ajustar posição do texto..."
+                            value={changeDescription}
+                            onChange={(e) => setChangeDescription(e.target.value)}
+                            rows={3}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-sm font-medium mb-2 block">
+                            Anexar imagens de referência (opcional):
+                          </label>
+                          <div className="border-2 border-dashed rounded-lg p-4 text-center">
+                            <input
+                              type="file"
+                              multiple
+                              accept="image/*"
+                              onChange={handleFileSelect}
+                              className="hidden"
+                              id={`file-upload-${mockup.version}`}
+                            />
+                            <label 
+                              htmlFor={`file-upload-${mockup.version}`}
+                              className="cursor-pointer flex flex-col items-center gap-2"
+                            >
+                              <Upload className="h-8 w-8 text-muted-foreground" />
+                              <span className="text-sm text-muted-foreground">
+                                Clique para selecionar arquivos
+                              </span>
+                            </label>
+                          </div>
+                          
+                          {files.length > 0 && (
+                            <div className="mt-2 space-y-1">
+                              {files.map((file, idx) => (
+                                <div key={idx} className="flex items-center justify-between bg-muted rounded px-3 py-1">
+                                  <span className="text-sm truncate">{file.name}</span>
+                                  <button
+                                    onClick={() => removeFile(idx)}
+                                    className="text-destructive hover:text-destructive/80"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => submitChangeRequest(mockup.version)}
+                            disabled={uploading || !changeDescription.trim()}
+                            className="flex-1"
+                          >
+                            {uploading ? (
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            ) : (
+                              <MessageSquare className="h-4 w-4 mr-2" />
+                            )}
+                            Enviar Solicitação
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => setActiveChangeForm(null)}
+                          >
+                            Cancelar
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Status message after decision */}
+                    {currentStatus === 'approved' && (
+                      <div className="bg-green-500/10 rounded-lg p-3 flex items-center gap-2 text-green-600">
+                        <Check className="h-5 w-5" />
+                        <span className="text-sm font-medium">Esta versão foi aprovada</span>
+                      </div>
+                    )}
+                    {currentStatus === 'rejected' && (
+                      <div className="bg-red-500/10 rounded-lg p-3 flex items-center gap-2 text-red-600">
+                        <ThumbsDown className="h-5 w-5" />
+                        <span className="text-sm font-medium">Esta versão foi recusada</span>
+                      </div>
+                    )}
+                    {currentStatus === 'changes_requested' && (
+                      <div className="bg-amber-500/10 rounded-lg p-3 flex items-center gap-2 text-amber-600">
+                        <MessageSquare className="h-5 w-5" />
+                        <span className="text-sm font-medium">Alteração solicitada</span>
+                      </div>
+                    )}
+
+                    {/* Button to change decision */}
+                    {currentStatus !== 'pending' && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="mt-2"
+                        onClick={() => setMockupStatuses(prev => 
+                          prev.map(m => m.version === mockup.version ? { ...m, status: 'pending' } : m)
+                        )}
+                      >
+                        Alterar decisão
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         ) : (
           <Card className="mb-6">
@@ -442,167 +654,52 @@ export default function LayoutApproval() {
               <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
                 <div className="text-center text-muted-foreground">
                   <ImageIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>Mockup não disponível</p>
+                  <p>Nenhum mockup disponível</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Status Messages */}
-        {isAlreadyApproved && (
-          <Card className="mb-6 border-green-500/50 bg-green-500/5">
+        {/* Submit All Button */}
+        {mockups.length > 0 && (
+          <Card className="sticky bottom-4">
             <CardContent className="pt-6">
-              <div className="flex items-center gap-3 text-green-600">
-                <Check className="h-6 w-6" />
-                <div>
-                  <p className="font-semibold">Layout Aprovado!</p>
-                  <p className="text-sm opacity-80">
-                    Você aprovou este layout em {new Date(data.approved_at!).toLocaleDateString('pt-BR')}
-                  </p>
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-sm">
+                  <span className="text-green-600 mr-3">✅ {mockupStatuses.filter(m => m.status === 'approved').length} aprovado(s)</span>
+                  <span className="text-amber-600 mr-3">🔄 {mockupStatuses.filter(m => m.status === 'changes_requested').length} alteração(ões)</span>
+                  <span className="text-red-600">❌ {mockupStatuses.filter(m => m.status === 'rejected').length} recusado(s)</span>
                 </div>
               </div>
+              <Button
+                className="w-full h-14 text-lg"
+                size="lg"
+                onClick={handleSubmitAll}
+                disabled={submitting !== null || mockupStatuses.some(m => m.status === 'pending')}
+              >
+                {submitting !== null ? (
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                ) : (
+                  <Check className="h-5 w-5 mr-2" />
+                )}
+                Enviar Feedback
+              </Button>
+              {mockupStatuses.some(m => m.status === 'pending') && (
+                <p className="text-xs text-muted-foreground text-center mt-2">
+                  Defina uma decisão para todas as versões antes de enviar
+                </p>
+              )}
             </CardContent>
           </Card>
         )}
-
-        {isAlreadyRequested && !isAlreadyApproved && (
-          <Card className="mb-6 border-amber-500/50 bg-amber-500/5">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3 text-amber-600">
-                <MessageSquare className="h-6 w-6" />
-                <div>
-                  <p className="font-semibold">Alterações Solicitadas</p>
-                  <p className="text-sm opacity-80">
-                    Você solicitou alterações em {new Date(data.changes_requested_at!).toLocaleDateString('pt-BR')}. 
-                    Aguarde o novo mockup.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Action Buttons */}
-        {!isAlreadyApproved && !isAlreadyRequested && (
-          <div className="space-y-4">
-            {!showChangeForm ? (
-              <>
-                <Button
-                  className="w-full h-14 text-lg"
-                  size="lg"
-                  onClick={handleApprove}
-                  disabled={submitting}
-                >
-                  {submitting ? (
-                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                  ) : (
-                    <Check className="h-5 w-5 mr-2" />
-                  )}
-                  Aprovar Layout
-                </Button>
-
-                <Button
-                  variant="outline"
-                  className="w-full h-14 text-lg"
-                  size="lg"
-                  onClick={() => setShowChangeForm(true)}
-                >
-                  <MessageSquare className="h-5 w-5 mr-2" />
-                  Solicitar Alteração
-                </Button>
-              </>
-            ) : (
-              <Card>
-                <CardContent className="pt-6 space-y-4">
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">
-                      Descreva as alterações necessárias:
-                    </label>
-                    <Textarea
-                      value={changeDescription}
-                      onChange={(e) => setChangeDescription(e.target.value)}
-                      placeholder="Ex: Trocar a logo do patrocinador pela nova versão, ajustar a cor da manga..."
-                      rows={4}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">
-                      Anexar arquivos (opcional):
-                    </label>
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      {files.map((file, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center gap-2 bg-muted px-3 py-1.5 rounded-md text-sm"
-                        >
-                          <span className="truncate max-w-[150px]">{file.name}</span>
-                          <button
-                            onClick={() => removeFile(index)}
-                            className="text-muted-foreground hover:text-destructive"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                    <label className="cursor-pointer">
-                      <div className="flex items-center gap-2 text-sm text-primary hover:underline">
-                        <Upload className="h-4 w-4" />
-                        Adicionar arquivo
-                      </div>
-                      <input
-                        type="file"
-                        className="hidden"
-                        multiple
-                        accept="image/*,.pdf,.doc,.docx"
-                        onChange={handleFileSelect}
-                      />
-                    </label>
-                  </div>
-
-                  <div className="flex gap-3 pt-2">
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => {
-                        setShowChangeForm(false);
-                        setChangeDescription('');
-                        setFiles([]);
-                      }}
-                    >
-                      Cancelar
-                    </Button>
-                    <Button
-                      className="flex-1"
-                      onClick={handleRequestChange}
-                      disabled={uploading || !changeDescription.trim()}
-                    >
-                      {uploading ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      ) : null}
-                      Enviar Solicitação
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        )}
-
-        {/* Footer */}
-        <p className="text-center text-xs text-muted-foreground mt-8">
-          Link válido até {new Date(data.expires_at).toLocaleDateString('pt-BR')}
-        </p>
       </div>
 
-      {/* Zoom Modal */}
       <ImageZoomModal
         isOpen={!!zoomImage}
-        imageUrl={zoomImage || ''}
-        alt="Mockup ampliado"
         onClose={() => setZoomImage(null)}
+        imageUrl={zoomImage || ''}
+        alt="Mockup"
       />
     </div>
   );
