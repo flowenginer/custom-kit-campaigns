@@ -2392,6 +2392,60 @@ export type Database = {
         }
         Relationships: []
       }
+      shipping_selection_links: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          dimension_info: Json | null
+          expires_at: string
+          id: string
+          selected_at: string | null
+          selected_option: Json | null
+          shipping_options: Json
+          task_id: string
+          token: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          dimension_info?: Json | null
+          expires_at: string
+          id?: string
+          selected_at?: string | null
+          selected_option?: Json | null
+          shipping_options?: Json
+          task_id: string
+          token: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          dimension_info?: Json | null
+          expires_at?: string
+          id?: string
+          selected_at?: string | null
+          selected_option?: Json | null
+          shipping_options?: Json
+          task_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shipping_selection_links_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shipping_selection_links_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "design_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shirt_model_variations: {
         Row: {
           created_at: string | null

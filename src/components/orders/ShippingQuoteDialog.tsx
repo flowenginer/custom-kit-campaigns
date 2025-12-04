@@ -3,7 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Package, Truck, AlertTriangle, Scale, Ruler } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Loader2, Package, Truck, AlertTriangle, Ruler, Send, Copy, Check, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -51,9 +52,12 @@ export const ShippingQuoteDialog = ({
 }: ShippingQuoteDialogProps) => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [sendingToCustomer, setSendingToCustomer] = useState(false);
   const [options, setOptions] = useState<ShippingOption[]>([]);
   const [selectedOption, setSelectedOption] = useState<ShippingOption | null>(null);
   const [dimensionInfo, setDimensionInfo] = useState<DimensionInfo | null>(null);
+  const [customerLink, setCustomerLink] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const handleQuote = async () => {
     if (!customerId) {
@@ -145,6 +149,60 @@ export const ShippingQuoteDialog = ({
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSendToCustomer = async () => {
+    if (options.length === 0) return;
+
+    setSendingToCustomer(true);
+    try {
+      // Generate unique token
+      const token = crypto.randomUUID();
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 48); // 48h expiration
+
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // Create shipping selection link
+      const { error } = await supabase
+        .from('shipping_selection_links')
+        .insert({
+          task_id: taskId,
+          token,
+          shipping_options: options as any,
+          dimension_info: dimensionInfo as any,
+          created_by: user?.id,
+          expires_at: expiresAt.toISOString()
+        });
+
+      if (error) throw error;
+
+      // Generate link
+      const link = `${window.location.origin}/shipping-select/${token}`;
+      setCustomerLink(link);
+      
+      toast.success("Link gerado! Envie para o cliente escolher o frete.");
+    } catch (error: any) {
+      console.error('Erro ao gerar link:', error);
+      toast.error("Erro ao gerar link para o cliente");
+    } finally {
+      setSendingToCustomer(false);
+    }
+  };
+
+  const handleCopyLink = () => {
+    if (!customerLink) return;
+    navigator.clipboard.writeText(customerLink);
+    setCopied(true);
+    toast.success("Link copiado!");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleShareWhatsApp = () => {
+    if (!customerLink) return;
+    const message = encodeURIComponent(`Olá! Escolha sua opção de frete preferida através do link abaixo:\n\n${customerLink}`);
+    window.open(`https://wa.me/?text=${message}`, '_blank');
   };
 
   const getCarrierIcon = (company: string) => {
@@ -295,15 +353,66 @@ export const ShippingQuoteDialog = ({
                 ))}
               </div>
 
+              {/* Link para cliente */}
+              {customerLink && (
+                <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+                    <Check className="h-4 w-4" />
+                    <span className="font-medium text-sm">Link gerado com sucesso!</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Input 
+                      value={customerLink} 
+                      readOnly 
+                      className="text-xs bg-background"
+                    />
+                    <Button 
+                      variant="outline" 
+                      size="icon"
+                      onClick={handleCopyLink}
+                    >
+                      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    className="w-full text-green-700 border-green-500/50 hover:bg-green-500/10"
+                    onClick={handleShareWhatsApp}
+                  >
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Enviar via WhatsApp
+                  </Button>
+                </div>
+              )}
+
               {/* Ações */}
               <div className="flex justify-between items-center gap-2 pt-4 border-t">
-                <Button variant="ghost" size="sm" onClick={handleQuote} disabled={loading}>
-                  {loading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    'Recotar'
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="sm" onClick={handleQuote} disabled={loading}>
+                    {loading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      'Recotar'
+                    )}
+                  </Button>
+                  {!customerLink && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handleSendToCustomer}
+                      disabled={sendingToCustomer || options.length === 0}
+                    >
+                      {sendingToCustomer ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Send className="mr-2 h-4 w-4" />
+                          Enviar para Cliente
+                        </>
+                      )}
+                    </Button>
                   )}
-                </Button>
+                </div>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => onOpenChange(false)}>
                     Cancelar

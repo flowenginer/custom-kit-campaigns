@@ -42,6 +42,7 @@ import Products from "./pages/admin/Products";
 import Quote from "./pages/Quote";
 import MelhorEnvio from "./pages/admin/MelhorEnvio";
 import Bling from "./pages/admin/Bling";
+import ShippingSelect from "./pages/ShippingSelect";
 
 // Componente para rastrear mudanças de rota em SPAs
 const AnalyticsTracker = () => {
@@ -81,6 +82,7 @@ const App = () => (
           <Route path="/c/:uniqueLink/upload-logos" element={<UploadLogos />} />
           <Route path="/customer-register/:token" element={<CustomerRegister />} />
           <Route path="/quote/:token" element={<Quote />} />
+          <Route path="/shipping-select/:token" element={<ShippingSelect />} />
           <Route path="/admin" element={<GlobalThemeProvider><AdminLayout /></GlobalThemeProvider>}>
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="traffic" element={<TrafficDashboard />} />
