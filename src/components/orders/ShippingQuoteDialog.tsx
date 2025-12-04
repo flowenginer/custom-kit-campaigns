@@ -201,11 +201,11 @@ export const ShippingQuoteDialog = ({
 
       if (error) throw error;
 
-      // Generate link using custom domain if available
+      // Generate link using custom domain if available - using shorter /frete/ path for better UX
       const baseUrl = customDomain 
         ? `https://${customDomain}` 
         : window.location.origin;
-      const link = `${baseUrl}/shipping-select/${token}`;
+      const link = `${baseUrl}/frete/${token}`;
       setCustomerLink(link);
 
       // Send webhook notification

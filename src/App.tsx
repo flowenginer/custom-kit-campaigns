@@ -82,6 +82,8 @@ const App = () => (
           <Route path="/c/:uniqueLink/upload-logos" element={<UploadLogos />} />
           <Route path="/customer-register/:token" element={<CustomerRegister />} />
           <Route path="/quote/:token" element={<Quote />} />
+          <Route path="/frete/:token" element={<ShippingSelect />} />
+          {/* Legacy route for old links */}
           <Route path="/shipping-select/:token" element={<ShippingSelect />} />
           <Route path="/admin" element={<GlobalThemeProvider><AdminLayout /></GlobalThemeProvider>}>
             <Route path="dashboard" element={<Dashboard />} />
