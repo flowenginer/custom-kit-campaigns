@@ -357,6 +357,7 @@ export type Database = {
           layout_id: string | null
           resolved_at: string | null
           resolved_by: string | null
+          source: string
           task_id: string
         }
         Insert: {
@@ -368,6 +369,7 @@ export type Database = {
           layout_id?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
+          source?: string
           task_id: string
         }
         Update: {
@@ -379,6 +381,7 @@ export type Database = {
           layout_id?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
+          source?: string
           task_id?: string
         }
         Relationships: [
@@ -1404,6 +1407,57 @@ export type Database = {
           updated_by?: string | null
         }
         Relationships: []
+      }
+      layout_approval_links: {
+        Row: {
+          approved_at: string | null
+          changes_requested_at: string | null
+          created_at: string | null
+          created_by: string | null
+          expires_at: string
+          id: string
+          layout_id: string | null
+          task_id: string
+          token: string
+        }
+        Insert: {
+          approved_at?: string | null
+          changes_requested_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          layout_id?: string | null
+          task_id: string
+          token: string
+        }
+        Update: {
+          approved_at?: string | null
+          changes_requested_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          layout_id?: string | null
+          task_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "layout_approval_links_layout_id_fkey"
+            columns: ["layout_id"]
+            isOneToOne: false
+            referencedRelation: "design_task_layouts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "layout_approval_links_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "design_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       leads: {
         Row: {

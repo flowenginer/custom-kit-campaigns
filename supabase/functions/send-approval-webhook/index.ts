@@ -8,13 +8,25 @@ const corsHeaders = {
 
 const WEBHOOK_URL = 'https://nwh.chelsan.com.br/webhook/criacao-aprovacao';
 
+// Generate a random token
+function generateToken(length = 32): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  const randomValues = new Uint8Array(length);
+  crypto.getRandomValues(randomValues);
+  for (let i = 0; i < length; i++) {
+    result += chars[randomValues[i] % chars.length];
+  }
+  return result;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { task_id } = await req.json();
+    const { task_id, layout_id } = await req.json();
 
     if (!task_id) {
       return new Response(
@@ -23,12 +35,43 @@ serve(async (req) => {
       );
     }
 
-    console.log('Processing approval webhook for task:', task_id);
+    console.log('Processing approval webhook for task:', task_id, 'layout:', layout_id);
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
+
+    // Get company settings for custom domain
+    const { data: companySettings } = await supabase
+      .from('company_settings')
+      .select('custom_domain')
+      .limit(1)
+      .single();
+
+    const baseUrl = companySettings?.custom_domain || Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovable.app') || '';
+
+    // Generate unique token for approval link
+    const approvalToken = generateToken(32);
+    
+    // Create approval link record
+    const { error: linkError } = await supabase
+      .from('layout_approval_links')
+      .insert({
+        task_id,
+        layout_id: layout_id || null,
+        token: approvalToken,
+        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
+      });
+
+    if (linkError) {
+      console.error('Error creating approval link:', linkError);
+      throw linkError;
+    }
+
+    // Build the approval URL
+    const approvalUrl = `${baseUrl}/approval/${approvalToken}`;
+    console.log('Generated approval URL:', approvalUrl);
 
     // Buscar dados completos da tarefa
     const { data: task, error: taskError } = await supabase
@@ -58,15 +101,41 @@ serve(async (req) => {
       );
     }
 
+    // Get layout data if layout_id provided
+    let layoutData = null;
+    if (layout_id) {
+      const { data: layout } = await supabase
+        .from('design_task_layouts')
+        .select('*')
+        .eq('id', layout_id)
+        .single();
+      layoutData = layout;
+    }
+
     // Extrair URLs das imagens dos mockups
-    const mockupImages = Array.isArray(task.design_files) 
-      ? task.design_files.map((file: any) => ({
-          url: file.url,
-          version: file.version,
-          uploaded_at: file.uploaded_at,
-          notes: file.notes || null
-        }))
-      : [];
+    let mockupImages: any[] = [];
+    
+    // First check layout-specific files
+    if (layoutData?.design_files) {
+      mockupImages = (layoutData.design_files as any[]).map((file: any) => ({
+        url: file.url,
+        version: file.version,
+        uploaded_at: file.uploaded_at,
+        notes: file.notes || null,
+        client_approved: file.client_approved || false
+      }));
+    }
+    
+    // Fallback to task-level files
+    if (mockupImages.length === 0 && Array.isArray(task.design_files)) {
+      mockupImages = task.design_files.map((file: any) => ({
+        url: file.url,
+        version: file.version,
+        uploaded_at: file.uploaded_at,
+        notes: file.notes || null,
+        client_approved: file.client_approved || false
+      }));
+    }
 
     // Preparar payload para o webhook
     const webhookPayload = {
@@ -80,6 +149,14 @@ serve(async (req) => {
         created_at: task.created_at,
         assigned_at: task.assigned_at
       },
+      layout: layoutData ? {
+        id: layoutData.id,
+        layout_number: layoutData.layout_number,
+        campaign_name: layoutData.campaign_name,
+        uniform_type: layoutData.uniform_type,
+        model_name: layoutData.model_name,
+        current_version: layoutData.current_version
+      } : null,
       customer: {
         name: task.orders.customer_name,
         email: task.orders.customer_email || null,
@@ -94,7 +171,10 @@ serve(async (req) => {
         name: task.campaigns?.name || null
       },
       mockups: mockupImages,
-      designer_id: task.assigned_to
+      designer_id: task.assigned_to,
+      // NEW: Include approval link
+      approval_link: approvalUrl,
+      approval_token: approvalToken
     };
 
     console.log('Sending webhook to:', WEBHOOK_URL);
@@ -134,7 +214,7 @@ serve(async (req) => {
       .insert({
         task_id,
         action: 'webhook_sent',
-        notes: `Webhook enviado para aprovação. Status: ${webhookStatus}`
+        notes: `Webhook enviado para aprovação. Link: ${approvalUrl}`
       });
 
     if (!webhookResponse.ok) {
@@ -146,7 +226,8 @@ serve(async (req) => {
         success: true, 
         message: 'Webhook enviado com sucesso',
         webhook_status: webhookStatus,
-        mockups_count: mockupImages.length
+        mockups_count: mockupImages.length,
+        approval_link: approvalUrl
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
