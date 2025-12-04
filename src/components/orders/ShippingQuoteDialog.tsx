@@ -279,6 +279,9 @@ export const ShippingQuoteDialog = ({
 
       const webhookPayload = {
         event: 'shipping_quote_whatsapp',
+        message_icon: '🚚',
+        message_type: 'shipping',
+        suggested_title: '🚚 Cotação de Entrega',
         shipping_url: customerLink,
         card_data: {
           id: taskId,
