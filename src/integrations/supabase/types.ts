@@ -2278,6 +2278,78 @@ export type Database = {
         }
         Relationships: []
       }
+      shipment_history: {
+        Row: {
+          cancelled_at: string | null
+          carrier_name: string
+          created_at: string
+          created_by: string | null
+          delivered_at: string | null
+          id: string
+          label_url: string | null
+          melhor_envio_id: string
+          posted_at: string | null
+          price: number
+          service_name: string
+          status: string
+          status_history: Json | null
+          task_id: string | null
+          tracking_code: string | null
+          updated_at: string
+        }
+        Insert: {
+          cancelled_at?: string | null
+          carrier_name: string
+          created_at?: string
+          created_by?: string | null
+          delivered_at?: string | null
+          id?: string
+          label_url?: string | null
+          melhor_envio_id: string
+          posted_at?: string | null
+          price: number
+          service_name: string
+          status?: string
+          status_history?: Json | null
+          task_id?: string | null
+          tracking_code?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cancelled_at?: string | null
+          carrier_name?: string
+          created_at?: string
+          created_by?: string | null
+          delivered_at?: string | null
+          id?: string
+          label_url?: string | null
+          melhor_envio_id?: string
+          posted_at?: string | null
+          price?: number
+          service_name?: string
+          status?: string
+          status_history?: Json | null
+          task_id?: string | null
+          tracking_code?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shipment_history_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shipment_history_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "design_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shipping_carriers: {
         Row: {
           code: string

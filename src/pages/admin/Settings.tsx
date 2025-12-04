@@ -18,6 +18,7 @@ import { UniformTypesManager } from "@/components/admin/UniformTypesManager";
 import { MenuStructureManager } from "@/components/admin/MenuStructureManager";
 import { BusinessSegmentsManager } from "@/components/admin/BusinessSegmentsManager";
 import { ShippingCarriersManager } from "@/components/admin/ShippingCarriersManager";
+import { ShippingPanel } from "@/components/admin/ShippingPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AppRole } from "@/hooks/useUserRole";
@@ -797,7 +798,18 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
         {/* TAB: ENVIOS / TRANSPORTADORAS */}
         <TabsContent value="shipping" className="space-y-4">
-          <ShippingCarriersManager />
+          <Tabs defaultValue="panel" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="panel">Painel de Envios</TabsTrigger>
+              <TabsTrigger value="carriers">Transportadoras</TabsTrigger>
+            </TabsList>
+            <TabsContent value="panel">
+              <ShippingPanel />
+            </TabsContent>
+            <TabsContent value="carriers">
+              <ShippingCarriersManager />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
       </Tabs>
 
