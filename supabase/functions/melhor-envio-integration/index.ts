@@ -44,7 +44,7 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    // Cliente com service role para ler configurações
+    // Cliente com service role para operações de banco de dados
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -114,8 +114,10 @@ serve(async (req) => {
         // Calcular frete
         const { task_id, customer_id } = data;
         
-        // Buscar task com layouts
-        const { data: task, error: taskError } = await supabaseClient
+        console.log('[Melhor Envio] Calculating shipping for task:', task_id, 'customer:', customer_id);
+        
+        // Buscar task com layouts usando service role
+        const { data: task, error: taskError } = await supabaseAdmin
           .from('design_tasks')
           .select(`
             *,
@@ -125,16 +127,23 @@ serve(async (req) => {
           .eq('id', task_id)
           .single();
 
-        if (taskError) throw taskError;
+        if (taskError) {
+          console.error('[Melhor Envio] Task fetch error:', taskError);
+          throw new Error(`Erro ao buscar pedido: ${taskError.message}`);
+        }
 
         // Se não tem customer na task, buscar pelo customer_id passado
         let customer = task.customers;
         if (!customer && customer_id) {
-          const { data: customerData } = await supabaseClient
+          const { data: customerData, error: customerError } = await supabaseAdmin
             .from('customers')
             .select('*')
             .eq('id', customer_id)
             .single();
+          
+          if (customerError) {
+            console.error('[Melhor Envio] Customer fetch error:', customerError);
+          }
           customer = customerData;
         }
 
@@ -147,7 +156,7 @@ serve(async (req) => {
         }
 
         // Buscar layouts para pegar os modelos e calcular dimensões/peso totais
-        const { data: layouts } = await supabaseClient
+        const { data: layouts } = await supabaseAdmin
           .from('design_task_layouts')
           .select('*, shirt_models:model_id(*)')
           .eq('task_id', task_id);
@@ -250,7 +259,7 @@ serve(async (req) => {
         // Criar etiqueta de envio
         const { task_id, shipping_option } = data;
         
-        const { data: task, error: taskError } = await supabaseClient
+        const { data: task, error: taskError } = await supabaseAdmin
           .from('design_tasks')
           .select(`
             *,
@@ -266,7 +275,7 @@ serve(async (req) => {
         const customer = task.customers;
 
         // Buscar dados do produto
-        const { data: model } = await supabaseClient
+        const { data: model } = await supabaseAdmin
           .from('shirt_models')
           .select('*')
           .eq('id', order.model_id)
@@ -379,7 +388,7 @@ serve(async (req) => {
         }
 
         // Atualizar task com dados do envio
-        await supabaseClient
+        await supabaseAdmin
           .from('design_tasks')
           .update({
             shipping_option: {
@@ -406,7 +415,7 @@ serve(async (req) => {
         // Buscar rastreamento
         const { task_id } = data;
         
-        const { data: task, error: taskError } = await supabaseClient
+        const { data: task, error: taskError } = await supabaseAdmin
           .from('design_tasks')
           .select('shipping_option')
           .eq('id', task_id)
