@@ -151,21 +151,36 @@ const Quote = () => {
         setSelectedShippingId(quoteData.selected_shipping.id);
       }
 
-      // Load existing size selections
-      const { data: existingSelections } = await supabase
-        .from("quote_size_selections")
-        .select("*")
-        .eq("quote_id", data.id);
+      // Se o status é 'sent' (orçamento novo/atualizado), limpar grades antigas
+      if (data.status === 'sent') {
+        // Deletar seleções antigas para este orçamento
+        await supabase
+          .from("quote_size_selections")
+          .delete()
+          .eq("quote_id", data.id);
+        
+        // Inicializar com grades vazias
+        const initialSelections: Record<number, SizeGrid> = {};
+        quoteData.items.forEach((_, index) => {
+          initialSelections[index] = createEmptySizeGrid();
+        });
+        setSizeSelections(initialSelections);
+      } else {
+        // Para outros status, carregar seleções existentes
+        const { data: existingSelections } = await supabase
+          .from("quote_size_selections")
+          .select("*")
+          .eq("quote_id", data.id);
 
-      // Initialize size selections
-      const initialSelections: Record<number, SizeGrid> = {};
-      quoteData.items.forEach((_, index) => {
-        const existing = existingSelections?.find(s => s.item_index === index);
-        initialSelections[index] = existing?.size_grid 
-          ? (existing.size_grid as unknown as SizeGrid)
-          : createEmptySizeGrid();
-      });
-      setSizeSelections(initialSelections);
+        const initialSelections: Record<number, SizeGrid> = {};
+        quoteData.items.forEach((_, index) => {
+          const existing = existingSelections?.find(s => s.item_index === index);
+          initialSelections[index] = existing?.size_grid 
+            ? (existing.size_grid as unknown as SizeGrid)
+            : createEmptySizeGrid();
+        });
+        setSizeSelections(initialSelections);
+      }
 
     } catch (err) {
       console.error("Error loading quote:", err);
@@ -488,14 +503,24 @@ const Quote = () => {
   const isCorrectionRequested = quote.status === 'correction_requested';
   const canTakeAction = !isExpired && !isApproved && !isCorrectionRequested;
 
-  // Check if all size grids meet minimum quantity
+  // Check if all size grids meet minimum quantity (>= not ==)
   const areAllGridsComplete = () => {
     if (!quote) return false;
-    return quote.items.every((item, index) => {
-      const grid = sizeSelections[index];
+    
+    for (let i = 0; i < quote.items.length; i++) {
+      const item = quote.items[i];
+      const grid = sizeSelections[i];
+      
+      // Se não tem grid ou está vazio, não está completo
       if (!grid) return false;
-      return calculateGridTotal(grid) >= item.quantity;
-    });
+      
+      const total = calculateGridTotal(grid);
+      
+      // Precisa ter pelo menos a quantidade mínima
+      if (total < item.quantity) return false;
+    }
+    
+    return true;
   };
 
   const allGridsComplete = areAllGridsComplete();
@@ -832,8 +857,8 @@ const Quote = () => {
           </CardContent>
         </Card>
 
-        {/* Warnings */}
-        {canTakeAction && (!allGridsComplete || (hasShippingOptions && !selectedShippingId)) && (
+        {/* Warnings - Só mostra se realmente falta algo */}
+        {canTakeAction && (hasShippingOptions && !selectedShippingId) && (
           <Card className="mb-6 border-orange-500/50 bg-orange-500/10">
             <CardContent className="py-4 text-center">
               <AlertCircle className="h-6 w-6 mx-auto text-orange-500 mb-2" />
@@ -841,12 +866,7 @@ const Quote = () => {
                 Ação Necessária
               </h3>
               <div className="text-xs text-muted-foreground mt-1 space-y-1">
-                {!allGridsComplete && (
-                  <p>• Preencha a grade de tamanhos com pelo menos a quantidade mínima</p>
-                )}
-                {hasShippingOptions && !selectedShippingId && (
-                  <p>• Selecione uma opção de frete</p>
-                )}
+                <p>• Selecione uma opção de frete</p>
               </div>
             </CardContent>
           </Card>

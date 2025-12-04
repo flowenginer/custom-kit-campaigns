@@ -86,53 +86,59 @@ export const SizeGridSelector = ({
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Masculino */}
+        {/* Masculino - 11 tamanhos: PP, P, M, G, GG, XG, G1, G2, G3, G4, G5 */}
         <div className="space-y-2">
           <label className="text-sm font-medium flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-blue-500"></span>
             Masculino
           </label>
-          <div className="grid grid-cols-11 gap-1">
-            {ADULT_SIZES.map(size => (
-              <div key={`m-${size}`} className="text-center">
-                <label className={`text-[10px] text-muted-foreground block mb-1 ${PLUS_SIZES.includes(size) ? 'text-purple-600 font-medium' : ''}`}>
-                  {size}
-                </label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={sizeGrid.masculino[size] || ''}
-                  onChange={(e) => handleChange('masculino', size, e.target.value)}
-                  className={`h-8 text-center text-xs px-0.5 ${PLUS_SIZES.includes(size) ? 'border-purple-300 focus:border-purple-500' : ''}`}
-                  disabled={disabled}
-                />
-              </div>
-            ))}
+          <div className="grid gap-1" style={{ gridTemplateColumns: 'repeat(11, minmax(0, 1fr))' }}>
+            {ADULT_SIZES.map(size => {
+              const isPlusSize = PLUS_SIZES.includes(size);
+              return (
+                <div key={`m-${size}`} className="text-center">
+                  <label className={`text-[10px] block mb-1 ${isPlusSize ? 'text-purple-600 font-medium' : 'text-muted-foreground'}`}>
+                    {size}
+                  </label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={sizeGrid.masculino[size] || ''}
+                    onChange={(e) => handleChange('masculino', size, e.target.value)}
+                    className={`h-8 text-center text-xs px-0.5 w-full ${isPlusSize ? 'border-purple-300 focus:border-purple-500' : ''}`}
+                    disabled={disabled}
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* Feminino */}
+        {/* Feminino - 11 tamanhos: PP, P, M, G, GG, XG, G1, G2, G3, G4, G5 */}
         <div className="space-y-2">
           <label className="text-sm font-medium flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-pink-500"></span>
             Feminino
           </label>
-          <div className="grid grid-cols-11 gap-1">
-            {ADULT_SIZES.map(size => (
-              <div key={`f-${size}`} className="text-center">
-                <label className={`text-[10px] text-muted-foreground block mb-1 ${PLUS_SIZES.includes(size) ? 'text-purple-600 font-medium' : ''}`}>
-                  {size}
-                </label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={sizeGrid.feminino[size] || ''}
-                  onChange={(e) => handleChange('feminino', size, e.target.value)}
-                  className={`h-8 text-center text-xs px-0.5 ${PLUS_SIZES.includes(size) ? 'border-purple-300 focus:border-purple-500' : ''}`}
-                  disabled={disabled}
-                />
-              </div>
-            ))}
+          <div className="grid gap-1" style={{ gridTemplateColumns: 'repeat(11, minmax(0, 1fr))' }}>
+            {ADULT_SIZES.map(size => {
+              const isPlusSize = PLUS_SIZES.includes(size);
+              return (
+                <div key={`f-${size}`} className="text-center">
+                  <label className={`text-[10px] block mb-1 ${isPlusSize ? 'text-purple-600 font-medium' : 'text-muted-foreground'}`}>
+                    {size}
+                  </label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={sizeGrid.feminino[size] || ''}
+                    onChange={(e) => handleChange('feminino', size, e.target.value)}
+                    className={`h-8 text-center text-xs px-0.5 w-full ${isPlusSize ? 'border-purple-300 focus:border-purple-500' : ''}`}
+                    disabled={disabled}
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
 
