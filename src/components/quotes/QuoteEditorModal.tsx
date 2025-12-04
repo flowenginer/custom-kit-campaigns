@@ -44,6 +44,7 @@ interface QuoteItem {
   segment_tag: string;
   model_tag: string;
   product_image: string;
+  approved_mockup_url?: string;
   unit_price: number;
   quantity: number;
   subtotal: number;
@@ -196,6 +197,7 @@ export const QuoteEditorModal = ({
   const generateQuoteFromLayouts = async () => {
     setLoading(true);
     try {
+      // Fetch layouts
       const { data: layouts, error: layoutsError } = await supabase
         .from("design_task_layouts")
         .select("*")
@@ -205,6 +207,34 @@ export const QuoteEditorModal = ({
         toast.error("Nenhum layout encontrado para gerar orçamento");
         setLoading(false);
         return;
+      }
+
+      // Fetch approved mockups from design_tasks
+      const { data: taskData } = await supabase
+        .from("design_tasks")
+        .select("design_files")
+        .eq("id", taskId)
+        .single();
+
+      const approvedMockups: Record<string, string> = {};
+      if (taskData?.design_files && Array.isArray(taskData.design_files)) {
+        taskData.design_files.forEach((file: any) => {
+          if (file.client_approved && file.url) {
+            // Use latest approved version
+            approvedMockups['main'] = file.url;
+          }
+        });
+      }
+
+      // Also check individual layout design_files
+      for (const layout of layouts) {
+        const layoutFiles = layout.design_files as any[];
+        if (layoutFiles && Array.isArray(layoutFiles)) {
+          const approvedFile = layoutFiles.find((f: any) => f.client_approved && f.url);
+          if (approvedFile) {
+            approvedMockups[layout.id] = approvedFile.url;
+          }
+        }
       }
 
       const items: QuoteItem[] = [];
@@ -246,12 +276,16 @@ export const QuoteEditorModal = ({
 
         const quantity = layout.quantity || 1;
 
+        // Get approved mockup URL for this layout
+        const approvedMockupUrl = approvedMockups[layout.id] || approvedMockups['main'] || "";
+
         items.push({
           layout_id: layout.id,
           product_name: productName,
           segment_tag: layout.campaign_name || "",
           model_tag: layout.uniform_type || "",
           product_image: productImage,
+          approved_mockup_url: approvedMockupUrl,
           unit_price: unitPrice,
           quantity,
           subtotal: unitPrice * quantity
@@ -590,6 +624,7 @@ export const QuoteEditorModal = ({
                   <Card key={index} className="overflow-hidden">
                     <CardContent className="p-3">
                       <div className="flex gap-3">
+                        {/* Product Image */}
                         <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
                           {item.product_image ? (
                             <img 
@@ -602,10 +637,24 @@ export const QuoteEditorModal = ({
                           )}
                         </div>
 
+                        {/* Approved Mockup */}
+                        {item.approved_mockup_url && (
+                          <div className="w-16 h-16 rounded-lg bg-green-100 dark:bg-green-900/30 border-2 border-green-500 flex items-center justify-center overflow-hidden flex-shrink-0 relative">
+                            <img 
+                              src={item.approved_mockup_url} 
+                              alt="Mockup aprovado"
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute -top-1 -right-1 bg-green-500 rounded-full p-0.5">
+                              <Check className="h-3 w-3 text-white" />
+                            </div>
+                          </div>
+                        )}
+
                         <div className="flex-1 min-w-0">
                           <h4 className="font-medium text-sm truncate">{item.product_name}</h4>
                           
-                          {editingItemIndex === index ? (
+                          {editingItemIndex === index && !isApproved ? (
                             <div className="mt-2 grid grid-cols-2 gap-2">
                               <div>
                                 <Label className="text-xs">Preço Unit.</Label>
