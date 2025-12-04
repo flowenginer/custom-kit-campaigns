@@ -161,16 +161,27 @@ serve(async (req) => {
           .select('*, shirt_models:model_id(*)')
           .eq('task_id', task_id);
 
+        // Tabela de dimensões padrão por tipo de uniforme
+        const defaultDimensionsByType: Record<string, { peso: number; largura: number; altura: number; profundidade: number }> = {
+          'manga_curta': { peso: 0.30, largura: 20, altura: 2, profundidade: 20 },
+          'manga_longa': { peso: 0.38, largura: 20, altura: 2.5, profundidade: 20 },
+          'regata': { peso: 0.25, largura: 20, altura: 1.5, profundidade: 20 },
+          'ziper': { peso: 0.45, largura: 25, altura: 3, profundidade: 25 },
+          'ziper_manga_longa': { peso: 0.50, largura: 25, altura: 3.5, profundidade: 25 },
+        };
+        const defaultDimensions = { peso: 0.38, largura: 20, altura: 2, profundidade: 20 };
+
         let totalWeight = 0;
         let maxWidth = 0;
-        let maxHeight = 0;
-        let totalLength = 0;
+        let totalHeight = 0; // SOMA (empilhamento vertical)
+        let maxLength = 0; // MAX (profundidade)
         let totalQuantity = 0;
         let insuranceValue = task.order_value || 100;
 
         // Validação de dimensões
         const dimensionWarnings: string[] = [];
         let layoutsWithoutModel = 0;
+        let layoutsUsingUniformTypeFallback = 0;
         let modelsWithoutDimensions: string[] = [];
 
         if (layouts && layouts.length > 0) {
@@ -179,55 +190,79 @@ serve(async (req) => {
             const qty = layout.quantity || 1;
             totalQuantity += qty;
             
+            let dims = defaultDimensions;
+            let usingFallback = false;
+            
             if (model) {
               // Verificar se o modelo tem dimensões cadastradas
               const hasDimensions = model.peso && model.largura && model.altura && model.profundidade;
               
-              if (!hasDimensions) {
+              if (hasDimensions) {
+                dims = {
+                  peso: model.peso,
+                  largura: model.largura,
+                  altura: model.altura,
+                  profundidade: model.profundidade,
+                };
+              } else {
                 if (!modelsWithoutDimensions.includes(model.name)) {
                   modelsWithoutDimensions.push(model.name);
                 }
+                // Usar dimensões padrão do tipo de uniforme se disponível
+                if (layout.uniform_type && defaultDimensionsByType[layout.uniform_type]) {
+                  dims = defaultDimensionsByType[layout.uniform_type];
+                }
               }
-              
-              // Usar valores do modelo ou padrão para cada dimensão
-              const peso = model.peso || 0.38;
-              const largura = model.largura || 20;
-              const altura = model.altura || 2;
-              const profundidade = model.profundidade || 20;
-              
-              totalWeight += peso * qty;
-              maxWidth = Math.max(maxWidth, largura);
-              maxHeight = Math.max(maxHeight, altura * qty); // Empilhar pela altura
-              totalLength = Math.max(totalLength, profundidade);
             } else {
-              // Layout sem modelo vinculado
+              // Layout sem modelo vinculado (ex: "Layout do Zero")
               layoutsWithoutModel++;
-              totalWeight += 0.38 * qty;
-              maxHeight += 2 * qty;
+              usingFallback = true;
+              
+              // Usar uniform_type para dimensões de fallback
+              if (layout.uniform_type && defaultDimensionsByType[layout.uniform_type]) {
+                dims = defaultDimensionsByType[layout.uniform_type];
+                layoutsUsingUniformTypeFallback++;
+              }
             }
+            
+            // Lógica de empilhamento correta:
+            // - Peso: SOMA (peso total de todas as peças)
+            // - Altura: SOMA (empilhamento vertical)
+            // - Largura: MAX (caixa não fica mais larga)
+            // - Profundidade: MAX (caixa não fica mais profunda)
+            totalWeight += dims.peso * qty;
+            totalHeight += dims.altura * qty; // ✅ SOMA para empilhamento
+            maxWidth = Math.max(maxWidth, dims.largura); // MAX
+            maxLength = Math.max(maxLength, dims.profundidade); // MAX
           }
         } else if (task.orders) {
           // Fallback para order antigo
           const order = task.orders;
           totalQuantity = order.quantity || 1;
-          totalWeight = 0.38 * totalQuantity;
-          maxHeight = 2 * totalQuantity;
+          totalWeight = defaultDimensions.peso * totalQuantity;
+          totalHeight = defaultDimensions.altura * totalQuantity;
+          maxWidth = defaultDimensions.largura;
+          maxLength = defaultDimensions.profundidade;
           dimensionWarnings.push('Pedido sem layouts - usando dimensões padrão estimadas');
         }
 
         // Gerar warnings baseado nas validações
         if (layoutsWithoutModel > 0) {
-          dimensionWarnings.push(`${layoutsWithoutModel} layout(s) sem modelo vinculado - usando dimensões padrão`);
+          if (layoutsUsingUniformTypeFallback > 0) {
+            dimensionWarnings.push(`${layoutsWithoutModel} layout(s) "do zero" - usando dimensões padrão por tipo de uniforme`);
+          } else {
+            dimensionWarnings.push(`${layoutsWithoutModel} layout(s) sem modelo vinculado - usando dimensões padrão genéricas`);
+          }
         }
         
         if (modelsWithoutDimensions.length > 0) {
-          dimensionWarnings.push(`Modelo(s) sem dimensões cadastradas: ${modelsWithoutDimensions.join(', ')}`);
+          dimensionWarnings.push(`Modelo(s) sem dimensões cadastradas: ${modelsWithoutDimensions.join(', ')} - cadastre em Produtos → Preços`);
         }
 
         // Aplicar valores mínimos para API do Melhor Envio
         const finalWidth = Math.max(maxWidth || 20, 11); // Mínimo 11cm
-        const finalHeight = Math.max(maxHeight || 10, 2); // Mínimo 2cm  
-        const finalLength = Math.max(totalLength || 20, 16); // Mínimo 16cm
+        const finalHeight = Math.max(totalHeight || 10, 2); // Mínimo 2cm (totalHeight = soma das alturas)
+        const finalLength = Math.max(maxLength || 20, 16); // Mínimo 16cm (profundidade)
         const finalWeight = Math.max(totalWeight, 0.3); // Mínimo 0.3kg
 
         // Limitar valores máximos
