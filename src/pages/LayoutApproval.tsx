@@ -61,20 +61,26 @@ export default function LayoutApproval() {
   const [uploading, setUploading] = useState(false);
   const [allSubmitted, setAllSubmitted] = useState(false);
 
+  // Limpa o token removendo caracteres extras que o WhatsApp mobile pode adicionar
+  const cleanToken = token?.trim().replace(/[^a-zA-Z0-9]/g, '') || '';
+
   useEffect(() => {
-    if (token) {
+    if (cleanToken) {
       loadApprovalData();
     }
-  }, [token]);
+  }, [cleanToken]);
 
   const loadApprovalData = async () => {
     try {
       setLoading(true);
       
+      console.log('🔍 Token original:', token);
+      console.log('🔍 Token limpo:', cleanToken);
+      
       const { data: linkData, error: linkError } = await supabase
         .from('layout_approval_links')
         .select('*')
-        .eq('token', token)
+        .eq('token', cleanToken)
         .single();
 
       if (linkError || !linkData) {
