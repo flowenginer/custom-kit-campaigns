@@ -93,6 +93,8 @@ export default function LayoutApproval() {
         return;
       }
 
+      console.log('🔍 Buscando task_id:', linkData.task_id);
+      
       const { data: taskData, error: taskError } = await supabase
         .from('design_tasks')
         .select(`
@@ -101,7 +103,7 @@ export default function LayoutApproval() {
           status,
           current_version,
           design_files,
-          orders!inner (
+          orders (
             customer_name,
             customer_phone
           ),
@@ -110,9 +112,17 @@ export default function LayoutApproval() {
           )
         `)
         .eq('id', linkData.task_id)
-        .single();
+        .maybeSingle();
 
-      if (taskError || !taskData) {
+      console.log('📦 Task data:', taskData, 'Error:', taskError);
+
+      if (taskError) {
+        console.error('❌ Task error:', taskError);
+        setError('Erro ao carregar tarefa. Por favor, tente novamente.');
+        return;
+      }
+
+      if (!taskData) {
         setError('Tarefa não encontrada.');
         return;
       }
