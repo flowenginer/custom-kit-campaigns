@@ -105,6 +105,9 @@ export const RequestCustomerRegistrationButton = ({
       // Prepare webhook payload with all card data
       const webhookPayload = {
         event: "cadastro",
+        message_icon: '📝',
+        message_type: 'registration',
+        suggested_title: '📝 Formulário de Cadastro',
         registration_url: generatedLink,
         card_data: {
           id: taskId,
