@@ -33,6 +33,7 @@ interface QuoteItem {
   segment_tag: string;
   model_tag: string;
   product_image: string;
+  approved_mockup_url?: string;
   unit_price: number;
   quantity: number;
   subtotal: number;
@@ -642,6 +643,20 @@ const Quote = () => {
                       <Package className="h-8 w-8 text-muted-foreground" />
                     )}
                   </div>
+
+                  {/* Approved Mockup */}
+                  {item.approved_mockup_url && (
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg bg-green-100 dark:bg-green-900/30 border-2 border-green-500 flex items-center justify-center overflow-hidden flex-shrink-0 relative">
+                      <img 
+                        src={item.approved_mockup_url} 
+                        alt="Mockup aprovado"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute -top-1 -right-1 bg-green-500 rounded-full p-0.5">
+                        <CheckCircle className="h-3 w-3 text-white" />
+                      </div>
+                    </div>
+                  )}
 
                   {/* Product Info - Container 1: Name + Subtotal */}
                   <div className="flex-1 min-w-0">

@@ -2188,7 +2188,9 @@ export type Database = {
           discount_type: string | null
           discount_value: number | null
           id: string
+          is_active: boolean | null
           items: Json
+          quote_number: number | null
           selected_shipping: Json | null
           sent_at: string | null
           sent_by: string | null
@@ -2210,7 +2212,9 @@ export type Database = {
           discount_type?: string | null
           discount_value?: number | null
           id?: string
+          is_active?: boolean | null
           items?: Json
+          quote_number?: number | null
           selected_shipping?: Json | null
           sent_at?: string | null
           sent_by?: string | null
@@ -2232,7 +2236,9 @@ export type Database = {
           discount_type?: string | null
           discount_value?: number | null
           id?: string
+          is_active?: boolean | null
           items?: Json
+          quote_number?: number | null
           selected_shipping?: Json | null
           sent_at?: string | null
           sent_by?: string | null
