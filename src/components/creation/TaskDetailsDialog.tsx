@@ -1901,6 +1901,7 @@ export const TaskDetailsDialog = ({
                   taskId={task.id}
                   customerName={task.customer_name || "Cliente"}
                   customerPhone={task.customer_phone}
+                  customerId={task.customer_id}
                   isSalesperson={isSalesperson}
                   isAdmin={isAdmin || isSuperAdmin}
                 />
