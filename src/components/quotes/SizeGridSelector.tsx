@@ -1,7 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AlertCircle, CheckCircle, Plus, RotateCcw } from "lucide-react";
 
 export interface SizeGrid {
   masculino: Record<string, number>;
@@ -58,6 +59,14 @@ export const SizeGridSelector = ({
     onChange(newGrid);
   };
 
+  const handleResetGender = (gender: keyof SizeGrid) => {
+    const newGrid = {
+      ...sizeGrid,
+      [gender]: {}
+    };
+    onChange(newGrid);
+  };
+
   return (
     <Card className="border-dashed">
       <CardHeader className="py-3">
@@ -88,10 +97,23 @@ export const SizeGridSelector = ({
       <CardContent className="space-y-4">
         {/* Masculino - 11 tamanhos: PP, P, M, G, GG, XG, G1, G2, G3, G4, G5 */}
         <div className="space-y-2">
-          <label className="text-sm font-medium flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-            Masculino
-          </label>
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+              Masculino
+            </label>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => handleResetGender('masculino')}
+              disabled={disabled}
+              className="h-6 px-2 text-xs text-muted-foreground hover:text-destructive"
+            >
+              <RotateCcw className="h-3 w-3 mr-1" />
+              Zerar
+            </Button>
+          </div>
           <div className="grid gap-1" style={{ gridTemplateColumns: 'repeat(11, minmax(0, 1fr))' }}>
             {ADULT_SIZES.map(size => {
               const isPlusSize = PLUS_SIZES.includes(size);
@@ -116,10 +138,23 @@ export const SizeGridSelector = ({
 
         {/* Feminino - 11 tamanhos: PP, P, M, G, GG, XG, G1, G2, G3, G4, G5 */}
         <div className="space-y-2">
-          <label className="text-sm font-medium flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-pink-500"></span>
-            Feminino
-          </label>
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-pink-500"></span>
+              Feminino
+            </label>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => handleResetGender('feminino')}
+              disabled={disabled}
+              className="h-6 px-2 text-xs text-muted-foreground hover:text-destructive"
+            >
+              <RotateCcw className="h-3 w-3 mr-1" />
+              Zerar
+            </Button>
+          </div>
           <div className="grid gap-1" style={{ gridTemplateColumns: 'repeat(11, minmax(0, 1fr))' }}>
             {ADULT_SIZES.map(size => {
               const isPlusSize = PLUS_SIZES.includes(size);
@@ -144,10 +179,23 @@ export const SizeGridSelector = ({
 
         {/* Infantil */}
         <div className="space-y-2">
-          <label className="text-sm font-medium flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-500"></span>
-            Infantil (Anos)
-          </label>
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-green-500"></span>
+              Infantil (Anos)
+            </label>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => handleResetGender('infantil')}
+              disabled={disabled}
+              className="h-6 px-2 text-xs text-muted-foreground hover:text-destructive"
+            >
+              <RotateCcw className="h-3 w-3 mr-1" />
+              Zerar
+            </Button>
+          </div>
           <div className="grid grid-cols-7 gap-1 max-w-xs">
             {CHILD_SIZES.map(size => (
               <div key={`i-${size}`} className="text-center">
