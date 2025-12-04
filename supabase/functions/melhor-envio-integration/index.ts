@@ -162,11 +162,16 @@ serve(async (req) => {
           .eq('task_id', task_id);
 
         let totalWeight = 0;
-        let maxWidth = 25;
-        let maxHeight = 25;
-        let maxLength = 5;
+        let maxWidth = 0;
+        let maxHeight = 0;
+        let totalLength = 0;
         let totalQuantity = 0;
         let insuranceValue = task.order_value || 100;
+
+        // Validação de dimensões
+        const dimensionWarnings: string[] = [];
+        let layoutsWithoutModel = 0;
+        let modelsWithoutDimensions: string[] = [];
 
         if (layouts && layouts.length > 0) {
           for (const layout of layouts) {
@@ -175,14 +180,30 @@ serve(async (req) => {
             totalQuantity += qty;
             
             if (model) {
-              totalWeight += (model.peso || 0.38) * qty;
-              maxWidth = Math.max(maxWidth, model.largura || 25);
-              maxHeight = Math.max(maxHeight, model.altura || 25);
-              maxLength += (model.profundidade || 2) * qty;
+              // Verificar se o modelo tem dimensões cadastradas
+              const hasDimensions = model.peso && model.largura && model.altura && model.profundidade;
+              
+              if (!hasDimensions) {
+                if (!modelsWithoutDimensions.includes(model.name)) {
+                  modelsWithoutDimensions.push(model.name);
+                }
+              }
+              
+              // Usar valores do modelo ou padrão para cada dimensão
+              const peso = model.peso || 0.38;
+              const largura = model.largura || 20;
+              const altura = model.altura || 2;
+              const profundidade = model.profundidade || 20;
+              
+              totalWeight += peso * qty;
+              maxWidth = Math.max(maxWidth, largura);
+              maxHeight = Math.max(maxHeight, altura * qty); // Empilhar pela altura
+              totalLength = Math.max(totalLength, profundidade);
             } else {
-              // Dimensões padrão se não tiver modelo
+              // Layout sem modelo vinculado
+              layoutsWithoutModel++;
               totalWeight += 0.38 * qty;
-              maxLength += 2 * qty;
+              maxHeight += 2 * qty;
             }
           }
         } else if (task.orders) {
@@ -190,12 +211,43 @@ serve(async (req) => {
           const order = task.orders;
           totalQuantity = order.quantity || 1;
           totalWeight = 0.38 * totalQuantity;
-          maxLength = 2 * totalQuantity;
+          maxHeight = 2 * totalQuantity;
+          dimensionWarnings.push('Pedido sem layouts - usando dimensões padrão estimadas');
         }
 
-        // Garantir valores mínimos
-        totalWeight = Math.max(totalWeight, 0.3);
-        maxLength = Math.min(maxLength, 100); // Máximo 100cm
+        // Gerar warnings baseado nas validações
+        if (layoutsWithoutModel > 0) {
+          dimensionWarnings.push(`${layoutsWithoutModel} layout(s) sem modelo vinculado - usando dimensões padrão`);
+        }
+        
+        if (modelsWithoutDimensions.length > 0) {
+          dimensionWarnings.push(`Modelo(s) sem dimensões cadastradas: ${modelsWithoutDimensions.join(', ')}`);
+        }
+
+        // Aplicar valores mínimos para API do Melhor Envio
+        const finalWidth = Math.max(maxWidth || 20, 11); // Mínimo 11cm
+        const finalHeight = Math.max(maxHeight || 10, 2); // Mínimo 2cm  
+        const finalLength = Math.max(totalLength || 20, 16); // Mínimo 16cm
+        const finalWeight = Math.max(totalWeight, 0.3); // Mínimo 0.3kg
+
+        // Limitar valores máximos
+        const cappedLength = Math.min(finalLength, 100);
+        const cappedWidth = Math.min(finalWidth, 100);
+        const cappedHeight = Math.min(finalHeight, 100);
+
+        const dimensionInfo = {
+          calculated: {
+            weight: Number(finalWeight.toFixed(2)),
+            width: finalWidth,
+            height: cappedHeight,
+            length: cappedLength,
+            quantity: totalQuantity,
+          },
+          warnings: dimensionWarnings,
+          usingDefaults: dimensionWarnings.length > 0,
+        };
+
+        console.log('[Melhor Envio] Dimension validation:', dimensionInfo);
 
         const quotePayload = {
           from: {
@@ -206,10 +258,10 @@ serve(async (req) => {
           },
           products: [{
             id: task_id,
-            width: maxWidth,
-            height: maxHeight,
-            length: maxLength,
-            weight: totalWeight,
+            width: cappedWidth,
+            height: cappedHeight,
+            length: cappedLength,
+            weight: finalWeight,
             insurance_value: insuranceValue,
             quantity: 1,
           }],
@@ -249,7 +301,8 @@ serve(async (req) => {
             final_price: parseFloat(q.price) - parseFloat(q.discount),
             delivery_time: q.delivery_time,
             delivery_range: q.delivery_range,
-          }))
+          })),
+          dimensions: dimensionInfo,
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
