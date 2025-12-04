@@ -116,6 +116,14 @@ serve(async (req) => {
         
         console.log('[Melhor Envio] Calculating shipping for task:', task_id, 'customer:', customer_id);
         
+        // Buscar transportadoras habilitadas
+        const { data: enabledCarriers } = await supabaseAdmin
+          .from('shipping_carriers')
+          .select('code, name, services')
+          .eq('enabled', true);
+        
+        console.log('[Melhor Envio] Enabled carriers:', enabledCarriers?.map(c => c.name));
+        
         // Buscar task com layouts usando service role
         const { data: task, error: taskError } = await supabaseAdmin
           .from('design_tasks')
@@ -177,10 +185,23 @@ serve(async (req) => {
         let maxLength = 0; // MAX (profundidade)
         let totalQuantity = 0;
         
-        // Usar sempre o valor real do pedido para o seguro
-        const insuranceValue = task.order_value && task.order_value > 0 
-          ? task.order_value 
-          : 100; // Fallback mínimo apenas se não houver valor
+        // Buscar valor do orçamento aprovado se order_value for null
+        let insuranceValue = task.order_value;
+        if (!insuranceValue || insuranceValue <= 0) {
+          const { data: quote } = await supabaseAdmin
+            .from('quotes')
+            .select('total_amount')
+            .eq('task_id', task_id)
+            .in('status', ['approved', 'sent'])
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          
+          insuranceValue = quote?.total_amount || 100;
+          console.log('[Melhor Envio] Using quote value for insurance:', insuranceValue, quote ? '(from quote)' : '(fallback)');
+        } else {
+          console.log('[Melhor Envio] Using order_value for insurance:', insuranceValue);
+        }
 
         // Validação de dimensões
         const dimensionWarnings: string[] = [];
@@ -328,12 +349,76 @@ serve(async (req) => {
 
         const quotes: ShippingQuote[] = await quoteResponse.json();
 
+        // Filtrar por transportadoras habilitadas
+        let filteredQuotes = quotes;
+        if (enabledCarriers && enabledCarriers.length > 0) {
+          // Mapear nomes de empresas para códigos
+          const carrierNameMap: Record<string, string> = {
+            'Correios': 'correios',
+            'JadLog': 'jadlog', 
+            'Jadlog': 'jadlog',
+            'JeT': 'jet',
+            'Loggi': 'loggi',
+            'Buslog': 'buslog',
+            'Azul Cargo': 'azul',
+            'Latam Cargo': 'latam',
+          };
+
+          // Construir lista de serviços habilitados
+          const enabledServices = new Set<string>();
+          for (const carrier of enabledCarriers) {
+            const services = carrier.services as Array<{code: string; name: string; enabled: boolean}>;
+            for (const service of services) {
+              if (service.enabled) {
+                // Mapear nomes de serviços para os nomes da API
+                const serviceName = service.name.toLowerCase();
+                enabledServices.add(`${carrier.code}:${serviceName}`);
+              }
+            }
+          }
+
+          console.log('[Melhor Envio] Enabled services:', Array.from(enabledServices));
+
+          filteredQuotes = quotes.filter(q => {
+            const carrierCode = carrierNameMap[q.company.name] || q.company.name.toLowerCase();
+            const serviceName = q.name.toLowerCase();
+            
+            // Verificar se a transportadora está habilitada
+            const carrierEnabled = enabledCarriers.some(c => c.code === carrierCode);
+            if (!carrierEnabled) {
+              console.log(`[Melhor Envio] Filtering out ${q.name} - carrier ${q.company.name} not enabled`);
+              return false;
+            }
+            
+            // Verificar se o serviço específico está habilitado
+            const carrier = enabledCarriers.find(c => c.code === carrierCode);
+            if (carrier) {
+              const services = carrier.services as Array<{code: string; name: string; enabled: boolean}>;
+              const serviceEnabled = services.some(s => 
+                s.enabled && (
+                  serviceName.includes(s.name.toLowerCase()) ||
+                  s.name.toLowerCase().includes(serviceName) ||
+                  s.code === serviceName
+                )
+              );
+              if (!serviceEnabled) {
+                console.log(`[Melhor Envio] Filtering out ${q.name} - service not enabled for ${q.company.name}`);
+                return false;
+              }
+            }
+            
+            return true;
+          });
+
+          console.log(`[Melhor Envio] Filtered ${quotes.length} quotes to ${filteredQuotes.length}`);
+        }
+
         // Ordenar por preço
-        quotes.sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+        filteredQuotes.sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
 
         return new Response(JSON.stringify({ 
           success: true, 
-          quotes: quotes.map(q => ({
+          quotes: filteredQuotes.map(q => ({
             id: q.id,
             name: q.name,
             company: q.company.name,
