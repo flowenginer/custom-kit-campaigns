@@ -10,13 +10,14 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { UserPlus, Trash2, Edit, KeyRound, Loader2, Code2, AlertCircle, Building2 } from "lucide-react";
+import { UserPlus, Trash2, Edit, KeyRound, Loader2, Code2, AlertCircle, Building2, Truck } from "lucide-react";
 import { UrgentReasonsManager } from "@/components/admin/UrgentReasonsManager";
 import { KanbanVisibilityManager } from "@/components/admin/KanbanVisibilityManager";
 import { MenuVisibilityManager } from "@/components/admin/MenuVisibilityManager";
 import { UniformTypesManager } from "@/components/admin/UniformTypesManager";
 import { MenuStructureManager } from "@/components/admin/MenuStructureManager";
 import { BusinessSegmentsManager } from "@/components/admin/BusinessSegmentsManager";
+import { ShippingCarriersManager } from "@/components/admin/ShippingCarriersManager";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AppRole } from "@/hooks/useUserRole";
@@ -425,13 +426,14 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="users" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-9">
+        <TabsList className="flex flex-wrap gap-1">
           <TabsTrigger value="users">Usuários</TabsTrigger>
           <TabsTrigger value="uniform-types">Tipos Uniforme</TabsTrigger>
           <TabsTrigger value="business-segments"><Building2 className="w-4 h-4 mr-1 inline" />Segmentos</TabsTrigger>
           <TabsTrigger value="kanban">Kanban</TabsTrigger>
           <TabsTrigger value="menu">Menu</TabsTrigger>
           <TabsTrigger value="menu-structure">Estrutura Menu</TabsTrigger>
+          <TabsTrigger value="shipping"><Truck className="w-4 h-4 mr-1 inline" />Envios</TabsTrigger>
           <TabsTrigger value="password">Senha</TabsTrigger>
           <TabsTrigger value="scripts"><Code2 className="w-4 h-4 mr-1 inline" />Scripts</TabsTrigger>
           <TabsTrigger value="urgent-reasons"><AlertCircle className="w-4 h-4 mr-1 inline" />Urgência</TabsTrigger>
@@ -791,6 +793,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         {/* TAB: SEGMENTOS DE NEGÓCIO */}
         <TabsContent value="business-segments" className="space-y-4">
           <BusinessSegmentsManager />
+        </TabsContent>
+
+        {/* TAB: ENVIOS / TRANSPORTADORAS */}
+        <TabsContent value="shipping" className="space-y-4">
+          <ShippingCarriersManager />
         </TabsContent>
       </Tabs>
 

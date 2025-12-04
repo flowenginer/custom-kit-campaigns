@@ -2278,6 +2278,42 @@ export type Database = {
         }
         Relationships: []
       }
+      shipping_carriers: {
+        Row: {
+          code: string
+          created_at: string | null
+          display_order: number
+          enabled: boolean
+          id: string
+          logo_url: string | null
+          name: string
+          services: Json
+          updated_at: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          display_order?: number
+          enabled?: boolean
+          id?: string
+          logo_url?: string | null
+          name: string
+          services?: Json
+          updated_at?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          display_order?: number
+          enabled?: boolean
+          id?: string
+          logo_url?: string | null
+          name?: string
+          services?: Json
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       shirt_model_variations: {
         Row: {
           created_at: string | null
