@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -53,11 +53,32 @@ export const ShippingQuoteDialog = ({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [sendingToCustomer, setSendingToCustomer] = useState(false);
+  const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
   const [options, setOptions] = useState<ShippingOption[]>([]);
   const [selectedOption, setSelectedOption] = useState<ShippingOption | null>(null);
   const [dimensionInfo, setDimensionInfo] = useState<DimensionInfo | null>(null);
   const [customerLink, setCustomerLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [customDomain, setCustomDomain] = useState<string | null>(null);
+
+  // Load custom domain on mount
+  useEffect(() => {
+    const loadCustomDomain = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("company_settings")
+          .select("custom_domain")
+          .single();
+        if (error) throw error;
+        if (data?.custom_domain) {
+          setCustomDomain(data.custom_domain);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar domínio personalizado:", error);
+      }
+    };
+    loadCustomDomain();
+  }, []);
 
   const handleQuote = async () => {
     if (!customerId) {
@@ -180,8 +201,11 @@ export const ShippingQuoteDialog = ({
 
       if (error) throw error;
 
-      // Generate link
-      const link = `${window.location.origin}/shipping-select/${token}`;
+      // Generate link using custom domain if available
+      const baseUrl = customDomain 
+        ? `https://${customDomain}` 
+        : window.location.origin;
+      const link = `${baseUrl}/shipping-select/${token}`;
       setCustomerLink(link);
 
       // Send webhook notification
@@ -218,10 +242,72 @@ export const ShippingQuoteDialog = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleShareWhatsApp = () => {
+  const handleShareWhatsApp = async () => {
     if (!customerLink) return;
-    const message = encodeURIComponent(`Olá! Escolha sua opção de frete preferida através do link abaixo:\n\n${customerLink}`);
-    window.open(`https://wa.me/?text=${message}`, '_blank');
+    
+    setSendingWhatsApp(true);
+    
+    try {
+      // Fetch task data for webhook
+      const { data: taskData } = await supabase
+        .from('design_tasks')
+        .select(`
+          *,
+          orders(customer_name, customer_phone, customer_email),
+          customers(name, phone, email),
+          leads(name, phone, email)
+        `)
+        .eq('id', taskId)
+        .single();
+
+      // Get customer info from various sources
+      const customerInfo = {
+        name: taskData?.customers?.name || (taskData?.orders as any)?.customer_name || (taskData?.leads as any)?.name || 'Cliente',
+        phone: taskData?.customers?.phone || (taskData?.orders as any)?.customer_phone || (taskData?.leads as any)?.phone || '',
+        email: taskData?.customers?.email || (taskData?.orders as any)?.customer_email || (taskData?.leads as any)?.email || ''
+      };
+
+      const webhookPayload = {
+        event: 'shipping_quote_whatsapp',
+        shipping_url: customerLink,
+        card_data: {
+          id: taskId,
+          order_number: taskData?.order_number,
+          status: taskData?.status,
+          customer_name: customerInfo.name,
+          customer_phone: customerInfo.phone,
+          customer_email: customerInfo.email
+        },
+        shipping_options: options.map(opt => ({
+          company: opt.company,
+          name: opt.name,
+          price: opt.final_price,
+          delivery_time: opt.delivery_time,
+          delivery_range: opt.delivery_range
+        })),
+        dimension_info: dimensionInfo?.calculated || null,
+        timestamp: new Date().toISOString()
+      };
+
+      const response = await fetch('https://nwh.techspacesports.com.br/webhook/events_criacao', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(webhookPayload)
+      });
+
+      if (!response.ok) throw new Error('REQUEST_FAILED');
+
+      toast.success('Dados enviados com sucesso! O cliente será notificado.');
+      
+      // Close modal after success
+      setTimeout(() => onOpenChange(false), 1000);
+      
+    } catch (error) {
+      console.error('Erro ao enviar via WhatsApp:', error);
+      toast.error('Erro ao enviar via WhatsApp. Tente novamente.');
+    } finally {
+      setSendingWhatsApp(false);
+    }
   };
 
   const getCarrierIcon = (company: string) => {
@@ -397,9 +483,19 @@ export const ShippingQuoteDialog = ({
                     variant="outline" 
                     className="w-full text-green-700 border-green-500/50 hover:bg-green-500/10"
                     onClick={handleShareWhatsApp}
+                    disabled={sendingWhatsApp}
                   >
-                    <ExternalLink className="mr-2 h-4 w-4" />
-                    Enviar via WhatsApp
+                    {sendingWhatsApp ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Enviando...
+                      </>
+                    ) : (
+                      <>
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        Enviar via WhatsApp
+                      </>
+                    )}
                   </Button>
                 </div>
               )}
