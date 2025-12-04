@@ -33,8 +33,10 @@ import {
   Save,
   RefreshCw,
   ExternalLink,
-  Truck
+  Truck,
+  Users
 } from "lucide-react";
+import { SizeGridViewer, SizeGrid } from "./SizeGridViewer";
 
 interface QuoteItem {
   layout_id: string;
@@ -73,6 +75,13 @@ interface ShippingOption {
   currency: string;
 }
 
+interface SizeSelection {
+  item_index: number;
+  layout_id: string | null;
+  size_grid: SizeGrid;
+  total_quantity: number;
+}
+
 interface QuoteEditorModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -109,6 +118,7 @@ export const QuoteEditorModal = ({
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
   const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([]);
   const [quotingShipping, setQuotingShipping] = useState(false);
+  const [sizeSelections, setSizeSelections] = useState<Record<number, SizeSelection>>({});
 
   useEffect(() => {
     if (open) {
@@ -119,6 +129,7 @@ export const QuoteEditorModal = ({
         setDiscountType(existingQuote.discount_type || "none");
         setDiscountValue(existingQuote.discount_value || 0);
         setShippingOptions((existingQuote.shipping_options || []) as ShippingOption[]);
+        loadSizeSelections(existingQuote.id);
         if (existingQuote.token) {
           const baseUrl = customDomain ? `https://${customDomain}` : window.location.origin;
           setGeneratedLink(`${baseUrl}/quote/${existingQuote.token}`);
@@ -126,9 +137,39 @@ export const QuoteEditorModal = ({
       } else {
         generateQuoteFromLayouts();
         setShippingOptions([]);
+        setSizeSelections({});
       }
     }
   }, [open, existingQuote]);
+
+  const loadSizeSelections = async (quoteId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("quote_size_selections")
+        .select("*")
+        .eq("quote_id", quoteId);
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const selections: Record<number, SizeSelection> = {};
+        data.forEach((selection) => {
+          selections[selection.item_index] = {
+            item_index: selection.item_index,
+            layout_id: selection.layout_id,
+            size_grid: selection.size_grid as unknown as SizeGrid,
+            total_quantity: selection.total_quantity || 0
+          };
+        });
+        setSizeSelections(selections);
+      } else {
+        setSizeSelections({});
+      }
+    } catch (error) {
+      console.error("Error loading size selections:", error);
+      setSizeSelections({});
+    }
+  };
 
   useEffect(() => {
     if (quote?.token && customDomain !== null) {
@@ -619,6 +660,31 @@ export const QuoteEditorModal = ({
                   <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
                   <p>Nenhum item encontrado</p>
                 </div>
+              )}
+
+              {/* Size Selections from Customer */}
+              {Object.keys(sizeSelections).length > 0 && (
+                <>
+                  <Separator />
+                  <div className="space-y-3">
+                    <Label className="flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      Tamanhos Selecionados pelo Cliente
+                    </Label>
+                    {quoteItems.map((item, index) => {
+                      const selection = sizeSelections[index];
+                      if (!selection || selection.total_quantity === 0) return null;
+                      return (
+                        <SizeGridViewer
+                          key={index}
+                          sizeGrid={selection.size_grid}
+                          itemName={item.product_name}
+                          itemIndex={index}
+                        />
+                      );
+                    })}
+                  </div>
+                </>
               )}
 
               <Separator />

@@ -54,6 +54,7 @@ interface QuoteSectionProps {
   taskId: string;
   customerName: string;
   customerPhone?: string;
+  customerId?: string | null;
   isSalesperson?: boolean;
   isAdmin?: boolean;
 }
@@ -62,6 +63,7 @@ export const QuoteSection = ({
   taskId,
   customerName,
   customerPhone,
+  customerId,
   isSalesperson,
   isAdmin
 }: QuoteSectionProps) => {
@@ -344,6 +346,7 @@ export const QuoteSection = ({
         taskId={taskId}
         customerName={customerName}
         customerPhone={customerPhone}
+        customerId={customerId}
         existingQuote={quote}
         onQuoteUpdated={loadQuote}
       />
