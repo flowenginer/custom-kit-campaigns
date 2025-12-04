@@ -44,6 +44,7 @@ import MelhorEnvio from "./pages/admin/MelhorEnvio";
 import Bling from "./pages/admin/Bling";
 import ShippingSelect from "./pages/ShippingSelect";
 import ReturnedTasks from "./pages/admin/ReturnedTasks";
+import LayoutApproval from "./pages/LayoutApproval";
 
 // Componente para rastrear mudanças de rota em SPAs
 const AnalyticsTracker = () => {
@@ -84,6 +85,7 @@ const App = () => (
           <Route path="/customer-register/:token" element={<CustomerRegister />} />
           <Route path="/quote/:token" element={<Quote />} />
           <Route path="/frete/:token" element={<ShippingSelect />} />
+          <Route path="/approval/:token" element={<LayoutApproval />} />
           {/* Legacy route for old links */}
           <Route path="/shipping-select/:token" element={<ShippingSelect />} />
           <Route path="/admin" element={<GlobalThemeProvider><AdminLayout /></GlobalThemeProvider>}>

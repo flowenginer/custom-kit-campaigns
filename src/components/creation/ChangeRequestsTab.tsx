@@ -83,9 +83,10 @@ export const ChangeRequestsTab = ({ taskId, taskStatus, layoutId, onChangeReques
 
       const formatted: ChangeRequest[] = requests.map((req) => ({
         ...req,
-        creator_name: profileMap.get(req.created_by) || "Desconhecido",
+        creator_name: req.source === 'client' ? 'Cliente' : (profileMap.get(req.created_by) || "Desconhecido"),
         resolver_name: req.resolved_by ? profileMap.get(req.resolved_by) || null : null,
-        attachments: (req.attachments as Array<{ name: string; url: string }>) || []
+        attachments: (req.attachments as Array<{ name: string; url: string }>) || [],
+        source: req.source || 'internal'
       }));
 
       setChangeRequests(formatted);
@@ -311,8 +312,13 @@ export const ChangeRequestsTab = ({ taskId, taskStatus, layoutId, onChangeReques
                         <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
                       )}
                       <div>
-                        <div className="font-medium">
+                        <div className="font-medium flex items-center gap-2">
                           Alteração #{changeRequests.length - index}
+                          {(cr as any).source === 'client' && (
+                            <Badge variant="outline" className="text-xs border-blue-500 text-blue-600">
+                              Via link
+                            </Badge>
+                          )}
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {format(new Date(cr.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
