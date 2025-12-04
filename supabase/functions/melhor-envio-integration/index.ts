@@ -30,6 +30,7 @@ serve(async (req) => {
   }
 
   try {
+    // Cliente para autenticação do usuário
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? ''
@@ -43,13 +44,25 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
+    // Cliente com service role para ler configurações
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
     const { action, data } = await req.json();
 
-    // Buscar configurações da empresa (token Melhor Envio)
-    const { data: settings, error: settingsError } = await supabaseClient
+    // Buscar configurações da empresa (token Melhor Envio) usando service role
+    const { data: settings, error: settingsError } = await supabaseAdmin
       .from('company_settings')
       .select('*')
       .single();
+
+    console.log('[Melhor Envio] Settings fetch result:', { 
+      hasSettings: !!settings, 
+      hasToken: !!settings?.melhor_envio_token,
+      error: settingsError?.message 
+    });
 
     if (settingsError || !settings?.melhor_envio_token) {
       throw new Error('Token Melhor Envio não configurado');
