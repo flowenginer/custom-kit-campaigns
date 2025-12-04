@@ -138,26 +138,32 @@ export default function LayoutApproval() {
     }
   };
 
-  const getMockupUrl = (): string | null => {
+  const getAllMockups = (): { url: string; version: number }[] => {
+    const mockups: { url: string; version: number }[] = [];
+    
     // First check layout-specific design files
     if (data?.task.layout?.design_files) {
       const files = data.task.layout.design_files as any[];
-      const latestApproved = files
-        .filter((f: any) => f.client_approved || f.url)
-        .sort((a: any, b: any) => (b.version || 0) - (a.version || 0))[0];
-      if (latestApproved?.url) return latestApproved.url;
+      files
+        .filter((f: any) => f.url)
+        .sort((a: any, b: any) => (b.version || 0) - (a.version || 0))
+        .forEach((f: any) => {
+          mockups.push({ url: f.url, version: f.version || 1 });
+        });
     }
 
-    // Then check task-level design files
-    if (data?.task.design_files) {
+    // If no layout files, check task-level design files
+    if (mockups.length === 0 && data?.task.design_files) {
       const files = data.task.design_files as any[];
-      const latestApproved = files
-        .filter((f: any) => f.client_approved || f.url)
-        .sort((a: any, b: any) => (b.version || 0) - (a.version || 0))[0];
-      if (latestApproved?.url) return latestApproved.url;
+      files
+        .filter((f: any) => f.url)
+        .sort((a: any, b: any) => (b.version || 0) - (a.version || 0))
+        .forEach((f: any) => {
+          mockups.push({ url: f.url, version: f.version || 1 });
+        });
     }
 
-    return null;
+    return mockups;
   };
 
   const handleApprove = async () => {
@@ -351,19 +357,19 @@ export default function LayoutApproval() {
 
   if (!data) return null;
 
-  const mockupUrl = getMockupUrl();
+  const mockups = getAllMockups();
   const isAlreadyApproved = !!data.approved_at;
   const isAlreadyRequested = !!data.changes_requested_at;
-  const version = data.task.layout?.current_version || data.task.current_version || 1;
+  const latestVersion = mockups.length > 0 ? mockups[0].version : 1;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted py-8 px-4">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold mb-2">Aprovação de Layout</h1>
           <p className="text-muted-foreground">
-            Visualize e aprove o mockup do seu pedido
+            Visualize e aprove os mockups do seu pedido
           </p>
         </div>
 
@@ -394,40 +400,54 @@ export default function LayoutApproval() {
                 </>
               )}
               <div>
-                <span className="text-muted-foreground">Versão:</span>
-                <p className="font-medium">{version}</p>
+                <span className="text-muted-foreground">Versões:</span>
+                <p className="font-medium">{mockups.length} mockup(s)</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Mockup Display */}
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            {mockupUrl ? (
-              <div 
-                className="relative cursor-zoom-in group"
-                onClick={() => setZoomImage(mockupUrl)}
-              >
-                <img
-                  src={mockupUrl}
-                  alt="Mockup do layout"
-                  className="w-full h-auto rounded-lg border"
-                />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg flex items-center justify-center">
-                  <ZoomIn className="h-12 w-12 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-              </div>
-            ) : (
+        {/* Mockups Gallery */}
+        {mockups.length > 0 ? (
+          <div className="space-y-4 mb-6">
+            {mockups.map((mockup, index) => (
+              <Card key={mockup.version}>
+                <CardContent className="pt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium bg-primary text-primary-foreground px-3 py-1 rounded-full">
+                      Versão {mockup.version}
+                      {index === 0 && ' (mais recente)'}
+                    </span>
+                  </div>
+                  <div 
+                    className="relative cursor-zoom-in group"
+                    onClick={() => setZoomImage(mockup.url)}
+                  >
+                    <img
+                      src={mockup.url}
+                      alt={`Mockup versão ${mockup.version}`}
+                      className="w-full h-auto rounded-lg border"
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg flex items-center justify-center">
+                      <ZoomIn className="h-12 w-12 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <Card className="mb-6">
+            <CardContent className="pt-6">
               <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
                 <div className="text-center text-muted-foreground">
                   <ImageIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
                   <p>Mockup não disponível</p>
                 </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Status Messages */}
         {isAlreadyApproved && (
