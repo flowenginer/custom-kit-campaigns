@@ -41,15 +41,17 @@ export const ChangeRequestsTab = ({ taskId, taskStatus, layoutId, onChangeReques
 
   const loadChangeRequests = async () => {
     try {
-      // Buscar todas as solicitações de alteração (filtradas por layout se layoutId fornecido)
+      // Buscar todas as solicitações de alteração da task
+      // Inclui tanto as com layout_id específico quanto as com layout_id null (vindas do cliente)
       let query = supabase
         .from("change_requests")
         .select("*")
         .eq("task_id", taskId);
       
-      // Se layoutId for fornecido, filtrar por esse layout específico
+      // Se layoutId for fornecido, buscar registros desse layout OU com layout_id null
+      // (alterações do cliente via link podem não ter layout_id)
       if (layoutId) {
-        query = query.eq("layout_id", layoutId);
+        query = query.or(`layout_id.eq.${layoutId},layout_id.is.null`);
       }
       
       const { data: requests, error: requestsError } = await query
