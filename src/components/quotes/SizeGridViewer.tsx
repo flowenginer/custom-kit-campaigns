@@ -13,12 +13,8 @@ interface SizeGridViewerProps {
   sizeGrid: SizeGrid;
   itemName?: string;
   itemIndex?: number;
+  compactMode?: boolean; // Mostra apenas tamanhos com quantidade > 0
 }
-
-const ADULT_SIZES_ROW1 = ['PP', 'P', 'M', 'G', 'GG', 'XG'];
-const ADULT_SIZES_ROW2 = ['G1', 'G2', 'G3', 'G4', 'G5'];
-const CHILD_SIZES_ROW1 = ['2', '4', '6', '8', '10', '12'];
-const CHILD_SIZES_ROW2 = ['14', '16'];
 
 const calculateGenderTotal = (gender: Record<string, number>) => {
   return Object.values(gender).reduce((sum, qty) => sum + qty, 0);
@@ -30,7 +26,14 @@ const calculateGridTotal = (grid: SizeGrid): number => {
          calculateGenderTotal(grid.infantil);
 };
 
-export const SizeGridViewer = ({ sizeGrid, itemName, itemIndex }: SizeGridViewerProps) => {
+// Retorna apenas os tamanhos com quantidade > 0
+const getSelectedSizes = (data: Record<string, number>): Array<{size: string, qty: number}> => {
+  return Object.entries(data)
+    .filter(([_, qty]) => qty > 0)
+    .map(([size, qty]) => ({ size, qty }));
+};
+
+export const SizeGridViewer = ({ sizeGrid, itemName, itemIndex, compactMode = false }: SizeGridViewerProps) => {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['masculino', 'feminino', 'infantil']));
   
   const toggleSection = (gender: string) => {
@@ -54,24 +57,6 @@ export const SizeGridViewer = ({ sizeGrid, itemName, itemIndex }: SizeGridViewer
     { key: 'infantil', label: 'Infantil', colorClass: 'bg-yellow-500', data: sizeGrid.infantil, total: infTotal },
   ];
 
-  const renderSizeRow = (sizes: string[], data: Record<string, number>) => (
-    <div className="grid grid-cols-6 gap-1.5">
-      {sizes.map(size => {
-        const qty = data[size] || 0;
-        return (
-          <div key={size} className="text-center">
-            <div className="text-[10px] text-muted-foreground font-medium mb-0.5">{size}</div>
-            <div className={`h-8 rounded flex items-center justify-center text-sm font-medium ${
-              qty > 0 ? 'bg-primary/20 text-primary' : 'bg-muted/50 text-muted-foreground'
-            }`}>
-              {qty}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-
   if (totalQuantity === 0) {
     return (
       <Card className="border-dashed">
@@ -85,6 +70,49 @@ export const SizeGridViewer = ({ sizeGrid, itemName, itemIndex }: SizeGridViewer
     );
   }
 
+  // Modo compacto: mostra apenas tamanhos selecionados em linha
+  if (compactMode) {
+    return (
+      <Card>
+        <CardContent className="p-3 space-y-2">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Tamanhos Selecionados</span>
+            </div>
+            <Badge variant="secondary" className="font-medium">
+              {totalQuantity} un.
+            </Badge>
+          </div>
+
+          {/* Gender sections - compact */}
+          {genderConfig.map(({ key, label, colorClass, data, total }) => {
+            if (total === 0) return null;
+            const selectedSizes = getSelectedSizes(data);
+            
+            return (
+              <div key={key} className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5">
+                  <span className={`w-2 h-2 rounded-full ${colorClass}`}></span>
+                  <span className="text-xs font-medium uppercase text-muted-foreground">{label}:</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedSizes.map(({ size, qty }) => (
+                    <Badge key={size} variant="outline" className="text-xs px-2 py-0.5">
+                      {qty}x {size}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Modo completo: grade expandível
   return (
     <Card>
       <CardContent className="p-3 space-y-2">
@@ -107,6 +135,8 @@ export const SizeGridViewer = ({ sizeGrid, itemName, itemIndex }: SizeGridViewer
           const hasQuantity = total > 0;
           
           if (!hasQuantity) return null;
+          
+          const selectedSizes = getSelectedSizes(data);
 
           return (
             <div key={key} className="border rounded-lg overflow-hidden">
@@ -131,48 +161,16 @@ export const SizeGridViewer = ({ sizeGrid, itemName, itemIndex }: SizeGridViewer
               </div>
 
               {isExpanded && (
-                <div className="p-3 space-y-2">
-                  {key !== 'infantil' ? (
-                    <>
-                      {renderSizeRow(ADULT_SIZES_ROW1, data)}
-                      <div className="grid grid-cols-6 gap-1.5">
-                        {ADULT_SIZES_ROW2.map(size => {
-                          const qty = data[size] || 0;
-                          return (
-                            <div key={size} className="text-center">
-                              <div className="text-[10px] text-muted-foreground font-medium mb-0.5">{size}</div>
-                              <div className={`h-8 rounded flex items-center justify-center text-sm font-medium ${
-                                qty > 0 ? 'bg-primary/20 text-primary' : 'bg-muted/50 text-muted-foreground'
-                              }`}>
-                                {qty}
-                              </div>
-                            </div>
-                          );
-                        })}
-                        <div></div>
+                <div className="p-3">
+                  <div className="flex flex-wrap gap-2">
+                    {selectedSizes.map(({ size, qty }) => (
+                      <div key={size} className="flex items-center gap-1 bg-primary/10 rounded-md px-3 py-1.5">
+                        <span className="text-sm font-bold text-primary">{qty}</span>
+                        <span className="text-xs text-muted-foreground">×</span>
+                        <span className="text-sm font-medium">{size}</span>
                       </div>
-                    </>
-                  ) : (
-                    <>
-                      {renderSizeRow(CHILD_SIZES_ROW1, data)}
-                      <div className="grid grid-cols-6 gap-1.5">
-                        {CHILD_SIZES_ROW2.map(size => {
-                          const qty = data[size] || 0;
-                          return (
-                            <div key={size} className="text-center">
-                              <div className="text-[10px] text-muted-foreground font-medium mb-0.5">{size}</div>
-                              <div className={`h-8 rounded flex items-center justify-center text-sm font-medium ${
-                                qty > 0 ? 'bg-primary/20 text-primary' : 'bg-muted/50 text-muted-foreground'
-                              }`}>
-                                {qty}
-                              </div>
-                            </div>
-                          );
-                        })}
-                        {[...Array(4)].map((_, i) => <div key={i}></div>)}
-                      </div>
-                    </>
-                  )}
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

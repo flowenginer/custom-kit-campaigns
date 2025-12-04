@@ -552,7 +552,7 @@ export const QuoteEditorModal = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            {quote?.id ? "Editar Orçamento" : "Criar Orçamento"}
+            {isApproved ? "Ver Orçamento" : quote?.id ? "Editar Orçamento" : "Criar Orçamento"}
           </DialogTitle>
         </DialogHeader>
 
@@ -640,14 +640,16 @@ export const QuoteEditorModal = ({
                           <p className="font-semibold text-primary text-sm">
                             {formatCurrency(item.subtotal)}
                           </p>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 mt-1"
-                            onClick={() => setEditingItemIndex(editingItemIndex === index ? null : index)}
-                          >
-                            <Edit2 className="h-3 w-3" />
-                          </Button>
+                          {!isApproved && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 mt-1"
+                              onClick={() => setEditingItemIndex(editingItemIndex === index ? null : index)}
+                            >
+                              <Edit2 className="h-3 w-3" />
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </CardContent>
@@ -680,6 +682,7 @@ export const QuoteEditorModal = ({
                           sizeGrid={selection.size_grid}
                           itemName={item.product_name}
                           itemIndex={index}
+                          compactMode={true}
                         />
                       );
                     })}
@@ -696,7 +699,7 @@ export const QuoteEditorModal = ({
                   Desconto
                 </Label>
                 <div className="grid grid-cols-2 gap-3">
-                  <Select value={discountType} onValueChange={setDiscountType}>
+                  <Select value={discountType} onValueChange={setDiscountType} disabled={isApproved}>
                     <SelectTrigger>
                       <SelectValue placeholder="Tipo de desconto" />
                     </SelectTrigger>
@@ -716,6 +719,7 @@ export const QuoteEditorModal = ({
                       value={discountValue}
                       onChange={(e) => setDiscountValue(parseFloat(e.target.value) || 0)}
                       placeholder={discountType === "percentage" ? "%" : "R$"}
+                      disabled={isApproved}
                     />
                   )}
                 </div>
@@ -730,7 +734,7 @@ export const QuoteEditorModal = ({
                     <Truck className="h-4 w-4" />
                     Opções de Frete
                   </Label>
-                  {customerId && (
+                  {customerId && !isApproved && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -747,7 +751,7 @@ export const QuoteEditorModal = ({
                   )}
                 </div>
                 
-                {!customerId && (
+                {!customerId && !isApproved && (
                   <p className="text-xs text-muted-foreground">
                     Cliente sem cadastro. Cadastre o cliente para cotar frete.
                   </p>
@@ -854,11 +858,11 @@ export const QuoteEditorModal = ({
         )}
 
         <DialogFooter className="flex-col gap-2 sm:flex-row">
-          {quote?.id && (
+          {quote?.id && !isApproved && (
             <Button
               variant="destructive"
               onClick={handleDeleteQuote}
-              disabled={deleting || isApproved}
+              disabled={deleting}
               className="w-full sm:w-auto"
             >
               {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4 mr-1" />}
@@ -871,15 +875,17 @@ export const QuoteEditorModal = ({
               Fechar
             </Button>
             
-            <Button 
-              onClick={handleSaveQuote} 
-              disabled={saving || quoteItems.length === 0}
-              variant="secondary"
-              className="flex-1 sm:flex-none"
-            >
-              {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
-              {quote?.id ? "Salvar" : "Gerar Link"}
-            </Button>
+            {!isApproved && (
+              <Button 
+                onClick={handleSaveQuote} 
+                disabled={saving || quoteItems.length === 0}
+                variant="secondary"
+                className="flex-1 sm:flex-none"
+              >
+                {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
+                {quote?.id ? "Salvar" : "Gerar Link"}
+              </Button>
+            )}
 
             {generatedLink && !isApproved && (
               <Button 
