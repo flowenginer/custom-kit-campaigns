@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { format, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -18,7 +19,8 @@ import {
   AlertCircle,
   RefreshCcw,
   Clock,
-  FileText
+  FileText,
+  Truck
 } from "lucide-react";
 import { SizeGridSelector, SizeGrid, createEmptySizeGrid, calculateGridTotal } from "@/components/quotes/SizeGridSelector";
 
@@ -31,6 +33,15 @@ interface QuoteItem {
   unit_price: number;
   quantity: number;
   subtotal: number;
+}
+
+interface ShippingOption {
+  id: string;
+  name: string;
+  company: { name: string; picture: string };
+  price: number;
+  delivery_time: number;
+  currency: string;
 }
 
 interface Quote {
@@ -48,6 +59,9 @@ interface Quote {
   approved_at: string | null;
   approved_by_name: string | null;
   created_at: string;
+  shipping_options?: ShippingOption[];
+  selected_shipping?: ShippingOption | null;
+  shipping_value?: number;
 }
 
 const Quote = () => {
@@ -60,6 +74,7 @@ const Quote = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sizeSelections, setSizeSelections] = useState<Record<number, SizeGrid>>({});
+  const [selectedShippingId, setSelectedShippingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (token) {
@@ -119,10 +134,18 @@ const Quote = () => {
         items: (data.items || []) as unknown as QuoteItem[],
         subtotal_before_discount: Number(data.subtotal_before_discount) || Number(data.total_amount),
         discount_type: data.discount_type || null,
-        discount_value: Number(data.discount_value) || 0
+        discount_value: Number(data.discount_value) || 0,
+        shipping_options: (data.shipping_options || []) as unknown as ShippingOption[],
+        selected_shipping: data.selected_shipping as unknown as ShippingOption | null,
+        shipping_value: Number(data.shipping_value) || 0
       } as Quote;
 
       setQuote(quoteData);
+      
+      // Set selected shipping if exists
+      if (quoteData.selected_shipping?.id) {
+        setSelectedShippingId(quoteData.selected_shipping.id);
+      }
 
       // Load existing size selections
       const { data: existingSelections } = await supabase
@@ -239,9 +262,52 @@ const Quote = () => {
     return true;
   };
 
+  const handleShippingSelect = async (shippingId: string) => {
+    if (!quote) return;
+    
+    const selectedOption = quote.shipping_options?.find(opt => opt.id === shippingId);
+    if (!selectedOption) return;
+    
+    setSelectedShippingId(shippingId);
+    
+    // Update quote in database
+    await supabase
+      .from("quotes")
+      .update({
+        selected_shipping: selectedOption as any,
+        shipping_value: selectedOption.price
+      })
+      .eq("id", quote.id);
+    
+    setQuote(prev => prev ? {
+      ...prev,
+      selected_shipping: selectedOption,
+      shipping_value: selectedOption.price
+    } : null);
+  };
+
+  const getSelectedShipping = (): ShippingOption | null => {
+    if (!quote || !selectedShippingId) return null;
+    return quote.shipping_options?.find(opt => opt.id === selectedShippingId) || null;
+  };
+
+  const calculateTotalWithShipping = (): number => {
+    if (!quote) return 0;
+    const selectedShipping = getSelectedShipping();
+    return Number(quote.total_amount) + (selectedShipping?.price || 0);
+  };
+
+  const hasShippingOptions = quote?.shipping_options && quote.shipping_options.length > 0;
+
   const handleApprove = async () => {
     // Validate size grids
     if (!validateSizeGrids()) {
+      return;
+    }
+
+    // Validate shipping selection if options exist
+    if (hasShippingOptions && !selectedShippingId) {
+      toast.error("Por favor, selecione uma opção de frete antes de aprovar");
       return;
     }
 
@@ -254,25 +320,42 @@ const Quote = () => {
 
     setSubmitting(true);
     try {
+      const selectedShipping = getSelectedShipping();
+      const totalWithShipping = calculateTotalWithShipping();
+      
       const { error: updateError } = await supabase
         .from("quotes")
         .update({
           status: 'approved',
           approved_at: new Date().toISOString(),
-          approved_by_name: approverName.trim()
+          approved_by_name: approverName.trim(),
+          selected_shipping: selectedShipping as any,
+          shipping_value: selectedShipping?.price || 0
         })
         .eq("id", quote!.id);
 
       if (updateError) throw updateError;
 
-      // Send webhook with size grids
+      // Update design_tasks with shipping info
+      await supabase
+        .from("design_tasks")
+        .update({
+          shipping_option: selectedShipping as any,
+          shipping_value: selectedShipping?.price || 0
+        })
+        .eq("id", quote!.task_id);
+
+      // Send webhook with size grids and shipping
       const webhookPayload = {
         event: 'quote_approved',
         quote: {
           id: quote!.id,
           task_id: quote!.task_id,
           customer_name: customerName,
-          total_amount: quote!.total_amount,
+          total_amount: totalWithShipping,
+          products_total: quote!.total_amount,
+          shipping_value: selectedShipping?.price || 0,
+          shipping_option: selectedShipping,
           approved_by: approverName.trim(),
           approved_at: new Date().toISOString()
         },
@@ -522,49 +605,160 @@ const Quote = () => {
           </CardContent>
         </Card>
 
+        {/* Shipping Options */}
+        {hasShippingOptions && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Truck className="h-5 w-5" />
+                Opções de Entrega
+                {!selectedShippingId && canTakeAction && (
+                  <Badge variant="destructive" className="ml-2">Obrigatório</Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <RadioGroup
+                value={selectedShippingId || ""}
+                onValueChange={handleShippingSelect}
+                disabled={!canTakeAction}
+                className="space-y-3"
+              >
+                {quote.shipping_options?.map((option) => (
+                  <div 
+                    key={option.id} 
+                    className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${
+                      selectedShippingId === option.id 
+                        ? 'border-primary bg-primary/5' 
+                        : 'border-border hover:border-primary/50'
+                    } ${!canTakeAction ? 'opacity-70' : 'cursor-pointer'}`}
+                    onClick={() => canTakeAction && handleShippingSelect(option.id)}
+                  >
+                    <RadioGroupItem value={option.id} id={option.id} />
+                    <div className="flex items-center gap-3 flex-1">
+                      {option.company.picture && (
+                        <img 
+                          src={option.company.picture} 
+                          alt={option.company.name}
+                          className="h-8 w-12 object-contain"
+                        />
+                      )}
+                      <div className="flex-1">
+                        <p className="font-medium">{option.company.name}</p>
+                        <p className="text-sm text-muted-foreground">{option.name}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-primary">{formatCurrency(option.price)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {option.delivery_time} {option.delivery_time === 1 ? 'dia útil' : 'dias úteis'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </RadioGroup>
+              
+              {/* Show selected shipping in approved state */}
+              {(isApproved || isCorrectionRequested) && quote.selected_shipping && (
+                <div className="mt-4 p-3 rounded-lg bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800">
+                  <div className="flex items-center gap-3">
+                    {quote.selected_shipping.company.picture && (
+                      <img 
+                        src={quote.selected_shipping.company.picture} 
+                        alt={quote.selected_shipping.company.name}
+                        className="h-8 w-12 object-contain"
+                      />
+                    )}
+                    <div className="flex-1">
+                      <p className="font-medium text-green-700 dark:text-green-400">
+                        Frete Selecionado: {quote.selected_shipping.company.name}
+                      </p>
+                      <p className="text-sm text-green-600 dark:text-green-500">
+                        {quote.selected_shipping.name} - {quote.selected_shipping.delivery_time} dias úteis
+                      </p>
+                    </div>
+                    <p className="font-semibold text-green-700 dark:text-green-400">
+                      {formatCurrency(quote.selected_shipping.price)}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Total */}
         <Card className="mb-6 bg-primary/5 border-primary/20">
           <CardContent className="py-6 space-y-3">
+            {/* Subtotal dos produtos */}
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span>Produtos</span>
+              <span>{formatCurrency(quote.subtotal_before_discount)}</span>
+            </div>
+            
+            {/* Desconto */}
             {quote.discount_type && quote.discount_value > 0 && (
-              <>
-                <div className="flex items-center justify-between text-muted-foreground">
-                  <span>Subtotal</span>
-                  <span>{formatCurrency(quote.subtotal_before_discount)}</span>
-                </div>
-                <div className="flex items-center justify-between text-green-600">
-                  <span>
-                    Desconto ({quote.discount_type === 'percentage' 
-                      ? `${quote.discount_value}%` 
-                      : formatCurrency(quote.discount_value)})
-                  </span>
-                  <span>-{formatCurrency(quote.subtotal_before_discount - Number(quote.total_amount))}</span>
-                </div>
-                <Separator />
-              </>
+              <div className="flex items-center justify-between text-green-600">
+                <span>
+                  Desconto ({quote.discount_type === 'percentage' 
+                    ? `${quote.discount_value}%` 
+                    : formatCurrency(quote.discount_value)})
+                </span>
+                <span>-{formatCurrency(quote.subtotal_before_discount - Number(quote.total_amount))}</span>
+              </div>
             )}
+            
+            {/* Frete */}
+            {(getSelectedShipping() || quote.selected_shipping) && (
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span className="flex items-center gap-2">
+                  <Truck className="h-4 w-4" />
+                  Frete ({(getSelectedShipping() || quote.selected_shipping)?.company.name})
+                </span>
+                <span>{formatCurrency((getSelectedShipping() || quote.selected_shipping)?.price || 0)}</span>
+              </div>
+            )}
+            
+            {hasShippingOptions && !selectedShippingId && canTakeAction && (
+              <div className="flex items-center justify-between text-orange-600">
+                <span className="flex items-center gap-2">
+                  <Truck className="h-4 w-4" />
+                  Frete
+                </span>
+                <span className="text-sm">Selecione uma opção acima</span>
+              </div>
+            )}
+            
+            <Separator />
+            
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <DollarSign className="h-8 w-8 text-primary" />
                 <span className="text-xl font-semibold">TOTAL</span>
               </div>
               <span className="text-3xl font-bold text-primary">
-                {formatCurrency(Number(quote.total_amount))}
+                {formatCurrency(calculateTotalWithShipping())}
               </span>
             </div>
           </CardContent>
         </Card>
 
-        {/* Size Grid Warning */}
-        {canTakeAction && !allGridsComplete && (
+        {/* Warnings */}
+        {canTakeAction && (!allGridsComplete || (hasShippingOptions && !selectedShippingId)) && (
           <Card className="mb-6 border-orange-500/50 bg-orange-500/10">
             <CardContent className="py-4 text-center">
               <AlertCircle className="h-6 w-6 mx-auto text-orange-500 mb-2" />
               <h3 className="font-semibold text-orange-700 dark:text-orange-400 text-sm">
-                Preencha a Grade de Tamanhos
+                Ação Necessária
               </h3>
-              <p className="text-xs text-muted-foreground mt-1">
-                Para aprovar o orçamento, informe as quantidades de cada tamanho nos itens acima.
-              </p>
+              <div className="text-xs text-muted-foreground mt-1 space-y-1">
+                {!allGridsComplete && (
+                  <p>• Preencha a grade de tamanhos de todos os itens</p>
+                )}
+                {hasShippingOptions && !selectedShippingId && (
+                  <p>• Selecione uma opção de frete</p>
+                )}
+              </div>
             </CardContent>
           </Card>
         )}
@@ -620,9 +814,9 @@ const Quote = () => {
                 </Button>
                 <Button
                   size="lg"
-                  className={`h-16 ${allGridsComplete ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'}`}
+                  className={`h-16 ${allGridsComplete && (!hasShippingOptions || selectedShippingId) ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'}`}
                   onClick={handleApprove}
-                  disabled={submitting || !allGridsComplete}
+                  disabled={submitting || !allGridsComplete || (hasShippingOptions && !selectedShippingId)}
                 >
                   {submitting ? (
                     <Loader2 className="h-5 w-5 animate-spin" />

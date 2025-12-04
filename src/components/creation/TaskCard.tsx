@@ -365,6 +365,18 @@ export const TaskCard = ({
                   </div>
                 </div>
               </div>
+
+              {/* Shipping Info - Show when shipping is selected */}
+              {task.shipping_option && (
+                <div className="mt-2 p-2 rounded-lg bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800">
+                  <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+                    <Truck className="h-4 w-4" />
+                    <span className="text-xs font-medium truncate">
+                      {(task.shipping_option as any)?.company?.name || 'Frete'}: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(task.shipping_value || 0)}
+                    </span>
+                  </div>
+                </div>
+              )}
             </CollapsibleContent>
 
             {/* Botões de Ação - Apenas para status approved E não designers */}
