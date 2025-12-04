@@ -43,6 +43,7 @@ import Quote from "./pages/Quote";
 import MelhorEnvio from "./pages/admin/MelhorEnvio";
 import Bling from "./pages/admin/Bling";
 import ShippingSelect from "./pages/ShippingSelect";
+import ReturnedTasks from "./pages/admin/ReturnedTasks";
 
 // Componente para rastrear mudanças de rota em SPAs
 const AnalyticsTracker = () => {
@@ -103,6 +104,7 @@ const App = () => (
             <Route path="ab-tests" element={<ABTests />} />
             <Route path="creation" element={<Creation />} />
             <Route path="orders" element={<Orders />} />
+            <Route path="returned" element={<ReturnedTasks />} />
             <Route path="approvals" element={<Approvals />} />
             <Route path="api" element={<Api />} />
             <Route path="settings" element={<Settings />} />
