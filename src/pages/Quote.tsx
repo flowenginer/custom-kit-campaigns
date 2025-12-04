@@ -642,32 +642,31 @@ const Quote = () => {
                     )}
                   </div>
 
-                  {/* Product Info - Reorganized for mobile */}
-                  <div className="flex-1 min-w-0 flex flex-col gap-2">
-                    {/* Top: Name + Subtotal */}
-                    <div className="flex items-start justify-between gap-2">
-                      <h4 className="font-medium text-sm sm:text-base leading-tight line-clamp-2">
+                  {/* Product Info - Container 1: Name + Subtotal */}
+                  <div className="flex-1 min-w-0">
+                    <div className="bg-muted/30 rounded-lg p-3 h-full flex flex-col justify-between">
+                      <h4 className="font-semibold text-sm sm:text-base leading-tight line-clamp-2">
                         {item.product_name}
                       </h4>
-                      <div className="text-right flex-shrink-0">
-                        <span className="text-[10px] sm:text-xs text-muted-foreground block">Subtotal</span>
-                        <p className="text-sm sm:text-lg font-semibold text-primary whitespace-nowrap">
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-xs text-muted-foreground">Subtotal</span>
+                        <p className="text-base sm:text-lg font-bold text-primary">
                           {formatCurrency(item.subtotal)}
                         </p>
                       </div>
                     </div>
-                    
-                    {/* Bottom: Details in a card */}
-                    <div className="bg-muted/50 rounded-md p-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs sm:text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Preço unitário:</span>
-                        <p className="font-medium">{formatCurrency(item.unit_price)}</p>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Qtd. mínima:</span>
-                        <p className="font-medium">{item.quantity} un.</p>
-                      </div>
-                    </div>
+                  </div>
+                </div>
+                
+                {/* Container 2: Details - Price & Quantity */}
+                <div className="bg-muted/50 rounded-lg p-3 grid grid-cols-2 gap-4">
+                  <div className="text-center">
+                    <span className="text-xs text-muted-foreground block mb-1">Preço Unitário</span>
+                    <p className="font-semibold text-sm sm:text-base">{formatCurrency(item.unit_price)}</p>
+                  </div>
+                  <div className="text-center">
+                    <span className="text-xs text-muted-foreground block mb-1">Qtd. Mínima</span>
+                    <p className="font-semibold text-sm sm:text-base">{item.quantity} un.</p>
                   </div>
                 </div>
 
