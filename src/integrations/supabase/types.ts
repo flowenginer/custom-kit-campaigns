@@ -2189,8 +2189,11 @@ export type Database = {
           discount_value: number | null
           id: string
           items: Json
+          selected_shipping: Json | null
           sent_at: string | null
           sent_by: string | null
+          shipping_options: Json | null
+          shipping_value: number | null
           status: string
           subtotal_before_discount: number | null
           task_id: string
@@ -2208,8 +2211,11 @@ export type Database = {
           discount_value?: number | null
           id?: string
           items?: Json
+          selected_shipping?: Json | null
           sent_at?: string | null
           sent_by?: string | null
+          shipping_options?: Json | null
+          shipping_value?: number | null
           status?: string
           subtotal_before_discount?: number | null
           task_id: string
@@ -2227,8 +2233,11 @@ export type Database = {
           discount_value?: number | null
           id?: string
           items?: Json
+          selected_shipping?: Json | null
           sent_at?: string | null
           sent_by?: string | null
+          shipping_options?: Json | null
+          shipping_value?: number | null
           status?: string
           subtotal_before_discount?: number | null
           task_id?: string

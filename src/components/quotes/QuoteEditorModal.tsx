@@ -32,7 +32,8 @@ import {
   Edit2,
   Save,
   RefreshCw,
-  ExternalLink
+  ExternalLink,
+  Truck
 } from "lucide-react";
 
 interface QuoteItem {
@@ -59,6 +60,17 @@ interface Quote {
   valid_until: string;
   created_at: string;
   sent_at: string | null;
+  shipping_options?: ShippingOption[];
+  shipping_value?: number;
+}
+
+interface ShippingOption {
+  id: string;
+  name: string;
+  company: { name: string; picture: string };
+  price: number;
+  delivery_time: number;
+  currency: string;
 }
 
 interface QuoteEditorModalProps {
@@ -67,6 +79,7 @@ interface QuoteEditorModalProps {
   taskId: string;
   customerName: string;
   customerPhone?: string;
+  customerId?: string | null;
   existingQuote?: Quote | null;
   onQuoteUpdated?: () => void;
 }
@@ -77,6 +90,7 @@ export const QuoteEditorModal = ({
   taskId,
   customerName,
   customerPhone,
+  customerId,
   existingQuote,
   onQuoteUpdated
 }: QuoteEditorModalProps) => {
@@ -93,6 +107,8 @@ export const QuoteEditorModal = ({
   const [customDomain, setCustomDomain] = useState<string | null>(null);
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
+  const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([]);
+  const [quotingShipping, setQuotingShipping] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -102,12 +118,14 @@ export const QuoteEditorModal = ({
         setQuoteItems(existingQuote.items || []);
         setDiscountType(existingQuote.discount_type || "none");
         setDiscountValue(existingQuote.discount_value || 0);
+        setShippingOptions((existingQuote.shipping_options || []) as ShippingOption[]);
         if (existingQuote.token) {
           const baseUrl = customDomain ? `https://${customDomain}` : window.location.origin;
           setGeneratedLink(`${baseUrl}/quote/${existingQuote.token}`);
         }
       } else {
         generateQuoteFromLayouts();
+        setShippingOptions([]);
       }
     }
   }, [open, existingQuote]);
@@ -232,6 +250,41 @@ export const QuoteEditorModal = ({
     setQuoteItems(newItems);
   };
 
+  const handleQuoteShipping = async () => {
+    if (!customerId) {
+      toast.error("Cliente não possui cadastro com endereço");
+      return;
+    }
+
+    setQuotingShipping(true);
+    try {
+      // Calculate total quantity
+      const totalQuantity = quoteItems.reduce((sum, item) => sum + item.quantity, 0);
+
+      const { data, error } = await supabase.functions.invoke('melhor-envio-integration', {
+        body: {
+          action: 'calculate',
+          taskId,
+          customerId,
+          quantity: totalQuantity
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.options && data.options.length > 0) {
+        setShippingOptions(data.options);
+        toast.success(`${data.options.length} opções de frete encontradas!`);
+      } else {
+        toast.warning("Nenhuma opção de frete disponível");
+      }
+    } catch (error) {
+      console.error("Error quoting shipping:", error);
+      toast.error("Erro ao cotar frete");
+    }
+    setQuotingShipping(false);
+  };
+
   const handleSaveQuote = async () => {
     setSaving(true);
     try {
@@ -248,7 +301,8 @@ export const QuoteEditorModal = ({
         subtotal_before_discount: subtotal,
         discount_type: discountType === "none" ? null : discountType,
         discount_value: discountType === "none" ? 0 : discountValue,
-        valid_until: validUntil.toISOString()
+        valid_until: validUntil.toISOString(),
+        shipping_options: shippingOptions.length > 0 ? (shippingOptions as unknown as any) : null
       };
 
       let savedQuote;
@@ -599,6 +653,58 @@ export const QuoteEditorModal = ({
                     />
                   )}
                 </div>
+              </div>
+
+              <Separator />
+
+              {/* Shipping Section */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-2">
+                    <Truck className="h-4 w-4" />
+                    Opções de Frete
+                  </Label>
+                  {customerId && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleQuoteShipping}
+                      disabled={quotingShipping}
+                    >
+                      {quotingShipping ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <Truck className="h-4 w-4 mr-2" />
+                      )}
+                      Cotar Frete
+                    </Button>
+                  )}
+                </div>
+                
+                {!customerId && (
+                  <p className="text-xs text-muted-foreground">
+                    Cliente sem cadastro. Cadastre o cliente para cotar frete.
+                  </p>
+                )}
+                
+                {shippingOptions.length > 0 && (
+                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                    {shippingOptions.map((option) => (
+                      <div key={option.id} className="flex items-center justify-between p-2 bg-muted/50 rounded text-sm">
+                        <div className="flex items-center gap-2">
+                          {option.company.picture && (
+                            <img src={option.company.picture} alt={option.company.name} className="h-5 w-8 object-contain" />
+                          )}
+                          <span>{option.company.name}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-medium">{formatCurrency(option.price)}</span>
+                          <span className="text-xs text-muted-foreground ml-2">{option.delivery_time}d</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <Separator />

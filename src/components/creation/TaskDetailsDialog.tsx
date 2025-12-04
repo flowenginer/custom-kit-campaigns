@@ -1226,6 +1226,29 @@ export const TaskDetailsDialog = ({
                         </div>
                       </div>
                     )}
+                    
+                    {/* Frete Selecionado */}
+                    {task.shipping_option && (
+                      <div className="mt-3 p-3 rounded-lg bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800">
+                        <Label className="text-xs text-green-700 dark:text-green-400 font-semibold mb-2 block">
+                          🚚 Frete Selecionado
+                        </Label>
+                        <div className="space-y-1">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-medium text-green-700 dark:text-green-400">
+                              {(task.shipping_option as any)?.company?.name || 'N/A'}
+                            </span>
+                            <Badge className="bg-green-600 text-white">
+                              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(task.shipping_value || 0)}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-green-600 dark:text-green-500">
+                            {(task.shipping_option as any)?.name || ''} 
+                            {(task.shipping_option as any)?.delivery_time && ` - ${(task.shipping_option as any).delivery_time} dias úteis`}
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
