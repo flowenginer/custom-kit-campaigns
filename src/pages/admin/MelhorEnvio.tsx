@@ -147,12 +147,8 @@ export default function MelhorEnvio() {
         <p className="text-muted-foreground">Configuração e gerenciamento de envios</p>
       </div>
 
-      <Tabs defaultValue="config">
+      <Tabs defaultValue="panel">
         <TabsList>
-          <TabsTrigger value="config">
-            <Settings className="w-4 h-4 mr-2" />
-            Configuração
-          </TabsTrigger>
           <TabsTrigger value="panel">
             <Package className="w-4 h-4 mr-2" />
             Painel de Envios
@@ -160,6 +156,10 @@ export default function MelhorEnvio() {
           <TabsTrigger value="carriers">
             <Truck className="w-4 h-4 mr-2" />
             Transportadoras
+          </TabsTrigger>
+          <TabsTrigger value="config">
+            <Settings className="w-4 h-4 mr-2" />
+            Configuração
           </TabsTrigger>
         </TabsList>
 
