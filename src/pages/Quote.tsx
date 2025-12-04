@@ -19,12 +19,12 @@ import {
   AlertCircle,
   RefreshCcw,
   Clock,
-  FileText,
   Truck,
   Plus,
   TrendingUp
 } from "lucide-react";
 import { SizeGridSelector, SizeGrid, createEmptySizeGrid, calculateGridTotal, calculatePlusSizeCount } from "@/components/quotes/SizeGridSelector";
+import logoSS from "@/assets/logo-ss.png";
 
 interface QuoteItem {
   layout_id: string;
@@ -531,10 +531,16 @@ const Quote = () => {
     <div className="min-h-screen bg-gradient-to-br from-background to-muted py-8 px-4">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-8">
-          <FileText className="h-12 w-12 mx-auto text-primary mb-3" />
-          <h1 className="text-2xl font-bold">Orçamento</h1>
-          <p className="text-muted-foreground">#{quote.id.slice(0, 8).toUpperCase()}</p>
+        <div className="flex items-center justify-between mb-8 px-2">
+          <img 
+            src={logoSS} 
+            alt="Space Sports" 
+            className="h-12 w-12 object-contain"
+          />
+          <div className="text-right">
+            <h1 className="text-xl font-bold">Orçamento</h1>
+            <p className="text-sm text-muted-foreground">#{quote.id.slice(0, 8).toUpperCase()}</p>
+          </div>
         </div>
 
         {/* Status Banner */}
@@ -582,16 +588,19 @@ const Quote = () => {
 
         {/* Quote Info */}
         <Card className="mb-6">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg">{customerName || "Cliente"}</CardTitle>
+          <CardHeader className="pb-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <CardTitle className="text-lg truncate">{customerName || "Cliente"}</CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Criado em: {format(new Date(quote.created_at), "dd/MM/yyyy", { locale: ptBR })}
                 </p>
               </div>
-              <div className="text-right">
-                <Badge variant={isExpired ? "destructive" : isApproved ? "default" : "secondary"}>
+              <div className="text-right flex-shrink-0">
+                <Badge 
+                  variant={isExpired ? "destructive" : isApproved ? "default" : "secondary"}
+                  className="text-[10px] sm:text-xs whitespace-nowrap px-2"
+                >
                   {isApproved && "Aprovado"}
                   {isExpired && !isApproved && "Expirado"}
                   {isCorrectionRequested && "Em Revisão"}
@@ -618,9 +627,10 @@ const Quote = () => {
           <CardContent className="space-y-4">
             {(quote.items as QuoteItem[]).map((item, index) => (
               <div key={index} className="space-y-4">
-                <div className="flex gap-4">
+                {/* Mobile-optimized item layout */}
+                <div className="flex gap-3">
                   {/* Product Image */}
-                  <div className="w-24 h-24 rounded-lg bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
                     {item.product_image ? (
                       <img 
                         src={item.product_image} 
@@ -628,31 +638,36 @@ const Quote = () => {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <Package className="h-10 w-10 text-muted-foreground" />
+                      <Package className="h-8 w-8 text-muted-foreground" />
                     )}
                   </div>
 
-                  {/* Product Info */}
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-medium">{item.product_name}</h4>
-                    <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
+                  {/* Product Info - Reorganized for mobile */}
+                  <div className="flex-1 min-w-0 flex flex-col gap-2">
+                    {/* Top: Name + Subtotal */}
+                    <div className="flex items-start justify-between gap-2">
+                      <h4 className="font-medium text-sm sm:text-base leading-tight line-clamp-2">
+                        {item.product_name}
+                      </h4>
+                      <div className="text-right flex-shrink-0">
+                        <span className="text-[10px] sm:text-xs text-muted-foreground block">Subtotal</span>
+                        <p className="text-sm sm:text-lg font-semibold text-primary whitespace-nowrap">
+                          {formatCurrency(item.subtotal)}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Bottom: Details in a card */}
+                    <div className="bg-muted/50 rounded-md p-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs sm:text-sm">
                       <div>
                         <span className="text-muted-foreground">Preço unitário:</span>
                         <p className="font-medium">{formatCurrency(item.unit_price)}</p>
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Quantidade mínima:</span>
+                        <span className="text-muted-foreground">Qtd. mínima:</span>
                         <p className="font-medium">{item.quantity} un.</p>
                       </div>
                     </div>
-                  </div>
-
-                  {/* Subtotal */}
-                  <div className="text-right flex-shrink-0">
-                    <span className="text-sm text-muted-foreground">Subtotal</span>
-                    <p className="text-lg font-semibold text-primary">
-                      {formatCurrency(item.subtotal)}
-                    </p>
                   </div>
                 </div>
 
