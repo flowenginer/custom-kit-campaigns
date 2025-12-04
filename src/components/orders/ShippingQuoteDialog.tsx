@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Package, Truck, MapPin, Box } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2, Package, Truck, AlertTriangle, Scale, Ruler } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -18,6 +19,18 @@ interface ShippingOption {
     min: number;
     max: number;
   };
+}
+
+interface DimensionInfo {
+  calculated: {
+    weight: number;
+    width: number;
+    height: number;
+    length: number;
+    quantity: number;
+  };
+  warnings: string[];
+  usingDefaults: boolean;
 }
 
 interface ShippingQuoteDialogProps {
@@ -39,7 +52,7 @@ export const ShippingQuoteDialog = ({
   const [saving, setSaving] = useState(false);
   const [options, setOptions] = useState<ShippingOption[]>([]);
   const [selectedOption, setSelectedOption] = useState<ShippingOption | null>(null);
-  const [quoteInfo, setQuoteInfo] = useState<{ from?: string; to?: string } | null>(null);
+  const [dimensionInfo, setDimensionInfo] = useState<DimensionInfo | null>(null);
 
   const handleQuote = async () => {
     if (!customerId) {
@@ -50,6 +63,7 @@ export const ShippingQuoteDialog = ({
     setLoading(true);
     setOptions([]);
     setSelectedOption(null);
+    setDimensionInfo(null);
     
     try {
       const { data, error } = await supabase.functions.invoke('melhor-envio-integration', {
@@ -67,6 +81,18 @@ export const ShippingQuoteDialog = ({
       if (data.error) {
         toast.error(data.error);
         return;
+      }
+
+      // Salvar info de dimensões
+      if (data.dimensions) {
+        setDimensionInfo(data.dimensions);
+        
+        // Mostrar warning se houver problemas
+        if (data.dimensions.warnings?.length > 0) {
+          toast.warning("Atenção: Cotação com dimensões estimadas", {
+            description: "Verifique os alertas de dimensões abaixo"
+          });
+        }
       }
 
       // Filtrar apenas opções válidas (sem erro)
@@ -164,6 +190,59 @@ export const ShippingQuoteDialog = ({
             </div>
           ) : (
             <>
+              {/* Alertas de dimensões */}
+              {dimensionInfo && (
+                <div className="space-y-2">
+                  {/* Info das dimensões calculadas */}
+                  <div className="bg-muted/50 rounded-lg p-3 text-sm">
+                    <div className="flex items-center gap-2 mb-2 text-muted-foreground">
+                      <Ruler className="h-4 w-4" />
+                      <span className="font-medium">Dimensões calculadas:</span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
+                      <div className="flex flex-col">
+                        <span className="text-muted-foreground">Peso</span>
+                        <span className="font-medium">{dimensionInfo.calculated.weight} kg</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-muted-foreground">Largura</span>
+                        <span className="font-medium">{dimensionInfo.calculated.width} cm</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-muted-foreground">Altura</span>
+                        <span className="font-medium">{dimensionInfo.calculated.height} cm</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-muted-foreground">Compr.</span>
+                        <span className="font-medium">{dimensionInfo.calculated.length} cm</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-muted-foreground">Qtd</span>
+                        <span className="font-medium">{dimensionInfo.calculated.quantity} un</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Warnings */}
+                  {dimensionInfo.warnings.length > 0 && (
+                    <Alert variant="destructive" className="border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription className="ml-2">
+                        <p className="font-medium mb-1">Atenção: Valores estimados</p>
+                        <ul className="text-xs space-y-0.5 list-disc list-inside">
+                          {dimensionInfo.warnings.map((warning, i) => (
+                            <li key={i}>{warning}</li>
+                          ))}
+                        </ul>
+                        <p className="text-xs mt-2 opacity-80">
+                          Para cotações precisas, cadastre as dimensões dos produtos em Produtos → Preços.
+                        </p>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+              )}
+
               {/* Lista de opções */}
               <div className="flex-1 overflow-y-auto space-y-3 pr-2">
                 {options.map((option) => (
