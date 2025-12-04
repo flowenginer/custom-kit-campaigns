@@ -31,7 +31,8 @@ import {
   Percent,
   Edit2,
   Save,
-  RefreshCw
+  RefreshCw,
+  ExternalLink
 } from "lucide-react";
 
 interface QuoteItem {
@@ -91,6 +92,7 @@ export const QuoteEditorModal = ({
   const [copied, setCopied] = useState(false);
   const [customDomain, setCustomDomain] = useState<string | null>(null);
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
+  const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -380,6 +382,63 @@ export const QuoteEditorModal = ({
     }
   };
 
+  const handleShareWhatsApp = async () => {
+    if (!generatedLink || !quote) return;
+    
+    setSendingWhatsApp(true);
+    
+    try {
+      const { subtotal, total } = calculateTotals();
+      
+      const webhookPayload = {
+        event: 'quote_whatsapp',
+        quote_url: generatedLink,
+        card_data: {
+          id: quote.id,
+          task_id: taskId,
+          customer_name: customerName,
+          customer_phone: customerPhone || '',
+          status: quote.status
+        },
+        quote: {
+          id: quote.id,
+          token: quote.token,
+          total_amount: total,
+          subtotal_before_discount: subtotal,
+          discount_type: discountType === "none" ? null : discountType,
+          discount_value: discountValue,
+          valid_until: quote.valid_until,
+          items: quoteItems.map(item => ({
+            product_name: item.product_name,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            subtotal: item.subtotal
+          }))
+        },
+        timestamp: new Date().toISOString()
+      };
+
+      const response = await fetch('https://nwh.techspacesports.com.br/webhook/events_criacao', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(webhookPayload)
+      });
+
+      if (!response.ok) throw new Error('REQUEST_FAILED');
+
+      toast.success('Orçamento enviado via WhatsApp com sucesso!');
+      
+      // Close modal after success
+      setTimeout(() => onOpenChange(false), 1000);
+      
+    } catch (error) {
+      console.error('Erro ao enviar via WhatsApp:', error);
+      toast.error('Erro ao enviar via WhatsApp. Tente novamente.');
+    } finally {
+      setSendingWhatsApp(false);
+    }
+  };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -573,7 +632,7 @@ export const QuoteEditorModal = ({
               {generatedLink && (
                 <>
                   <Separator />
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <Label className="flex items-center gap-2">
                       <Link2 className="h-4 w-4" />
                       Link do Orçamento
@@ -595,6 +654,26 @@ export const QuoteEditorModal = ({
                     <p className="text-xs text-muted-foreground">
                       Válido até: {format(addDays(new Date(), 7), "dd/MM/yyyy", { locale: ptBR })}
                     </p>
+                    
+                    {/* WhatsApp Button */}
+                    <Button 
+                      variant="outline" 
+                      className="w-full text-green-700 border-green-500/50 hover:bg-green-500/10"
+                      onClick={handleShareWhatsApp}
+                      disabled={sendingWhatsApp}
+                    >
+                      {sendingWhatsApp ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Enviando...
+                        </>
+                      ) : (
+                        <>
+                          <ExternalLink className="mr-2 h-4 w-4" />
+                          Enviar via WhatsApp
+                        </>
+                      )}
+                    </Button>
                   </div>
                 </>
               )}
