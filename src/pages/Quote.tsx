@@ -350,6 +350,18 @@ const Quote = () => {
   const isCorrectionRequested = quote.status === 'correction_requested';
   const canTakeAction = !isExpired && !isApproved && !isCorrectionRequested;
 
+  // Check if all size grids are complete
+  const areAllGridsComplete = () => {
+    if (!quote) return false;
+    return quote.items.every((item, index) => {
+      const grid = sizeSelections[index];
+      if (!grid) return false;
+      return calculateGridTotal(grid) === item.quantity;
+    });
+  };
+
+  const allGridsComplete = areAllGridsComplete();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted py-8 px-4">
       <div className="max-w-2xl mx-auto">
@@ -542,6 +554,21 @@ const Quote = () => {
           </CardContent>
         </Card>
 
+        {/* Size Grid Warning */}
+        {canTakeAction && !allGridsComplete && (
+          <Card className="mb-6 border-orange-500/50 bg-orange-500/10">
+            <CardContent className="py-4 text-center">
+              <AlertCircle className="h-6 w-6 mx-auto text-orange-500 mb-2" />
+              <h3 className="font-semibold text-orange-700 dark:text-orange-400 text-sm">
+                Preencha a Grade de Tamanhos
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Para aprovar o orçamento, informe as quantidades de cada tamanho nos itens acima.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Action Buttons */}
         {canTakeAction && (
           <div className="space-y-4">
@@ -593,9 +620,9 @@ const Quote = () => {
                 </Button>
                 <Button
                   size="lg"
-                  className="h-16 bg-green-600 hover:bg-green-700"
+                  className={`h-16 ${allGridsComplete ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'}`}
                   onClick={handleApprove}
-                  disabled={submitting}
+                  disabled={submitting || !allGridsComplete}
                 >
                   {submitting ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
