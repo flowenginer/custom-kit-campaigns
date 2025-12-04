@@ -6,12 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Settings, Truck, Package, Save, Loader2, CheckCircle2, XCircle, Link2 } from "lucide-react";
+import { Settings, Truck, Package, Save, Loader2, CheckCircle2, XCircle, Link2, DollarSign } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { ShippingPanel } from "@/components/admin/ShippingPanel";
 import { ShippingCarriersManager } from "@/components/admin/ShippingCarriersManager";
+import { ShippingPricingPanel } from "@/components/admin/ShippingPricingPanel";
 
 export default function MelhorEnvio() {
   const [loading, setLoading] = useState(true);
@@ -157,6 +158,10 @@ export default function MelhorEnvio() {
             <Truck className="w-4 h-4 mr-2" />
             Transportadoras
           </TabsTrigger>
+          <TabsTrigger value="pricing">
+            <DollarSign className="w-4 h-4 mr-2" />
+            Preço
+          </TabsTrigger>
           <TabsTrigger value="config">
             <Settings className="w-4 h-4 mr-2" />
             Configuração
@@ -290,6 +295,10 @@ export default function MelhorEnvio() {
 
         <TabsContent value="carriers" className="mt-6">
           <ShippingCarriersManager />
+        </TabsContent>
+
+        <TabsContent value="pricing" className="mt-6">
+          <ShippingPricingPanel />
         </TabsContent>
       </Tabs>
     </div>

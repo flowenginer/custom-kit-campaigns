@@ -543,6 +543,8 @@ export type Database = {
           number: string
           phone: string | null
           razao_social: string
+          shipping_markup_type: string | null
+          shipping_markup_value: number | null
           state: string
           street: string
           updated_at: string | null
@@ -569,6 +571,8 @@ export type Database = {
           number: string
           phone?: string | null
           razao_social: string
+          shipping_markup_type?: string | null
+          shipping_markup_value?: number | null
           state: string
           street: string
           updated_at?: string | null
@@ -595,6 +599,8 @@ export type Database = {
           number?: string
           phone?: string | null
           razao_social?: string
+          shipping_markup_type?: string | null
+          shipping_markup_value?: number | null
           state?: string
           street?: string
           updated_at?: string | null
