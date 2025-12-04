@@ -165,7 +165,7 @@ export const ShippingQuoteDialog = ({
       const { data: { user } } = await supabase.auth.getUser();
 
       // Create shipping selection link
-      const { error } = await supabase
+      const { data: linkData, error } = await supabase
         .from('shipping_selection_links')
         .insert({
           task_id: taskId,
@@ -174,13 +174,32 @@ export const ShippingQuoteDialog = ({
           dimension_info: dimensionInfo as any,
           created_by: user?.id,
           expires_at: expiresAt.toISOString()
-        });
+        })
+        .select('id')
+        .single();
 
       if (error) throw error;
 
       // Generate link
       const link = `${window.location.origin}/shipping-select/${token}`;
       setCustomerLink(link);
+
+      // Send webhook notification
+      try {
+        await supabase.functions.invoke('send-shipping-quote-webhook', {
+          body: {
+            task_id: taskId,
+            selection_link_id: linkData.id,
+            selection_link_url: link,
+            shipping_options: options,
+            dimension_info: dimensionInfo
+          }
+        });
+        console.log('[ShippingQuoteDialog] Webhook sent successfully');
+      } catch (webhookError) {
+        console.error('[ShippingQuoteDialog] Webhook error (non-blocking):', webhookError);
+        // Non-blocking - don't fail the whole operation if webhook fails
+      }
       
       toast.success("Link gerado! Envie para o cliente escolher o frete.");
     } catch (error: any) {
