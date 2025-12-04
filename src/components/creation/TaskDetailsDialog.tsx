@@ -73,7 +73,8 @@ import {
   ChevronRight,
   Eye,
   ArrowRightLeft,
-  Edit
+  Edit,
+  Receipt
 } from "lucide-react";
 import { ModificationRequestDialog } from "@/components/orders/ModificationRequestDialog";
 import { BusinessSegmentField } from "./BusinessSegmentField";
@@ -1086,7 +1087,7 @@ export const TaskDetailsDialog = ({
         ) : (
           // INTERFACE COMPLETA DO DESIGNER
           <Tabs defaultValue="details" className="flex-1 overflow-hidden flex flex-col">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="details">
                 <FileText className="h-4 w-4 mr-2" />
                 Detalhes
@@ -1104,6 +1105,10 @@ export const TaskDetailsDialog = ({
                     )}
                   </span>
                 )}
+              </TabsTrigger>
+              <TabsTrigger value="quote">
+                <Receipt className="h-4 w-4 mr-2" />
+                Orçamento
               </TabsTrigger>
               <TabsTrigger value="history">
                 <HistoryIcon className="h-4 w-4 mr-2" />
@@ -1885,20 +1890,31 @@ export const TaskDetailsDialog = ({
                     </Card>
                   )}
 
-                  {/* Quote Section - Only visible to Salespersons and Admins when status is approved */}
-                  {(isSalesperson || isSuperAdmin || isAdmin) && !isDesigner && task.status === 'approved' && (
-                    <QuoteSection
-                      taskId={task.id}
-                      customerName={task.customer_name || "Cliente"}
-                      customerPhone={task.customer_phone}
-                      isSalesperson={isSalesperson}
-                      isAdmin={isAdmin || isSuperAdmin}
-                    />
-                  )}
                 </div>
               )}
             </TabsContent>
 
+            {/* Tab de Orçamento */}
+            <TabsContent value="quote" className="mt-0">
+              {(isSalesperson || isSuperAdmin || isAdmin) && !isDesigner && task.status === 'approved' ? (
+                <QuoteSection
+                  taskId={task.id}
+                  customerName={task.customer_name || "Cliente"}
+                  customerPhone={task.customer_phone}
+                  isSalesperson={isSalesperson}
+                  isAdmin={isAdmin || isSuperAdmin}
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <Receipt className="h-12 w-12 text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">
+                    {task.status !== 'approved' 
+                      ? "O orçamento estará disponível após a aprovação do mockup pelo cliente."
+                      : "Você não tem permissão para gerenciar orçamentos."}
+                  </p>
+                </div>
+              )}
+            </TabsContent>
 
             <TabsContent value="history" className="mt-0">
               <div className="space-y-4">
