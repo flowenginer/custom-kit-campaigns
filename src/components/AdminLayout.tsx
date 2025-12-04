@@ -9,6 +9,7 @@ import { NotificationsDropdown } from "./NotificationsDropdown";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useGlobalTheme } from "@/hooks/useGlobalTheme";
 import { useTotalPendingApprovalsCount } from "@/hooks/useTotalPendingApprovalsCount";
+import { useReturnedTasksCount } from "@/hooks/useReturnedTasksCount";
 import { useMenuStructure } from "@/hooks/useMenuStructure";
 import { cn } from "@/lib/utils";
 import logoSS from "@/assets/logo-ss.png";
@@ -218,6 +219,7 @@ const AdminLayout = () => {
   
   const { currentTheme, changeTheme } = useGlobalTheme();
   const { count: pendingCount } = useTotalPendingApprovalsCount();
+  const { count: returnedCount } = useReturnedTasksCount();
   const { getMenuTree, getIcon, isLoading: menusLoading } = useMenuStructure();
   
   const menuTree = getMenuTree();
@@ -424,7 +426,8 @@ const AdminLayout = () => {
                       }
 
                       // Menu sem submenus
-                      const showBadge = menu.slug === 'approvals' && pendingCount > 0;
+                      const showApprovalsBadge = menu.slug === 'approvals' && pendingCount > 0;
+                      const showReturnedBadge = menu.slug === 'returned' && returnedCount > 0;
                       
                       return (
                         <SidebarMenuItem key={menu.id}>
@@ -442,9 +445,14 @@ const AdminLayout = () => {
                             <NavLink to={menu.route} onClick={() => setIsNavigating(true)}>
                               <Icon className="h-5 w-5" />
                               <span className="text-base">{menu.label}</span>
-                              {showBadge && (
+                              {showApprovalsBadge && (
                                 <Badge className="ml-auto bg-destructive text-destructive-foreground text-xs">
                                   {pendingCount}
+                                </Badge>
+                              )}
+                              {showReturnedBadge && (
+                                <Badge className="ml-auto bg-amber-500 text-white text-xs">
+                                  {returnedCount}
                                 </Badge>
                               )}
                             </NavLink>

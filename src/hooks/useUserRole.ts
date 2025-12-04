@@ -85,8 +85,12 @@ export const useUserRole = () => {
         } else if (menuDefaults?.allowed_menu_items) {
           menuItems = menuDefaults.allowed_menu_items as string[];
         } else {
-          // Fallback completo
-          menuItems = ['dashboard', 'creation', 'ranking'];
+          // Fallback completo baseado no papel
+          if (primaryRole === 'salesperson') {
+            menuItems = ['orders', 'returned', 'customers', 'chat'];
+          } else {
+            menuItems = ['dashboard', 'creation', 'ranking', 'orders', 'returned'];
+          }
         }
         
         setAllowedKanbanColumns(columns);
