@@ -28,6 +28,7 @@ interface DimensionInfo {
     height: number;
     length: number;
     quantity: number;
+    insuranceValue?: number;
   };
   warnings: string[];
   usingDefaults: boolean;
@@ -199,7 +200,7 @@ export const ShippingQuoteDialog = ({
                       <Ruler className="h-4 w-4" />
                       <span className="font-medium">Dimensões calculadas:</span>
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
+                    <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 text-xs">
                       <div className="flex flex-col">
                         <span className="text-muted-foreground">Peso</span>
                         <span className="font-medium">{dimensionInfo.calculated.weight} kg</span>
@@ -219,6 +220,12 @@ export const ShippingQuoteDialog = ({
                       <div className="flex flex-col">
                         <span className="text-muted-foreground">Qtd</span>
                         <span className="font-medium">{dimensionInfo.calculated.quantity} un</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-muted-foreground">Seguro</span>
+                        <span className="font-medium">
+                          R$ {(dimensionInfo.calculated.insuranceValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
                       </div>
                     </div>
                   </div>
