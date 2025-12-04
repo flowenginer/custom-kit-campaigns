@@ -176,7 +176,11 @@ serve(async (req) => {
         let totalHeight = 0; // SOMA (empilhamento vertical)
         let maxLength = 0; // MAX (profundidade)
         let totalQuantity = 0;
-        let insuranceValue = task.order_value || 100;
+        
+        // Usar sempre o valor real do pedido para o seguro
+        const insuranceValue = task.order_value && task.order_value > 0 
+          ? task.order_value 
+          : 100; // Fallback mínimo apenas se não houver valor
 
         // Validação de dimensões
         const dimensionWarnings: string[] = [];
@@ -277,12 +281,14 @@ serve(async (req) => {
             height: cappedHeight,
             length: cappedLength,
             quantity: totalQuantity,
+            insuranceValue: insuranceValue,
           },
           warnings: dimensionWarnings,
           usingDefaults: dimensionWarnings.length > 0,
         };
 
         console.log('[Melhor Envio] Dimension validation:', dimensionInfo);
+        console.log('[Melhor Envio] Insurance value (order_value):', insuranceValue);
 
         const quotePayload = {
           from: {
