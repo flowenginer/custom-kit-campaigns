@@ -414,18 +414,35 @@ serve(async (req) => {
 
         filteredQuotes.sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
 
+        // Aplicar markup de preço se configurado
+        const markupType = settings.shipping_markup_type || 'fixed';
+        const markupValue = settings.shipping_markup_value || 0;
+        console.log(`[Melhor Envio] Applying markup: ${markupType} = ${markupValue}`);
+
+        const applyMarkup = (price: number): number => {
+          if (markupValue <= 0) return price;
+          if (markupType === 'percentage') {
+            return price * (1 + markupValue / 100);
+          }
+          return price + markupValue;
+        };
+
         return new Response(JSON.stringify({ 
           success: true, 
-          quotes: filteredQuotes.map(q => ({
-            id: q.id,
-            name: q.name,
-            company: q.company.name,
-            price: parseFloat(q.price),
-            discount: parseFloat(q.discount),
-            final_price: parseFloat(q.price) - parseFloat(q.discount),
-            delivery_time: q.delivery_time,
-            delivery_range: q.delivery_range,
-          })),
+          quotes: filteredQuotes.map(q => {
+            const originalPrice = parseFloat(q.price) - parseFloat(q.discount);
+            const finalPrice = applyMarkup(originalPrice);
+            return {
+              id: q.id,
+              name: q.name,
+              company: q.company.name,
+              price: parseFloat(q.price),
+              discount: parseFloat(q.discount),
+              final_price: Number(finalPrice.toFixed(2)),
+              delivery_time: q.delivery_time,
+              delivery_range: q.delivery_range,
+            };
+          }),
           dimensions: dimensionInfo,
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
