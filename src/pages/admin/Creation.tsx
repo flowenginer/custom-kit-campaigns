@@ -216,6 +216,7 @@ const Creation = () => {
             uploaded_logo_url,
             logo_action,
             logo_description,
+            salesperson_status,
             business_segment_id,
             business_segment_other,
             business_segments (
@@ -281,6 +282,7 @@ const Creation = () => {
         logo_action: task.lead?.logo_action,
         logo_description: task.lead?.logo_description || null,
         uploaded_logo_url: task.lead?.uploaded_logo_url || null,
+        salesperson_status: task.lead?.salesperson_status || null,
         created_by_salesperson: task.created_by_salesperson,
         creator_name: task.creator?.full_name || null,
         designer_name: task.designer?.full_name || null,
@@ -730,10 +732,12 @@ const Creation = () => {
       status: "logo_needed" as const,
       icon: Inbox,
       // Only show tasks that need logo AND don't have logos in layouts yet
+      // Exclude tasks rejected by designer (they go to ReturnedTasks page)
       tasks: applyAllFilters(tasks.filter(t => 
         t.needs_logo === true && 
         t.logo_action === 'waiting_client' && 
-        !taskHasLogosInLayouts(t)
+        !taskHasLogosInLayouts(t) &&
+        (t as any).salesperson_status !== 'rejected_by_designer'
       )),
     },
     {
@@ -741,8 +745,11 @@ const Creation = () => {
       status: "pending" as const,
       icon: Inbox,
       // Include tasks that are pending AND (don't need logo OR have logos in layouts)
+      // Exclude tasks rejected by designer
       tasks: applyAllFilters(tasks.filter(t => 
-        t.status === "pending" && (
+        t.status === "pending" && 
+        (t as any).salesperson_status !== 'rejected_by_designer' &&
+        (
           !t.needs_logo || 
           t.logo_action !== 'waiting_client' || 
           taskHasLogosInLayouts(t)
