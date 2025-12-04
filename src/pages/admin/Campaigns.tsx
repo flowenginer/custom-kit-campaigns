@@ -18,6 +18,7 @@ import { generateUniqueSlug } from "@/lib/utils";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
+import { useCustomDomain } from "@/hooks/useCustomDomain";
 
 interface Campaign {
   id: string;
@@ -54,6 +55,7 @@ interface Segment {
 
 export default function Campaigns() {
   const { isSuperAdmin } = useUserRole();
+  const { urls, getBaseUrl } = useCustomDomain();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [segments, setSegments] = useState<Segment[]>([]);
   const [workflows, setWorkflows] = useState<WorkflowTemplate[]>([]);
@@ -436,7 +438,7 @@ export default function Campaigns() {
   };
 
   const copyLink = (link: string) => {
-    const fullLink = `${window.location.origin}/c/${link}`;
+    const fullLink = urls.campaign(link);
     navigator.clipboard.writeText(fullLink);
     toast.success("Link copiado!");
   };
@@ -755,7 +757,7 @@ export default function Campaigns() {
                 <CardContent className="space-y-3 pt-0">
                   <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
                     <code className="text-xs flex-1 truncate">
-                      {window.location.origin}/c/{campaign.unique_link}
+                      {urls.campaign(campaign.unique_link)}
                     </code>
                     <Button
                       variant="ghost"
@@ -769,7 +771,7 @@ export default function Campaigns() {
                       variant="ghost"
                       size="sm"
                       className="h-8 w-8 p-0"
-                      onClick={() => window.open(`/c/${campaign.unique_link}`, "_blank")}
+                      onClick={() => window.open(urls.campaign(campaign.unique_link), "_blank")}
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
                     </Button>

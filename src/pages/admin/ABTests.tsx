@@ -13,6 +13,7 @@ import { Loader2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
+import { useCustomDomain } from "@/hooks/useCustomDomain";
 
 export default function ABTests() {
   const [tests, setTests] = useState<ABTest[]>([]);
@@ -20,6 +21,7 @@ export default function ABTests() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [deleteTestId, setDeleteTestId] = useState<string | null>(null);
   const { toast } = useToast();
+  const { urls } = useCustomDomain();
 
   const refreshData = useCallback(async () => {
     await fetchTests();
@@ -54,7 +56,7 @@ export default function ABTests() {
   };
 
   const copyLink = (uniqueLink: string) => {
-    const url = `${window.location.origin}/t/${uniqueLink}`;
+    const url = urls.abTest(uniqueLink);
     navigator.clipboard.writeText(url);
     toast({
       title: "Link copiado!",
