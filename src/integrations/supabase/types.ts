@@ -2131,6 +2131,54 @@ export type Database = {
         }
         Relationships: []
       }
+      quote_size_selections: {
+        Row: {
+          created_at: string | null
+          id: string
+          item_index: number
+          layout_id: string | null
+          quote_id: string
+          size_grid: Json
+          total_quantity: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          item_index: number
+          layout_id?: string | null
+          quote_id: string
+          size_grid?: Json
+          total_quantity?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          item_index?: number
+          layout_id?: string | null
+          quote_id?: string
+          size_grid?: Json
+          total_quantity?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_size_selections_layout_id_fkey"
+            columns: ["layout_id"]
+            isOneToOne: false
+            referencedRelation: "design_task_layouts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_size_selections_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quotes: {
         Row: {
           approved_at: string | null
