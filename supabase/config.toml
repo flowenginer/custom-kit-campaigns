@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.seed-test-data]
 verify_jwt = false
+
+[functions.melhor-envio-webhook]
+verify_jwt = false

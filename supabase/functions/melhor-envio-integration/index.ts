@@ -84,7 +84,6 @@ serve(async (req) => {
 
     switch (action) {
       case 'test_connection': {
-        // Testar conexão com Melhor Envio
         const testResponse = await fetch(`${baseUrl}/me`, {
           method: 'GET',
           headers,
@@ -110,8 +109,30 @@ serve(async (req) => {
         });
       }
 
+      case 'get_balance': {
+        const balanceResponse = await fetch(`${baseUrl}/me/balance`, {
+          method: 'GET',
+          headers,
+        });
+
+        if (!balanceResponse.ok) {
+          const error = await balanceResponse.text();
+          console.error('[Melhor Envio] Balance error:', error);
+          throw new Error('Erro ao consultar saldo');
+        }
+
+        const balanceData = await balanceResponse.json();
+        console.log('[Melhor Envio] Balance:', balanceData);
+        
+        return new Response(JSON.stringify({ 
+          success: true, 
+          balance: balanceData.balance || 0,
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
       case 'calculate_shipping': {
-        // Calcular frete
         const { task_id, customer_id } = data;
         
         console.log('[Melhor Envio] Calculating shipping for task:', task_id, 'customer:', customer_id);
@@ -181,8 +202,8 @@ serve(async (req) => {
 
         let totalWeight = 0;
         let maxWidth = 0;
-        let totalHeight = 0; // SOMA (empilhamento vertical)
-        let maxLength = 0; // MAX (profundidade)
+        let totalHeight = 0;
+        let maxLength = 0;
         let totalQuantity = 0;
         
         // Buscar valor do orçamento aprovado se order_value for null
@@ -203,7 +224,6 @@ serve(async (req) => {
           console.log('[Melhor Envio] Using order_value for insurance:', insuranceValue);
         }
 
-        // Validação de dimensões
         const dimensionWarnings: string[] = [];
         let layoutsWithoutModel = 0;
         let layoutsUsingUniformTypeFallback = 0;
@@ -216,10 +236,8 @@ serve(async (req) => {
             totalQuantity += qty;
             
             let dims = defaultDimensions;
-            let usingFallback = false;
             
             if (model) {
-              // Verificar se o modelo tem dimensões cadastradas
               const hasDimensions = model.peso && model.largura && model.altura && model.profundidade;
               
               if (hasDimensions) {
@@ -233,35 +251,25 @@ serve(async (req) => {
                 if (!modelsWithoutDimensions.includes(model.name)) {
                   modelsWithoutDimensions.push(model.name);
                 }
-                // Usar dimensões padrão do tipo de uniforme se disponível
                 if (layout.uniform_type && defaultDimensionsByType[layout.uniform_type]) {
                   dims = defaultDimensionsByType[layout.uniform_type];
                 }
               }
             } else {
-              // Layout sem modelo vinculado (ex: "Layout do Zero")
               layoutsWithoutModel++;
-              usingFallback = true;
               
-              // Usar uniform_type para dimensões de fallback
               if (layout.uniform_type && defaultDimensionsByType[layout.uniform_type]) {
                 dims = defaultDimensionsByType[layout.uniform_type];
                 layoutsUsingUniformTypeFallback++;
               }
             }
             
-            // Lógica de empilhamento correta:
-            // - Peso: SOMA (peso total de todas as peças)
-            // - Altura: SOMA (empilhamento vertical)
-            // - Largura: MAX (caixa não fica mais larga)
-            // - Profundidade: MAX (caixa não fica mais profunda)
             totalWeight += dims.peso * qty;
-            totalHeight += dims.altura * qty; // ✅ SOMA para empilhamento
-            maxWidth = Math.max(maxWidth, dims.largura); // MAX
-            maxLength = Math.max(maxLength, dims.profundidade); // MAX
+            totalHeight += dims.altura * qty;
+            maxWidth = Math.max(maxWidth, dims.largura);
+            maxLength = Math.max(maxLength, dims.profundidade);
           }
         } else if (task.orders) {
-          // Fallback para order antigo
           const order = task.orders;
           totalQuantity = order.quantity || 1;
           totalWeight = defaultDimensions.peso * totalQuantity;
@@ -271,7 +279,6 @@ serve(async (req) => {
           dimensionWarnings.push('Pedido sem layouts - usando dimensões padrão estimadas');
         }
 
-        // Gerar warnings baseado nas validações
         if (layoutsWithoutModel > 0) {
           if (layoutsUsingUniformTypeFallback > 0) {
             dimensionWarnings.push(`${layoutsWithoutModel} layout(s) "do zero" - usando dimensões padrão por tipo de uniforme`);
@@ -284,13 +291,11 @@ serve(async (req) => {
           dimensionWarnings.push(`Modelo(s) sem dimensões cadastradas: ${modelsWithoutDimensions.join(', ')} - cadastre em Produtos → Preços`);
         }
 
-        // Aplicar valores mínimos para API do Melhor Envio
-        const finalWidth = Math.max(maxWidth || 20, 11); // Mínimo 11cm
-        const finalHeight = Math.max(totalHeight || 10, 2); // Mínimo 2cm (totalHeight = soma das alturas)
-        const finalLength = Math.max(maxLength || 20, 16); // Mínimo 16cm (profundidade)
-        const finalWeight = Math.max(totalWeight, 0.3); // Mínimo 0.3kg
+        const finalWidth = Math.max(maxWidth || 20, 11);
+        const finalHeight = Math.max(totalHeight || 10, 2);
+        const finalLength = Math.max(maxLength || 20, 16);
+        const finalWeight = Math.max(totalWeight, 0.3);
 
-        // Limitar valores máximos
         const cappedLength = Math.min(finalLength, 100);
         const cappedWidth = Math.min(finalWidth, 100);
         const cappedHeight = Math.min(finalHeight, 100);
@@ -309,7 +314,6 @@ serve(async (req) => {
         };
 
         console.log('[Melhor Envio] Dimension validation:', dimensionInfo);
-        console.log('[Melhor Envio] Insurance value (order_value):', insuranceValue);
 
         const quotePayload = {
           from: {
@@ -352,7 +356,6 @@ serve(async (req) => {
         // Filtrar por transportadoras habilitadas
         let filteredQuotes = quotes;
         if (enabledCarriers && enabledCarriers.length > 0) {
-          // Mapear nomes de empresas para códigos
           const carrierNameMap: Record<string, string> = {
             'Correios': 'correios',
             'JadLog': 'jadlog', 
@@ -364,13 +367,11 @@ serve(async (req) => {
             'Latam Cargo': 'latam',
           };
 
-          // Construir lista de serviços habilitados
           const enabledServices = new Set<string>();
           for (const carrier of enabledCarriers) {
             const services = carrier.services as Array<{code: string; name: string; enabled: boolean}>;
             for (const service of services) {
               if (service.enabled) {
-                // Mapear nomes de serviços para os nomes da API
                 const serviceName = service.name.toLowerCase();
                 enabledServices.add(`${carrier.code}:${serviceName}`);
               }
@@ -383,14 +384,12 @@ serve(async (req) => {
             const carrierCode = carrierNameMap[q.company.name] || q.company.name.toLowerCase();
             const serviceName = q.name.toLowerCase();
             
-            // Verificar se a transportadora está habilitada
             const carrierEnabled = enabledCarriers.some(c => c.code === carrierCode);
             if (!carrierEnabled) {
               console.log(`[Melhor Envio] Filtering out ${q.name} - carrier ${q.company.name} not enabled`);
               return false;
             }
             
-            // Verificar se o serviço específico está habilitado
             const carrier = enabledCarriers.find(c => c.code === carrierCode);
             if (carrier) {
               const services = carrier.services as Array<{code: string; name: string; enabled: boolean}>;
@@ -413,7 +412,6 @@ serve(async (req) => {
           console.log(`[Melhor Envio] Filtered ${quotes.length} quotes to ${filteredQuotes.length}`);
         }
 
-        // Ordenar por preço
         filteredQuotes.sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
 
         return new Response(JSON.stringify({ 
@@ -435,7 +433,6 @@ serve(async (req) => {
       }
 
       case 'create_shipping': {
-        // Criar etiqueta de envio
         const { task_id, shipping_option } = data;
         
         const { data: task, error: taskError } = await supabaseAdmin
@@ -459,6 +456,21 @@ serve(async (req) => {
           .select('*')
           .eq('id', order.model_id)
           .single();
+
+        // Buscar valor do orçamento se order_value for null
+        let orderValue = task.order_value;
+        if (!orderValue || orderValue <= 0) {
+          const { data: quote } = await supabaseAdmin
+            .from('quotes')
+            .select('total_amount')
+            .eq('task_id', task_id)
+            .in('status', ['approved', 'sent'])
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          
+          orderValue = quote?.total_amount || 100;
+        }
 
         const orderPayload = {
           service: shipping_option.id,
@@ -496,18 +508,18 @@ serve(async (req) => {
             postal_code: customer.cep.replace(/\D/g, ''),
           },
           products: [{
-            name: model.name,
+            name: model?.name || 'Uniforme personalizado',
             quantity: order.quantity,
-            unitary_value: task.order_value / order.quantity,
+            unitary_value: orderValue / order.quantity,
           }],
           volumes: [{
-            height: model.altura || 10,
-            width: model.largura || 20,
-            length: model.profundidade || 30,
-            weight: model.peso || 0.5,
+            height: model?.altura || 10,
+            width: model?.largura || 20,
+            length: model?.profundidade || 30,
+            weight: model?.peso || 0.5,
           }],
           options: {
-            insurance_value: task.order_value,
+            insurance_value: orderValue,
             receipt: false,
             own_hand: false,
             reverse: false,
@@ -563,7 +575,6 @@ serve(async (req) => {
         if (!labelResponse.ok) {
           const error = await labelResponse.text();
           console.error('[Melhor Envio] Label error:', error);
-          // Não falhar se a geração da etiqueta demorar
         }
 
         // Atualizar task com dados do envio
@@ -581,6 +592,20 @@ serve(async (req) => {
           })
           .eq('id', task_id);
 
+        // Criar registro no histórico de envios
+        await supabaseAdmin
+          .from('shipment_history')
+          .insert({
+            task_id: task_id,
+            melhor_envio_id: result.id,
+            service_name: shipping_option.name,
+            carrier_name: shipping_option.company,
+            price: shipping_option.final_price,
+            tracking_code: result.tracking || null,
+            status: 'pending',
+            created_by: user.id,
+          });
+
         return new Response(JSON.stringify({ 
           success: true, 
           shipping_id: result.id,
@@ -590,27 +615,114 @@ serve(async (req) => {
         });
       }
 
+      case 'print_label': {
+        const { melhor_envio_id } = data;
+        
+        console.log('[Melhor Envio] Printing label for:', melhor_envio_id);
+
+        const printResponse = await fetch(`${baseUrl}/me/shipment/print`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            mode: 'public',
+            orders: [melhor_envio_id],
+          }),
+        });
+
+        if (!printResponse.ok) {
+          const error = await printResponse.text();
+          console.error('[Melhor Envio] Print error:', error);
+          throw new Error(`Erro ao imprimir etiqueta: ${error}`);
+        }
+
+        const printResult = await printResponse.json();
+        console.log('[Melhor Envio] Print result:', printResult);
+
+        // Atualizar histórico com URL da etiqueta
+        if (printResult.url) {
+          await supabaseAdmin
+            .from('shipment_history')
+            .update({ label_url: printResult.url })
+            .eq('melhor_envio_id', melhor_envio_id);
+        }
+
+        return new Response(JSON.stringify({ 
+          success: true, 
+          label_url: printResult.url,
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      case 'cancel_label': {
+        const { melhor_envio_id, reason } = data;
+        
+        console.log('[Melhor Envio] Canceling label:', melhor_envio_id);
+
+        const cancelResponse = await fetch(`${baseUrl}/me/shipment/cancel`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            order: {
+              id: melhor_envio_id,
+              reason_id: reason || '2',
+              description: 'Cancelamento solicitado pelo usuário',
+            },
+          }),
+        });
+
+        if (!cancelResponse.ok) {
+          const error = await cancelResponse.text();
+          console.error('[Melhor Envio] Cancel error:', error);
+          throw new Error(`Erro ao cancelar etiqueta: ${error}`);
+        }
+
+        const cancelResult = await cancelResponse.json();
+        console.log('[Melhor Envio] Cancel result:', cancelResult);
+
+        // Atualizar histórico
+        await supabaseAdmin
+          .from('shipment_history')
+          .update({ 
+            status: 'cancelled',
+            cancelled_at: new Date().toISOString(),
+          })
+          .eq('melhor_envio_id', melhor_envio_id);
+
+        return new Response(JSON.stringify({ 
+          success: true, 
+          message: 'Etiqueta cancelada com sucesso',
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
       case 'get_tracking': {
-        // Buscar rastreamento
-        const { task_id } = data;
+        const { task_id, melhor_envio_id } = data;
         
-        const { data: task, error: taskError } = await supabaseAdmin
-          .from('design_tasks')
-          .select('shipping_option')
-          .eq('id', task_id)
-          .single();
-
-        if (taskError) throw taskError;
-
-        const melhorEnvioId = task.shipping_option?.melhor_envio_id;
+        let trackingId = melhor_envio_id;
         
-        if (!melhorEnvioId) {
+        // Se não passou melhor_envio_id, buscar da task
+        if (!trackingId && task_id) {
+          const { data: task } = await supabaseAdmin
+            .from('design_tasks')
+            .select('shipping_option')
+            .eq('id', task_id)
+            .single();
+
+          trackingId = task?.shipping_option?.melhor_envio_id;
+        }
+        
+        if (!trackingId) {
           throw new Error('Envio não encontrado');
         }
 
-        const trackingResponse = await fetch(`${baseUrl}/me/shipment/tracking?orders=${melhorEnvioId}`, {
-          method: 'GET',
+        const trackingResponse = await fetch(`${baseUrl}/me/shipment/tracking`, {
+          method: 'POST',
           headers,
+          body: JSON.stringify({
+            orders: [trackingId],
+          }),
         });
 
         if (!trackingResponse.ok) {
@@ -618,11 +730,150 @@ serve(async (req) => {
           throw new Error(`Erro ao buscar rastreamento: ${error}`);
         }
 
-        const tracking = await trackingResponse.json();
+        const trackingData = await trackingResponse.json();
+        console.log('[Melhor Envio] Tracking data:', trackingData);
+
+        // Atualizar status no histórico se houver mudança
+        const tracking = trackingData[trackingId];
+        if (tracking) {
+          const newStatus = tracking.status || 'pending';
+          await supabaseAdmin
+            .from('shipment_history')
+            .update({
+              status: newStatus,
+              tracking_code: tracking.tracking || null,
+              status_history: tracking.tracking_events || [],
+              ...(newStatus === 'delivered' ? { delivered_at: new Date().toISOString() } : {}),
+              ...(newStatus === 'posted' ? { posted_at: new Date().toISOString() } : {}),
+            })
+            .eq('melhor_envio_id', trackingId);
+        }
 
         return new Response(JSON.stringify({ 
           success: true, 
-          tracking 
+          tracking: trackingData,
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      case 'list_shipments': {
+        const { status, limit = 50 } = data;
+        
+        let query = supabaseAdmin
+          .from('shipment_history')
+          .select(`
+            *,
+            design_tasks (
+              id,
+              order_number,
+              orders (customer_name)
+            )
+          `)
+          .order('created_at', { ascending: false })
+          .limit(limit);
+        
+        if (status) {
+          query = query.eq('status', status);
+        }
+
+        const { data: shipments, error } = await query;
+
+        if (error) throw error;
+
+        return new Response(JSON.stringify({ 
+          success: true, 
+          shipments,
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      case 'list_agencies': {
+        const { company_id, state, city } = data;
+        
+        let url = `${baseUrl}/me/shipment/agencies?`;
+        if (company_id) url += `company=${company_id}&`;
+        if (state) url += `state=${state}&`;
+        if (city) url += `city=${encodeURIComponent(city)}`;
+
+        const agenciesResponse = await fetch(url, {
+          method: 'GET',
+          headers,
+        });
+
+        if (!agenciesResponse.ok) {
+          const error = await agenciesResponse.text();
+          throw new Error(`Erro ao buscar agências: ${error}`);
+        }
+
+        const agencies = await agenciesResponse.json();
+
+        return new Response(JSON.stringify({ 
+          success: true, 
+          agencies,
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      case 'sync_status': {
+        // Sincronizar status de todos os envios pendentes
+        const { data: pendingShipments } = await supabaseAdmin
+          .from('shipment_history')
+          .select('melhor_envio_id')
+          .not('status', 'in', '("delivered","cancelled")')
+          .limit(100);
+
+        if (!pendingShipments || pendingShipments.length === 0) {
+          return new Response(JSON.stringify({ 
+            success: true, 
+            message: 'Nenhum envio pendente para sincronizar',
+            synced: 0,
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        const orderIds = pendingShipments.map(s => s.melhor_envio_id);
+        
+        const trackingResponse = await fetch(`${baseUrl}/me/shipment/tracking`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            orders: orderIds,
+          }),
+        });
+
+        if (!trackingResponse.ok) {
+          const error = await trackingResponse.text();
+          throw new Error(`Erro ao sincronizar: ${error}`);
+        }
+
+        const trackingData = await trackingResponse.json();
+        let synced = 0;
+
+        for (const [orderId, tracking] of Object.entries(trackingData)) {
+          const t = tracking as any;
+          if (t && t.status) {
+            await supabaseAdmin
+              .from('shipment_history')
+              .update({
+                status: t.status,
+                tracking_code: t.tracking || null,
+                status_history: t.tracking_events || [],
+                ...(t.status === 'delivered' ? { delivered_at: new Date().toISOString() } : {}),
+                ...(t.status === 'posted' ? { posted_at: new Date().toISOString() } : {}),
+              })
+              .eq('melhor_envio_id', orderId);
+            synced++;
+          }
+        }
+
+        return new Response(JSON.stringify({ 
+          success: true, 
+          message: `${synced} envios sincronizados`,
+          synced,
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -634,7 +885,6 @@ serve(async (req) => {
   } catch (error) {
     console.error('[Melhor Envio Integration] Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-    // Return 200 with error in body for better client handling
     return new Response(JSON.stringify({ success: false, error: errorMessage }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
