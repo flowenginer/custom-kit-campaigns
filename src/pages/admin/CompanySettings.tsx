@@ -4,12 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Building2, Package, Save, Boxes, Loader2, CheckCircle2, XCircle, Link2, Unlink, Copy } from "lucide-react";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+import { Building2, Save } from "lucide-react";
 
 export default function CompanySettings() {
   const [loading, setLoading] = useState(true);
@@ -29,39 +25,10 @@ export default function CompanySettings() {
   const [neighborhood, setNeighborhood] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
-
-  // Melhor Envio
-  const [melhorEnvioToken, setMelhorEnvioToken] = useState("");
-  const [melhorEnvioEnvironment, setMelhorEnvioEnvironment] = useState<"sandbox" | "production">("sandbox");
-  const [melhorEnvioTesting, setMelhorEnvioTesting] = useState(false);
-  const [melhorEnvioTestResult, setMelhorEnvioTestResult] = useState<{ success: boolean; data?: any; error?: string } | null>(null);
-
-  // Bling OAuth
-  const [blingClientId, setBlingClientId] = useState("");
-  const [blingClientSecret, setBlingClientSecret] = useState("");
-  const [blingConnected, setBlingConnected] = useState(false);
-  const [blingExpiresAt, setBlingExpiresAt] = useState<string | null>(null);
-  const [blingConnecting, setBlingConnecting] = useState(false);
-  const [blingCheckingStatus, setBlingCheckingStatus] = useState(true);
-
-  // Custom Domain
   const [customDomain, setCustomDomain] = useState("");
 
   useEffect(() => {
     loadSettings();
-  }, []);
-
-  // Verificar callback OAuth do Bling
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    const blingState = urlParams.get('state');
-    
-    if (code && blingState) {
-      handleBlingCallback(code);
-      // Limpar URL
-      window.history.replaceState({}, '', window.location.pathname);
-    }
   }, []);
 
   const loadSettings = async () => {
@@ -88,142 +55,13 @@ export default function CompanySettings() {
         setNeighborhood(data.neighborhood || "");
         setCity(data.city || "");
         setState(data.state || "");
-        setMelhorEnvioToken(data.melhor_envio_token || "");
-        setMelhorEnvioEnvironment((data.melhor_envio_environment as "sandbox" | "production") || "sandbox");
-        setBlingClientId((data as any).bling_client_id || "");
-        setBlingClientSecret((data as any).bling_client_secret || "");
         setCustomDomain(data.custom_domain || "");
       }
-
-      // Verificar status da conexão Bling
-      await checkBlingStatus();
     } catch (error) {
       console.error("Error loading settings:", error);
       toast.error("Erro ao carregar configurações");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const checkBlingStatus = async () => {
-    setBlingCheckingStatus(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('bling-oauth', {
-        body: { action: 'get_status' }
-      });
-
-      if (error) {
-        console.error("Error checking Bling status:", error);
-        setBlingConnected(false);
-      } else {
-        setBlingConnected(data.connected || false);
-        setBlingExpiresAt(data.expires_at || null);
-      }
-    } catch (error) {
-      console.error("Error checking Bling status:", error);
-      setBlingConnected(false);
-    } finally {
-      setBlingCheckingStatus(false);
-    }
-  };
-
-  // Helper para gerar a URL base correta
-  const getBaseUrl = () => {
-    if (customDomain) {
-      const cleanDomain = customDomain.replace(/^https?:\/\//, '').replace(/\/$/, '');
-      return `https://${cleanDomain}`;
-    }
-    return window.location.origin;
-  };
-
-  const getBlingCallbackUrl = () => `${getBaseUrl()}/admin/company-settings`;
-
-  const handleCopyCallbackUrl = () => {
-    navigator.clipboard.writeText(getBlingCallbackUrl());
-    toast.success("URL copiada!");
-  };
-
-  const handleBlingConnect = async () => {
-    if (!blingClientId || !blingClientSecret) {
-      toast.error("Configure o Client ID e Client Secret primeiro");
-      return;
-    }
-
-    // Salvar credenciais primeiro
-    await handleSave();
-
-    setBlingConnecting(true);
-    try {
-      const redirectUri = getBlingCallbackUrl();
-      
-      const { data, error } = await supabase.functions.invoke('bling-oauth', {
-        body: { 
-          action: 'get_auth_url',
-          redirect_uri: redirectUri
-        }
-      });
-
-      if (error) throw error;
-      if (data.error) throw new Error(data.error);
-
-      // Redirecionar para Bling - usar window.open para evitar bloqueio de iframe
-      const authWindow = window.open(data.auth_url, '_blank');
-      if (!authWindow) {
-        toast.error("Popup bloqueado. Permita popups para este site.");
-        setBlingConnecting(false);
-        return;
-      }
-      
-      setBlingConnecting(false);
-      toast.info("Autorize no Bling e depois clique em 'Verificar Conexão'.", { duration: 10000 });
-    } catch (error: any) {
-      console.error("Error connecting to Bling:", error);
-      toast.error(error.message || "Erro ao conectar ao Bling");
-      setBlingConnecting(false);
-    }
-  };
-
-  const handleBlingCallback = async (code: string) => {
-    setBlingConnecting(true);
-    try {
-      const redirectUri = getBlingCallbackUrl();
-      
-      const { data, error } = await supabase.functions.invoke('bling-oauth', {
-        body: { 
-          action: 'exchange_code',
-          code,
-          redirect_uri: redirectUri
-        }
-      });
-
-      if (error) throw error;
-      if (data.error) throw new Error(data.error);
-
-      toast.success("🎉 Conectado ao Bling com sucesso!");
-      setBlingConnected(true);
-      setBlingExpiresAt(data.expires_at);
-    } catch (error: any) {
-      console.error("Error in Bling callback:", error);
-      toast.error(error.message || "Erro ao processar autorização do Bling");
-    } finally {
-      setBlingConnecting(false);
-    }
-  };
-
-  const handleBlingDisconnect = async () => {
-    try {
-      const { error } = await supabase.functions.invoke('bling-oauth', {
-        body: { action: 'disconnect' }
-      });
-
-      if (error) throw error;
-
-      toast.success("Desconectado do Bling");
-      setBlingConnected(false);
-      setBlingExpiresAt(null);
-    } catch (error: any) {
-      console.error("Error disconnecting from Bling:", error);
-      toast.error("Erro ao desconectar do Bling");
     }
   };
 
@@ -243,51 +81,6 @@ export default function CompanySettings() {
       }
     } catch (error) {
       console.error("Error fetching address:", error);
-    }
-  };
-
-  const handleTestMelhorEnvio = async () => {
-    if (!melhorEnvioToken) {
-      toast.error("Configure o token do Melhor Envio primeiro");
-      return;
-    }
-
-    // Salvar antes de testar
-    await handleSave();
-
-    setMelhorEnvioTesting(true);
-    setMelhorEnvioTestResult(null);
-
-    try {
-      const { data, error } = await supabase.functions.invoke('melhor-envio-integration', {
-        body: { 
-          action: 'test_connection',
-          data: {}
-        }
-      });
-
-      if (error) {
-        throw new Error(error.message || "Erro ao conectar com a função");
-      }
-      
-      if (data?.error) {
-        throw new Error(data.error);
-      }
-
-      setMelhorEnvioTestResult({
-        success: true,
-        data: data.data
-      });
-      toast.success("Conexão com Melhor Envio OK!");
-    } catch (error: any) {
-      console.error("Error testing Melhor Envio:", error);
-      setMelhorEnvioTestResult({
-        success: false,
-        error: error.message || "Erro ao conectar"
-      });
-      toast.error(error.message || "Erro ao testar conexão");
-    } finally {
-      setMelhorEnvioTesting(false);
     }
   };
 
@@ -313,10 +106,6 @@ export default function CompanySettings() {
         neighborhood,
         city,
         state,
-        melhor_envio_token: melhorEnvioToken || null,
-        melhor_envio_environment: melhorEnvioEnvironment,
-        bling_client_id: blingClientId || null,
-        bling_client_secret: blingClientSecret || null,
         custom_domain: customDomain || null,
       };
 
@@ -340,7 +129,6 @@ export default function CompanySettings() {
         if (error) throw error;
       }
 
-      setMelhorEnvioTestResult(null); // Reset test result after save
       toast.success("Configurações salvas com sucesso!");
     } catch (error) {
       console.error("Error saving settings:", error);
@@ -364,487 +152,173 @@ export default function CompanySettings() {
   return (
     <div className="p-8 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Configurações da Empresa</h1>
+        <h1 className="text-3xl font-bold flex items-center gap-3">
+          <Building2 className="h-8 w-8" />
+          Configurações da Empresa
+        </h1>
         <p className="text-muted-foreground">Dados usados como remetente padrão</p>
       </div>
 
-      <Tabs defaultValue="company">
-        <TabsList>
-          <TabsTrigger value="company">
-            <Building2 className="w-4 h-4 mr-2" />
-            Empresa
-          </TabsTrigger>
-          <TabsTrigger value="shipping">
-            <Package className="w-4 h-4 mr-2" />
-            Melhor Envio
-          </TabsTrigger>
-          <TabsTrigger value="bling">
-            <Boxes className="w-4 h-4 mr-2" />
-            Bling
-          </TabsTrigger>
-        </TabsList>
+      <Card>
+        <CardHeader>
+          <CardTitle>Dados da Empresa</CardTitle>
+          <CardDescription>Informações usadas em pedidos e integrações</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="razaoSocial">Razão Social *</Label>
+              <Input
+                id="razaoSocial"
+                value={razaoSocial}
+                onChange={(e) => setRazaoSocial(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="nomeFantasia">Nome Fantasia</Label>
+              <Input
+                id="nomeFantasia"
+                value={nomeFantasia}
+                onChange={(e) => setNomeFantasia(e.target.value)}
+              />
+            </div>
+          </div>
 
-        <TabsContent value="company" className="space-y-6 mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Dados da Empresa</CardTitle>
-              <CardDescription>Informações usadas em pedidos e integrações</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="razaoSocial">Razão Social *</Label>
-                  <Input
-                    id="razaoSocial"
-                    value={razaoSocial}
-                    onChange={(e) => setRazaoSocial(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="nomeFantasia">Nome Fantasia</Label>
-                  <Input
-                    id="nomeFantasia"
-                    value={nomeFantasia}
-                    onChange={(e) => setNomeFantasia(e.target.value)}
-                  />
-                </div>
-              </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="cnpj">CNPJ *</Label>
+              <Input
+                id="cnpj"
+                value={cnpj}
+                onChange={(e) => setCnpj(e.target.value)}
+                placeholder="00.000.000/0000-00"
+              />
+            </div>
+            <div>
+              <Label htmlFor="inscricaoEstadual">Inscrição Estadual</Label>
+              <Input
+                id="inscricaoEstadual"
+                value={inscricaoEstadual}
+                onChange={(e) => setInscricaoEstadual(e.target.value)}
+              />
+            </div>
+          </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="cnpj">CNPJ *</Label>
-                  <Input
-                    id="cnpj"
-                    value={cnpj}
-                    onChange={(e) => setCnpj(e.target.value)}
-                    placeholder="00.000.000/0000-00"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="inscricaoEstadual">Inscrição Estadual</Label>
-                  <Input
-                    id="inscricaoEstadual"
-                    value={inscricaoEstadual}
-                    onChange={(e) => setInscricaoEstadual(e.target.value)}
-                  />
-                </div>
-              </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="email">E-mail</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="phone">Telefone</Label>
+              <Input
+                id="phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
+            </div>
+          </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="email">E-mail</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="phone">Telefone</Label>
-                  <Input
-                    id="phone"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                  />
-                </div>
-              </div>
+          <div>
+            <Label htmlFor="customDomain">Domínio Personalizado</Label>
+            <Input
+              id="customDomain"
+              value={customDomain}
+              onChange={(e) => setCustomDomain(e.target.value)}
+              placeholder="app.lojaspacesport.com.br"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Este domínio será usado nos links enviados aos clientes (ex: links de cadastro, integração Bling)
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
-              <div>
-                <Label htmlFor="customDomain">Domínio Personalizado</Label>
-                <Input
-                  id="customDomain"
-                  value={customDomain}
-                  onChange={(e) => setCustomDomain(e.target.value)}
-                  placeholder="app.lojaspacesport.com.br"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Este domínio será usado nos links enviados aos clientes (ex: links de cadastro)
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Endereço</CardTitle>
+          <CardDescription>Endereço de origem dos envios</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="cep">CEP *</Label>
+            <Input
+              id="cep"
+              value={cep}
+              onChange={(e) => {
+                setCep(e.target.value);
+                if (e.target.value.replace(/\D/g, "").length === 8) {
+                  fetchAddressByCep(e.target.value);
+                }
+              }}
+              placeholder="00000-000"
+            />
+          </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Endereço</CardTitle>
-              <CardDescription>Endereço de origem dos envios</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="cep">CEP *</Label>
-                <Input
-                  id="cep"
-                  value={cep}
-                  onChange={(e) => {
-                    setCep(e.target.value);
-                    if (e.target.value.replace(/\D/g, "").length === 8) {
-                      fetchAddressByCep(e.target.value);
-                    }
-                  }}
-                  placeholder="00000-000"
-                />
-              </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="col-span-2">
+              <Label htmlFor="street">Rua *</Label>
+              <Input
+                id="street"
+                value={street}
+                onChange={(e) => setStreet(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="number">Número *</Label>
+              <Input
+                id="number"
+                value={number}
+                onChange={(e) => setNumber(e.target.value)}
+              />
+            </div>
+          </div>
 
-              <div className="grid grid-cols-3 gap-4">
-                <div className="col-span-2">
-                  <Label htmlFor="street">Rua *</Label>
-                  <Input
-                    id="street"
-                    value={street}
-                    onChange={(e) => setStreet(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="number">Número *</Label>
-                  <Input
-                    id="number"
-                    value={number}
-                    onChange={(e) => setNumber(e.target.value)}
-                  />
-                </div>
-              </div>
+          <div>
+            <Label htmlFor="complement">Complemento</Label>
+            <Input
+              id="complement"
+              value={complement}
+              onChange={(e) => setComplement(e.target.value)}
+            />
+          </div>
 
-              <div>
-                <Label htmlFor="complement">Complemento</Label>
-                <Input
-                  id="complement"
-                  value={complement}
-                  onChange={(e) => setComplement(e.target.value)}
-                />
-              </div>
+          <div>
+            <Label htmlFor="neighborhood">Bairro *</Label>
+            <Input
+              id="neighborhood"
+              value={neighborhood}
+              onChange={(e) => setNeighborhood(e.target.value)}
+            />
+          </div>
 
-              <div>
-                <Label htmlFor="neighborhood">Bairro *</Label>
-                <Input
-                  id="neighborhood"
-                  value={neighborhood}
-                  onChange={(e) => setNeighborhood(e.target.value)}
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="col-span-2">
-                  <Label htmlFor="city">Cidade *</Label>
-                  <Input
-                    id="city"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="state">Estado *</Label>
-                  <Input
-                    id="state"
-                    value={state}
-                    onChange={(e) => setState(e.target.value)}
-                    placeholder="UF"
-                    maxLength={2}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="shipping" className="space-y-6 mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                🚚 Integração Melhor Envio
-                {melhorEnvioTestResult && (
-                  melhorEnvioTestResult.success ? (
-                    <Badge variant="default" className="bg-green-600">
-                      <CheckCircle2 className="h-3 w-3 mr-1" />
-                      Conectado
-                    </Badge>
-                  ) : (
-                    <Badge variant="destructive">
-                      <XCircle className="h-3 w-3 mr-1" />
-                      Erro
-                    </Badge>
-                  )
-                )}
-              </CardTitle>
-              <CardDescription>Configure o token para cotação de frete em tempo real</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="melhorEnvioEnvironment">Ambiente</Label>
-                <Select value={melhorEnvioEnvironment} onValueChange={(v: any) => setMelhorEnvioEnvironment(v)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="sandbox">Sandbox (Testes)</SelectItem>
-                    <SelectItem value="production">Produção</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="melhorEnvioToken">Token do Melhor Envio</Label>
-                <Textarea
-                  id="melhorEnvioToken"
-                  value={melhorEnvioToken}
-                  onChange={(e) => {
-                    setMelhorEnvioToken(e.target.value);
-                    setMelhorEnvioTestResult(null);
-                  }}
-                  placeholder="Cole aqui o token da API do Melhor Envio"
-                  rows={3}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Obtenha seu token em: https://melhorenvio.com.br/painel/gerenciar/tokens
-                </p>
-              </div>
-
-              {/* Botão Testar Conexão */}
-              <div className="space-y-3 p-4 border rounded-lg">
-                <h4 className="font-medium">Testar Conexão</h4>
-                <p className="text-sm text-muted-foreground">
-                  Salve as configurações e teste se o token está funcionando corretamente.
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={handleTestMelhorEnvio}
-                    disabled={melhorEnvioTesting || !melhorEnvioToken}
-                  >
-                    {melhorEnvioTesting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Testando...
-                      </>
-                    ) : (
-                      <>
-                        <Link2 className="h-4 w-4 mr-2" />
-                        Testar Conexão
-                      </>
-                    )}
-                  </Button>
-                </div>
-                
-                {melhorEnvioTestResult && (
-                  <div className={`mt-3 p-3 rounded-lg ${
-                    melhorEnvioTestResult.success 
-                      ? 'bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800' 
-                      : 'bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800'
-                  }`}>
-                    {melhorEnvioTestResult.success ? (
-                      <div className="text-green-700 dark:text-green-300">
-                        <p className="font-medium flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4" />
-                          Conexão bem-sucedida!
-                        </p>
-                        <p className="text-sm mt-1">Conta: {melhorEnvioTestResult.data?.email}</p>
-                        <p className="text-sm">Nome: {melhorEnvioTestResult.data?.name}</p>
-                      </div>
-                    ) : (
-                      <div className="text-red-700 dark:text-red-300">
-                        <p className="font-medium flex items-center gap-2">
-                          <XCircle className="h-4 w-4" />
-                          Erro na conexão
-                        </p>
-                        <p className="text-sm mt-1">{melhorEnvioTestResult.error}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {!melhorEnvioToken && (
-                  <p className="text-xs text-amber-600">
-                    ⚠️ Configure o token primeiro
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="bling" className="space-y-6 mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                🔌 Integração Bling ERP
-                {blingCheckingStatus ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : blingConnected ? (
-                  <Badge variant="default" className="bg-green-600">
-                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                    Conectado
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary">
-                    <XCircle className="h-3 w-3 mr-1" />
-                    Desconectado
-                  </Badge>
-                )}
-              </CardTitle>
-              <CardDescription>
-                Conecte sua conta do Bling para sincronizar produtos e exportar pedidos automaticamente
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* URL de Callback */}
-              <div className="space-y-3 p-4 border rounded-lg bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
-                <h4 className="font-medium text-amber-800 dark:text-amber-200">
-                  ⚠️ URL de Callback para cadastrar no Bling
-                </h4>
-                <p className="text-sm text-amber-700 dark:text-amber-300">
-                  Copie esta URL e cadastre como "URL de Callback" no painel de desenvolvedores do Bling:
-                </p>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 bg-background border rounded px-3 py-2 text-sm font-mono break-all">
-                    {getBlingCallbackUrl()}
-                  </code>
-                  <Button 
-                    variant="outline" 
-                    size="icon"
-                    onClick={handleCopyCallbackUrl}
-                    title="Copiar URL"
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-                {!customDomain && (
-                  <p className="text-xs text-amber-600 dark:text-amber-400">
-                    💡 Dica: Configure o "Domínio Personalizado" na aba Empresa para usar seu próprio domínio
-                  </p>
-                )}
-              </div>
-
-              {/* Credenciais OAuth */}
-              <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
-                <h4 className="font-medium">1. Configure as credenciais do aplicativo</h4>
-                <p className="text-sm text-muted-foreground">
-                  Obtenha o Client ID e Client Secret no painel de desenvolvedores do Bling:
-                  <a 
-                    href="https://developer.bling.com.br/aplicativos" 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="text-primary hover:underline ml-1"
-                  >
-                    developer.bling.com.br/aplicativos
-                  </a>
-                </p>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="blingClientId">Client ID</Label>
-                    <Input
-                      id="blingClientId"
-                      value={blingClientId}
-                      onChange={(e) => setBlingClientId(e.target.value)}
-                      placeholder="Cole o Client ID aqui"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="blingClientSecret">Client Secret</Label>
-                    <Input
-                      id="blingClientSecret"
-                      type="password"
-                      value={blingClientSecret}
-                      onChange={(e) => setBlingClientSecret(e.target.value)}
-                      placeholder="Cole o Client Secret aqui"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Botão de Conexão OAuth */}
-              <div className="space-y-4 p-4 border rounded-lg">
-                <h4 className="font-medium">2. Autorize o acesso à sua conta Bling</h4>
-                
-                {blingConnected ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-green-600">
-                      <CheckCircle2 className="h-5 w-5" />
-                      <span className="font-medium">Conectado ao Bling!</span>
-                    </div>
-                    {blingExpiresAt && (
-                      <p className="text-sm text-muted-foreground">
-                        Token válido até: {new Date(blingExpiresAt).toLocaleString('pt-BR')}
-                      </p>
-                    )}
-                    <Button 
-                      variant="outline" 
-                      onClick={handleBlingDisconnect}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Unlink className="h-4 w-4 mr-2" />
-                      Desconectar do Bling
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <p className="text-sm text-muted-foreground">
-                      Clique no botão abaixo para autorizar o acesso ao seu Bling. 
-                      Uma nova aba será aberta para você fazer login e autorizar.
-                    </p>
-                    <div className="flex gap-2">
-                      <Button 
-                        onClick={handleBlingConnect}
-                        disabled={blingConnecting || !blingClientId || !blingClientSecret}
-                        className="bg-blue-600 hover:bg-blue-700"
-                      >
-                        {blingConnecting ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Conectando...
-                          </>
-                        ) : (
-                          <>
-                            <Link2 className="h-4 w-4 mr-2" />
-                            Conectar ao Bling
-                          </>
-                        )}
-                      </Button>
-                      <Button 
-                        onClick={checkBlingStatus}
-                        disabled={blingCheckingStatus}
-                        variant="outline"
-                      >
-                        {blingCheckingStatus ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Verificando...
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle2 className="h-4 w-4 mr-2" />
-                            Verificar Conexão
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                    {(!blingClientId || !blingClientSecret) && (
-                      <p className="text-xs text-amber-600">
-                        ⚠️ Configure o Client ID e Client Secret primeiro
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Info sobre funcionalidades */}
-              {blingConnected && (
-                <div className="rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 p-4">
-                  <h4 className="font-medium text-green-800 dark:text-green-200 mb-2">
-                    ✅ Integração Ativa
-                  </h4>
-                  <ul className="text-sm text-green-700 dark:text-green-300 space-y-1">
-                    <li>• Produtos podem ser sincronizados para o Bling</li>
-                    <li>• Pedidos podem ser exportados automaticamente</li>
-                    <li>• Clientes são cadastrados junto com os pedidos</li>
-                    <li>• Tokens são renovados automaticamente</li>
-                  </ul>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="col-span-2">
+              <Label htmlFor="city">Cidade *</Label>
+              <Input
+                id="city"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="state">Estado *</Label>
+              <Input
+                id="state"
+                value={state}
+                onChange={(e) => setState(e.target.value)}
+                placeholder="UF"
+                maxLength={2}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={saving} size="lg">
