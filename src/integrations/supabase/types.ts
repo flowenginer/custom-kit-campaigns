@@ -355,6 +355,7 @@ export type Database = {
           description: string
           id: string
           layout_id: string | null
+          mockup_url: string | null
           resolved_at: string | null
           resolved_by: string | null
           source: string
@@ -367,6 +368,7 @@ export type Database = {
           description: string
           id?: string
           layout_id?: string | null
+          mockup_url?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
           source?: string
@@ -379,6 +381,7 @@ export type Database = {
           description?: string
           id?: string
           layout_id?: string | null
+          mockup_url?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
           source?: string

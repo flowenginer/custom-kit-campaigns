@@ -9,8 +9,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Upload, Download, CheckCircle, AlertCircle, Paperclip, X, Send } from "lucide-react";
+import { Upload, Download, CheckCircle, AlertCircle, Paperclip, X, Send, ZoomIn } from "lucide-react";
 import { ChangeRequest } from "@/types/design-task";
+import { ImageZoomModal } from "@/components/ui/image-zoom-modal";
 
 interface ChangeRequestsTabProps {
   taskId: string;
@@ -22,12 +23,17 @@ interface ChangeRequestsTabProps {
   canAddChangeRequest?: boolean; // Nova prop: controla visibilidade do formulário
 }
 
+interface ExtendedChangeRequest extends ChangeRequest {
+  mockup_url?: string | null;
+}
+
 export const ChangeRequestsTab = ({ taskId, taskStatus, layoutId, onChangeRequestAdded, onClose, onSendForApproval, canAddChangeRequest = true }: ChangeRequestsTabProps) => {
-  const [changeRequests, setChangeRequests] = useState<ChangeRequest[]>([]);
+  const [changeRequests, setChangeRequests] = useState<ExtendedChangeRequest[]>([]);
   const [description, setDescription] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [zoomImage, setZoomImage] = useState<string | null>(null);
 
   useEffect(() => {
     loadChangeRequests();
@@ -83,12 +89,13 @@ export const ChangeRequestsTab = ({ taskId, taskStatus, layoutId, onChangeReques
 
       const profileMap = new Map(profiles?.map((p) => [p.id, p.full_name]) || []);
 
-      const formatted: ChangeRequest[] = requests.map((req) => ({
+      const formatted: ExtendedChangeRequest[] = requests.map((req) => ({
         ...req,
         creator_name: req.source === 'client' ? 'Cliente' : (profileMap.get(req.created_by) || "Desconhecido"),
         resolver_name: req.resolved_by ? profileMap.get(req.resolved_by) || null : null,
         attachments: (req.attachments as Array<{ name: string; url: string }>) || [],
-        source: req.source || 'internal'
+        source: req.source || 'internal',
+        mockup_url: (req as any).mockup_url || null
       }));
 
       setChangeRequests(formatted);
@@ -306,42 +313,63 @@ export const ChangeRequestsTab = ({ taskId, taskStatus, layoutId, onChangeReques
             {changeRequests.map((cr, index) => (
               <Card key={cr.id} className={cr.resolved_at ? "border-green-200" : "border-red-200"}>
                 <CardContent className="p-4 space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      {cr.resolved_at ? (
-                        <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
-                      ) : (
-                        <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
-                      )}
-                      <div>
-                        <div className="font-medium flex items-center gap-2">
-                          Alteração #{changeRequests.length - index}
-                          {(cr as any).source === 'client' && (
-                            <Badge variant="outline" className="text-xs border-blue-500 text-blue-600">
-                              Via link
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {format(new Date(cr.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                          {cr.creator_name && ` • ${cr.creator_name}`}
+                  <div className="flex items-start gap-3">
+                    {/* Mockup Thumbnail */}
+                    {cr.mockup_url && (
+                      <div 
+                        className="relative flex-shrink-0 w-16 h-16 rounded-md overflow-hidden border cursor-pointer group"
+                        onClick={() => setZoomImage(cr.mockup_url!)}
+                      >
+                        <img 
+                          src={cr.mockup_url} 
+                          alt="Mockup" 
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <ZoomIn className="h-4 w-4 text-white" />
                         </div>
                       </div>
-                    </div>
-                    
-                    {!cr.resolved_at && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleMarkAsResolved(cr.id)}
-                      >
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Resolver
-                      </Button>
                     )}
-                  </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-2">
+                          {cr.resolved_at ? (
+                            <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                          ) : (
+                            <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
+                          )}
+                          <div>
+                            <div className="font-medium flex items-center gap-2">
+                              Ação #{changeRequests.length - index}
+                              {(cr as any).source === 'client' && (
+                                <Badge variant="outline" className="text-xs border-blue-500 text-blue-600">
+                                  Via link
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {format(new Date(cr.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                              {cr.creator_name && ` • ${cr.creator_name}`}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {!cr.resolved_at && !cr.description.startsWith('[✅') && !cr.description.startsWith('[❌') && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleMarkAsResolved(cr.id)}
+                          >
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Resolver
+                          </Button>
+                        )}
+                      </div>
 
-                  <p className="text-sm pl-7">{cr.description}</p>
+                      <p className="text-sm mt-2">{cr.description}</p>
+                    </div>
+                  </div>
 
                   {cr.attachments && cr.attachments.length > 0 && (
                     <div className="pl-7 space-y-2">
@@ -385,6 +413,14 @@ export const ChangeRequestsTab = ({ taskId, taskStatus, layoutId, onChangeReques
           </Button>
         </div>
       )}
+
+      {/* Zoom Modal */}
+      <ImageZoomModal
+        isOpen={!!zoomImage}
+        onClose={() => setZoomImage(null)}
+        imageUrl={zoomImage || ''}
+        alt="Mockup"
+      />
     </div>
   );
 };
