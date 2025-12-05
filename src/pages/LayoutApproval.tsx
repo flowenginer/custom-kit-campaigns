@@ -238,6 +238,12 @@ export default function LayoutApproval() {
       .replace(/[^a-zA-Z0-9.-]/g, '_');
   };
 
+  const getMockupUrlByVersion = (version: number): string | null => {
+    const mockups = getAllMockups();
+    const mockup = mockups.find(m => m.version === version);
+    return mockup?.url || null;
+  };
+
   const submitChangeRequest = async (version: number) => {
     if (!data || !changeDescription.trim()) {
       toast.error('Por favor, descreva as alterações necessárias.');
@@ -265,6 +271,8 @@ export default function LayoutApproval() {
         }
       }
 
+      const mockupUrl = getMockupUrlByVersion(version);
+
       await supabase
         .from('change_requests')
         .insert({
@@ -273,7 +281,8 @@ export default function LayoutApproval() {
           description: `[Versão ${version}] ${changeDescription}`,
           attachments,
           source: 'client',
-          created_by: null
+          created_by: null,
+          mockup_url: mockupUrl
         });
 
       setMockupStatuses(prev => 
@@ -313,6 +322,39 @@ export default function LayoutApproval() {
         rejected.length > 0 ? `❌ Recusadas: v${rejected.map(m => m.version).join(', v')}` : '',
         changesRequested.length > 0 ? `🔄 Alterações: v${changesRequested.map(m => m.version).join(', v')}` : '',
       ].filter(Boolean).join(' | ');
+
+      // Save approved/rejected mockups to change_requests for history tracking
+      const feedbackRecords = [];
+      
+      for (const approvedMockup of approved) {
+        const mockupUrl = getMockupUrlByVersion(approvedMockup.version);
+        feedbackRecords.push({
+          task_id: data.task_id,
+          layout_id: data.layout_id,
+          description: `[✅ Aprovado] Versão ${approvedMockup.version}`,
+          attachments: [],
+          source: 'client',
+          created_by: null,
+          mockup_url: mockupUrl
+        });
+      }
+      
+      for (const rejectedMockup of rejected) {
+        const mockupUrl = getMockupUrlByVersion(rejectedMockup.version);
+        feedbackRecords.push({
+          task_id: data.task_id,
+          layout_id: data.layout_id,
+          description: `[❌ Recusado] Versão ${rejectedMockup.version}`,
+          attachments: [],
+          source: 'client',
+          created_by: null,
+          mockup_url: mockupUrl
+        });
+      }
+
+      if (feedbackRecords.length > 0) {
+        await supabase.from('change_requests').insert(feedbackRecords);
+      }
 
       // Update approval link
       if (approved.length > 0 && rejected.length === 0 && changesRequested.length === 0) {
