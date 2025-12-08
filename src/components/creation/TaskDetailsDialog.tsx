@@ -2243,7 +2243,9 @@ export const TaskDetailsDialog = ({
           task={task}
           open={showRejectDialog}
           onOpenChange={setShowRejectDialog}
-          onSuccess={() => {
+          onSuccess={async () => {
+            // Delay para garantir propagação no banco antes de recarregar
+            await new Promise(resolve => setTimeout(resolve, 300));
             onTaskUpdated();
             onOpenChange(false);
           }}
