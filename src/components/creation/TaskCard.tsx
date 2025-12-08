@@ -345,7 +345,7 @@ export const TaskCard = ({
                   {/* Nome do Vendedor/Criador */}
                   <div className="border border-border rounded px-2 py-1.5 bg-card text-center min-h-[36px] flex items-center justify-center">
                     <span className="font-bold text-teal-600 truncate" style={{ fontSize: `${fontSizes?.salesperson || 12}px` }}>
-                      {task.creator_name || (task.created_by_salesperson ? 'Vendedor' : task.customer_name || 'Cliente')}
+                      {task.creator_name || 'Sistema'}
                     </span>
                   </div>
 
