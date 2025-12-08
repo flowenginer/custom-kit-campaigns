@@ -4,13 +4,16 @@ import { DeleteApprovalsList } from "@/components/admin/DeleteApprovalsList";
 import { DeleteApprovalsHistory } from "@/components/admin/DeleteApprovalsHistory";
 import { ModificationApprovalsList } from "@/components/admin/ModificationApprovalsList";
 import { ModificationApprovalsHistory } from "@/components/admin/ModificationApprovalsHistory";
+import { PriorityChangeApprovalsList } from "@/components/admin/PriorityChangeApprovalsList";
+import { PriorityChangeApprovalsHistory } from "@/components/admin/PriorityChangeApprovalsHistory";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, Trash2, Edit, User } from "lucide-react";
+import { AlertCircle, Trash2, Edit, User, ArrowUpDown } from "lucide-react";
 import { usePendingApprovalsCount } from "@/hooks/usePendingApprovalsCount";
 import { usePendingDeletesCount } from "@/hooks/usePendingDeletesCount";
 import { usePendingModificationsCount } from "@/hooks/usePendingModificationsCount";
 import { usePendingCustomerDeletesCount } from "@/hooks/usePendingCustomerDeletesCount";
+import { usePendingPriorityChangesCount } from "@/hooks/usePendingPriorityChangesCount";
 import { CustomerDeleteApprovalsList } from "@/components/admin/CustomerDeleteApprovalsList";
 import { CustomerDeleteApprovalsHistory } from "@/components/admin/CustomerDeleteApprovalsHistory";
 import { useCallback } from "react";
@@ -22,6 +25,7 @@ const Approvals = () => {
   const { count: deleteCount } = usePendingDeletesCount();
   const { count: modificationsCount } = usePendingModificationsCount();
   const { count: customerDeleteCount } = usePendingCustomerDeletesCount();
+  const { count: priorityChangesCount } = usePendingPriorityChangesCount();
 
   const refreshData = useCallback(async () => {
     // Forçar re-render (os componentes têm seus próprios refetch)
@@ -62,6 +66,9 @@ const Approvals = () => {
           </TabsTrigger>
           <TabsTrigger value="customer_deletes">
             👤 Clientes {customerDeleteCount > 0 && `(${customerDeleteCount})`}
+          </TabsTrigger>
+          <TabsTrigger value="priority_changes">
+            🔄 Prioridade {priorityChangesCount > 0 && `(${priorityChangesCount})`}
           </TabsTrigger>
         </TabsList>
 
@@ -185,6 +192,37 @@ const Approvals = () => {
             </TabsContent>
             <TabsContent value="history" className="mt-6">
               <CustomerDeleteApprovalsHistory />
+            </TabsContent>
+          </Tabs>
+        </TabsContent>
+
+        {/* ABA ALTERAÇÃO DE PRIORIDADE */}
+        <TabsContent value="priority_changes" className="mt-6">
+          <Card className="border-amber-200 bg-amber-50/50 mb-6">
+            <CardHeader>
+              <div className="flex items-start gap-3">
+                <ArrowUpDown className="h-5 w-5 text-amber-600 mt-0.5" />
+                <div>
+                  <CardTitle className="text-amber-900">Solicitações de Alteração de Prioridade</CardTitle>
+                  <CardDescription className="text-amber-700">
+                    Vendedores solicitaram alteração na prioridade de tarefas.
+                    Revise cada solicitação e aprove ou rejeite conforme necessário.
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+
+          <Tabs defaultValue="pending" className="w-full">
+            <TabsList>
+              <TabsTrigger value="pending">Pendentes</TabsTrigger>
+              <TabsTrigger value="history">Histórico</TabsTrigger>
+            </TabsList>
+            <TabsContent value="pending" className="mt-6">
+              <PriorityChangeApprovalsList />
+            </TabsContent>
+            <TabsContent value="history" className="mt-6">
+              <PriorityChangeApprovalsHistory />
             </TabsContent>
           </Tabs>
         </TabsContent>
