@@ -93,6 +93,7 @@ export const RejectTaskDialog = ({
 
       if (taskError) {
         console.error('Error updating task:', taskError);
+        throw taskError;
       }
 
       // 4. Registrar no histórico
