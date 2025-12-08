@@ -27,7 +27,8 @@ import {
   Package,
   Search,
   X,
-  ArrowUpDown
+  ArrowUpDown,
+  RefreshCcw
 } from "lucide-react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
@@ -188,6 +189,7 @@ const Creation = () => {
           created_by_salesperson,
           order_number,
           customer_id,
+          returned_from_rejection,
           orders!inner (
             customer_name,
             customer_email,
@@ -297,6 +299,8 @@ const Creation = () => {
         business_segment_name: (task.lead?.business_segments as any)?.name || null,
         business_segment_icon: (task.lead?.business_segments as any)?.icon || null,
         business_segment_other: task.lead?.business_segment_other || null,
+        // Flag de retorno de recusa
+        returned_from_rejection: task.returned_from_rejection || false,
       }));
 
       setTasks(formattedTasks);
@@ -503,12 +507,20 @@ const Creation = () => {
       // Tocar som de mudança de status
       playStatusChange();
       
+      // Preparar dados de atualização
+      const updateData: any = { 
+        status: validStatus,
+        completed_at: null
+      };
+
+      // Limpar flag de retorno de recusa quando designer aceita (move para in_progress)
+      if (validStatus === 'in_progress' && task.returned_from_rejection) {
+        updateData.returned_from_rejection = false;
+      }
+      
       const { error } = await supabase
         .from("design_tasks")
-        .update({ 
-          status: validStatus,
-          completed_at: null
-        })
+        .update(updateData)
         .eq("id", task.id);
 
       if (error) throw error;
@@ -741,14 +753,26 @@ const Creation = () => {
       )),
     },
     {
+      title: "🔄 Retorno de Alteração",
+      status: "pending" as const,
+      icon: RefreshCcw,
+      // Tarefas que voltaram de recusa do designer
+      tasks: applyAllFilters(tasks.filter(t => 
+        t.status === "pending" && 
+        t.returned_from_rejection === true
+      )),
+      backgroundColor: "#f97316", // Laranja chamativo
+    },
+    {
       title: "Novos Com Logo",
       status: "pending" as const,
       icon: Inbox,
       // Include tasks that are pending AND (don't need logo OR have logos in layouts)
-      // Exclude tasks rejected by designer
+      // Exclude tasks rejected by designer AND exclude returned from rejection
       tasks: applyAllFilters(tasks.filter(t => 
         t.status === "pending" && 
         (t as any).salesperson_status !== 'rejected_by_designer' &&
+        t.returned_from_rejection !== true &&
         (
           !t.needs_logo || 
           t.logo_action !== 'waiting_client' || 

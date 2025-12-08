@@ -156,6 +156,12 @@ export const TaskCard = ({
               <Badge className="bg-amber-500 text-white rounded-full px-4 py-1 font-semibold shadow-md" style={{ fontSize: `${fontSizes?.badge || 12}px` }}>
                 {getCreatorType(task)}
               </Badge>
+              {/* Badge de Retorno de Alteração - chamativo */}
+              {task.returned_from_rejection && (
+                <Badge className="bg-orange-500 text-white rounded-full px-4 py-1 font-semibold shadow-md animate-pulse" style={{ fontSize: `${fontSizes?.badge || 12}px` }}>
+                  🔄 RETORNO DE ALTERAÇÃO
+                </Badge>
+              )}
               {/* Badge de Cliente Cadastrado */}
               {task.customer_id && (
                 <Badge className="bg-green-500 text-white rounded-full px-4 py-1 font-semibold shadow-md" style={{ fontSize: `${fontSizes?.badge || 12}px` }}>

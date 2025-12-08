@@ -1106,6 +1106,7 @@ export type Database = {
           registration_completed_at: string | null
           registration_sent_at: string | null
           registration_token: string | null
+          returned_from_rejection: boolean | null
           shipping_option: Json | null
           shipping_value: number | null
           status: Database["public"]["Enums"]["task_status"]
@@ -1139,6 +1140,7 @@ export type Database = {
           registration_completed_at?: string | null
           registration_sent_at?: string | null
           registration_token?: string | null
+          returned_from_rejection?: boolean | null
           shipping_option?: Json | null
           shipping_value?: number | null
           status?: Database["public"]["Enums"]["task_status"]
@@ -1172,6 +1174,7 @@ export type Database = {
           registration_completed_at?: string | null
           registration_sent_at?: string | null
           registration_token?: string | null
+          returned_from_rejection?: boolean | null
           shipping_option?: Json | null
           shipping_value?: number | null
           status?: Database["public"]["Enums"]["task_status"]
