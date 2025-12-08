@@ -38,7 +38,7 @@ const REJECTION_REASONS: Record<string, string> = {
 };
 
 const ReturnedTasks = () => {
-  const { isSuperAdmin, isAdmin, isSalesperson } = useUserRole();
+  const { isSuperAdmin, isAdmin, isSalesperson, isLoading: isLoadingRoles } = useUserRole();
   const [tasks, setTasks] = useState<DesignTask[]>([]);
   const [taskRejections, setTaskRejections] = useState<Record<string, TaskRejection>>({});
   const [loading, setLoading] = useState(true);
@@ -65,11 +65,14 @@ const ReturnedTasks = () => {
   }, []);
 
   useEffect(() => {
+    // Aguardar carregamento das roles
+    if (isLoadingRoles) return;
+    
     if (isSalesperson && !isSuperAdmin && !isAdmin && currentUserId === null) {
       return;
     }
     loadTasks();
-  }, [currentUserId, isSalesperson, isSuperAdmin, isAdmin]);
+  }, [currentUserId, isSalesperson, isSuperAdmin, isAdmin, isLoadingRoles]);
 
   const loadTasks = async () => {
     setLoading(true);

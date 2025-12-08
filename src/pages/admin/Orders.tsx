@@ -49,7 +49,7 @@ const REJECTION_REASONS: Record<string, string> = {
 };
 
 const Orders = () => {
-  const { isSuperAdmin, isAdmin, isSalesperson } = useUserRole();
+  const { isSuperAdmin, isAdmin, isSalesperson, isLoading: isLoadingRoles } = useUserRole();
   const [tasks, setTasks] = useState<DesignTask[]>([]);
   const [rejectedTasks, setRejectedTasks] = useState<DesignTask[]>([]);
   const [taskRejections, setTaskRejections] = useState<Record<string, TaskRejection>>({});
@@ -81,15 +81,17 @@ const Orders = () => {
     loadCurrentUser();
   }, []);
 
-  // Carregar tarefas APENAS quando temos as informações do usuário
-  // Para vendedores, precisamos esperar currentUserId para filtrar corretamente
+  // Carregar tarefas APENAS quando temos as informações do usuário e roles carregadas
   useEffect(() => {
+    // Aguardar carregamento das roles
+    if (isLoadingRoles) return;
+    
     // Se é vendedor e currentUserId ainda não carregou, não fazer nada
     if (isSalesperson && !isSuperAdmin && !isAdmin && currentUserId === null) {
       return;
     }
     loadTasks();
-  }, [currentUserId, isSalesperson, isSuperAdmin, isAdmin]);
+  }, [currentUserId, isSalesperson, isSuperAdmin, isAdmin, isLoadingRoles]);
 
   const loadTasks = async () => {
     setLoading(true);

@@ -5,7 +5,7 @@ import { useUserRole } from './useUserRole';
 export const useReturnedTasksCount = () => {
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const { isSuperAdmin, isAdmin, isSalesperson } = useUserRole();
+  const { isSuperAdmin, isAdmin, isSalesperson, isLoading: isLoadingRoles } = useUserRole();
 
   const fetchCount = useCallback(async () => {
     try {
@@ -35,6 +35,9 @@ export const useReturnedTasksCount = () => {
   }, [isSuperAdmin, isAdmin, isSalesperson]);
 
   useEffect(() => {
+    // Aguardar carregamento das roles
+    if (isLoadingRoles) return;
+    
     fetchCount();
 
     // Subscribe to realtime updates
@@ -57,7 +60,7 @@ export const useReturnedTasksCount = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchCount]);
+  }, [fetchCount, isLoadingRoles]);
 
   return { count, loading, refetch: fetchCount };
 };
