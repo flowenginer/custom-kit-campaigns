@@ -993,7 +993,7 @@ const Creation = () => {
             <div className="flex gap-4 overflow-x-auto overflow-y-hidden h-full p-4">
               {visibleColumns.map((column, index) => (
                 <KanbanColumn
-                  key={column.status}
+                  key={`${column.status}-${column.title}`}
                   title={column.title}
                   status={column.status}
                   icon={column.icon}
