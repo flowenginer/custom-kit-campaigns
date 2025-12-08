@@ -87,7 +87,7 @@ export const RejectTaskDialog = ({
           assigned_to: null,
           assigned_at: null,
           status_changed_at: new Date().toISOString(),
-          returned_from_rejection: true,
+          returned_from_rejection: false,
         })
         .eq('id', task.id);
 
