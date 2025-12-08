@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { DeleteReasonDialog } from "@/components/orders/DeleteReasonDialog";
+import { OrdersHistoryTab } from "@/components/orders/OrdersHistoryTab";
 
 /**
  * Página EXCLUSIVA de Vendedores para gerenciar LEADS SEM LOGO
@@ -374,6 +375,9 @@ const Orders = () => {
               <Badge variant="destructive" className="ml-1">{rejectedTasks.length}</Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="history" className="gap-2">
+            📋 Histórico
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="pending" className="space-y-4 mt-4">
@@ -520,6 +524,10 @@ const Orders = () => {
               })}
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="history" className="mt-4">
+          <OrdersHistoryTab />
         </TabsContent>
       </Tabs>
 
