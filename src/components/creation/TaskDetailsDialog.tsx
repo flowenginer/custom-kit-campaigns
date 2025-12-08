@@ -77,6 +77,7 @@ import {
   Receipt
 } from "lucide-react";
 import { ModificationRequestDialog } from "@/components/orders/ModificationRequestDialog";
+import { PriorityChangeRequestDialog } from "@/components/orders/PriorityChangeRequestDialog";
 import { BusinessSegmentField } from "./BusinessSegmentField";
 import { extractUniformType } from "@/lib/utils";
 import { MockupVersionSelectorModal } from "./MockupVersionSelectorModal";
@@ -122,6 +123,8 @@ export const TaskDetailsDialog = ({
   const [orderInfoExpanded, setOrderInfoExpanded] = useState(true);
   const [alteracoesExpanded, setAlteracoesExpanded] = useState(true);
   const [showVersionSelector, setShowVersionSelector] = useState(false);
+  const [showPriorityChangeDialog, setShowPriorityChangeDialog] = useState(false);
+  const [requestedPriority, setRequestedPriority] = useState<"normal" | "urgent">("urgent");
   
   const { roles, isSalesperson, isDesigner, isSuperAdmin, isAdmin } = useUserRole();
 
@@ -755,6 +758,14 @@ export const TaskDetailsDialog = ({
   const handlePriorityChange = async (newPriority: "normal" | "urgent") => {
     if (!task) return;
 
+    // Se for vendedor (e não admin/super admin), abrir dialog de solicitação
+    if (isSalesperson && !isSuperAdmin && !isAdmin) {
+      setRequestedPriority(newPriority);
+      setShowPriorityChangeDialog(true);
+      return;
+    }
+
+    // Admin/Super Admin pode alterar diretamente
     const { error } = await supabase
       .from("design_tasks")
       .update({ priority: newPriority })
@@ -764,6 +775,14 @@ export const TaskDetailsDialog = ({
       toast.error("Erro ao atualizar prioridade");
       return;
     }
+
+    // Add to history
+    await supabase.from("design_task_history").insert({
+      task_id: task.id,
+      user_id: currentUser?.id,
+      action: "priority_changed",
+      notes: `Prioridade alterada para ${newPriority === "urgent" ? "Urgente" : "Normal"}`,
+    });
 
     toast.success("Prioridade atualizada!");
     onTaskUpdated();
@@ -1202,19 +1221,22 @@ export const TaskDetailsDialog = ({
                       <Label className="text-xs text-muted-foreground">Prioridade</Label>
                       <Select 
                         value={task.priority}
-                        onValueChange={handlePriorityChange}
-                        disabled={!isSuperAdmin && !isAdmin && !isAssignedDesigner}
+                        onValueChange={(value) => handlePriorityChange(value as "normal" | "urgent")}
+                        disabled={!isSuperAdmin && !isAdmin && !isAssignedDesigner && !isSalesperson}
                       >
                         <SelectTrigger className="mt-1">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="low">🟢 Baixa</SelectItem>
                           <SelectItem value="normal">🟡 Normal</SelectItem>
-                          <SelectItem value="high">🟠 Alta</SelectItem>
                           <SelectItem value="urgent">🔴 Urgente</SelectItem>
                         </SelectContent>
                       </Select>
+                      {isSalesperson && !isSuperAdmin && !isAdmin && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Alterações de prioridade requerem aprovação
+                        </p>
+                      )}
                     </div>
                     
                     {/* 🆕 FASE 6: Exibir nome do criador/vendedor */}
@@ -2236,6 +2258,17 @@ export const TaskDetailsDialog = ({
         mockupVersions={task.design_files}
         currentVersion={task.current_version}
         onConfirm={handleSendLayoutToClient}
+      />
+
+      {/* Priority Change Request Dialog for salespeople */}
+      <PriorityChangeRequestDialog
+        open={showPriorityChangeDialog}
+        onOpenChange={setShowPriorityChangeDialog}
+        taskId={task.id}
+        currentPriority={task.priority as "normal" | "urgent"}
+        requestedPriority={requestedPriority}
+        customerName={task.customer_name}
+        onSuccess={onTaskUpdated}
       />
     </Dialog>
   );

@@ -1966,6 +1966,72 @@ export type Database = {
           },
         ]
       }
+      pending_priority_change_requests: {
+        Row: {
+          created_at: string | null
+          current_priority: Database["public"]["Enums"]["task_priority"]
+          id: string
+          rejection_reason: string | null
+          requested_at: string | null
+          requested_by: string | null
+          requested_priority: Database["public"]["Enums"]["task_priority"]
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          task_id: string
+          updated_at: string | null
+          urgent_reason_id: string | null
+          urgent_reason_text: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_priority: Database["public"]["Enums"]["task_priority"]
+          id?: string
+          rejection_reason?: string | null
+          requested_at?: string | null
+          requested_by?: string | null
+          requested_priority: Database["public"]["Enums"]["task_priority"]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          task_id: string
+          updated_at?: string | null
+          urgent_reason_id?: string | null
+          urgent_reason_text?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          current_priority?: Database["public"]["Enums"]["task_priority"]
+          id?: string
+          rejection_reason?: string | null
+          requested_at?: string | null
+          requested_by?: string | null
+          requested_priority?: Database["public"]["Enums"]["task_priority"]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          task_id?: string
+          updated_at?: string | null
+          urgent_reason_id?: string | null
+          urgent_reason_text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_priority_change_requests_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "design_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_priority_change_requests_urgent_reason_id_fkey"
+            columns: ["urgent_reason_id"]
+            isOneToOne: false
+            referencedRelation: "urgent_reasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pending_urgent_requests: {
         Row: {
           created_at: string | null
