@@ -92,6 +92,8 @@ export interface DesignTask {
   business_segment_name?: string | null;
   business_segment_icon?: string | null;
   business_segment_other?: string | null;
+  // Flag para identificar tarefas que voltaram de recusa do designer
+  returned_from_rejection?: boolean;
 }
 
 export interface DesignTaskHistory {

@@ -211,6 +211,18 @@ const ReturnedTasks = () => {
           .eq('id', taskRejections[task.id].id);
       }
 
+      // Atualizar status da design_task para pending (retorno de alteração)
+      await supabase
+        .from('design_tasks')
+        .update({
+          status: 'pending',
+          assigned_to: null,
+          assigned_at: null,
+          status_changed_at: new Date().toISOString(),
+          returned_from_rejection: true,
+        })
+        .eq('id', task.id);
+
       // Atualizar lead para remover status de rejeitado
       if (task.lead_id) {
         await supabase

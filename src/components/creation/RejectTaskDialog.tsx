@@ -79,7 +79,23 @@ export const RejectTaskDialog = ({
         }
       }
 
-      // 3. Registrar no histórico
+      // 3. Atualizar status da design_task para pending e marcar como retorno de recusa
+      const { error: taskError } = await supabase
+        .from('design_tasks')
+        .update({
+          status: 'pending',
+          assigned_to: null,
+          assigned_at: null,
+          status_changed_at: new Date().toISOString(),
+          returned_from_rejection: true,
+        })
+        .eq('id', task.id);
+
+      if (taskError) {
+        console.error('Error updating task:', taskError);
+      }
+
+      // 4. Registrar no histórico
       const reasonLabel = REJECTION_REASONS.find(r => r.id === reasonType)?.label || reasonType;
       const fullReason = reasonText.trim() 
         ? `${reasonLabel}. Observação: ${reasonText}` 
@@ -94,7 +110,7 @@ export const RejectTaskDialog = ({
         notes: `Tarefa recusada pelo designer. Motivo: ${fullReason}`,
       });
 
-      // 4. Criar notificação para o vendedor
+      // 5. Criar notificação para o vendedor
       if (task.created_by) {
         await supabase.from('notifications').insert({
           user_id: task.created_by,
