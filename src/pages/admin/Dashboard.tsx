@@ -16,6 +16,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useDesignMode } from "@/contexts/DesignModeContext";
+import { CRMPageHeader } from "@/components/crm/CRMPageHeader";
 
 // LocalStorage helpers for campaign and workflow selection persistence
 const STORAGE_KEY = 'dashboard_selected_campaigns';
@@ -239,6 +241,7 @@ const formatTime = (seconds: number): string => {
 
 const Dashboard = () => {
   const { isDesigner, isLoading: isLoadingRole } = useUserRole();
+  const { isCRM } = useDesignMode();
   const [workflows, setWorkflows] = useState<WorkflowTemplate[]>([]);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>(loadSelectedWorkflow());
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -1840,29 +1843,24 @@ const Dashboard = () => {
   const topUtmSourcesP1Data = getTopUtmSourcesP1();
   const topUtmSourcesP2Data = getTopUtmSourcesP2();
   return <div className="p-8 space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-chart-purple bg-clip-text text-transparent">Dashboard</h1>
-            <p className="text-muted-foreground mt-1">
-              Visualize a performance de suas campanhas em tempo real
-            </p>
+      <CRMPageHeader
+        title="Dashboard"
+        description="Visualize a performance de suas campanhas em tempo real"
+        actions={
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            {comparisonMode === "comparison" && (
+              <Badge variant="secondary" className="ml-2">
+                Modo Comparação
+              </Badge>
+            )}
+            <RefreshIndicator 
+              lastUpdated={lastUpdated}
+              isRefreshing={isRefreshing}
+              onRefresh={refresh}
+            />
           </div>
-          {comparisonMode === "comparison" && (
-            <Badge variant="secondary" className="ml-2">
-              Modo Comparação
-            </Badge>
-          )}
-        </div>
-        
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <RefreshIndicator 
-            lastUpdated={lastUpdated}
-            isRefreshing={isRefreshing}
-            onRefresh={refresh}
-          />
-        </div>
-      </div>
+        }
+      />
 
 
       {/* Seletores de Períodos */}

@@ -14,11 +14,13 @@ import { ThemeCustomizer } from "@/components/theme/ThemeCustomizer";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { ABTest } from "@/types/ab-test";
-import { generateUniqueSlug } from "@/lib/utils";
+import { generateUniqueSlug, cn } from "@/lib/utils";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
 import { useCustomDomain } from "@/hooks/useCustomDomain";
+import { CRMPageHeader } from "@/components/crm/CRMPageHeader";
+import { useDesignMode } from "@/contexts/DesignModeContext";
 
 interface Campaign {
   id: string;
@@ -55,6 +57,7 @@ interface Segment {
 
 export default function Campaigns() {
   const { isSuperAdmin } = useUserRole();
+  const { isCRM } = useDesignMode();
   const { urls, getBaseUrl } = useCustomDomain();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [segments, setSegments] = useState<Segment[]>([]);
@@ -481,31 +484,33 @@ export default function Campaigns() {
 
   return (
     <div className="p-8 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Campanhas</h1>
-            <p className="text-muted-foreground">Gerencie suas campanhas de vendas</p>
-          </div>
-          <div className="flex gap-2">
-            <RefreshIndicator 
-              lastUpdated={lastUpdated}
-              isRefreshing={isRefreshing}
-              onRefresh={refresh}
-            />
-            
-            <Dialog open={showDialog} onOpenChange={setShowDialog}>
-              <DialogTrigger asChild>
-                <Button onClick={() => {
-                  setFormData({ name: "", segment_tag: "", model_tag: "", workflow_template_id: "" });
-                  setIsCreatingSegmentTag(false);
-                  setIsCreatingModelTag(false);
-                  setNewSegmentTag("");
-                  setNewModelTag("");
-                }}>
-                  <Plus className="w-4 h-4" />
-                  Nova Campanha
-                </Button>
-              </DialogTrigger>
+        <CRMPageHeader
+          title="Campanhas"
+          description="Gerencie suas campanhas de vendas"
+          actions={
+            <div className="flex gap-2">
+              <RefreshIndicator 
+                lastUpdated={lastUpdated}
+                isRefreshing={isRefreshing}
+                onRefresh={refresh}
+              />
+              
+              <Dialog open={showDialog} onOpenChange={setShowDialog}>
+                <DialogTrigger asChild>
+                  <Button 
+                    variant={isCRM ? "gradient" : "default"}
+                    onClick={() => {
+                      setFormData({ name: "", segment_tag: "", model_tag: "", workflow_template_id: "" });
+                      setIsCreatingSegmentTag(false);
+                      setIsCreatingModelTag(false);
+                      setNewSegmentTag("");
+                      setNewModelTag("");
+                    }}
+                  >
+                    <Plus className="w-4 h-4" />
+                    Nova Campanha
+                  </Button>
+                </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Nova Campanha</DialogTitle>
@@ -688,8 +693,9 @@ export default function Campaigns() {
             <FlaskConical className="w-4 h-4" />
             Criar Teste A/B
           </Button>
-        </div>
-      </div>
+            </div>
+          }
+        />
 
         {campaigns.length > 0 && isSuperAdmin && (
           <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg border">
