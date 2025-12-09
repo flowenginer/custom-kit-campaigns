@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { UserPlus, Trash2, Edit, KeyRound, Loader2, Code2, AlertCircle, Building2, Columns } from "lucide-react";
+import { UserPlus, Trash2, Edit, KeyRound, Loader2, Code2, AlertCircle, Building2, Columns, Palette } from "lucide-react";
+import { DesignModeSwitcher } from "@/components/DesignModeSwitcher";
 import { UrgentReasonsManager } from "@/components/admin/UrgentReasonsManager";
 import { KanbanVisibilityManager } from "@/components/admin/KanbanVisibilityManager";
 import { KanbanColumnsManager } from "@/components/admin/KanbanColumnsManager";
@@ -428,6 +429,7 @@ const Settings = () => {
       <Tabs defaultValue="users" className="space-y-4">
         <TabsList className="flex flex-wrap gap-1">
           <TabsTrigger value="users">Usuários</TabsTrigger>
+          <TabsTrigger value="design"><Palette className="w-4 h-4 mr-1 inline" />Visual</TabsTrigger>
           <TabsTrigger value="uniform-types">Tipos Uniforme</TabsTrigger>
           <TabsTrigger value="business-segments"><Building2 className="w-4 h-4 mr-1 inline" />Segmentos</TabsTrigger>
           <TabsTrigger value="kanban-columns"><Columns className="w-4 h-4 mr-1 inline" />Colunas Kanban</TabsTrigger>
@@ -438,6 +440,21 @@ const Settings = () => {
           <TabsTrigger value="scripts"><Code2 className="w-4 h-4 mr-1 inline" />Scripts</TabsTrigger>
           <TabsTrigger value="urgent-reasons"><AlertCircle className="w-4 h-4 mr-1 inline" />Urgência</TabsTrigger>
         </TabsList>
+
+        {/* TAB: DESIGN MODE */}
+        <TabsContent value="design" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Modo de Design</CardTitle>
+              <CardDescription>
+                Escolha entre o visual clássico com 13 temas ou o novo design CRM moderno com roxo/rosa
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DesignModeSwitcher />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* TAB: USUÁRIOS */}
         <TabsContent value="users" className="space-y-4">
