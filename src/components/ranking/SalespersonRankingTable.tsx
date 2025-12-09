@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, TrendingUp } from "lucide-react";
+import { Trophy } from "lucide-react";
 import { formatSegmentTag } from "@/lib/utils";
 
 interface SalespersonRankingTableProps {
@@ -16,13 +16,30 @@ interface SalespersonStats {
   id: string;
   name: string;
   total: number;
-  today: number;
-  thisWeek: number;
-  thisMonth: number;
+  firstThird: number;
+  middleThird: number;
+  lastThird: number;
   segments: { [key: string]: number };
 }
 
+const formatPeriodLabel = (start: Date, end: Date) => {
+  const formatter = new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'short' });
+  return `${formatter.format(start)} - ${formatter.format(end)}`;
+};
+
 export const SalespersonRankingTable = ({ startDate, endDate, limit }: SalespersonRankingTableProps) => {
+  // Calcular os breakpoints dos terços
+  const periodDuration = endDate.getTime() - startDate.getTime();
+  const oneThird = periodDuration / 3;
+  
+  const firstThirdEnd = new Date(startDate.getTime() + oneThird);
+  const secondThirdEnd = new Date(startDate.getTime() + oneThird * 2);
+
+  // Labels dinâmicos para as colunas
+  const firstThirdLabel = formatPeriodLabel(startDate, firstThirdEnd);
+  const middleThirdLabel = formatPeriodLabel(firstThirdEnd, secondThirdEnd);
+  const lastThirdLabel = formatPeriodLabel(secondThirdEnd, endDate);
+
   const { data: stats, isLoading } = useQuery({
     queryKey: ['salesperson-ranking', startDate, endDate],
     queryFn: async () => {
@@ -49,28 +66,29 @@ export const SalespersonRankingTable = ({ startDate, endDate, limit }: Salespers
         const userName = task.profiles?.full_name || 'Desconhecido';
         const segmentName = formatSegmentTag(task.campaigns?.segment_tag);
         const taskDate = new Date(task.created_at);
-        const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
         if (!acc[userId]) {
           acc[userId] = {
             id: userId,
             name: userName,
             total: 0,
-            today: 0,
-            thisWeek: 0,
-            thisMonth: 0,
+            firstThird: 0,
+            middleThird: 0,
+            lastThird: 0,
             segments: {}
           };
         }
 
         acc[userId].total++;
         
-        if (taskDate >= today) acc[userId].today++;
-        if (taskDate >= weekAgo) acc[userId].thisWeek++;
-        if (taskDate >= monthStart) acc[userId].thisMonth++;
+        // Classificar em qual terço a task se encaixa
+        if (taskDate >= secondThirdEnd) {
+          acc[userId].lastThird++;
+        } else if (taskDate >= firstThirdEnd) {
+          acc[userId].middleThird++;
+        } else {
+          acc[userId].firstThird++;
+        }
 
         acc[userId].segments[segmentName] = (acc[userId].segments[segmentName] || 0) + 1;
 
@@ -115,9 +133,9 @@ export const SalespersonRankingTable = ({ startDate, endDate, limit }: Salespers
             <TableHead className="w-12">#</TableHead>
             <TableHead>Vendedor</TableHead>
             <TableHead className="text-right">Total</TableHead>
-            <TableHead className="text-right">Hoje</TableHead>
-            <TableHead className="text-right">Semana</TableHead>
-            <TableHead className="text-right">Mês</TableHead>
+            <TableHead className="text-right text-xs">{firstThirdLabel}</TableHead>
+            <TableHead className="text-right text-xs">{middleThirdLabel}</TableHead>
+            <TableHead className="text-right text-xs">{lastThirdLabel}</TableHead>
             <TableHead>Principais Segmentos</TableHead>
           </TableRow>
         </TableHeader>
@@ -138,9 +156,9 @@ export const SalespersonRankingTable = ({ startDate, endDate, limit }: Salespers
                     {stat.total}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right">{stat.today}</TableCell>
-                <TableCell className="text-right">{stat.thisWeek}</TableCell>
-                <TableCell className="text-right">{stat.thisMonth}</TableCell>
+                <TableCell className="text-right">{stat.firstThird}</TableCell>
+                <TableCell className="text-right">{stat.middleThird}</TableCell>
+                <TableCell className="text-right">{stat.lastThird}</TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
                     {topSegments.map(([segment, count]) => (
