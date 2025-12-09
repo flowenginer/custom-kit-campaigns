@@ -212,12 +212,12 @@ const ReturnedTasks = () => {
       }
 
       // Atualizar status da design_task para pending (retorno de alteração)
+      // IMPORTANTE: NÃO remover assigned_to/assigned_at - manter o designer que já aceitou
       await supabase
         .from('design_tasks')
         .update({
           status: 'pending',
-          assigned_to: null,
-          assigned_at: null,
+          // assigned_to e assigned_at são mantidos - tarefa volta para o mesmo designer
           status_changed_at: new Date().toISOString(),
           returned_from_rejection: true,
         })
@@ -234,12 +234,15 @@ const ReturnedTasks = () => {
           .eq('id', task.lead_id);
       }
 
-      // Registrar no histórico
+      // Registrar no histórico - diferenciar se manteve o designer ou não
+      const designerKept = task.assigned_to !== null;
       await supabase.from('design_task_history').insert({
         task_id: task.id,
         user_id: currentUserId,
-        action: 'resent_to_designer',
-        notes: 'Tarefa reenviada ao designer após correção',
+        action: designerKept ? 'resent_to_same_designer' : 'resent_to_designer',
+        notes: designerKept 
+          ? 'Tarefa reenviada ao mesmo designer após correção' 
+          : 'Tarefa reenviada após correção',
       });
 
       toast.success("Tarefa reenviada para o designer!");
