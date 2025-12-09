@@ -298,12 +298,12 @@ const Orders = () => {
           .eq('id', taskRejections[task.id].id);
       }
 
-      // Atualizar status da design_task para pending (retorno de alteração)
+      // Atualizar status da design_task para in_progress (vai direto para o designer)
       // IMPORTANTE: NÃO remover assigned_to/assigned_at - manter o designer que já aceitou
       await supabase
         .from('design_tasks')
         .update({
-          status: 'pending',
+          status: 'in_progress',
           // assigned_to e assigned_at são mantidos - tarefa volta para o mesmo designer
           status_changed_at: new Date().toISOString(),
           returned_from_rejection: true,

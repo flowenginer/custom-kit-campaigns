@@ -763,18 +763,7 @@ const Creation = () => {
       )),
       backgroundColor: "#ef4444", // Vermelho
     },
-    {
-      title: "🟡 Retorno de Alteração",
-      status: "pending" as const,
-      icon: RefreshCcw,
-      // Tasks que JÁ FORAM reenviadas pelo vendedor após devolução
-      tasks: applyAllFilters(tasks.filter(t => 
-        t.status === "pending" && 
-        t.returned_from_rejection === true &&
-        (t as any).salesperson_status !== 'rejected_by_designer'
-      )),
-      backgroundColor: "#eab308", // Amarelo
-    },
+    // Coluna "Retorno de Alteração" removida - cards agora vão direto para "Em Progresso" com badge piscante
     {
       title: "Novos Com Logo",
       status: "pending" as const,
