@@ -408,19 +408,31 @@ export type Database = {
         Row: {
           created_at: string | null
           created_by: string
+          group_description: string | null
+          group_icon: string | null
+          group_name: string | null
           id: string
+          is_group: boolean | null
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
           created_by: string
+          group_description?: string | null
+          group_icon?: string | null
+          group_name?: string | null
           id?: string
+          is_group?: boolean | null
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
           created_by?: string
+          group_description?: string | null
+          group_icon?: string | null
+          group_name?: string | null
           id?: string
+          is_group?: boolean | null
           updated_at?: string | null
         }
         Relationships: [

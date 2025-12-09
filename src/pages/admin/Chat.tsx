@@ -1,55 +1,38 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { MessageSquarePlus } from "lucide-react";
 import { ConversationList } from "@/components/chat/ConversationList";
 import { ChatWindow } from "@/components/chat/ChatWindow";
-import { NewConversationDialog } from "@/components/chat/NewConversationDialog";
-import { supabase } from "@/integrations/supabase/client";
+import { CreateGroupDialog } from "@/components/chat/CreateGroupDialog";
+import { MessageSquarePlus } from "lucide-react";
 
 interface SelectedConversation {
   id: string;
-  otherUser: {
+  is_group: boolean;
+  other_user?: {
     id: string;
     full_name: string;
   };
+  group_name?: string;
+  group_icon?: string;
 }
 
 const Chat = () => {
   const [selectedConversation, setSelectedConversation] = useState<SelectedConversation | null>(null);
-  const [isNewConversationOpen, setIsNewConversationOpen] = useState(false);
+  const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
 
   const handleSelectConversation = (conversation: any) => {
     setSelectedConversation({
       id: conversation.id,
-      otherUser: {
-        id: conversation.other_user.id,
-        full_name: conversation.other_user.full_name,
-      },
+      is_group: conversation.is_group || false,
+      other_user: conversation.other_user,
+      group_name: conversation.group_name,
+      group_icon: conversation.group_icon,
     });
   };
 
-  const handleNewConversationCreated = async (conversationId: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data: otherParticipant } = await supabase
-      .from("chat_participants")
-      .select("user_id, profiles!inner(id, full_name)")
-      .eq("conversation_id", conversationId)
-      .neq("user_id", user.id)
-      .single();
-
-    if (otherParticipant) {
-      setSelectedConversation({
-        id: conversationId,
-        otherUser: {
-          id: (otherParticipant as any).profiles.id,
-          full_name: (otherParticipant as any).profiles.full_name,
-        },
-      });
-      setIsNewConversationOpen(false);
-    }
+  const handleGroupCreated = (conversationId: string) => {
+    // Refresh will happen via realtime subscription
+    setIsCreateGroupOpen(false);
   };
 
   const handleBack = () => {
@@ -61,24 +44,14 @@ const Chat = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
         {/* Lista de Conversas */}
         <Card className={`lg:col-span-1 ${selectedConversation ? 'hidden lg:flex' : 'flex'} flex-col`}>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-xl font-semibold">Conversas</CardTitle>
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => setIsNewConversationOpen(true)}
-                className="h-8 w-8"
-              >
-                <MessageSquarePlus className="h-4 w-4" />
-              </Button>
-            </div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xl font-semibold">Chat</CardTitle>
           </CardHeader>
           <CardContent className="flex-1 overflow-hidden p-0">
             <ConversationList
               onSelectConversation={handleSelectConversation}
-              onNewConversation={() => setIsNewConversationOpen(true)}
-              selectedConversationId={selectedConversation?.id}
+              onCreateGroup={() => setIsCreateGroupOpen(true)}
+              selectedConversationId={selectedConversation?.id || null}
             />
           </CardContent>
         </Card>
@@ -88,24 +61,27 @@ const Chat = () => {
           {selectedConversation ? (
             <ChatWindow
               conversationId={selectedConversation.id}
-              otherUser={selectedConversation.otherUser}
+              isGroup={selectedConversation.is_group}
+              otherUser={selectedConversation.other_user}
+              groupName={selectedConversation.group_name}
+              groupIcon={selectedConversation.group_icon}
               onBack={handleBack}
             />
           ) : (
             <div className="flex-1 flex items-center justify-center text-muted-foreground">
               <div className="text-center space-y-2">
                 <MessageSquarePlus className="h-12 w-12 mx-auto opacity-20" />
-                <p>Selecione uma conversa ou inicie uma nova</p>
+                <p>Selecione uma conversa para começar</p>
               </div>
             </div>
           )}
         </Card>
       </div>
 
-      <NewConversationDialog
-        open={isNewConversationOpen}
-        onOpenChange={setIsNewConversationOpen}
-        onConversationCreated={handleNewConversationCreated}
+      <CreateGroupDialog
+        open={isCreateGroupOpen}
+        onOpenChange={setIsCreateGroupOpen}
+        onGroupCreated={handleGroupCreated}
       />
     </div>
   );

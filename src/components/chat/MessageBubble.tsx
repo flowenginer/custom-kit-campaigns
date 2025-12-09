@@ -14,6 +14,7 @@ interface MessageBubbleProps {
   createdAt: string;
   isOwnMessage: boolean;
   senderName: string;
+  showSenderName?: boolean;
 }
 
 export const MessageBubble = ({
@@ -25,6 +26,7 @@ export const MessageBubble = ({
   createdAt,
   isOwnMessage,
   senderName,
+  showSenderName = false,
 }: MessageBubbleProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -143,8 +145,8 @@ export const MessageBubble = ({
         isOwnMessage ? "items-end ml-auto" : "items-start mr-auto"
       )}
     >
-      {!isOwnMessage && (
-        <span className="text-xs text-muted-foreground px-2">{senderName}</span>
+      {showSenderName && (
+        <span className="text-xs font-medium text-primary px-2">{senderName}</span>
       )}
       <div
         className={cn(

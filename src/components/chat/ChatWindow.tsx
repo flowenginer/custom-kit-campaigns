@@ -1,31 +1,44 @@
 import { useState, useRef, useEffect } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { MessageBubble } from "./MessageBubble";
+import { DateSeparator } from "./DateSeparator";
 import { AudioRecorder } from "./AudioRecorder";
 import { useChat } from "@/hooks/useChat";
 import { toast } from "sonner";
-import { Send, Paperclip, Loader2, X } from "lucide-react";
+import { Send, Paperclip, Loader2, X, ArrowLeft } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { format, isSameDay } from "date-fns";
 
 interface ChatWindowProps {
   conversationId: string;
-  otherUser: {
+  isGroup: boolean;
+  otherUser?: {
     id: string;
     full_name: string;
   };
+  groupName?: string;
+  groupIcon?: string;
   onBack: () => void;
 }
 
-export const ChatWindow = ({ conversationId, otherUser, onBack }: ChatWindowProps) => {
+export const ChatWindow = ({
+  conversationId,
+  isGroup,
+  otherUser,
+  groupName,
+  groupIcon,
+  onBack,
+}: ChatWindowProps) => {
   const { messages, loading, sendMessage, uploadFile, currentUserId } = useChat(conversationId);
   const [messageText, setMessageText] = useState("");
   const [sending, setSending] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -33,13 +46,21 @@ export const ChatWindow = ({ conversationId, otherUser, onBack }: ChatWindowProp
     }
   }, [messages]);
 
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      const newHeight = Math.min(textareaRef.current.scrollHeight, 120);
+      textareaRef.current.style.height = `${newHeight}px`;
+    }
+  }, [messageText]);
+
   const handleSendText = async () => {
     if (!messageText.trim() && !selectedFile) return;
 
     setSending(true);
     try {
       if (selectedFile) {
-        // Upload do arquivo
         const fileUrl = await uploadFile(selectedFile);
         const messageType = selectedFile.type.startsWith("image/") ? "image" : "file";
         
@@ -68,7 +89,6 @@ export const ChatWindow = ({ conversationId, otherUser, onBack }: ChatWindowProp
   const handleAudioRecorded = async (audioBlob: Blob, duration: number) => {
     setSending(true);
     try {
-      // Criar um arquivo a partir do blob
       const audioFile = new File([audioBlob], `audio-${Date.now()}.webm`, {
         type: "audio/webm",
       });
@@ -106,6 +126,13 @@ export const ChatWindow = ({ conversationId, otherUser, onBack }: ChatWindowProp
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendText();
+    }
+  };
+
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -115,22 +142,53 @@ export const ChatWindow = ({ conversationId, otherUser, onBack }: ChatWindowProp
       .toUpperCase();
   };
 
+  // Agrupar mensagens por data
+  const messagesWithSeparators = () => {
+    const result: { type: "date" | "message"; date?: string; message?: any }[] = [];
+    let lastDate: string | null = null;
+
+    for (const message of messages) {
+      const messageDate = format(new Date(message.created_at), "yyyy-MM-dd");
+
+      if (lastDate !== messageDate) {
+        result.push({ type: "date", date: message.created_at });
+        lastDate = messageDate;
+      }
+
+      result.push({ type: "message", message });
+    }
+
+    return result;
+  };
+
+  const displayName = isGroup ? groupName : otherUser?.full_name;
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={onBack} className="lg:hidden">
-            <X className="h-5 w-5" />
+            <ArrowLeft className="h-5 w-5" />
           </Button>
-          <Avatar>
-            <AvatarFallback className="bg-primary text-primary-foreground">
-              {getInitials(otherUser.full_name)}
-            </AvatarFallback>
-          </Avatar>
+          {isGroup ? (
+            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-lg">
+              {groupIcon || "👥"}
+            </div>
+          ) : (
+            <Avatar>
+              <AvatarFallback className="bg-primary text-primary-foreground">
+                {getInitials(displayName || "?")}
+              </AvatarFallback>
+            </Avatar>
+          )}
           <div>
-            <h3 className="font-semibold">{otherUser.full_name}</h3>
-            <Badge variant="secondary" className="text-xs">Online</Badge>
+            <h3 className="font-semibold">{displayName}</h3>
+            {isGroup ? (
+              <span className="text-xs text-muted-foreground">Grupo</span>
+            ) : (
+              <Badge variant="secondary" className="text-xs">Online</Badge>
+            )}
           </div>
         </div>
       </div>
@@ -146,20 +204,28 @@ export const ChatWindow = ({ conversationId, otherUser, onBack }: ChatWindowProp
             Nenhuma mensagem ainda. Envie a primeira!
           </div>
         ) : (
-          <div className="space-y-4">
-            {messages.map((message) => (
-              <MessageBubble
-                key={message.id}
-                content={message.content}
-                messageType={message.message_type}
-                fileUrl={message.file_url}
-                fileName={message.file_name}
-                audioDuration={message.audio_duration}
-                createdAt={message.created_at}
-                isOwnMessage={message.sender_id === currentUserId}
-                senderName={message.sender_name}
-              />
-            ))}
+          <div className="space-y-2">
+            {messagesWithSeparators().map((item, index) => {
+              if (item.type === "date") {
+                return <DateSeparator key={`date-${index}`} date={item.date!} />;
+              }
+
+              const message = item.message!;
+              return (
+                <MessageBubble
+                  key={message.id}
+                  content={message.content}
+                  messageType={message.message_type}
+                  fileUrl={message.file_url}
+                  fileName={message.file_name}
+                  audioDuration={message.audio_duration}
+                  createdAt={message.created_at}
+                  isOwnMessage={message.sender_id === currentUserId}
+                  senderName={message.sender_name}
+                  showSenderName={isGroup && message.sender_id !== currentUserId}
+                />
+              );
+            })}
           </div>
         )}
       </ScrollArea>
@@ -180,7 +246,7 @@ export const ChatWindow = ({ conversationId, otherUser, onBack }: ChatWindowProp
             </Button>
           </div>
         )}
-        <div className="flex items-center gap-2">
+        <div className="flex items-end gap-2">
           <input
             ref={fileInputRef}
             type="file"
@@ -194,21 +260,19 @@ export const ChatWindow = ({ conversationId, otherUser, onBack }: ChatWindowProp
             size="icon"
             onClick={() => fileInputRef.current?.click()}
             disabled={sending}
+            className="flex-shrink-0"
           >
             <Paperclip className="h-5 w-5" />
           </Button>
-          <Input
+          <Textarea
+            ref={textareaRef}
             placeholder="Digite sua mensagem..."
             value={messageText}
             onChange={(e) => setMessageText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSendText();
-              }
-            }}
+            onKeyDown={handleKeyDown}
             disabled={sending}
-            className="flex-1"
+            className="flex-1 min-h-[40px] max-h-[120px] resize-none py-2"
+            rows={1}
           />
           <AudioRecorder onAudioRecorded={handleAudioRecorded} />
           <Button
@@ -216,6 +280,7 @@ export const ChatWindow = ({ conversationId, otherUser, onBack }: ChatWindowProp
             onClick={handleSendText}
             disabled={sending || (!messageText.trim() && !selectedFile)}
             size="icon"
+            className="flex-shrink-0"
           >
             {sending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
