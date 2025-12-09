@@ -12,6 +12,7 @@ import { useDesignMode } from "@/contexts/DesignModeContext";
 import { useCRMTheme } from "@/contexts/CRMThemeContext";
 import { useTotalPendingApprovalsCount } from "@/hooks/useTotalPendingApprovalsCount";
 import { useReturnedTasksCount } from "@/hooks/useReturnedTasksCount";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useMenuStructure } from "@/hooks/useMenuStructure";
 import { cn } from "@/lib/utils";
 import logoSS from "@/assets/logo-ss.png";
@@ -302,6 +303,7 @@ const AdminLayout = () => {
   const { currentTheme, changeTheme } = useGlobalTheme();
   const { count: pendingCount } = useTotalPendingApprovalsCount();
   const { count: returnedCount } = useReturnedTasksCount();
+  const { unreadCount } = useUnreadMessages();
   const { getMenuTree, getIcon, isLoading: menusLoading } = useMenuStructure();
   
   const menuTree = getMenuTree();
@@ -490,6 +492,7 @@ const AdminLayout = () => {
                                     const ChildIcon = getIcon(child.icon);
                                     const isChildActive = location.pathname === child.route;
                                     const showBadge = child.slug === 'approvals' && pendingCount > 0;
+                                    const showChatBadge = child.slug === 'chat' && unreadCount > 0;
 
                                     return (
                                       <SidebarMenuItem key={child.id}>
@@ -515,6 +518,11 @@ const AdminLayout = () => {
                                                 {pendingCount}
                                               </Badge>
                                             )}
+                                            {showChatBadge && (
+                                              <Badge className="ml-auto bg-blue-500 text-white text-xs">
+                                                {unreadCount > 99 ? '99+' : unreadCount}
+                                              </Badge>
+                                            )}
                                           </NavLink>
                                         </SidebarMenuButton>
                                       </SidebarMenuItem>
@@ -529,6 +537,7 @@ const AdminLayout = () => {
                       // Menu sem submenus
                       const showApprovalsBadge = menu.slug === 'approvals' && pendingCount > 0;
                       const showReturnedBadge = menu.slug === 'returned' && returnedCount > 0;
+                      const showChatBadge = menu.slug === 'chat' && unreadCount > 0;
                       
                       return (
                         <SidebarMenuItem key={menu.id}>
@@ -558,6 +567,11 @@ const AdminLayout = () => {
                               {showReturnedBadge && (
                                 <Badge className="ml-auto bg-amber-500 text-white text-xs">
                                   {returnedCount}
+                                </Badge>
+                              )}
+                              {showChatBadge && (
+                                <Badge className="ml-auto bg-blue-500 text-white text-xs">
+                                  {unreadCount > 99 ? '99+' : unreadCount}
                                 </Badge>
                               )}
                             </NavLink>
