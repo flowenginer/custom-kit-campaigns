@@ -17,6 +17,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { useCardFontSizes } from "@/hooks/useCardFontSizes";
 import { useCardCollapse } from "@/hooks/useCardCollapse";
 import { useSoundNotifications } from "@/hooks/useSoundNotifications";
+import { useRealtimeTasks } from "@/hooks/useRealtimeTasks";
 import { toast } from "sonner";
 import { 
   Inbox, 
@@ -30,8 +31,6 @@ import {
   ArrowUpDown,
   RefreshCcw
 } from "lucide-react";
-import { useAutoRefresh } from "@/hooks/useAutoRefresh";
-import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
 import {
   DndContext,
   DragEndEvent,
@@ -96,48 +95,38 @@ const Creation = () => {
     })
   );
 
-  const refreshData = useCallback(async () => {
-    await loadTasks();
-  }, []);
-
-  const { lastUpdated, isRefreshing, refresh } = useAutoRefresh(
-    refreshData,
-    { interval: 60000, enabled: true }
-  );
-
   // Manter ref sincronizado com selectedTask
   useEffect(() => {
     selectedTaskRef.current = selectedTask;
   }, [selectedTask]);
 
+  // Hook de realtime - atualizações incrementais
+  useRealtimeTasks(
+    tasks,
+    setTasks,
+    selectedTaskRef,
+    setSelectedTask,
+    {
+      onNewTask: playNewCard,
+      onStatusChange: playStatusChange,
+    }
+  );
+
+  // Estado para controle do refresh manual
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Função de refresh manual
+  const handleManualRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await loadTasks();
+    setIsRefreshing(false);
+    toast.success("Dados atualizados!");
+  }, []);
+
   useEffect(() => {
     loadTasks();
     getCurrentUser();
-    
-    // Subscribe to realtime changes for new cards and updates
-    const channel = supabase
-      .channel("design_tasks_changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "design_tasks",
-        },
-        (payload) => {
-          // Tocar som apenas em INSERT (novos cards)
-          if (payload.eventType === 'INSERT') {
-            playNewCard();
-          }
-          loadTasks();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [playNewCard]);
+  }, []);
 
   const getCurrentUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -865,11 +854,17 @@ const Creation = () => {
               />
             </div>
 
-            <RefreshIndicator 
-              lastUpdated={lastUpdated}
-              isRefreshing={isRefreshing}
-              onRefresh={refresh}
-            />
+            {/* Botão de refresh manual */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleManualRefresh}
+              disabled={isRefreshing}
+              className="gap-2"
+            >
+              <RefreshCcw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {isRefreshing ? 'Atualizando...' : 'Atualizar'}
+            </Button>
 
             <CardFontEditor 
               sizes={fontSizes}
