@@ -11,7 +11,11 @@ interface ProductionChartsProps {
   endDate: Date;
 }
 
-const COLORS = ['#4F9CF9', '#34A853', '#F9844A', '#9B87F5', '#F97316', '#06B6D4'];
+const COLORS = [
+  '#4F9CF9', '#34A853', '#F9844A', '#9B87F5', '#F97316', '#06B6D4',
+  '#EC4899', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#6366F1',
+  '#14B8A6', '#84CC16', '#A855F7', '#3B82F6'
+];
 
 export const ProductionCharts = ({ startDate, endDate }: ProductionChartsProps) => {
   const { data, isLoading } = useQuery({
@@ -67,10 +71,9 @@ export const ProductionCharts = ({ startDate, endDate }: ProductionChartsProps) 
         segmentData[segment] = (segmentData[segment] || 0) + 1;
       });
 
-      const pieData = Object.entries(segmentData).map(([name, value]) => ({
-        name,
-        value
-      }));
+      const pieData = Object.entries(segmentData)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value);
 
       // 3. Status distribution
       const statusData: { [key: string]: number } = {};
@@ -174,32 +177,60 @@ export const ProductionCharts = ({ startDate, endDate }: ProductionChartsProps) 
       </Card>
 
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Distribuição por Segmento */}
+        {/* Distribuição por Segmento - Donut Chart */}
         <Card>
           <CardHeader>
             <CardTitle>🥧 Distribuição por Segmento</CardTitle>
             <CardDescription>Proporção de tarefas por segmento</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={data.segments}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {data.segments.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <ChartTooltip />
-              </PieChart>
-            </ResponsiveContainer>
+            <div className="flex items-center gap-4">
+              <div className="relative flex-shrink-0">
+                <ResponsiveContainer width={200} height={200}>
+                  <PieChart>
+                    <Pie
+                      data={data.segments}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={80}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {data.segments.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <ChartTooltip 
+                      formatter={(value: number, name: string) => [`${value} tarefas`, name]}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                {/* Total no centro */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-foreground">
+                      {data.segments.reduce((acc, s) => acc + s.value, 0)}
+                    </div>
+                    <div className="text-xs text-muted-foreground">Total</div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Legenda lateral */}
+              <div className="flex-1 space-y-1.5 max-h-[200px] overflow-y-auto">
+                {data.segments.map((segment, index) => (
+                  <div key={segment.name} className="flex items-center gap-2 text-sm">
+                    <div 
+                      className="w-3 h-3 rounded-sm flex-shrink-0"
+                      style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                    />
+                    <span className="truncate flex-1 text-foreground">{segment.name}</span>
+                    <span className="font-medium text-muted-foreground">{segment.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </CardContent>
         </Card>
 
