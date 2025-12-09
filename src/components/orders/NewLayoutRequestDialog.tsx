@@ -2128,7 +2128,7 @@ export const NewLayoutRequestDialog = ({
                       ))}
                       <Input
                         type="file"
-                        accept="image/*"
+                        accept="*/*"
                         onChange={(e) => {
                           const file = e.target.files?.[0];
                           if (file) {
@@ -2433,7 +2433,7 @@ export const NewLayoutRequestDialog = ({
                 ))}
                 <Input
                   type="file"
-                  accept="image/*"
+                  accept="*/*"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) {
