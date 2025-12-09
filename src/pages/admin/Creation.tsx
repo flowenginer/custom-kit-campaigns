@@ -753,15 +753,26 @@ const Creation = () => {
       )),
     },
     {
-      title: "🔄 Retorno de Alteração",
+      title: "🔴 Cards Devolvidos",
+      status: "pending" as const,
+      icon: AlertCircle,
+      // Tasks que foram devolvidas pelo designer e ainda NÃO foram reenviadas
+      tasks: applyAllFilters(tasks.filter(t => 
+        (t as any).salesperson_status === 'rejected_by_designer' &&
+        t.returned_from_rejection !== true
+      )),
+      backgroundColor: "#ef4444", // Vermelho
+    },
+    {
+      title: "🟡 Retorno de Alteração",
       status: "pending" as const,
       icon: RefreshCcw,
-      // Tarefas que voltaram de recusa do designer
+      // Tasks que JÁ FORAM reenviadas pelo vendedor após devolução
       tasks: applyAllFilters(tasks.filter(t => 
         t.status === "pending" && 
         t.returned_from_rejection === true
       )),
-      backgroundColor: "#f97316", // Laranja chamativo
+      backgroundColor: "#eab308", // Amarelo
     },
     {
       title: "Novos Com Logo",
