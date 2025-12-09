@@ -770,7 +770,8 @@ const Creation = () => {
       // Tasks que JÁ FORAM reenviadas pelo vendedor após devolução
       tasks: applyAllFilters(tasks.filter(t => 
         t.status === "pending" && 
-        t.returned_from_rejection === true
+        t.returned_from_rejection === true &&
+        (t as any).salesperson_status !== 'rejected_by_designer'
       )),
       backgroundColor: "#eab308", // Amarelo
     },
