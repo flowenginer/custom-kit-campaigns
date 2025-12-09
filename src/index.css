@@ -2,11 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* ============================================
+   DESIGN SYSTEM - All colors MUST be HSL
+   ============================================ */
 
 @layer base {
+  /* ============================================
+     DESIGN CLÁSSICO - Variáveis Base (Padrão)
+     ============================================ */
   :root {
     --background: 250 100% 98%;
     --foreground: 222 47% 11%;
@@ -47,7 +50,7 @@ All colors MUST be HSL.
     --shadow-lg: 0 10px 15px -3px hsl(220 13% 91% / 0.1), 0 4px 6px -4px hsl(220 13% 91% / 0.1);
     --shadow-xl: 0 20px 25px -5px hsl(220 13% 91% / 0.1), 0 8px 10px -6px hsl(220 13% 91% / 0.1);
 
-    /* Chart colors for 3D visualizations */
+    /* Chart colors */
     --chart-purple: 258 90% 66%;
     --chart-green: 142 76% 36%;
     --chart-orange: 25 95% 53%;
@@ -58,9 +61,22 @@ All colors MUST be HSL.
     --chart-indigo: 243 75% 59%;
     --chart-cyan: 189 94% 43%;
     --chart-amber: 38 92% 50%;
+    
+    /* CRM Sidebar Colors (para modo clássico, usar padrão) */
+    --sidebar-background: var(--card);
+    --sidebar-foreground: var(--foreground);
+    --sidebar-primary: var(--primary);
+    --sidebar-primary-foreground: var(--primary-foreground);
+    --sidebar-accent: var(--accent);
+    --sidebar-accent-foreground: var(--accent-foreground);
+    --sidebar-border: var(--border);
+    --sidebar-ring: var(--ring);
   }
 
-  .dark {
+  /* ============================================
+     DESIGN CLÁSSICO - Dark Mode
+     ============================================ */
+  .dark:not(.design-crm) {
     --background: 222 47% 11%;
     --foreground: 210 40% 98%;
 
@@ -92,6 +108,105 @@ All colors MUST be HSL.
     --input: 217 33% 18%;
     --ring: 217 91% 60%;
   }
+
+  /* ============================================
+     DESIGN CRM - Light Mode
+     Cores roxo/rosa vibrantes
+     ============================================ */
+  .design-crm.light,
+  .design-crm:not(.dark) {
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* Roxo como primário */
+    --primary: 270 91% 65%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 220 14% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    /* Rosa como accent */
+    --accent: 330 81% 60%;
+    --accent-foreground: 0 0% 100%;
+
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 270 91% 65%;
+
+    /* Sidebar com gradiente roxo→rosa */
+    --sidebar-background: linear-gradient(180deg, hsl(270 91% 65%) 0%, hsl(330 81% 60%) 100%);
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 0 0% 100%;
+    --sidebar-primary-foreground: 270 91% 65%;
+    --sidebar-accent: 0 0% 100% / 0.1;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 100% / 0.2;
+    --sidebar-ring: 0 0% 100%;
+  }
+
+  /* ============================================
+     DESIGN CRM - Dark Mode
+     Fundo slate-900 com roxo/rosa
+     ============================================ */
+  .design-crm.dark {
+    --background: 222 47% 7%;
+    --foreground: 210 40% 98%;
+
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 98%;
+
+    /* Roxo como primário */
+    --primary: 270 91% 65%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 217 33% 18%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217 33% 18%;
+    --muted-foreground: 215 20% 65%;
+
+    /* Rosa como accent */
+    --accent: 330 81% 60%;
+    --accent-foreground: 0 0% 100%;
+
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217 33% 18%;
+    --input: 217 33% 18%;
+    --ring: 270 91% 65%;
+
+    /* Sidebar escura sólida */
+    --sidebar-background: 222 47% 7%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 270 91% 65%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 270 91% 65% / 0.1;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217 33% 18%;
+    --sidebar-ring: 270 91% 65%;
+  }
 }
 
 @layer base {
@@ -118,8 +233,87 @@ All colors MUST be HSL.
   .status-transition {
     transition: all 0.3s ease-in-out;
   }
+
+  /* ============================================
+     CRM UTILITIES - Apenas para Design CRM
+     ============================================ */
   
-  /* Campaign Theme Variables (Applied dynamically) */
+  /* Sidebar com gradiente (modo claro CRM) */
+  .design-crm:not(.dark) .sidebar-gradient {
+    background: linear-gradient(180deg, hsl(270 91% 65%) 0%, hsl(330 81% 60%) 100%);
+    color: white;
+  }
+  
+  /* Sidebar escura (modo escuro CRM) */
+  .design-crm.dark .sidebar-gradient {
+    background: hsl(222 47% 7%);
+    border-right: 1px solid hsl(217 33% 18%);
+  }
+
+  /* Botão com gradiente roxo→rosa */
+  .btn-gradient {
+    background: linear-gradient(135deg, hsl(270 91% 65%) 0%, hsl(330 81% 60%) 100%);
+    color: white;
+    transition: all 0.3s ease;
+  }
+  .btn-gradient:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: 0 10px 20px -10px hsl(270 91% 65% / 0.5);
+  }
+
+  /* Efeito glass */
+  .glass {
+    background: hsl(var(--card) / 0.8);
+    backdrop-filter: blur(12px);
+    border: 1px solid hsl(var(--border) / 0.5);
+  }
+
+  /* Card elevado */
+  .card-elevated {
+    background: hsl(var(--card));
+    border-radius: 1rem;
+    border: 1px solid hsl(var(--border) / 0.5);
+    box-shadow: 0 4px 6px -1px hsl(var(--foreground) / 0.05), 
+                0 2px 4px -2px hsl(var(--foreground) / 0.05);
+    transition: all 0.3s ease;
+  }
+  .card-elevated:hover {
+    box-shadow: 0 10px 15px -3px hsl(var(--foreground) / 0.08), 
+                0 4px 6px -4px hsl(var(--foreground) / 0.08);
+    transform: translateY(-2px);
+  }
+
+  /* Ícone com gradiente */
+  .icon-gradient {
+    background: linear-gradient(135deg, hsl(270 91% 65%) 0%, hsl(330 81% 60%) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ============================================
+     SCROLLBAR CUSTOMIZADA (CRM)
+     ============================================ */
+  .design-crm ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .design-crm ::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+    border-radius: 3px;
+  }
+  .design-crm ::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.3);
+    border-radius: 3px;
+  }
+  .design-crm ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.5);
+  }
+
+  /* ============================================
+     CAMPAIGN THEME VARIABLES (Mantido do original)
+     ============================================ */
   .campaign-themed {
     --campaign-primary: var(--theme-primary, 217 91% 60%);
     --campaign-background: var(--theme-background, 250 100% 98%);
@@ -134,7 +328,6 @@ All colors MUST be HSL.
     --campaign-spacing: var(--theme-spacing, 8px);
   }
   
-  /* Apply theme variables */
   .campaign-themed {
     background-color: hsl(var(--campaign-background));
     color: hsl(var(--campaign-text));

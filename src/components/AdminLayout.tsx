@@ -8,11 +8,13 @@ import { Session } from "@supabase/supabase-js";
 import { NotificationsDropdown } from "./NotificationsDropdown";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useGlobalTheme } from "@/hooks/useGlobalTheme";
+import { useDesignMode } from "@/contexts/DesignModeContext";
 import { useTotalPendingApprovalsCount } from "@/hooks/useTotalPendingApprovalsCount";
 import { useReturnedTasksCount } from "@/hooks/useReturnedTasksCount";
 import { useMenuStructure } from "@/hooks/useMenuStructure";
 import { cn } from "@/lib/utils";
 import logoSS from "@/assets/logo-ss.png";
+import { ThemeToggle } from "./ThemeToggle";
 import {
   Sidebar,
   SidebarContent,
@@ -162,6 +164,51 @@ const SidebarThemeButtons = ({ currentTheme, changeTheme }: { currentTheme: any,
   );
 };
 
+// Controles de tema CRM (toggle light/dark + som)
+const SidebarCRMThemeButtons = () => {
+  const { open } = useSidebar();
+  const [soundDialogOpen, setSoundDialogOpen] = useState(false);
+  
+  return (
+    <>
+      <div className="p-3 border-b border-border/50">
+        {open && <span className="text-xs text-muted-foreground mb-2 block">Tema</span>}
+        <div className={cn(
+          "flex gap-2",
+          open ? "items-center justify-center" : "flex-col items-center"
+        )}>
+          <ThemeToggle />
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setSoundDialogOpen(true)}
+                className="h-8 w-8"
+              >
+                <Volume2 className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side={open ? "top" : "right"}>Configurações de Sons</TooltipContent>
+          </Tooltip>
+        </div>
+      </div>
+
+      <Sheet open={soundDialogOpen} onOpenChange={setSoundDialogOpen}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>Notificações Sonoras</SheetTitle>
+          </SheetHeader>
+          <div className="mt-6">
+            <SoundPreferencesPanel />
+          </div>
+        </SheetContent>
+      </Sheet>
+    </>
+  );
+};
+
 const SidebarLogoutButton = ({ onSignOut, userName }: { onSignOut: () => void; userName: string | null }) => {
   const { open } = useSidebar();
   
@@ -216,6 +263,8 @@ const AdminLayout = () => {
     isLoading,
     allowedMenuItems,
   } = useUserRole();
+  
+  const { isCRM } = useDesignMode();
   
   const { currentTheme, changeTheme } = useGlobalTheme();
   const { count: pendingCount } = useTotalPendingApprovalsCount();
@@ -466,7 +515,11 @@ const AdminLayout = () => {
           </SidebarContent>
 
           <SidebarFooter className="border-t border-border">
-            <SidebarThemeButtons currentTheme={currentTheme} changeTheme={changeTheme} />
+            {isCRM ? (
+              <SidebarCRMThemeButtons />
+            ) : (
+              <SidebarThemeButtons currentTheme={currentTheme} changeTheme={changeTheme} />
+            )}
             <SidebarLogoutButton onSignOut={handleSignOut} userName={userFirstName} />
           </SidebarFooter>
         </Sidebar>
