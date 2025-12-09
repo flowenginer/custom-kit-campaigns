@@ -5,29 +5,35 @@ import { MessageCircle, X, Minimize2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ConversationList } from "./ConversationList";
 import { ChatWindow } from "./ChatWindow";
-import { NewConversationDialog } from "./NewConversationDialog";
+import { CreateGroupDialog } from "./CreateGroupDialog";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { cn } from "@/lib/utils";
 
 interface SelectedConversation {
   id: string;
-  other_user: {
+  is_group: boolean;
+  other_user?: {
     id: string;
     full_name: string;
   };
+  group_name?: string;
+  group_icon?: string;
 }
 
 export const ChatPanel = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [selectedConversation, setSelectedConversation] = useState<SelectedConversation | null>(null);
-  const [showNewConversation, setShowNewConversation] = useState(false);
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
   const { unreadCount } = useUnreadMessages();
 
   const handleSelectConversation = (conversation: any) => {
     setSelectedConversation({
       id: conversation.id,
+      is_group: conversation.is_group || false,
       other_user: conversation.other_user,
+      group_name: conversation.group_name,
+      group_icon: conversation.group_icon,
     });
     setIsMinimized(false);
   };
@@ -36,11 +42,13 @@ export const ChatPanel = () => {
     setSelectedConversation(null);
   };
 
-  const handleConversationCreated = (conversationId: string) => {
-    // Recarregar lista de conversas e selecionar a nova
-    setShowNewConversation(false);
-    // A lista será atualizada via realtime
+  const handleGroupCreated = (conversationId: string) => {
+    setShowCreateGroup(false);
   };
+
+  const displayName = selectedConversation?.is_group 
+    ? selectedConversation.group_name 
+    : selectedConversation?.other_user?.full_name;
 
   return (
     <>
@@ -74,9 +82,7 @@ export const ChatPanel = () => {
             <div className="flex items-center gap-2">
               <MessageCircle className="h-5 w-5" />
               <h3 className="font-semibold">
-                {selectedConversation
-                  ? selectedConversation.other_user.full_name
-                  : "Chat Interno"}
+                {selectedConversation ? displayName : "Chat Interno"}
               </h3>
             </div>
             <div className="flex items-center gap-1">
@@ -108,13 +114,16 @@ export const ChatPanel = () => {
               {selectedConversation ? (
                 <ChatWindow
                   conversationId={selectedConversation.id}
+                  isGroup={selectedConversation.is_group}
                   otherUser={selectedConversation.other_user}
+                  groupName={selectedConversation.group_name}
+                  groupIcon={selectedConversation.group_icon}
                   onBack={handleBack}
                 />
               ) : (
                 <ConversationList
                   onSelectConversation={handleSelectConversation}
-                  onNewConversation={() => setShowNewConversation(true)}
+                  onCreateGroup={() => setShowCreateGroup(true)}
                   selectedConversationId={selectedConversation?.id || null}
                 />
               )}
@@ -123,10 +132,10 @@ export const ChatPanel = () => {
         </Card>
       )}
 
-      <NewConversationDialog
-        open={showNewConversation}
-        onOpenChange={setShowNewConversation}
-        onConversationCreated={handleConversationCreated}
+      <CreateGroupDialog
+        open={showCreateGroup}
+        onOpenChange={setShowCreateGroup}
+        onGroupCreated={handleGroupCreated}
       />
     </>
   );
