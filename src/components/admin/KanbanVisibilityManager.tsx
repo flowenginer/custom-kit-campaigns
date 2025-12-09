@@ -24,14 +24,14 @@ interface UserWithCustomSettings {
   allowed_kanban_columns: string[];
 }
 
-const allKanbanColumns = [
-  { id: 'pending', label: 'Novos Com Logo', icon: '📋' },
-  { id: 'in_progress', label: 'Em Progresso', icon: '🎨' },
-  { id: 'awaiting_approval', label: 'Aguard. Aprovação', icon: '⏳' },
-  { id: 'changes_requested', label: 'Revisão Necessária', icon: '🔄' },
-  { id: 'approved', label: 'Aprovado', icon: '✅' },
-  { id: 'completed', label: 'Produção', icon: '📦' },
-];
+interface KanbanColumnFromDB {
+  id: string;
+  key: string;
+  title: string;
+  icon: string | null;
+  is_active: boolean;
+  sort_order: number;
+}
 
 const roleInfo: Record<AppRole, { label: string; icon: string; description: string }> = {
   salesperson: { label: 'Vendedor', icon: '👔', description: 'Vendedores precisam ver mockups para aprovação' },
@@ -46,6 +46,7 @@ export const KanbanVisibilityManager = () => {
   const [usersWithCustom, setUsersWithCustom] = useState<UserWithCustomSettings[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
+  const [kanbanColumns, setKanbanColumns] = useState<KanbanColumnFromDB[]>([]);
   
   // Estados para edição de cada papel
   const [editingRole, setEditingRole] = useState<Record<AppRole, string[]>>({
@@ -63,6 +64,16 @@ export const KanbanVisibilityManager = () => {
   const loadData = async () => {
     setLoading(true);
     try {
+      // Buscar colunas do banco de dados
+      const { data: columnsData, error: columnsError } = await supabase
+        .from('kanban_columns')
+        .select('id, key, title, icon, is_active, sort_order')
+        .eq('is_active', true)
+        .order('sort_order');
+
+      if (columnsError) throw columnsError;
+      setKanbanColumns(columnsData || []);
+
       // Buscar configurações padrão por papel
       const { data: defaults, error: defaultsError } = await supabase
         .from('role_kanban_defaults')
@@ -191,12 +202,12 @@ export const KanbanVisibilityManager = () => {
     }
   };
 
-  const toggleColumn = (role: AppRole, columnId: string) => {
+  const toggleColumn = (role: AppRole, columnKey: string) => {
     setEditingRole(prev => {
       const current = prev[role] || [];
-      const updated = current.includes(columnId)
-        ? current.filter(c => c !== columnId)
-        : [...current, columnId];
+      const updated = current.includes(columnKey)
+        ? current.filter(c => c !== columnKey)
+        : [...current, columnKey];
       return { ...prev, [role]: updated };
     });
   };
@@ -247,22 +258,21 @@ export const KanbanVisibilityManager = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 gap-2">
-                    {allKanbanColumns.map((col) => (
+                    {kanbanColumns.map((col) => (
                       <div 
-                        key={col.id} 
+                        key={col.key} 
                         className="flex items-center space-x-3 p-2 rounded-md hover:bg-accent/50 transition-colors"
                       >
                         <Checkbox
-                          id={`${role}-${col.id}`}
-                          checked={currentColumns.includes(col.id)}
-                          onCheckedChange={() => toggleColumn(role, col.id)}
+                          id={`${role}-${col.key}`}
+                          checked={currentColumns.includes(col.key)}
+                          onCheckedChange={() => toggleColumn(role, col.key)}
                         />
                         <Label 
-                          htmlFor={`${role}-${col.id}`}
-                          className="flex-1 text-sm cursor-pointer flex items-center gap-2"
+                          htmlFor={`${role}-${col.key}`}
+                          className="flex-1 text-sm cursor-pointer"
                         >
-                          <span>{col.icon}</span>
-                          {col.label}
+                          {col.title}
                         </Label>
                       </div>
                     ))}
@@ -270,7 +280,7 @@ export const KanbanVisibilityManager = () => {
                   
                   <div className="flex items-center justify-between pt-2 border-t">
                     <span className="text-xs text-muted-foreground">
-                      {currentColumns.length} de {allKanbanColumns.length} colunas
+                      {currentColumns.length} de {kanbanColumns.length} colunas
                     </span>
                     <Button
                       size="sm"
@@ -336,7 +346,7 @@ export const KanbanVisibilityManager = () => {
                       </TableCell>
                       <TableCell>
                         <span className="text-sm">
-                          {user.allowed_kanban_columns.length} / {allKanbanColumns.length}
+                          {user.allowed_kanban_columns.length} / {kanbanColumns.length}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">

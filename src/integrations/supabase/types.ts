@@ -1414,6 +1414,89 @@ export type Database = {
         }
         Relationships: []
       }
+      kanban_column_rules: {
+        Row: {
+          column_id: string
+          created_at: string | null
+          field_name: string
+          id: string
+          is_active: boolean
+          operator: string
+          rule_order: number
+          value: string | null
+        }
+        Insert: {
+          column_id: string
+          created_at?: string | null
+          field_name: string
+          id?: string
+          is_active?: boolean
+          operator: string
+          rule_order?: number
+          value?: string | null
+        }
+        Update: {
+          column_id?: string
+          created_at?: string | null
+          field_name?: string
+          id?: string
+          is_active?: boolean
+          operator?: string
+          rule_order?: number
+          value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kanban_column_rules_column_id_fkey"
+            columns: ["column_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_columns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kanban_columns: {
+        Row: {
+          background_color: string | null
+          created_at: string | null
+          icon: string | null
+          id: string
+          is_active: boolean
+          is_manual_only: boolean
+          key: string
+          sort_order: number
+          text_color: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          background_color?: string | null
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          is_manual_only?: boolean
+          key: string
+          sort_order?: number
+          text_color?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          background_color?: string | null
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          is_manual_only?: boolean
+          key?: string
+          sort_order?: number
+          text_color?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       layout_approval_links: {
         Row: {
           approved_at: string | null

@@ -10,9 +10,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { UserPlus, Trash2, Edit, KeyRound, Loader2, Code2, AlertCircle, Building2 } from "lucide-react";
+import { UserPlus, Trash2, Edit, KeyRound, Loader2, Code2, AlertCircle, Building2, Columns } from "lucide-react";
 import { UrgentReasonsManager } from "@/components/admin/UrgentReasonsManager";
 import { KanbanVisibilityManager } from "@/components/admin/KanbanVisibilityManager";
+import { KanbanColumnsManager } from "@/components/admin/KanbanColumnsManager";
 import { MenuVisibilityManager } from "@/components/admin/MenuVisibilityManager";
 import { UniformTypesManager } from "@/components/admin/UniformTypesManager";
 import { MenuStructureManager } from "@/components/admin/MenuStructureManager";
@@ -429,7 +430,8 @@ const Settings = () => {
           <TabsTrigger value="users">Usuários</TabsTrigger>
           <TabsTrigger value="uniform-types">Tipos Uniforme</TabsTrigger>
           <TabsTrigger value="business-segments"><Building2 className="w-4 h-4 mr-1 inline" />Segmentos</TabsTrigger>
-          <TabsTrigger value="kanban">Kanban</TabsTrigger>
+          <TabsTrigger value="kanban-columns"><Columns className="w-4 h-4 mr-1 inline" />Colunas Kanban</TabsTrigger>
+          <TabsTrigger value="kanban">Visibilidade</TabsTrigger>
           <TabsTrigger value="menu">Menu</TabsTrigger>
           <TabsTrigger value="menu-structure">Estrutura Menu</TabsTrigger>
           <TabsTrigger value="password">Senha</TabsTrigger>
@@ -598,6 +600,11 @@ const Settings = () => {
         {/* TAB: TIPOS DE UNIFORME */}
         <TabsContent value="uniform-types" className="space-y-4">
           <UniformTypesManager />
+        </TabsContent>
+
+        {/* TAB: COLUNAS KANBAN */}
+        <TabsContent value="kanban-columns" className="space-y-4">
+          <KanbanColumnsManager />
         </TabsContent>
 
         {/* TAB: VISIBILIDADE KANBAN */}
