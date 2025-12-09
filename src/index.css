@@ -2,9 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* =====================================================
+   DESIGN SYSTEM - CLASSIC MODE (Padrão)
+   ===================================================== */
 
 @layer base {
   :root {
@@ -58,6 +60,16 @@ All colors MUST be HSL.
     --chart-indigo: 243 75% 59%;
     --chart-cyan: 189 94% 43%;
     --chart-amber: 38 92% 50%;
+    
+    /* Sidebar (Classic) */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 14% 96%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217 91% 60%;
   }
 
   .dark {
@@ -91,8 +103,116 @@ All colors MUST be HSL.
     --border: 217 33% 18%;
     --input: 217 33% 18%;
     --ring: 217 91% 60%;
+    
+    /* Sidebar (Classic Dark) */
+    --sidebar-background: 222 47% 11%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 217 33% 18%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217 33% 18%;
+    --sidebar-ring: 217 91% 60%;
   }
 }
+
+/* =====================================================
+   DESIGN SYSTEM - CRM MODE (Roxo/Rosa)
+   ===================================================== */
+
+.design-crm:root,
+.design-crm.light {
+  --background: 210 20% 98%;
+  --foreground: 220 13% 9%;
+  --card: 0 0% 100%;
+  --card-foreground: 220 13% 9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 220 13% 9%;
+  
+  /* Cores Primárias - Roxo */
+  --primary: 262 83% 58%;
+  --primary-foreground: 0 0% 100%;
+  
+  /* Cores Secundárias - Rosa */
+  --secondary: 330 81% 60%;
+  --secondary-foreground: 0 0% 100%;
+  
+  /* Status */
+  --success: 160 84% 39%;
+  --success-foreground: 0 0% 100%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  
+  /* Neutros */
+  --muted: 210 20% 96%;
+  --muted-foreground: 215 13% 34%;
+  --accent: 262 55% 82%;
+  --accent-foreground: 262 83% 48%;
+  
+  /* Bordas */
+  --border: 214 20% 82%;
+  --input: 214 20% 85%;
+  --ring: 262 83% 58%;
+  --radius: 0.75rem;
+  
+  /* Sidebar CRM Claro - Gradiente Roxo */
+  --sidebar-background: 262 83% 58%;
+  --sidebar-foreground: 0 0% 100%;
+  --sidebar-primary: 0 0% 100%;
+  --sidebar-primary-foreground: 262 83% 58%;
+  --sidebar-accent: 0 0% 100%;
+  --sidebar-accent-foreground: 0 0% 100%;
+  --sidebar-border: 0 0% 100%;
+  --sidebar-ring: 0 0% 100%;
+}
+
+.design-crm.dark {
+  --background: 220 13% 9%;
+  --foreground: 0 0% 95%;
+  --card: 220 13% 12%;
+  --card-foreground: 0 0% 95%;
+  --popover: 220 13% 12%;
+  --popover-foreground: 0 0% 95%;
+  
+  /* Cores Primárias */
+  --primary: 262 83% 65%;
+  --primary-foreground: 0 0% 100%;
+  
+  /* Cores Secundárias */
+  --secondary: 330 81% 65%;
+  --secondary-foreground: 0 0% 100%;
+  
+  /* Status */
+  --success: 160 84% 45%;
+  --success-foreground: 0 0% 100%;
+  --destructive: 0 62% 50%;
+  --destructive-foreground: 0 0% 100%;
+  
+  /* Neutros */
+  --muted: 220 13% 18%;
+  --muted-foreground: 215 13% 65%;
+  --accent: 262 45% 20%;
+  --accent-foreground: 262 83% 80%;
+  
+  /* Bordas */
+  --border: 220 13% 20%;
+  --input: 220 13% 20%;
+  --ring: 262 83% 65%;
+  
+  /* Sidebar CRM Escuro */
+  --sidebar-background: 220 13% 10%;
+  --sidebar-foreground: 0 0% 95%;
+  --sidebar-primary: 262 83% 65%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 262 83% 65%;
+  --sidebar-accent-foreground: 0 0% 95%;
+  --sidebar-border: 220 13% 20%;
+  --sidebar-ring: 262 83% 65%;
+}
+
+/* =====================================================
+   BASE STYLES
+   ===================================================== */
 
 @layer base {
   * {
@@ -100,9 +220,78 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+  
+  html {
+    transition: background-color 0.3s ease, color 0.15s ease;
   }
 }
+
+/* =====================================================
+   COMPONENT CLASSES
+   ===================================================== */
+
+@layer components {
+  /* Gradiente Sidebar CRM (só aplica no modo CRM light) */
+  .design-crm.light .sidebar-gradient {
+    background: linear-gradient(180deg, hsl(262 83% 58%) 0%, hsl(280 70% 50%) 50%, hsl(330 81% 60%) 100%);
+  }
+  
+  .design-crm.dark .sidebar-gradient {
+    background: linear-gradient(180deg, hsl(220 13% 10%) 0%, hsl(220 13% 8%) 100%);
+  }
+  
+  /* Botão Gradiente */
+  .btn-gradient {
+    background: linear-gradient(135deg, hsl(262 83% 58%) 0%, hsl(330 81% 60%) 100%);
+  }
+  .btn-gradient:hover {
+    background: linear-gradient(135deg, hsl(262 83% 48%) 0%, hsl(330 81% 50%) 100%);
+  }
+  
+  /* Efeito Glass */
+  .glass {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+  }
+  .dark .glass {
+    background: rgba(0, 0, 0, 0.2);
+  }
+  
+  /* Card Elevado */
+  .card-elevated {
+    @apply bg-card rounded-2xl border border-border shadow-lg;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+  }
+  .dark .card-elevated {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
+  }
+  
+  /* Gradiente Ícone */
+  .icon-gradient {
+    background: linear-gradient(135deg, hsl(262 83% 58%) 0%, hsl(330 81% 60%) 100%);
+  }
+  
+  /* Componentes Tema-Aware */
+  .theme-card {
+    @apply bg-card border border-border shadow-sm;
+  }
+  .theme-input {
+    @apply bg-background border border-border text-foreground placeholder:text-muted-foreground;
+  }
+  .theme-table-header {
+    @apply bg-muted/50 border-border;
+  }
+  .theme-table-row {
+    @apply border-border hover:bg-muted/50;
+  }
+}
+
+/* =====================================================
+   UTILITY CLASSES
+   ===================================================== */
 
 @layer utilities {
   /* Hide scrollbar but keep functionality */
@@ -117,6 +306,20 @@ All colors MUST be HSL.
   /* Smooth transition for status changes */
   .status-transition {
     transition: all 0.3s ease-in-out;
+  }
+  
+  /* Animations */
+  .animate-fade-in {
+    animation: fade-in 0.4s ease-out;
+  }
+  .animate-slide-up {
+    animation: slide-up 0.4s ease-out;
+  }
+  .animate-slide-in-left {
+    animation: slide-in-left 0.3s ease-out;
+  }
+  .animate-scale-in {
+    animation: scale-in 0.3s ease-out;
   }
   
   /* Campaign Theme Variables (Applied dynamically) */
@@ -177,4 +380,58 @@ All colors MUST be HSL.
   body.btn-style-pill .campaign-themed button {
     border-radius: 9999px;
   }
+}
+
+/* =====================================================
+   SCROLLBAR STYLING
+   ===================================================== */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(220 13% 30% / 0.4) transparent;
+}
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: hsl(220 13% 40% / 0.3);
+  border-radius: 9999px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: hsl(262 60% 50% / 0.5);
+}
+
+:root *::-webkit-scrollbar-thumb {
+  background: hsl(220 13% 70% / 0.4);
+}
+.dark *::-webkit-scrollbar-thumb {
+  background: hsl(220 13% 40% / 0.25);
+}
+
+/* =====================================================
+   KEYFRAMES
+   ===================================================== */
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
 }
