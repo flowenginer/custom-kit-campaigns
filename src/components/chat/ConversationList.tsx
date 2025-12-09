@@ -5,10 +5,20 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Search, Users, Loader2 } from "lucide-react";
-import { format } from "date-fns";
+import { Search, Users, Loader2, Mic, Paperclip, Image } from "lucide-react";
+import { format, isToday, isYesterday, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+
+const formatRelativeDate = (dateString: string) => {
+  const date = new Date(dateString);
+  if (isToday(date)) return format(date, "HH:mm", { locale: ptBR });
+  if (isYesterday(date)) return "Ontem";
+  if (differenceInDays(new Date(), date) < 7) {
+    return format(date, "EEE", { locale: ptBR });
+  }
+  return format(date, "dd/MM", { locale: ptBR });
+};
 
 interface UserWithConversation {
   id: string;
@@ -351,18 +361,28 @@ export const ConversationList = ({
   };
 
   const getMessagePreview = (msg?: { content: string; message_type: string; sender_name?: string }) => {
-    if (!msg) return "Nenhuma mensagem ainda";
+    if (!msg) return { text: "Nenhuma mensagem ainda", icon: null };
 
-    let preview = "";
-    if (msg.message_type === "audio") preview = "🎤 Áudio";
-    else if (msg.message_type === "file") preview = "📎 Arquivo";
-    else if (msg.message_type === "image") preview = "🖼️ Imagem";
-    else preview = msg.content || "";
+    let text = "";
+    let icon = null;
+    
+    if (msg.message_type === "audio") {
+      text = "Áudio";
+      icon = <Mic className="h-3 w-3" />;
+    } else if (msg.message_type === "file") {
+      text = "Arquivo";
+      icon = <Paperclip className="h-3 w-3" />;
+    } else if (msg.message_type === "image") {
+      text = "Imagem";
+      icon = <Image className="h-3 w-3" />;
+    } else {
+      text = msg.content || "";
+    }
 
     if (msg.sender_name) {
-      return `${msg.sender_name.split(" ")[0]}: ${preview}`;
+      text = `${msg.sender_name.split(" ")[0]}: ${text}`;
     }
-    return preview;
+    return { text, icon };
   };
 
   const filteredUsers = users.filter((u) =>
@@ -434,11 +454,12 @@ export const ConversationList = ({
                         )}
                       </div>
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm text-muted-foreground truncate">
-                          {getMessagePreview(group.last_message)}
+                        <p className="text-sm text-muted-foreground truncate flex items-center gap-1">
+                          {getMessagePreview(group.last_message).icon}
+                          <span>{getMessagePreview(group.last_message).text}</span>
                         </p>
                         {group.unread_count > 0 && (
-                          <Badge className="bg-destructive text-destructive-foreground text-xs flex-shrink-0">
+                          <Badge className="bg-destructive text-white text-[10px] h-5 min-w-5 px-1.5 flex items-center justify-center rounded-full animate-pulse">
                             {group.unread_count}
                           </Badge>
                         )}
@@ -457,51 +478,65 @@ export const ConversationList = ({
                     Conversas Recentes
                   </span>
                 </div>
-                {usersWithMessages.map((user) => (
-                  <button
-                    key={user.id}
-                    onClick={() => handleSelectUser(user)}
-                    className={cn(
-                      "w-full p-4 flex items-start gap-3 hover:bg-accent/10 transition-colors text-left",
-                      selectedConversationId === user.conversation_id && "bg-accent/20",
-                      user.unread_count > 0 && "bg-primary/5"
-                    )}
-                  >
-                    <Avatar className="flex-shrink-0">
-                      <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-                        {getInitials(user.full_name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium truncate">{user.full_name}</span>
-                          <Badge
-                            variant="secondary"
-                            className={cn("text-[10px] px-1.5", ROLE_COLORS[user.role], "text-white")}
+                <div className="p-2 space-y-1">
+                  {usersWithMessages.map((user) => {
+                    const preview = getMessagePreview(user.last_message);
+                    return (
+                      <button
+                        key={user.id}
+                        onClick={() => handleSelectUser(user)}
+                        className={cn(
+                          "w-full p-3 rounded-xl flex items-center gap-3 transition-all duration-200 text-left",
+                          "hover:bg-accent hover:shadow-sm",
+                          selectedConversationId === user.conversation_id && "bg-accent shadow-sm ring-1 ring-primary/20",
+                          user.unread_count > 0 && !selectedConversationId && "bg-primary/5"
+                        )}
+                      >
+                        {/* Avatar com indicador de role */}
+                        <div className="relative flex-shrink-0">
+                          <Avatar className="h-12 w-12 ring-2 ring-background shadow-sm">
+                            <AvatarFallback className={cn(ROLE_COLORS[user.role], "text-white font-medium text-sm")}>
+                              {getInitials(user.full_name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span 
+                            className={cn(
+                              "absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full border-2 border-background",
+                              "flex items-center justify-center text-[9px] text-white font-bold shadow-sm",
+                              ROLE_COLORS[user.role]
+                            )}
+                            title={ROLE_LABELS[user.role]}
                           >
                             {ROLE_LABELS[user.role]?.charAt(0) || "?"}
-                          </Badge>
-                        </div>
-                        {user.last_message && (
-                          <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
-                            {format(new Date(user.last_message.created_at), "HH:mm", { locale: ptBR })}
                           </span>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm text-muted-foreground truncate">
-                          {getMessagePreview(user.last_message)}
-                        </p>
-                        {user.unread_count > 0 && (
-                          <Badge className="bg-destructive text-destructive-foreground text-xs flex-shrink-0">
-                            {user.unread_count}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                ))}
+                        </div>
+                        
+                        {/* Conteúdo */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-sm truncate">{user.full_name}</span>
+                            {user.last_message && (
+                              <span className="text-[11px] text-muted-foreground ml-2 flex-shrink-0">
+                                {formatRelativeDate(user.last_message.created_at)}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center justify-between mt-0.5">
+                            <p className="text-xs text-muted-foreground truncate max-w-[180px] flex items-center gap-1">
+                              {preview.icon}
+                              <span>{preview.text}</span>
+                            </p>
+                            {user.unread_count > 0 && (
+                              <Badge className="bg-destructive text-white text-[10px] h-5 min-w-5 px-1.5 flex items-center justify-center rounded-full animate-pulse">
+                                {user.unread_count}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </>
             )}
 
