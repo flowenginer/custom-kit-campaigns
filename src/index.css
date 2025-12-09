@@ -238,15 +238,22 @@
      CRM UTILITIES - Apenas para Design CRM
      ============================================ */
   
-  /* Sidebar com gradiente (modo claro CRM) */
+  /* Sidebar com gradiente roxo→rosa (modo claro CRM) */
+  .design-crm.light .sidebar-gradient,
   .design-crm:not(.dark) .sidebar-gradient {
-    background: linear-gradient(180deg, hsl(270 91% 65%) 0%, hsl(330 81% 60%) 100%);
-    color: white;
+    background: linear-gradient(180deg, hsl(270 91% 65%) 0%, hsl(330 81% 60%) 100%) !important;
+    color: white !important;
   }
   
-  /* Sidebar escura (modo escuro CRM) */
+  /* Garantir que todos os textos na sidebar CRM light sejam brancos */
+  .design-crm.light .sidebar-gradient *,
+  .design-crm:not(.dark) .sidebar-gradient * {
+    --sidebar-foreground: 0 0% 100%;
+  }
+  
+  /* Sidebar escura sólida (modo escuro CRM) */
   .design-crm.dark .sidebar-gradient {
-    background: hsl(222 47% 7%);
+    background: hsl(222 47% 11%) !important;
     border-right: 1px solid hsl(217 33% 18%);
   }
 
