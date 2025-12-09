@@ -681,7 +681,7 @@ export const NewLayoutRequestDialog = ({
           order_id: orderData.id,
           created_by: user.id,
           created_by_salesperson: true,
-          needs_logo: firstLayout.hasLogo === "depois" || firstLayout.hasLogo === "sem_logo",
+          needs_logo: firstLayout.hasLogo === "depois" || firstLayout.hasLogo === "criar_logo",
           logo_action: firstLayout.hasLogo === "depois" ? "waiting_client" : (firstLayout.hasLogo === "criar_logo" ? "designer_create" : null),
           // Preencher logo_description para "criar_logo" OU para campanhas "Layout do Zero"
           logo_description: (firstLayout.hasLogo === "criar_logo" || firstLayout.campaignName?.toLowerCase().includes('layout do zero')) ? firstLayout.logoDescription : null,
