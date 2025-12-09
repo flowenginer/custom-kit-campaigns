@@ -218,7 +218,7 @@ export const ProductionCharts = ({ startDate, endDate }: ProductionChartsProps) 
               </div>
               
               {/* Legenda lateral */}
-              <div className="flex-1 space-y-1.5 max-h-[200px] overflow-y-auto">
+              <div className="flex-1 space-y-1.5">
                 {data.segments.map((segment, index) => (
                   <div key={segment.name} className="flex items-center gap-2 text-sm">
                     <div 
