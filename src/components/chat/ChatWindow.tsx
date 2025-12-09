@@ -1,16 +1,18 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { MessageBubble } from "./MessageBubble";
 import { DateSeparator } from "./DateSeparator";
 import { AudioRecorder } from "./AudioRecorder";
 import { useChat } from "@/hooks/useChat";
 import { toast } from "sonner";
-import { Send, Paperclip, Loader2, X, ArrowLeft } from "lucide-react";
+import { Send, Paperclip, Loader2, X, ArrowLeft, Search, ChevronUp, ChevronDown } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { format, isSameDay } from "date-fns";
+import { format } from "date-fns";
+import { useDebouncedCallback } from "use-debounce";
 
 interface ChatWindowProps {
   conversationId: string;
@@ -39,12 +41,63 @@ export const ChatWindow = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  // Search state
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [currentResultIndex, setCurrentResultIndex] = useState(0);
+
+  // Debounce search query
+  const debouncedSetQuery = useDebouncedCallback((value: string) => {
+    setDebouncedQuery(value);
+    setCurrentResultIndex(0);
+  }, 300);
+
+  // Search results
+  const searchResults = useMemo(() => {
+    if (!debouncedQuery.trim()) return [];
+    
+    const query = debouncedQuery.toLowerCase();
+    return messages
+      .filter(msg => msg.content?.toLowerCase().includes(query))
+      .map(msg => msg.id);
+  }, [messages, debouncedQuery]);
+
+  // Scroll to current search result
+  useEffect(() => {
+    if (searchResults.length > 0 && currentResultIndex < searchResults.length) {
+      const messageId = searchResults[currentResultIndex];
+      const messageElement = messageRefs.current.get(messageId);
+      
+      if (messageElement) {
+        messageElement.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }
+  }, [currentResultIndex, searchResults]);
+
+  // Focus search input when opened
+  useEffect(() => {
+    if (isSearchOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [isSearchOpen]);
+
+  // Reset search when conversation changes
+  useEffect(() => {
+    setIsSearchOpen(false);
+    setSearchQuery("");
+    setDebouncedQuery("");
+    setCurrentResultIndex(0);
+  }, [conversationId]);
 
   useEffect(() => {
-    if (scrollRef.current) {
+    if (scrollRef.current && !isSearchOpen) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, isSearchOpen]);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -54,6 +107,39 @@ export const ChatWindow = ({
       textareaRef.current.style.height = `${newHeight}px`;
     }
   }, [messageText]);
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    debouncedSetQuery(value);
+  };
+
+  const goToNextResult = () => {
+    if (searchResults.length > 0) {
+      setCurrentResultIndex(prev => (prev + 1) % searchResults.length);
+    }
+  };
+
+  const goToPrevResult = () => {
+    if (searchResults.length > 0) {
+      setCurrentResultIndex(prev => (prev - 1 + searchResults.length) % searchResults.length);
+    }
+  };
+
+  const closeSearch = () => {
+    setIsSearchOpen(false);
+    setSearchQuery("");
+    setDebouncedQuery("");
+    setCurrentResultIndex(0);
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      goToNextResult();
+    } else if (e.key === "Escape") {
+      closeSearch();
+    }
+  };
 
   const handleSendText = async () => {
     if (!messageText.trim() && !selectedFile) return;
@@ -162,35 +248,92 @@ export const ChatWindow = ({
   };
 
   const displayName = isGroup ? groupName : otherUser?.full_name;
+  const currentHighlightedId = searchResults[currentResultIndex];
 
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={onBack} className="lg:hidden">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          {isGroup ? (
-            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-lg">
-              {groupIcon || "👥"}
+        {isSearchOpen ? (
+          // Search mode header
+          <div className="flex items-center gap-2 w-full">
+            <Button variant="ghost" size="icon" onClick={closeSearch}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                ref={searchInputRef}
+                placeholder="Buscar na conversa..."
+                value={searchQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                className="pl-9 pr-4"
+              />
             </div>
-          ) : (
-            <Avatar>
-              <AvatarFallback className="bg-primary text-primary-foreground">
-                {getInitials(displayName || "?")}
-              </AvatarFallback>
-            </Avatar>
-          )}
-          <div>
-            <h3 className="font-semibold">{displayName}</h3>
-            {isGroup ? (
-              <span className="text-xs text-muted-foreground">Grupo</span>
-            ) : (
-              <Badge variant="secondary" className="text-xs">Online</Badge>
+            {debouncedQuery && (
+              <div className="flex items-center gap-1">
+                <span className="text-sm text-muted-foreground whitespace-nowrap">
+                  {searchResults.length > 0
+                    ? `${currentResultIndex + 1} de ${searchResults.length}`
+                    : "0 resultados"}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={goToPrevResult}
+                  disabled={searchResults.length === 0}
+                  className="h-8 w-8"
+                >
+                  <ChevronUp className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={goToNextResult}
+                  disabled={searchResults.length === 0}
+                  className="h-8 w-8"
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </div>
             )}
+            <Button variant="ghost" size="icon" onClick={closeSearch} className="h-8 w-8">
+              <X className="h-4 w-4" />
+            </Button>
           </div>
-        </div>
+        ) : (
+          // Normal header
+          <>
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" onClick={onBack} className="lg:hidden">
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              {isGroup ? (
+                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-lg">
+                  {groupIcon || "👥"}
+                </div>
+              ) : (
+                <Avatar>
+                  <AvatarFallback className="bg-primary text-primary-foreground">
+                    {getInitials(displayName || "?")}
+                  </AvatarFallback>
+                </Avatar>
+              )}
+              <div>
+                <h3 className="font-semibold">{displayName}</h3>
+                {isGroup ? (
+                  <span className="text-xs text-muted-foreground">Grupo</span>
+                ) : (
+                  <Badge variant="secondary" className="text-xs">Online</Badge>
+                )}
+              </div>
+            </div>
+            <Button variant="ghost" size="icon" onClick={() => setIsSearchOpen(true)}>
+              <Search className="h-5 w-5" />
+            </Button>
+          </>
+        )}
       </div>
 
       {/* Messages */}
@@ -211,19 +354,31 @@ export const ChatWindow = ({
               }
 
               const message = item.message!;
+              const isHighlighted = message.id === currentHighlightedId;
+              
               return (
-                <MessageBubble
+                <div
                   key={message.id}
-                  content={message.content}
-                  messageType={message.message_type}
-                  fileUrl={message.file_url}
-                  fileName={message.file_name}
-                  audioDuration={message.audio_duration}
-                  createdAt={message.created_at}
-                  isOwnMessage={message.sender_id === currentUserId}
-                  senderName={message.sender_name}
-                  showSenderName={isGroup && message.sender_id !== currentUserId}
-                />
+                  ref={(el) => {
+                    if (el) {
+                      messageRefs.current.set(message.id, el);
+                    }
+                  }}
+                >
+                  <MessageBubble
+                    content={message.content}
+                    messageType={message.message_type}
+                    fileUrl={message.file_url}
+                    fileName={message.file_name}
+                    audioDuration={message.audio_duration}
+                    createdAt={message.created_at}
+                    isOwnMessage={message.sender_id === currentUserId}
+                    senderName={message.sender_name}
+                    showSenderName={isGroup && message.sender_id !== currentUserId}
+                    highlightText={debouncedQuery}
+                    isHighlighted={isHighlighted}
+                  />
+                </div>
               );
             })}
           </div>

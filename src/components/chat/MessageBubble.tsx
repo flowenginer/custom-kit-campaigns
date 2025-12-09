@@ -3,7 +3,7 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { FileText, Download, Play, Pause } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 
 interface MessageBubbleProps {
   content: string | null;
@@ -15,6 +15,8 @@ interface MessageBubbleProps {
   isOwnMessage: boolean;
   senderName: string;
   showSenderName?: boolean;
+  highlightText?: string;
+  isHighlighted?: boolean;
 }
 
 export const MessageBubble = ({
@@ -27,6 +29,8 @@ export const MessageBubble = ({
   isOwnMessage,
   senderName,
   showSenderName = false,
+  highlightText = "",
+  isHighlighted = false,
 }: MessageBubbleProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -72,9 +76,45 @@ export const MessageBubble = ({
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
+  // Highlight text in content
+  const getHighlightedContent = useMemo(() => {
+    if (!content || !highlightText.trim()) {
+      return content;
+    }
+
+    try {
+      const escapedQuery = highlightText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regex = new RegExp(`(${escapedQuery})`, "gi");
+      const parts = content.split(regex);
+
+      return parts.map((part, index) => {
+        if (part.toLowerCase() === highlightText.toLowerCase()) {
+          return (
+            <mark
+              key={index}
+              className={cn(
+                "bg-yellow-300 dark:bg-yellow-600 text-inherit rounded-sm px-0.5",
+                isOwnMessage && "bg-yellow-200 dark:bg-yellow-500"
+              )}
+            >
+              {part}
+            </mark>
+          );
+        }
+        return part;
+      });
+    } catch {
+      return content;
+    }
+  }, [content, highlightText, isOwnMessage]);
+
   const renderContent = () => {
     if (messageType === "text") {
-      return <p className="text-sm whitespace-pre-wrap break-words">{content}</p>;
+      return (
+        <p className="text-sm whitespace-pre-wrap break-words">
+          {getHighlightedContent}
+        </p>
+      );
     }
 
     if (messageType === "audio" && fileUrl) {
@@ -141,8 +181,9 @@ export const MessageBubble = ({
   return (
     <div
       className={cn(
-        "flex flex-col gap-1 max-w-[70%]",
-        isOwnMessage ? "items-end ml-auto" : "items-start mr-auto"
+        "flex flex-col gap-1 max-w-[70%] transition-all duration-300",
+        isOwnMessage ? "items-end ml-auto" : "items-start mr-auto",
+        isHighlighted && "scale-[1.02]"
       )}
     >
       {showSenderName && (
@@ -150,10 +191,11 @@ export const MessageBubble = ({
       )}
       <div
         className={cn(
-          "rounded-lg px-3 py-2",
+          "rounded-lg px-3 py-2 transition-all duration-300",
           isOwnMessage
             ? "bg-primary text-primary-foreground"
-            : "bg-muted"
+            : "bg-muted",
+          isHighlighted && "ring-2 ring-yellow-400 ring-offset-2 ring-offset-background"
         )}
       >
         {renderContent()}
