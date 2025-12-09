@@ -16,8 +16,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import type { ABTest } from "@/types/ab-test";
 import { generateUniqueSlug, cn } from "@/lib/utils";
 import { useUserRole } from "@/hooks/useUserRole";
-import { useAutoRefresh } from "@/hooks/useAutoRefresh";
-import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
 import { useCustomDomain } from "@/hooks/useCustomDomain";
 import { CRMPageHeader } from "@/components/crm/CRMPageHeader";
 import { useDesignMode } from "@/contexts/DesignModeContext";
@@ -85,17 +83,28 @@ export default function Campaigns() {
     workflow_template_id: "",
   });
 
-  const refreshData = useCallback(async () => {
-    await loadData();
-  }, []);
-
-  const { lastUpdated, isRefreshing, refresh } = useAutoRefresh(
-    refreshData,
-    { interval: 60000, enabled: true }
-  );
-
   useEffect(() => {
     loadData();
+  }, []);
+
+  // Realtime subscription for campaigns
+  useEffect(() => {
+    const channel = supabase
+      .channel('campaigns-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'campaigns' },
+        async (payload) => {
+          console.log('📣 Campaigns realtime:', payload.eventType);
+          // Para qualquer mudança, recarregar dados completos (campanhas têm relations complexas)
+          loadData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const loadData = async () => {
@@ -489,12 +498,6 @@ export default function Campaigns() {
           description="Gerencie suas campanhas de vendas"
           actions={
             <div className="flex gap-2">
-              <RefreshIndicator 
-                lastUpdated={lastUpdated}
-                isRefreshing={isRefreshing}
-                onRefresh={refresh}
-              />
-              
               <Dialog open={showDialog} onOpenChange={setShowDialog}>
                 <DialogTrigger asChild>
                   <Button 

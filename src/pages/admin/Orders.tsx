@@ -11,8 +11,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { NewLayoutRequestDialog } from "@/components/orders/NewLayoutRequestDialog";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useAutoRefresh } from "@/hooks/useAutoRefresh";
-import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -63,14 +61,41 @@ const Orders = () => {
   const [deleteDialogTask, setDeleteDialogTask] = useState<DesignTask | null>(null);
   const [editingRejectedTask, setEditingRejectedTask] = useState(false);
 
-  const refreshData = useCallback(async () => {
-    await loadTasks();
-  }, []);
+  // Realtime subscription for design_tasks and leads
+  useEffect(() => {
+    if (isLoadingRoles) return;
 
-  const { lastUpdated, isRefreshing, refresh } = useAutoRefresh(
-    refreshData,
-    { interval: 60000, enabled: true }
-  );
+    const channel = supabase
+      .channel('orders-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'design_tasks' },
+        async (payload) => {
+          console.log('📦 Orders realtime - design_tasks:', payload.eventType);
+          if (payload.eventType === 'DELETE') {
+            setTasks(prev => prev.filter(t => t.id !== payload.old.id));
+            setRejectedTasks(prev => prev.filter(t => t.id !== payload.old.id));
+          } else {
+            // Para INSERT e UPDATE, recarregar dados
+            loadTasks();
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'leads' },
+        async (payload) => {
+          console.log('📦 Orders realtime - leads:', payload.eventType);
+          // Leads update pode afetar logo_action, needs_logo, etc
+          loadTasks();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isLoadingRoles, currentUserId, isSalesperson, isSuperAdmin, isAdmin]);
 
   // Primeiro carregar o usuário
   useEffect(() => {
@@ -367,12 +392,6 @@ const Orders = () => {
             <Plus className="h-4 w-4 mr-2" />
             Nova Requisição
           </Button>
-          
-          <RefreshIndicator 
-            lastUpdated={lastUpdated}
-            isRefreshing={isRefreshing}
-            onRefresh={refresh}
-          />
         </div>
       </div>
 

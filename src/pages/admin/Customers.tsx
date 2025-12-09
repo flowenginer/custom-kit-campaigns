@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +43,54 @@ export default function Customers() {
 
   useEffect(() => {
     loadCustomers();
+  }, []);
+
+  // Realtime subscription for customers
+  useEffect(() => {
+    const channel = supabase
+      .channel('customers-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'customers' },
+        async (payload) => {
+          console.log('👥 Customers realtime:', payload.eventType);
+          if (payload.eventType === 'INSERT') {
+            // Buscar dados completos do novo cliente
+            const { data: newCustomer } = await supabase
+              .from('customers')
+              .select('*')
+              .eq('id', payload.new.id)
+              .single();
+            
+            if (newCustomer) {
+              setCustomers(prev => [{
+                ...newCustomer,
+                person_type: newCustomer.person_type as 'fisica' | 'juridica',
+                total_orders: newCustomer.total_orders || 0,
+                total_revenue: newCustomer.total_revenue || 0,
+                is_active: newCustomer.is_active ?? true,
+              }, ...prev]);
+            }
+          } else if (payload.eventType === 'UPDATE') {
+            setCustomers(prev => prev.map(c => 
+              c.id === payload.new.id 
+                ? { 
+                    ...c, 
+                    ...payload.new,
+                    person_type: (payload.new as any).person_type as 'fisica' | 'juridica',
+                  } 
+                : c
+            ));
+          } else if (payload.eventType === 'DELETE') {
+            setCustomers(prev => prev.filter(c => c.id !== payload.old.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const loadCustomers = async () => {

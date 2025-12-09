@@ -14,8 +14,6 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { useUserRole } from "@/hooks/useUserRole";
-import { useAutoRefresh } from "@/hooks/useAutoRefresh";
-import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
 import { useUniformTypes } from "@/hooks/useUniformTypes";
 
 interface Lead {
@@ -60,14 +58,6 @@ const Leads = () => {
   const [showOnlyFirstAttempt, setShowOnlyFirstAttempt] = useState(false);
   const [showDeleted, setShowDeleted] = useState(false);
 
-  const refreshData = useCallback(async () => {
-    await loadLeads();
-  }, []);
-
-  const { lastUpdated, isRefreshing, refresh } = useAutoRefresh(
-    refreshData,
-    { interval: 60000, enabled: true }
-  );
 
   useEffect(() => {
     loadLeads();
@@ -485,12 +475,6 @@ const Leads = () => {
             </span>
           </p>
         </div>
-        
-        <RefreshIndicator 
-          lastUpdated={lastUpdated}
-          isRefreshing={isRefreshing}
-          onRefresh={refresh}
-        />
       </div>
 
       {/* Analytics de Conversão */}
