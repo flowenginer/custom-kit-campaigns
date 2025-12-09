@@ -11,8 +11,6 @@ import { useGlobalTheme } from "@/hooks/useGlobalTheme";
 import { useTotalPendingApprovalsCount } from "@/hooks/useTotalPendingApprovalsCount";
 import { useReturnedTasksCount } from "@/hooks/useReturnedTasksCount";
 import { useMenuStructure } from "@/hooks/useMenuStructure";
-import { useDesignMode } from "@/contexts/DesignModeContext";
-import { CRMThemeToggle } from "./CRMThemeToggle";
 import { cn } from "@/lib/utils";
 import logoSS from "@/assets/logo-ss.png";
 import {
@@ -80,7 +78,7 @@ const SidebarControls = () => {
   );
 };
 
-const SidebarThemeButtons = ({ currentTheme, changeTheme, isCRMMode }: { currentTheme: any, changeTheme: (id: string) => void, isCRMMode: boolean }) => {
+const SidebarThemeButtons = ({ currentTheme, changeTheme }: { currentTheme: any, changeTheme: (id: string) => void }) => {
   const { open } = useSidebar();
   const [soundDialogOpen, setSoundDialogOpen] = useState(false);
   
@@ -92,55 +90,47 @@ const SidebarThemeButtons = ({ currentTheme, changeTheme, isCRMMode }: { current
           "flex gap-2",
           open ? "items-center justify-center" : "flex-col items-center"
         )}>
-          {isCRMMode ? (
-            // Modo CRM: Toggle animado light/dark
-            <CRMThemeToggle />
-          ) : (
-            // Modo Clássico: 3 botões de tema
-            <>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant={currentTheme?.id === 'light' ? 'default' : 'outline'}
-                    size="icon"
-                    onClick={() => changeTheme('light')}
-                    className="h-8 w-8"
-                  >
-                    <Sun className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side={open ? "top" : "right"}>Tema Claro</TooltipContent>
-              </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={currentTheme?.id === 'light' ? 'default' : 'outline'}
+                size="icon"
+                onClick={() => changeTheme('light')}
+                className="h-8 w-8"
+              >
+                <Sun className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side={open ? "top" : "right"}>Tema Claro</TooltipContent>
+          </Tooltip>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant={currentTheme?.id === 'gray' ? 'default' : 'outline'}
-                    size="icon"
-                    onClick={() => changeTheme('gray')}
-                    className="h-8 w-8"
-                  >
-                    <Cloud className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side={open ? "top" : "right"}>Tema Médio</TooltipContent>
-              </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={currentTheme?.id === 'gray' ? 'default' : 'outline'}
+                size="icon"
+                onClick={() => changeTheme('gray')}
+                className="h-8 w-8"
+              >
+                <Cloud className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side={open ? "top" : "right"}>Tema Médio</TooltipContent>
+          </Tooltip>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant={currentTheme?.id === 'dark' ? 'default' : 'outline'}
-                    size="icon"
-                    onClick={() => changeTheme('dark')}
-                    className="h-8 w-8"
-                  >
-                    <Moon className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side={open ? "top" : "right"}>Tema Escuro</TooltipContent>
-              </Tooltip>
-            </>
-          )}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={currentTheme?.id === 'dark' ? 'default' : 'outline'}
+                size="icon"
+                onClick={() => changeTheme('dark')}
+                className="h-8 w-8"
+              >
+                <Moon className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side={open ? "top" : "right"}>Tema Escuro</TooltipContent>
+          </Tooltip>
 
           <Tooltip>
             <TooltipTrigger asChild>
@@ -231,7 +221,6 @@ const AdminLayout = () => {
   const { count: pendingCount } = useTotalPendingApprovalsCount();
   const { count: returnedCount } = useReturnedTasksCount();
   const { getMenuTree, getIcon, isLoading: menusLoading } = useMenuStructure();
-  const { isCRMMode } = useDesignMode();
   
   const menuTree = getMenuTree();
 
@@ -334,7 +323,7 @@ const AdminLayout = () => {
     <TooltipProvider>
       <SidebarProvider defaultOpen={true}>
         <div className="min-h-screen flex w-full">
-        <Sidebar collapsible="icon" className={cn("bg-card border-r border-primary/20 overflow-hidden", isCRMMode && "sidebar-gradient")}>
+        <Sidebar collapsible="icon" className="bg-card border-r border-primary/20 overflow-hidden">
           <SidebarHeader className="border-b p-6 space-y-4">
             <SidebarLogo />
             <SidebarControls />
@@ -477,7 +466,7 @@ const AdminLayout = () => {
           </SidebarContent>
 
           <SidebarFooter className="border-t border-border">
-            <SidebarThemeButtons currentTheme={currentTheme} changeTheme={changeTheme} isCRMMode={isCRMMode} />
+            <SidebarThemeButtons currentTheme={currentTheme} changeTheme={changeTheme} />
             <SidebarLogoutButton onSignOut={handleSignOut} userName={userFirstName} />
           </SidebarFooter>
         </Sidebar>
