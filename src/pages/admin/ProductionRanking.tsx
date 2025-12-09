@@ -9,8 +9,12 @@ import { SegmentCrossTable } from "@/components/ranking/SegmentCrossTable";
 import { subDays } from "date-fns";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { RefreshIndicator } from "@/components/dashboard/RefreshIndicator";
+import { CRMPageHeader } from "@/components/crm/CRMPageHeader";
+import { useDesignMode } from "@/contexts/DesignModeContext";
+import { cn } from "@/lib/utils";
 
 const ProductionRanking = () => {
+  const { isCRM } = useDesignMode();
   const [startDate, setStartDate] = useState<Date>(subDays(new Date(), 30));
   const [endDate, setEndDate] = useState<Date>(new Date());
 
@@ -31,12 +35,10 @@ const ProductionRanking = () => {
 
   return (
     <div className="p-8 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">🏆 Ranking de Produção</h1>
-        <p className="text-muted-foreground">
-          Análise de desempenho de vendedores e designers
-        </p>
-      </div>
+      <CRMPageHeader
+        title="🏆 Ranking de Produção"
+        description="Análise de desempenho de vendedores e designers"
+      />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
