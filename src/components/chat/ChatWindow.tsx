@@ -244,72 +244,70 @@ export const ChatWindow = ({
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex flex-col gap-2 p-4 border-b bg-background/95 backdrop-blur">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={onBack} className="lg:hidden">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          {isGroup ? (
-            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-lg">
-              {groupIcon || "👥"}
-            </div>
-          ) : (
-            <Avatar>
-              <AvatarFallback className="bg-primary text-primary-foreground">
-                {getInitials(displayName || "?")}
-              </AvatarFallback>
-            </Avatar>
-          )}
-          <div className="flex-1">
-            <h3 className="font-semibold">{displayName}</h3>
-            {isGroup ? (
-              <span className="text-xs text-muted-foreground">Grupo</span>
-            ) : (
-              <Badge variant="secondary" className="text-xs">Online</Badge>
-            )}
+      <div className="flex items-center gap-3 p-3 border-b bg-background/95 backdrop-blur">
+        <Button variant="ghost" size="icon" onClick={onBack} className="lg:hidden h-8 w-8">
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        {isGroup ? (
+          <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-base flex-shrink-0">
+            {groupIcon || "👥"}
           </div>
+        ) : (
+          <Avatar className="h-9 w-9 flex-shrink-0">
+            <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+              {getInitials(displayName || "?")}
+            </AvatarFallback>
+          </Avatar>
+        )}
+        <div className="flex-shrink-0">
+          <h3 className="font-semibold text-sm leading-tight">{displayName}</h3>
+          {isGroup ? (
+            <span className="text-xs text-muted-foreground">Grupo</span>
+          ) : (
+            <Badge variant="secondary" className="text-[10px] h-4 px-1.5">Online</Badge>
+          )}
         </div>
         
-        {/* Search field always visible */}
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        {/* Search field */}
+        <div className="flex items-center gap-1 flex-1 min-w-0">
+          <div className="relative flex-1 max-w-[200px]">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
               ref={searchInputRef}
-              placeholder="Buscar na conversa..."
+              placeholder="Buscar..."
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
               onKeyDown={handleSearchKeyDown}
-              className="pl-9 pr-4 h-9"
+              className="pl-7 pr-2 h-7 text-xs"
             />
           </div>
           {debouncedQuery && (
-            <div className="flex items-center gap-1">
-              <span className="text-sm text-muted-foreground whitespace-nowrap">
+            <div className="flex items-center gap-0.5">
+              <span className="text-xs text-muted-foreground whitespace-nowrap">
                 {searchResults.length > 0
-                  ? `${currentResultIndex + 1} de ${searchResults.length}`
-                  : "0 resultados"}
+                  ? `${currentResultIndex + 1}/${searchResults.length}`
+                  : "0"}
               </span>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={goToPrevResult}
                 disabled={searchResults.length === 0}
-                className="h-8 w-8"
+                className="h-6 w-6"
               >
-                <ChevronUp className="h-4 w-4" />
+                <ChevronUp className="h-3 w-3" />
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={goToNextResult}
                 disabled={searchResults.length === 0}
-                className="h-8 w-8"
+                className="h-6 w-6"
               >
-                <ChevronDown className="h-4 w-4" />
+                <ChevronDown className="h-3 w-3" />
               </Button>
-              <Button variant="ghost" size="icon" onClick={clearSearch} className="h-8 w-8">
-                <X className="h-4 w-4" />
+              <Button variant="ghost" size="icon" onClick={clearSearch} className="h-6 w-6">
+                <X className="h-3 w-3" />
               </Button>
             </div>
           )}
