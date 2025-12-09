@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const useUnreadMessages = () => {
@@ -14,29 +14,35 @@ export const useUnreadMessages = () => {
 
     fetchUnreadCount();
 
-    // Realtime subscriptions
+    // Realtime subscription - atualização incremental
     const messagesChannel = supabase
-      .channel("unread_messages")
+      .channel("unread_messages_optimized")
       .on(
         "postgres_changes",
         {
-          event: "*",
+          event: "INSERT",
           schema: "public",
           table: "chat_messages",
         },
-        () => {
-          fetchUnreadCount();
+        (payload) => {
+          // Incrementar se a mensagem não é do usuário atual
+          if (payload.new.sender_id !== currentUserId) {
+            setUnreadCount(prev => prev + 1);
+          }
         }
       )
       .on(
         "postgres_changes",
         {
-          event: "*",
+          event: "UPDATE",
           schema: "public",
           table: "chat_participants",
         },
-        () => {
-          fetchUnreadCount();
+        (payload) => {
+          // Se last_read_at foi atualizado para o usuário atual, refetch
+          if (payload.new.user_id === currentUserId && payload.new.last_read_at) {
+            fetchUnreadCount();
+          }
         }
       )
       .subscribe();
@@ -51,40 +57,21 @@ export const useUnreadMessages = () => {
     setCurrentUserId(user?.id || null);
   };
 
-  const fetchUnreadCount = async () => {
+  const fetchUnreadCount = useCallback(async () => {
     if (!currentUserId) return;
 
     try {
-      // Buscar conversas do usuário
-      const { data: participations } = await supabase
-        .from("chat_participants")
-        .select("conversation_id, last_read_at")
-        .eq("user_id", currentUserId);
+      // Usar RPC otimizada - uma única query!
+      const { data, error } = await supabase
+        .rpc('get_total_unread_count', { p_user_id: currentUserId });
 
-      if (!participations || participations.length === 0) {
-        setUnreadCount(0);
-        return;
-      }
+      if (error) throw error;
 
-      let totalUnread = 0;
-
-      // Para cada conversa, contar mensagens não lidas
-      for (const participation of participations) {
-        const { count } = await supabase
-          .from("chat_messages")
-          .select("*", { count: "exact", head: true })
-          .eq("conversation_id", participation.conversation_id)
-          .neq("sender_id", currentUserId)
-          .gt("created_at", participation.last_read_at);
-
-        totalUnread += count || 0;
-      }
-
-      setUnreadCount(totalUnread);
+      setUnreadCount(Number(data) || 0);
     } catch (error) {
       console.error("Error fetching unread count:", error);
     }
-  };
+  }, [currentUserId]);
 
-  return { unreadCount };
+  return { unreadCount, refetch: fetchUnreadCount };
 };

@@ -3187,6 +3187,39 @@ export type Database = {
         Returns: undefined
       }
       format_tag_to_name: { Args: { tag: string }; Returns: string }
+      get_all_users_with_conversations: {
+        Args: { p_user_id: string }
+        Returns: {
+          conversation_id: string
+          full_name: string
+          last_message_content: string
+          last_message_created_at: string
+          last_message_type: string
+          role: string
+          unread_count: number
+          updated_at: string
+          user_id: string
+        }[]
+      }
+      get_total_unread_count: { Args: { p_user_id: string }; Returns: number }
+      get_user_conversations: {
+        Args: { p_user_id: string }
+        Returns: {
+          conversation_id: string
+          group_icon: string
+          group_name: string
+          is_group: boolean
+          last_message_content: string
+          last_message_created_at: string
+          last_message_sender_name: string
+          last_message_type: string
+          other_user_id: string
+          other_user_name: string
+          other_user_role: string
+          unread_count: number
+          updated_at: string
+        }[]
+      }
       get_user_roles: {
         Args: { _user_id: string }
         Returns: {

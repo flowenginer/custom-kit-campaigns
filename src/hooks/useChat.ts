@@ -154,11 +154,7 @@ export const useChat = (conversationId: string | null) => {
 
       if (error) throw error;
 
-      // Atualizar updated_at da conversa
-      await supabase
-        .from("chat_conversations")
-        .update({ updated_at: new Date().toISOString() })
-        .eq("id", conversationId);
+      // Nota: updated_at é atualizado automaticamente via trigger no banco
     } catch (error) {
       console.error("Error sending message:", error);
       throw error;

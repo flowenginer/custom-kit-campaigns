@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -90,22 +90,22 @@ export const ConversationList = ({
 
     loadData();
 
+    // Realtime subscription - atualização granular
     const channel = supabase
       .channel("conversations_updates")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "chat_messages" },
-        () => loadData()
+        { event: "INSERT", schema: "public", table: "chat_messages" },
+        (payload) => {
+          // Atualizar apenas a conversa afetada
+          const convId = payload.new.conversation_id;
+          updateConversationFromRealtime(convId, payload.new);
+        }
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "chat_participants" },
-        () => loadData()
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "chat_conversations" },
-        () => loadData()
+        { event: "INSERT", schema: "public", table: "chat_conversations" },
+        () => loadData() // Novo grupo/conversa - reload
       )
       .subscribe();
 
@@ -119,124 +119,68 @@ export const ConversationList = ({
     setCurrentUserId(user?.id || null);
   };
 
-  const loadData = async () => {
+  // Atualização granular quando nova mensagem chega
+  const updateConversationFromRealtime = useCallback(async (
+    conversationId: string, 
+    newMessage: any
+  ) => {
     if (!currentUserId) return;
 
-    setLoading(true);
-    try {
-      // 1. Buscar TODOS os usuários com suas roles
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, full_name")
-        .order("full_name");
+    // Atualizar grupos se for um grupo
+    setGroups(prev => {
+      const groupIndex = prev.findIndex(g => g.id === conversationId);
+      if (groupIndex === -1) return prev;
 
-      if (profilesError) throw profilesError;
-
-      const { data: roles, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("user_id, role");
-
-      if (rolesError) throw rolesError;
-
-      // 2. Buscar conversas do usuário atual
-      const { data: myParticipations, error: partError } = await supabase
-        .from("chat_participants")
-        .select("conversation_id, last_read_at")
-        .eq("user_id", currentUserId);
-
-      if (partError) throw partError;
-
-      const myConvIds = myParticipations?.map((p) => p.conversation_id) || [];
-
-      // 3. Buscar detalhes das conversas
-      const { data: conversations, error: convError } = await supabase
-        .from("chat_conversations")
-        .select("id, is_group, group_name, group_icon, updated_at")
-        .in("id", myConvIds.length > 0 ? myConvIds : ["00000000-0000-0000-0000-000000000000"]);
-
-      if (convError) throw convError;
-
-      // 4. Separar grupos e conversas individuais
-      const groupConvs = conversations?.filter((c) => c.is_group) || [];
-      const individualConvs = conversations?.filter((c) => !c.is_group) || [];
-
-      // 5. Para conversas individuais, mapear para o outro usuário
-      const convToOtherUser: Record<string, string> = {};
-      for (const conv of individualConvs) {
-        const { data: otherPart } = await supabase
-          .from("chat_participants")
-          .select("user_id")
-          .eq("conversation_id", conv.id)
-          .neq("user_id", currentUserId)
-          .single();
-
-        if (otherPart) {
-          convToOtherUser[conv.id] = otherPart.user_id;
-        }
+      const updated = [...prev];
+      const group = { ...updated[groupIndex] };
+      
+      group.last_message = {
+        content: newMessage.content,
+        created_at: newMessage.created_at,
+        message_type: newMessage.message_type,
+        sender_name: "", // Será atualizado na próxima carga completa
+      };
+      
+      if (newMessage.sender_id !== currentUserId) {
+        group.unread_count = (group.unread_count || 0) + 1;
       }
+      
+      group.updated_at = newMessage.created_at;
+      updated[groupIndex] = group;
+      
+      // Reordenar
+      updated.sort((a, b) => {
+        if (a.unread_count > 0 && b.unread_count === 0) return -1;
+        if (a.unread_count === 0 && b.unread_count > 0) return 1;
+        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+      });
+      
+      return updated;
+    });
 
-      // 6. Montar lista de usuários com info de conversa
-      const usersList: UserWithConversation[] = [];
+    // Atualizar usuários
+    setUsers(prev => {
+      const userIndex = prev.findIndex(u => u.conversation_id === conversationId);
+      if (userIndex === -1) return prev;
 
-      for (const profile of profiles || []) {
-        if (profile.id === currentUserId) continue;
-
-        const userRole = roles?.find((r) => r.user_id === profile.id);
-        
-        // Verificar se já existe conversa com este usuário
-        const existingConvId = Object.entries(convToOtherUser).find(
-          ([_, otherId]) => otherId === profile.id
-        )?.[0];
-
-        let lastMessage;
-        let unreadCount = 0;
-        let updatedAt = null;
-
-        if (existingConvId) {
-          // Buscar última mensagem
-          const { data: lastMsg } = await supabase
-            .from("chat_messages")
-            .select("content, created_at, message_type")
-            .eq("conversation_id", existingConvId)
-            .is("deleted_at", null)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          lastMessage = lastMsg || undefined;
-
-          // Buscar last_read_at
-          const participation = myParticipations?.find(
-            (p) => p.conversation_id === existingConvId
-          );
-
-          // Contar não lidas
-          const { count } = await supabase
-            .from("chat_messages")
-            .select("*", { count: "exact", head: true })
-            .eq("conversation_id", existingConvId)
-            .neq("sender_id", currentUserId)
-            .gt("created_at", participation?.last_read_at || "1970-01-01");
-
-          unreadCount = count || 0;
-
-          const conv = individualConvs.find((c) => c.id === existingConvId);
-          updatedAt = conv?.updated_at || null;
-        }
-
-        usersList.push({
-          id: profile.id,
-          full_name: profile.full_name || "Sem nome",
-          role: userRole?.role || "viewer",
-          conversation_id: existingConvId || null,
-          last_message: lastMessage,
-          unread_count: unreadCount,
-          updated_at: updatedAt,
-        });
+      const updated = [...prev];
+      const user = { ...updated[userIndex] };
+      
+      user.last_message = {
+        content: newMessage.content,
+        created_at: newMessage.created_at,
+        message_type: newMessage.message_type,
+      };
+      
+      if (newMessage.sender_id !== currentUserId) {
+        user.unread_count = (user.unread_count || 0) + 1;
       }
-
-      // 7. Ordenar: não lidas primeiro, depois por última mensagem
-      usersList.sort((a, b) => {
+      
+      user.updated_at = newMessage.created_at;
+      updated[userIndex] = user;
+      
+      // Reordenar
+      updated.sort((a, b) => {
         if (a.unread_count > 0 && b.unread_count === 0) return -1;
         if (a.unread_count === 0 && b.unread_count > 0) return 1;
         if (a.updated_at && b.updated_at) {
@@ -246,64 +190,81 @@ export const ConversationList = ({
         if (b.updated_at) return 1;
         return a.full_name.localeCompare(b.full_name);
       });
+      
+      return updated;
+    });
+  }, [currentUserId]);
 
-      setUsers(usersList);
+  const loadData = useCallback(async () => {
+    if (!currentUserId) return;
 
-      // 8. Processar grupos
+    setLoading(true);
+    try {
+      // 1. Buscar conversas via RPC otimizada (uma única query!)
+      const { data: conversations, error: convError } = await supabase
+        .rpc('get_user_conversations', { p_user_id: currentUserId });
+
+      if (convError) throw convError;
+
+      // 2. Buscar todos usuários com info de conversa via RPC
+      const { data: allUsers, error: usersError } = await supabase
+        .rpc('get_all_users_with_conversations', { p_user_id: currentUserId });
+
+      if (usersError) throw usersError;
+
+      // 3. Separar grupos das conversas
       const groupsList: GroupConversation[] = [];
-
-      for (const group of groupConvs) {
-        const { data: lastMsg } = await supabase
-          .from("chat_messages")
-          .select("content, created_at, message_type, sender:profiles!chat_messages_sender_id_fkey(full_name)")
-          .eq("conversation_id", group.id)
-          .is("deleted_at", null)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        const participation = myParticipations?.find(
-          (p) => p.conversation_id === group.id
-        );
-
-        const { count } = await supabase
-          .from("chat_messages")
-          .select("*", { count: "exact", head: true })
-          .eq("conversation_id", group.id)
-          .neq("sender_id", currentUserId)
-          .gt("created_at", participation?.last_read_at || "1970-01-01");
-
-        groupsList.push({
-          id: group.id,
-          group_name: group.group_name || "Grupo",
-          group_icon: group.group_icon || "👥",
-          last_message: lastMsg ? {
-            content: lastMsg.content,
-            created_at: lastMsg.created_at,
-            message_type: lastMsg.message_type,
-            sender_name: (lastMsg.sender as any)?.full_name || "Desconhecido",
-          } : undefined,
-          unread_count: count || 0,
-          updated_at: group.updated_at,
-        });
+      
+      for (const conv of conversations || []) {
+        if (conv.is_group) {
+          groupsList.push({
+            id: conv.conversation_id,
+            group_name: conv.group_name || "Grupo",
+            group_icon: conv.group_icon || "👥",
+            last_message: conv.last_message_content ? {
+              content: conv.last_message_content,
+              created_at: conv.last_message_created_at,
+              message_type: conv.last_message_type,
+              sender_name: conv.last_message_sender_name || "",
+            } : undefined,
+            unread_count: Number(conv.unread_count) || 0,
+            updated_at: conv.updated_at,
+          });
+        }
       }
 
-      // Ordenar grupos
-      groupsList.sort((a, b) => {
-        if (a.unread_count > 0 && b.unread_count === 0) return -1;
-        if (a.unread_count === 0 && b.unread_count > 0) return 1;
-        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
-      });
+      // 4. Montar lista de usuários
+      const usersList: UserWithConversation[] = (allUsers || []).map((u: any) => ({
+        id: u.user_id,
+        full_name: u.full_name || "Sem nome",
+        role: u.role || "viewer",
+        conversation_id: u.conversation_id || null,
+        last_message: u.last_message_content ? {
+          content: u.last_message_content,
+          created_at: u.last_message_created_at,
+          message_type: u.last_message_type,
+        } : undefined,
+        unread_count: Number(u.unread_count) || 0,
+        updated_at: u.updated_at || null,
+      }));
 
       setGroups(groupsList);
+      setUsers(usersList);
     } catch (error) {
       console.error("Error loading data:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentUserId]);
 
   const handleSelectUser = async (user: UserWithConversation) => {
+    // Zerar contagem de não lidas ao selecionar
+    if (user.unread_count > 0) {
+      setUsers(prev => prev.map(u => 
+        u.id === user.id ? { ...u, unread_count: 0 } : u
+      ));
+    }
+
     if (user.conversation_id) {
       onSelectConversation({
         id: user.conversation_id,
@@ -331,6 +292,11 @@ export const ConversationList = ({
 
         if (partError) throw partError;
 
+        // Atualizar estado local
+        setUsers(prev => prev.map(u => 
+          u.id === user.id ? { ...u, conversation_id: conversation.id } : u
+        ));
+
         onSelectConversation({
           id: conversation.id,
           is_group: false,
@@ -343,6 +309,13 @@ export const ConversationList = ({
   };
 
   const handleSelectGroup = (group: GroupConversation) => {
+    // Zerar contagem de não lidas ao selecionar
+    if (group.unread_count > 0) {
+      setGroups(prev => prev.map(g => 
+        g.id === group.id ? { ...g, unread_count: 0 } : g
+      ));
+    }
+
     onSelectConversation({
       id: group.id,
       is_group: true,
@@ -385,16 +358,23 @@ export const ConversationList = ({
     return { text, icon };
   };
 
-  const filteredUsers = users.filter((u) =>
-    u.full_name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredUsers = useMemo(() => 
+    users.filter((u) =>
+      u.full_name.toLowerCase().includes(searchQuery.toLowerCase())
+    ), [users, searchQuery]);
 
-  const filteredGroups = groups.filter((g) =>
-    g.group_name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredGroups = useMemo(() => 
+    groups.filter((g) =>
+      g.group_name.toLowerCase().includes(searchQuery.toLowerCase())
+    ), [groups, searchQuery]);
 
-  const usersWithMessages = filteredUsers.filter((u) => u.conversation_id && u.last_message);
-  const usersWithoutMessages = filteredUsers.filter((u) => !u.conversation_id || !u.last_message);
+  const usersWithMessages = useMemo(() => 
+    filteredUsers.filter((u) => u.conversation_id && u.last_message),
+    [filteredUsers]);
+  
+  const usersWithoutMessages = useMemo(() => 
+    filteredUsers.filter((u) => !u.conversation_id || !u.last_message),
+    [filteredUsers]);
 
   return (
     <div className="flex flex-col h-full">
@@ -449,7 +429,7 @@ export const ConversationList = ({
                         <span className="font-medium truncate">{group.group_name}</span>
                         {group.last_message && (
                           <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
-                            {format(new Date(group.last_message.created_at), "HH:mm", { locale: ptBR })}
+                            {formatRelativeDate(group.last_message.created_at)}
                           </span>
                         )}
                       </div>
@@ -499,30 +479,43 @@ export const ConversationList = ({
                               {getInitials(user.full_name)}
                             </AvatarFallback>
                           </Avatar>
-                          <span 
-                            className={cn(
-                              "absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full border-2 border-background",
-                              "flex items-center justify-center text-[9px] text-white font-bold shadow-sm",
-                              ROLE_COLORS[user.role]
-                            )}
-                            title={ROLE_LABELS[user.role]}
-                          >
-                            {ROLE_LABELS[user.role]?.charAt(0) || "?"}
-                          </span>
+                          {/* Indicador de role pequeno */}
+                          <div className={cn(
+                            "absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-background flex items-center justify-center",
+                            ROLE_COLORS[user.role]
+                          )}>
+                            <span className="text-[8px] text-white font-bold">
+                              {user.role === "super_admin" ? "S" : 
+                               user.role === "admin" ? "A" :
+                               user.role === "designer" ? "D" :
+                               user.role === "salesperson" ? "V" : ""}
+                            </span>
+                          </div>
                         </div>
-                        
-                        {/* Conteúdo */}
+
+                        {/* Info */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <span className="font-semibold text-sm truncate">{user.full_name}</span>
+                          <div className="flex items-center justify-between mb-0.5">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className={cn(
+                                "font-medium truncate",
+                                user.unread_count > 0 && "font-semibold"
+                              )}>
+                                {user.full_name}
+                              </span>
+                            </div>
                             {user.last_message && (
-                              <span className="text-[11px] text-muted-foreground ml-2 flex-shrink-0">
+                              <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
                                 {formatRelativeDate(user.last_message.created_at)}
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center justify-between mt-0.5">
-                            <p className="text-xs text-muted-foreground truncate max-w-[180px] flex items-center gap-1">
+                          
+                          <div className="flex items-center justify-between gap-2">
+                            <p className={cn(
+                              "text-sm truncate flex items-center gap-1",
+                              user.unread_count > 0 ? "text-foreground font-medium" : "text-muted-foreground"
+                            )}>
                               {preview.icon}
                               <span>{preview.text}</span>
                             </p>
@@ -548,29 +541,36 @@ export const ConversationList = ({
                     Todos os Usuários
                   </span>
                 </div>
-                {usersWithoutMessages.map((user) => (
-                  <button
-                    key={user.id}
-                    onClick={() => handleSelectUser(user)}
-                    className={cn(
-                      "w-full p-3 flex items-center gap-3 hover:bg-accent/10 transition-colors text-left",
-                      selectedConversationId === user.conversation_id && "bg-accent/20"
-                    )}
-                  >
-                    <Avatar className="flex-shrink-0 h-8 w-8">
-                      <AvatarFallback className="bg-muted text-muted-foreground text-xs">
-                        {getInitials(user.full_name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm truncate flex-1">{user.full_name}</span>
-                    <Badge
-                      variant="secondary"
-                      className={cn("text-[10px] px-1.5", ROLE_COLORS[user.role], "text-white")}
+                <div className="p-2 space-y-1">
+                  {usersWithoutMessages.map((user) => (
+                    <button
+                      key={user.id}
+                      onClick={() => handleSelectUser(user)}
+                      className={cn(
+                        "w-full p-3 rounded-xl flex items-center gap-3 transition-all duration-200 text-left",
+                        "hover:bg-accent hover:shadow-sm",
+                        selectedConversationId === user.conversation_id && "bg-accent shadow-sm ring-1 ring-primary/20"
+                      )}
                     >
-                      {ROLE_LABELS[user.role] || user.role}
-                    </Badge>
-                  </button>
-                ))}
+                      <div className="relative flex-shrink-0">
+                        <Avatar className="h-10 w-10 ring-2 ring-background shadow-sm">
+                          <AvatarFallback className={cn(ROLE_COLORS[user.role], "text-white font-medium text-xs")}>
+                            {getInitials(user.full_name)}
+                          </AvatarFallback>
+                        </Avatar>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium truncate">{user.full_name}</span>
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
+                            {ROLE_LABELS[user.role] || user.role}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">Iniciar conversa</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </>
             )}
           </div>
