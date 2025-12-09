@@ -977,10 +977,12 @@ export const TaskDetailsDialog = ({
                       context === 'creation';
 
   // Pode recusar tarefa: Designer ou Admin/SuperAdmin
-  const canReject = (task?.status === 'pending' || task?.status === 'in_progress') && 
+  // IMPORTANTE: Só pode devolver/recusar DEPOIS de aceitar a tarefa (status = in_progress)
+  // Designer precisa primeiro aceitar a tarefa para depois poder devolver
+  const canReject = task?.status === 'in_progress' && 
                     (isDesigner || hasFullAccess) &&
                     context === 'creation' &&
-                    (!task?.assigned_to || task?.assigned_to === currentUser?.id || hasFullAccess);
+                    (task?.assigned_to === currentUser?.id || hasFullAccess);
 
   // Pode solicitar exclusão: Designer atribuído ou Admin/SuperAdmin
   const canDesignerRequestDelete = (isAssignedDesigner || hasFullAccess) && 
