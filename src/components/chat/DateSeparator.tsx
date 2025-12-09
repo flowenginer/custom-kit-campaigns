@@ -21,10 +21,12 @@ export const DateSeparator = ({ date }: DateSeparatorProps) => {
   };
 
   return (
-    <div className="flex items-center justify-center my-4">
-      <div className="bg-muted px-4 py-1.5 rounded-full text-xs text-muted-foreground font-medium">
+    <div className="flex items-center gap-4 my-6 px-4">
+      <div className="flex-1 h-px bg-border" />
+      <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">
         {formatRelativeDate(date)}
-      </div>
+      </span>
+      <div className="flex-1 h-px bg-border" />
     </div>
   );
 };
