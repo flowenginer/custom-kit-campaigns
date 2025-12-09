@@ -3,11 +3,23 @@ import { GlobalTheme, GLOBAL_THEMES } from '@/lib/themes';
 import { hexToHSL } from '@/lib/colorUtils';
 import { toast } from 'sonner';
 
+// Hook para verificar se estamos no modo CRM (sem importar o contexto para evitar dependência circular)
+const getDesignMode = () => {
+  if (typeof window === 'undefined') return 'classic';
+  return localStorage.getItem('design-mode') || 'classic';
+};
+
 export const useGlobalTheme = () => {
   const [currentTheme, setCurrentTheme] = useState<GlobalTheme>(GLOBAL_THEMES[0]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Se estamos no modo CRM, não aplicar temas clássicos
+    if (getDesignMode() === 'crm') {
+      setIsLoading(false);
+      return;
+    }
+
     // Carregar tema salvo do localStorage
     const savedThemeId = localStorage.getItem('global-theme-id');
     if (savedThemeId) {
@@ -21,6 +33,9 @@ export const useGlobalTheme = () => {
   }, []);
 
   const applyTheme = (theme: GlobalTheme) => {
+    // Se estamos no modo CRM, não aplicar
+    if (getDesignMode() === 'crm') return;
+
     const root = document.documentElement;
     
     // Converter cores hex para HSL e aplicar
@@ -54,6 +69,12 @@ export const useGlobalTheme = () => {
   };
 
   const changeTheme = (themeId: string) => {
+    // Se estamos no modo CRM, não permitir mudança
+    if (getDesignMode() === 'crm') {
+      toast.info('Mude para o Design Clássico em Configurações para usar temas coloridos');
+      return;
+    }
+
     const theme = GLOBAL_THEMES.find(t => t.id === themeId);
     if (theme) {
       setCurrentTheme(theme);
@@ -64,7 +85,7 @@ export const useGlobalTheme = () => {
   };
 
   const resetToDefault = () => {
-    const defaultTheme = GLOBAL_THEMES[0]; // Azul Oceano
+    const defaultTheme = GLOBAL_THEMES[0]; // Tema Claro
     setCurrentTheme(defaultTheme);
     applyTheme(defaultTheme);
     localStorage.removeItem('global-theme-id');
