@@ -9,6 +9,7 @@ import { NotificationsDropdown } from "./NotificationsDropdown";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useGlobalTheme } from "@/hooks/useGlobalTheme";
 import { useDesignMode } from "@/contexts/DesignModeContext";
+import { useCRMTheme } from "@/contexts/CRMThemeContext";
 import { useTotalPendingApprovalsCount } from "@/hooks/useTotalPendingApprovalsCount";
 import { useReturnedTasksCount } from "@/hooks/useReturnedTasksCount";
 import { useMenuStructure } from "@/hooks/useMenuStructure";
@@ -36,21 +37,27 @@ import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { SoundPreferencesPanel } from "@/components/creation/SoundPreferencesPanel";
 
-const SidebarLogo = () => {
+const SidebarLogo = ({ isCRM }: { isCRM: boolean }) => {
   const { open } = useSidebar();
   
   return (
     <div className="flex items-center gap-2">
       <img src={logoSS} alt="Space Sports Logo" className="h-10 w-10 object-contain flex-shrink-0" />
       {open && (
-        <h1 className="font-bold text-xl">Space Sports</h1>
+        <h1 className={cn(
+          "font-bold text-xl",
+          isCRM && "text-white"
+        )}>Space Sports</h1>
       )}
     </div>
   );
 };
 
-const SidebarControls = () => {
+const SidebarControls = ({ isCRM, isLight }: { isCRM: boolean; isLight: boolean }) => {
   const { open } = useSidebar();
+  
+  // No modo CRM claro, os ícones devem ser brancos
+  const iconClass = isCRM && isLight ? "text-white" : "";
   
   return (
     <div className={cn(
@@ -59,7 +66,7 @@ const SidebarControls = () => {
     )}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <SidebarTrigger className="h-9 w-9 flex-shrink-0" />
+          <SidebarTrigger className={cn("h-9 w-9 flex-shrink-0", iconClass)} />
         </TooltipTrigger>
         <TooltipContent side="right">
           <p>Recolher menu lateral</p>
@@ -68,7 +75,7 @@ const SidebarControls = () => {
 
       <Tooltip>
         <TooltipTrigger asChild>
-          <div>
+          <div className={iconClass}>
             <NotificationsDropdown />
           </div>
         </TooltipTrigger>
@@ -76,6 +83,9 @@ const SidebarControls = () => {
           <p>Notificações</p>
         </TooltipContent>
       </Tooltip>
+      
+      {/* Toggle de tema no header para CRM */}
+      {isCRM && <ThemeToggle />}
     </div>
   );
 };
@@ -164,28 +174,31 @@ const SidebarThemeButtons = ({ currentTheme, changeTheme }: { currentTheme: any,
   );
 };
 
-// Controles de tema CRM (toggle light/dark + som)
-const SidebarCRMThemeButtons = () => {
+// Controles de tema CRM no Footer (apenas som, toggle foi pro header)
+const SidebarCRMSoundButton = ({ isLight }: { isLight: boolean }) => {
   const { open } = useSidebar();
   const [soundDialogOpen, setSoundDialogOpen] = useState(false);
   
   return (
     <>
-      <div className="p-3 border-b border-border/50">
-        {open && <span className="text-xs text-muted-foreground mb-2 block">Tema</span>}
+      <div className={cn(
+        "p-3",
+        isLight ? "border-white/20" : "border-border/50"
+      )}>
         <div className={cn(
           "flex gap-2",
           open ? "items-center justify-center" : "flex-col items-center"
         )}>
-          <ThemeToggle />
-          
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="icon"
                 onClick={() => setSoundDialogOpen(true)}
-                className="h-8 w-8"
+                className={cn(
+                  "h-8 w-8",
+                  isLight && "text-white hover:bg-white/10"
+                )}
               >
                 <Volume2 className="h-4 w-4" />
               </Button>
@@ -209,8 +222,21 @@ const SidebarCRMThemeButtons = () => {
   );
 };
 
-const SidebarLogoutButton = ({ onSignOut, userName }: { onSignOut: () => void; userName: string | null }) => {
+const SidebarLogoutButton = ({ 
+  onSignOut, 
+  userName, 
+  isCRM, 
+  isLight 
+}: { 
+  onSignOut: () => void; 
+  userName: string | null;
+  isCRM: boolean;
+  isLight: boolean;
+}) => {
   const { open } = useSidebar();
+  
+  // No CRM light, textos e ícones brancos
+  const textClass = isCRM && isLight ? "text-white" : "";
   
   return (
     <div className={cn(
@@ -220,21 +246,27 @@ const SidebarLogoutButton = ({ onSignOut, userName }: { onSignOut: () => void; u
       {open && userName && (
         <>
           <Avatar className="h-8 w-8 flex-shrink-0">
-            <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+            <AvatarFallback className={cn(
+              "text-xs",
+              isCRM && isLight 
+                ? "bg-white text-purple-600" 
+                : "bg-primary text-primary-foreground"
+            )}>
               {userName.substring(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <span className="text-sm font-medium flex-1 truncate">{userName}</span>
+          <span className={cn("text-sm font-medium flex-1 truncate", textClass)}>{userName}</span>
         </>
       )}
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
-            variant={open ? "default" : "ghost"}
+            variant={isCRM && isLight ? "ghost" : (open ? "default" : "ghost")}
             size={open ? "default" : "icon"}
             onClick={onSignOut}
             className={cn(
-              open ? "px-4" : "h-9 w-9"
+              open ? "px-4" : "h-9 w-9",
+              isCRM && isLight && "text-white hover:bg-white/10 border-white/30"
             )}
           >
             <LogOut className="h-4 w-4" />
@@ -265,6 +297,7 @@ const AdminLayout = () => {
   } = useUserRole();
   
   const { isCRM } = useDesignMode();
+  const { isLight } = useCRMTheme();
   
   const { currentTheme, changeTheme } = useGlobalTheme();
   const { count: pendingCount } = useTotalPendingApprovalsCount();
@@ -372,10 +405,21 @@ const AdminLayout = () => {
     <TooltipProvider>
       <SidebarProvider defaultOpen={true}>
         <div className="min-h-screen flex w-full">
-        <Sidebar collapsible="icon" className="bg-card border-r border-primary/20 overflow-hidden">
-          <SidebarHeader className="border-b p-6 space-y-4">
-            <SidebarLogo />
-            <SidebarControls />
+        <Sidebar 
+          collapsible="icon" 
+          className={cn(
+            "overflow-hidden",
+            isCRM 
+              ? "sidebar-gradient border-r border-white/10" 
+              : "bg-card border-r border-primary/20"
+          )}
+        >
+          <SidebarHeader className={cn(
+            "p-6 space-y-4",
+            isCRM && isLight ? "border-b border-white/20" : "border-b"
+          )}>
+            <SidebarLogo isCRM={isCRM && isLight} />
+            <SidebarControls isCRM={isCRM} isLight={isLight} />
           </SidebarHeader>
 
           <SidebarContent className="py-4 overflow-y-auto overflow-x-hidden scrollbar-hide">
@@ -406,9 +450,13 @@ const AdminLayout = () => {
                                   isActive={isActive}
                                   className={cn(
                                     "transition-colors flex-1",
-                                    isActive
-                                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                                      : "hover:bg-accent/10 hover:text-primary"
+                                    isCRM && isLight
+                                      ? isActive
+                                        ? "bg-white text-purple-600 hover:bg-white/90"
+                                        : "text-white hover:bg-white/10"
+                                      : isActive
+                                        ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                                        : "hover:bg-accent/10 hover:text-primary"
                                   )}
                                 >
                                   <NavLink to={menu.route} onClick={() => setIsNavigating(true)}>
@@ -450,9 +498,13 @@ const AdminLayout = () => {
                                           isActive={isChildActive}
                                           className={cn(
                                             "transition-colors",
-                                            isChildActive
-                                              ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                                              : "hover:bg-accent/10 hover:text-primary"
+                                            isCRM && isLight
+                                              ? isChildActive
+                                                ? "bg-white text-purple-600 hover:bg-white/90"
+                                                : "text-white hover:bg-white/10"
+                                              : isChildActive
+                                                ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                                                : "hover:bg-accent/10 hover:text-primary"
                                           )}
                                         >
                                           <NavLink to={child.route} onClick={() => setIsNavigating(true)}>
@@ -486,9 +538,13 @@ const AdminLayout = () => {
                             disabled={isNavigating}
                             className={cn(
                               "transition-colors",
-                              isActive
-                                ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                                : "hover:bg-accent/10 hover:text-primary"
+                              isCRM && isLight
+                                ? isActive
+                                  ? "bg-white text-purple-600 hover:bg-white/90"
+                                  : "text-white hover:bg-white/10"
+                                : isActive
+                                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                                  : "hover:bg-accent/10 hover:text-primary"
                             )}
                           >
                             <NavLink to={menu.route} onClick={() => setIsNavigating(true)}>
@@ -514,13 +570,21 @@ const AdminLayout = () => {
             </SidebarGroup>
           </SidebarContent>
 
-          <SidebarFooter className="border-t border-border">
+          <SidebarFooter className={cn(
+            "border-t",
+            isCRM && isLight ? "border-white/20" : "border-border"
+          )}>
             {isCRM ? (
-              <SidebarCRMThemeButtons />
+              <SidebarCRMSoundButton isLight={isLight} />
             ) : (
               <SidebarThemeButtons currentTheme={currentTheme} changeTheme={changeTheme} />
             )}
-            <SidebarLogoutButton onSignOut={handleSignOut} userName={userFirstName} />
+            <SidebarLogoutButton 
+              onSignOut={handleSignOut} 
+              userName={userFirstName} 
+              isCRM={isCRM}
+              isLight={isLight}
+            />
           </SidebarFooter>
         </Sidebar>
 
