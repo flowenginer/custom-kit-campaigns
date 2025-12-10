@@ -243,6 +243,18 @@ export const TaskDetailsDialog = ({
       return;
     }
 
+    // ✅ Registrar no histórico quando designer assume tarefa
+    await supabase
+      .from("design_task_history")
+      .insert([{
+        task_id: task.id,
+        user_id: currentUser.id,
+        action: 'task_assigned',
+        old_status: task.status as DbTaskStatus,
+        new_status: 'in_progress' as DbTaskStatus,
+        notes: 'Designer assumiu a tarefa'
+      }]);
+
     toast.success("Tarefa atribuída com sucesso!");
     onTaskUpdated();
     onOpenChange(false); // ✅ Fecha o modal para forçar recarregamento ao reabrir

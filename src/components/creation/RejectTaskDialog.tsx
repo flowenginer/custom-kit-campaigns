@@ -62,6 +62,31 @@ export const RejectTaskDialog = ({
     const isReturnForCorrection = actionType === 'return_for_correction';
 
     try {
+      // ✅ CORREÇÃO: Garantir que o designer está atribuído ANTES de devolver
+      // Se for "devolver para correção" e o designer não está atribuído, atribuir agora
+      if (isReturnForCorrection && !task.assigned_to) {
+        const { error: assignError } = await supabase
+          .from('design_tasks')
+          .update({
+            assigned_to: currentUserId,
+            assigned_at: new Date().toISOString()
+          })
+          .eq('id', task.id);
+
+        if (assignError) {
+          console.error('Error assigning designer before rejection:', assignError);
+          throw assignError;
+        }
+
+        // Registrar atribuição no histórico
+        await supabase.from('design_task_history').insert({
+          task_id: task.id,
+          user_id: currentUserId,
+          action: 'task_assigned',
+          notes: 'Designer atribuído automaticamente antes de devolver para correção',
+        });
+      }
+
       // 1. Inserir na tabela task_rejections
       const { error: rejectionError } = await supabase
         .from('task_rejections')
@@ -85,7 +110,7 @@ export const RejectTaskDialog = ({
       }
 
       // 3. Atualizar status da design_task
-      // Se "devolver para correção" - MANTER atribuição do designer
+      // Se "devolver para correção" - MANTER atribuição do designer (já garantida acima)
       // Se "recusar definitivamente" - REMOVER atribuição
       const updateData: Record<string, unknown> = {
         status: 'pending',
