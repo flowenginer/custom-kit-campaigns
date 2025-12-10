@@ -158,6 +158,9 @@ const Orders = () => {
           creator:profiles!design_tasks_created_by_fkey (
             full_name
           ),
+          designer:profiles!design_tasks_assigned_to_fkey (
+            full_name
+          ),
           lead:leads!design_tasks_lead_id_fkey (
             needs_logo,
             uploaded_logo_url,
@@ -172,25 +175,30 @@ const Orders = () => {
 
       console.log('📦 Orders.tsx - Total tasks fetched:', data?.length);
 
-      const formattedTasks: DesignTask[] = (data || []).map((task: any) => ({
-        ...task,
-        customer_name: task.orders?.customer_name,
-        customer_email: task.orders?.customer_email,
-        customer_phone: task.orders?.customer_phone,
-        quantity: task.orders?.quantity,
-        customization_data: task.orders?.customization_data,
-        campaign_name: task.campaigns?.name,
-        model_name: task.orders?.shirt_models?.name,
-        model_code: task.orders?.shirt_models?.sku,
-        needs_logo: task.lead?.needs_logo,
-        logo_action: task.lead?.logo_action,
-        uploaded_logo_url: task.lead?.uploaded_logo_url || null,
-        salesperson_status: task.lead?.salesperson_status,
-        created_by_salesperson: task.created_by_salesperson,
-        creator_name: task.creator?.full_name || null,
-        designer_name: null,
-        designer_initials: null,
-      }));
+      const formattedTasks: DesignTask[] = (data || []).map((task: any) => {
+        const designerName = task.designer?.full_name || null;
+        return {
+          ...task,
+          customer_name: task.orders?.customer_name,
+          customer_email: task.orders?.customer_email,
+          customer_phone: task.orders?.customer_phone,
+          quantity: task.orders?.quantity,
+          customization_data: task.orders?.customization_data,
+          campaign_name: task.campaigns?.name,
+          model_name: task.orders?.shirt_models?.name,
+          model_code: task.orders?.shirt_models?.sku,
+          needs_logo: task.lead?.needs_logo,
+          logo_action: task.lead?.logo_action,
+          uploaded_logo_url: task.lead?.uploaded_logo_url || null,
+          salesperson_status: task.lead?.salesperson_status,
+          created_by_salesperson: task.created_by_salesperson,
+          creator_name: task.creator?.full_name || null,
+          designer_name: designerName,
+          designer_initials: designerName 
+            ? designerName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+            : null,
+        };
+      });
 
       // ✅ Filtrar tarefas AGUARDANDO logo (waiting_client)
       let pendingLogoTasks = formattedTasks.filter(task => 
