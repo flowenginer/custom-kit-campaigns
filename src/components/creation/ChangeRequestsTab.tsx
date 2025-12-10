@@ -254,7 +254,7 @@ export const ChangeRequestsTab = ({ taskId, taskStatus, layoutId, onChangeReques
               <Input
                 type="file"
                 multiple
-                accept="image/*,.pdf,.ai,.psd"
+                accept="*/*"
                 onChange={handleFileSelect}
                 className="flex-1"
               />
@@ -376,16 +376,29 @@ export const ChangeRequestsTab = ({ taskId, taskStatus, layoutId, onChangeReques
                       <Label className="text-xs">Anexos:</Label>
                       <div className="flex flex-wrap gap-2">
                         {cr.attachments.map((att: any, idx: number) => (
-                          <a
+                          <button
                             key={idx}
-                            href={att.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-xs text-primary hover:underline"
+                            onClick={async () => {
+                              try {
+                                const response = await fetch(att.url);
+                                const blob = await response.blob();
+                                const downloadUrl = URL.createObjectURL(blob);
+                                const link = document.createElement('a');
+                                link.href = downloadUrl;
+                                link.download = att.name;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                                URL.revokeObjectURL(downloadUrl);
+                              } catch {
+                                window.open(att.url, '_blank');
+                              }
+                            }}
+                            className="flex items-center gap-1 text-xs text-primary hover:underline cursor-pointer"
                           >
                             <Download className="h-3 w-3" />
                             {att.name}
-                          </a>
+                          </button>
                         ))}
                       </div>
                     </div>

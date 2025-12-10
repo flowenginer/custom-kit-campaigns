@@ -140,7 +140,7 @@ export const ModificationRequestDialog = ({
                 id="mod-file-input"
                 type="file"
                 multiple
-                accept="image/*,.pdf"
+                accept="*/*"
                 onChange={handleFileSelect}
                 className="hidden"
               />

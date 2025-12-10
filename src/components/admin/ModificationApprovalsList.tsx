@@ -17,7 +17,7 @@ import {
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CheckCircle, XCircle, ExternalLink, Loader2, FileText } from "lucide-react";
+import { CheckCircle, XCircle, Download, Loader2, FileText } from "lucide-react";
 
 interface PendingModificationRequest {
   id: string;
@@ -256,12 +256,27 @@ export const ModificationApprovalsList = () => {
                           key={idx}
                           variant="outline"
                           size="sm"
-                          onClick={() => window.open(att.url, '_blank')}
+                          onClick={async () => {
+                            try {
+                              const response = await fetch(att.url);
+                              const blob = await response.blob();
+                              const downloadUrl = URL.createObjectURL(blob);
+                              const link = document.createElement('a');
+                              link.href = downloadUrl;
+                              link.download = att.name;
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                              URL.revokeObjectURL(downloadUrl);
+                            } catch {
+                              window.open(att.url, '_blank');
+                            }
+                          }}
                           className="w-full justify-start"
                         >
                           <FileText className="h-4 w-4 mr-2" />
                           {att.name}
-                          <ExternalLink className="h-3 w-3 ml-auto" />
+                          <Download className="h-3 w-3 ml-auto" />
                         </Button>
                       ))}
                     </div>
