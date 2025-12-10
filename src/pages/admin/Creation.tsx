@@ -775,7 +775,8 @@ const Creation = () => {
       status: "in_progress" as const,
       icon: Palette,
       tasks: applyAllFilters(tasks.filter(t => 
-        t.status === "in_progress" || t.returned_from_rejection === true
+        t.status === "in_progress" || 
+        (t.returned_from_rejection === true && t.status === "pending")
       )),
     },
     {
