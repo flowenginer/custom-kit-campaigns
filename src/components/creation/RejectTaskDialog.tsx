@@ -111,13 +111,26 @@ export const RejectTaskDialog = ({
 
       if (rejectionError) throw rejectionError;
 
-      // 2. Atualizar a lead para indicar que foi rejeitada (usa função SECURITY DEFINER)
-      if (task.lead_id) {
+      // 2. Atualizar a lead SOMENTE se for recusa definitiva
+      // ✅ CORREÇÃO: "Devolver para correção" NÃO deve marcar como rejected_by_designer
+      // pois isso impede o card de aparecer na coluna "Retorno de Alteração"
+      if (task.lead_id && !isReturnForCorrection) {
+        // Recusa definitiva: marca como rejeitado pelo designer
         const { error: leadError } = await supabase
           .rpc('mark_lead_rejected_by_designer', { p_lead_id: task.lead_id });
 
         if (leadError) {
           console.error('Error updating lead:', leadError);
+        }
+      } else if (task.lead_id && isReturnForCorrection) {
+        // Devolução para correção: resetar salesperson_status para permitir aparecer em "Retorno de Alteração"
+        const { error: leadError } = await supabase
+          .from('leads')
+          .update({ salesperson_status: 'pending_correction' })
+          .eq('id', task.lead_id);
+
+        if (leadError) {
+          console.error('Error updating lead salesperson_status:', leadError);
         }
       }
 
