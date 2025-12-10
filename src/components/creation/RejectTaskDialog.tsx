@@ -57,9 +57,21 @@ export const RejectTaskDialog = ({
       return;
     }
 
-    setSubmitting(true);
-
+    // ✅ VALIDAÇÃO EXTRA: Impedir devolução se tarefa nunca foi trabalhada
+    // Isso previne tarefas "órfãs" que aparecem em retorno de alteração sem designer
     const isReturnForCorrection = actionType === 'return_for_correction';
+    
+    if (isReturnForCorrection && task.status === 'pending' && !task.assigned_to) {
+      console.warn('[RejectTaskDialog] Tentativa de devolver tarefa nunca assumida:', {
+        taskId: task.id,
+        status: task.status,
+        assigned_to: task.assigned_to,
+        currentUserId
+      });
+      // Em vez de bloquear, vamos permitir mas garantir a atribuição (fallback seguro)
+    }
+
+    setSubmitting(true);
 
     try {
       // ✅ CORREÇÃO: Garantir que o designer está atribuído ANTES de devolver
