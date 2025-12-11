@@ -287,35 +287,34 @@ export default function CustomerRegister() {
         return;
       }
 
-      // Criar cliente novo
-      const { data: customer, error: customerError } = await supabase
-        .from("customers")
-        .insert({
-          name: formData.person_type === "pj" ? formData.razao_social : formData.name,
-          phone: formData.phone.replace(/\D/g, ""),
-          email: formData.email || null,
-          person_type: formData.person_type,
-          cpf: formData.person_type === "pf" ? formData.cpf.replace(/\D/g, "") : null,
-          cnpj: formData.person_type === "pj" ? formData.cnpj.replace(/\D/g, "") : null,
-          company_name: formData.company_name,
-          state_registration: formData.person_type === "pj" ? formData.state_registration : null,
-          birth_date: formData.birth_date || null,
-          cep: formData.cep,
-          state: formData.state,
-          city: formData.city,
-          neighborhood: formData.neighborhood,
-          street: formData.street,
-          number: formData.number,
-          complement: formData.complement || null,
-          created_by: linkData.created_by, // Associar vendedor ao cliente
-        })
-        .select()
-        .single();
+      // Criar cliente novo via RPC (SECURITY DEFINER - contorna RLS)
+      const { data: customerId, error: customerError } = await supabase.rpc(
+        'create_customer_from_registration',
+        {
+          p_name: formData.person_type === "pj" ? formData.razao_social : formData.name,
+          p_phone: formData.phone.replace(/\D/g, ""),
+          p_email: formData.email || null,
+          p_person_type: formData.person_type,
+          p_cpf: formData.person_type === "pf" ? formData.cpf.replace(/\D/g, "") : null,
+          p_cnpj: formData.person_type === "pj" ? formData.cnpj.replace(/\D/g, "") : null,
+          p_company_name: formData.company_name,
+          p_state_registration: formData.person_type === "pj" ? formData.state_registration : null,
+          p_birth_date: formData.birth_date || '',
+          p_cep: formData.cep,
+          p_state: formData.state,
+          p_city: formData.city,
+          p_neighborhood: formData.neighborhood,
+          p_street: formData.street,
+          p_number: formData.number,
+          p_complement: formData.complement || null,
+          p_created_by: linkData.created_by,
+        }
+      );
 
       if (customerError) throw customerError;
 
       // Atualizar link e task
-      await updateLinkAndTask(customer.id);
+      await updateLinkAndTask(customerId);
 
       setCompleted(true);
       toast.success("Cadastro realizado com sucesso!");
