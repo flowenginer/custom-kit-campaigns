@@ -3234,6 +3234,28 @@ export type Database = {
         Args: { p_customer_id: string; p_token: string }
         Returns: undefined
       }
+      create_customer_from_registration: {
+        Args: {
+          p_birth_date?: string
+          p_cep?: string
+          p_city?: string
+          p_cnpj?: string
+          p_company_name?: string
+          p_complement?: string
+          p_cpf?: string
+          p_created_by?: string
+          p_email?: string
+          p_name: string
+          p_neighborhood?: string
+          p_number?: string
+          p_person_type?: string
+          p_phone: string
+          p_state?: string
+          p_state_registration?: string
+          p_street?: string
+        }
+        Returns: string
+      }
       format_tag_to_name: { Args: { tag: string }; Returns: string }
       get_all_users_with_conversations: {
         Args: { p_user_id: string }
