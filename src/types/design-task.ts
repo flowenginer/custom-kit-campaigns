@@ -38,6 +38,7 @@ export interface DesignFile {
   notes?: string;
   is_revision?: boolean;
   client_approved?: boolean;
+  original_name?: string;
 }
 
 export interface DesignTask {
