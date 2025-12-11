@@ -557,8 +557,10 @@ export const TaskDetailsDialog = ({
         const file = pendingFiles[i];
         setUploadProgress(`Enviando ${i + 1} de ${pendingFiles.length}...`);
         
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${task.id}/v${newVersion}/${Date.now()}.${fileExt}`;
+        // Preservar nome original do arquivo, sanitizado para URL
+        const originalName = file.name;
+        const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const fileName = `${task.id}/v${newVersion}/${sanitizedName}_${Date.now()}`;
         
         const { error: uploadError } = await supabase.storage
           .from('customer-logos')
@@ -573,6 +575,7 @@ export const TaskDetailsDialog = ({
         uploadedFiles.push({
           version: newVersion,
           url: publicUrl,
+          original_name: originalName,
           uploaded_at: new Date().toISOString(),
           notes: uploadNotes || undefined,
           is_revision: task.status === 'changes_requested'
@@ -1770,6 +1773,12 @@ export const TaskDetailsDialog = ({
                                 <span className="text-xs text-muted-foreground">
                                   {format(new Date(file.uploaded_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                                 </span>
+                                {file.original_name && (
+                                  <span className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                                    <FileText className="h-3 w-3" />
+                                    {file.original_name}
+                                  </span>
+                                )}
                               </div>
                               <Button 
                                 variant="outline" 
@@ -1781,7 +1790,7 @@ export const TaskDetailsDialog = ({
                                     const url = window.URL.createObjectURL(blob);
                                     const link = document.createElement('a');
                                     link.href = url;
-                                    link.download = `mockup_v${file.version}_${new Date().getTime()}.png`;
+                                    link.download = file.original_name || `mockup_v${file.version}.png`;
                                     document.body.appendChild(link);
                                     link.click();
                                     document.body.removeChild(link);
