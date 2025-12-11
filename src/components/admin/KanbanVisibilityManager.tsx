@@ -8,11 +8,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AppRole } from "@/hooks/useUserRole";
+import { useRolesConfig, RoleConfig } from "@/hooks/useRolesConfig";
 import { Loader2, Users, RefreshCw } from "lucide-react";
 
 interface RoleDefaults {
   id: string;
-  role: AppRole;
+  role: string;
   allowed_columns: string[];
 }
 
@@ -33,29 +34,16 @@ interface KanbanColumnFromDB {
   sort_order: number;
 }
 
-const roleInfo: Record<AppRole, { label: string; icon: string; description: string }> = {
-  salesperson: { label: 'Vendedor', icon: '👔', description: 'Vendedores precisam ver mockups para aprovação' },
-  designer: { label: 'Designer', icon: '🎨', description: 'Designers trabalham em todas as etapas' },
-  admin: { label: 'Admin', icon: '⚙️', description: 'Administradores têm visão completa' },
-  super_admin: { label: 'Super Admin', icon: '👑', description: 'Acesso total ao sistema' },
-  viewer: { label: 'Visualizador', icon: '👁️', description: 'Apenas visualização' },
-};
-
 export const KanbanVisibilityManager = () => {
+  const { roles: rolesConfig, getRoleLabel, getRoleIcon, getRoleInfo } = useRolesConfig();
   const [roleDefaults, setRoleDefaults] = useState<RoleDefaults[]>([]);
   const [usersWithCustom, setUsersWithCustom] = useState<UserWithCustomSettings[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [kanbanColumns, setKanbanColumns] = useState<KanbanColumnFromDB[]>([]);
   
-  // Estados para edição de cada papel
-  const [editingRole, setEditingRole] = useState<Record<AppRole, string[]>>({
-    salesperson: [],
-    designer: [],
-    admin: [],
-    super_admin: [],
-    viewer: [],
-  });
+  // Estados para edição de cada papel (dinâmico baseado nos roles do banco)
+  const [editingRole, setEditingRole] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
     loadData();
@@ -152,13 +140,14 @@ export const KanbanVisibilityManager = () => {
     }
   };
 
-  const handleSaveRole = async (role: AppRole) => {
+  const handleSaveRole = async (role: string) => {
     setSaving(role);
     try {
       const columns = editingRole[role];
       
-      if (columns.length === 0) {
+      if (!columns || columns.length === 0) {
         toast.error('Selecione pelo menos uma coluna');
+        setSaving(null);
         return;
       }
 
@@ -171,11 +160,11 @@ export const KanbanVisibilityManager = () => {
           updated_by: user?.id,
           updated_at: new Date().toISOString()
         })
-        .eq('role', role);
+        .eq('role', role as AppRole);
 
       if (error) throw error;
 
-      toast.success(`Configuração do papel "${roleInfo[role].label}" salva com sucesso!`);
+      toast.success(`Configuração do papel "${getRoleLabel(role)}" salva com sucesso!`);
       await loadData();
     } catch (error: any) {
       console.error('Erro ao salvar:', error);
@@ -202,7 +191,7 @@ export const KanbanVisibilityManager = () => {
     }
   };
 
-  const toggleColumn = (role: AppRole, columnKey: string) => {
+  const toggleColumn = (role: string, columnKey: string) => {
     setEditingRole(prev => {
       const current = prev[role] || [];
       const updated = current.includes(columnKey)
@@ -211,6 +200,9 @@ export const KanbanVisibilityManager = () => {
       return { ...prev, [role]: updated };
     });
   };
+
+  // Filtrar apenas roles que não são viewer (ou outros que não devam aparecer)
+  const visibleRoles = rolesConfig.filter(r => r.role_key !== 'viewer');
 
   if (loading) {
     return (
@@ -243,18 +235,17 @@ export const KanbanVisibilityManager = () => {
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
-          {(['salesperson', 'designer', 'admin', 'super_admin'] as AppRole[]).map((role) => {
-            const info = roleInfo[role];
-            const currentColumns = editingRole[role] || [];
+          {visibleRoles.map((roleConfig) => {
+            const currentColumns = editingRole[roleConfig.role_key] || [];
             
             return (
-              <Card key={role}>
+              <Card key={roleConfig.role_key}>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <span className="text-2xl">{info.icon}</span>
-                    {info.label}
+                    <span className="text-2xl">{roleConfig.icon}</span>
+                    {roleConfig.label}
                   </CardTitle>
-                  <CardDescription>{info.description}</CardDescription>
+                  <CardDescription>{roleConfig.description || 'Configurar visibilidade'}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 gap-2">
@@ -264,12 +255,12 @@ export const KanbanVisibilityManager = () => {
                         className="flex items-center space-x-3 p-2 rounded-md hover:bg-accent/50 transition-colors"
                       >
                         <Checkbox
-                          id={`${role}-${col.key}`}
+                          id={`${roleConfig.role_key}-${col.key}`}
                           checked={currentColumns.includes(col.key)}
-                          onCheckedChange={() => toggleColumn(role, col.key)}
+                          onCheckedChange={() => toggleColumn(roleConfig.role_key, col.key)}
                         />
                         <Label 
-                          htmlFor={`${role}-${col.key}`}
+                          htmlFor={`${roleConfig.role_key}-${col.key}`}
                           className="flex-1 text-sm cursor-pointer"
                         >
                           {col.title}
@@ -284,10 +275,10 @@ export const KanbanVisibilityManager = () => {
                     </span>
                     <Button
                       size="sm"
-                      onClick={() => handleSaveRole(role)}
-                      disabled={saving === role || currentColumns.length === 0}
+                      onClick={() => handleSaveRole(roleConfig.role_key)}
+                      disabled={saving === roleConfig.role_key || currentColumns.length === 0}
                     >
-                      {saving === role ? (
+                      {saving === roleConfig.role_key ? (
                         <>
                           <Loader2 className="h-3 w-3 mr-2 animate-spin" />
                           Salvando...
@@ -339,7 +330,7 @@ export const KanbanVisibilityManager = () => {
                         <div className="flex flex-wrap gap-1">
                           {user.roles.map(r => (
                             <Badge key={r} variant="outline" className="text-xs">
-                              {roleInfo[r]?.label || r}
+                              {getRoleLabel(r)}
                             </Badge>
                           ))}
                         </div>

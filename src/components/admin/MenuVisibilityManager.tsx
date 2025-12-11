@@ -6,14 +6,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { RefreshCw, Save, RotateCcw } from "lucide-react";
+import { RefreshCw, Save, RotateCcw, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AppRole } from "@/hooks/useUserRole";
+import { useRolesConfig } from "@/hooks/useRolesConfig";
 
 interface RoleDefaults {
   id: string;
-  role: AppRole;
+  role: string;
   allowed_menu_items: string[];
 }
 
@@ -25,15 +26,8 @@ interface UserWithCustomSettings {
   allowed_menu_items: string[];
 }
 
-const roleInfo: Record<AppRole, { label: string; description: string }> = {
-  super_admin: { label: 'Super Admin', description: 'Acesso total ao sistema' },
-  admin: { label: 'Admin', description: 'Acesso administrativo' },
-  designer: { label: 'Designer', description: 'Acesso a tarefas de design' },
-  salesperson: { label: 'Vendedor', description: 'Acesso a pedidos e temas' },
-  viewer: { label: 'Visualizador', description: 'Acesso somente leitura' },
-};
-
 export const MenuVisibilityManager = () => {
+  const { roles: rolesConfig, getRoleLabel, getRoleIcon, loading: rolesLoading } = useRolesConfig();
   const { getAllMenus } = useMenuStructure();
   const allMenuItems = getAllMenus().map(menu => ({
     id: menu.slug,
@@ -44,7 +38,7 @@ export const MenuVisibilityManager = () => {
   const [roleDefaults, setRoleDefaults] = useState<RoleDefaults[]>([]);
   const [usersWithCustom, setUsersWithCustom] = useState<UserWithCustomSettings[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingRole, setEditingRole] = useState<AppRole | null>(null);
+  const [editingRole, setEditingRole] = useState<string | null>(null);
   const [editingItems, setEditingItems] = useState<string[]>([]);
 
   useEffect(() => {
@@ -107,7 +101,7 @@ export const MenuVisibilityManager = () => {
     );
   };
 
-  const handleSaveRole = async (role: AppRole) => {
+  const handleSaveRole = async (role: string) => {
     try {
       const roleDefault = roleDefaults.find(r => r.role === role);
       if (!roleDefault) return;
@@ -122,7 +116,7 @@ export const MenuVisibilityManager = () => {
 
       if (error) throw error;
 
-      toast.success(`Configuração de ${roleInfo[role].label} atualizada`);
+      toast.success(`Configuração de ${getRoleLabel(role)} atualizada`);
       setEditingRole(null);
       loadData();
     } catch (error: any) {
@@ -130,6 +124,9 @@ export const MenuVisibilityManager = () => {
       console.error(error);
     }
   };
+  
+  // Filtrar apenas roles que devem aparecer (não viewer)
+  const visibleRoles = rolesConfig.filter(r => r.role_key !== 'viewer');
 
   const handleResetUserToDefault = async (userId: string) => {
     try {
@@ -190,35 +187,36 @@ export const MenuVisibilityManager = () => {
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">Configurações Padrão por Função</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {(['salesperson', 'designer', 'admin', 'super_admin'] as AppRole[]).map((role) => {
-            const roleDefault = roleDefaults.find(r => r.role === role);
+          {visibleRoles.map((roleConfig) => {
+            const roleDefault = roleDefaults.find(r => r.role === roleConfig.role_key);
             if (!roleDefault) return null;
 
-            const isEditing = editingRole === role;
+            const isEditing = editingRole === roleConfig.role_key;
             const currentItems = isEditing ? editingItems : roleDefault.allowed_menu_items;
 
             return (
-              <Card key={role}>
+              <Card key={roleConfig.role_key}>
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
-                    {roleInfo[role].label}
+                    <span className="text-xl">{roleConfig.icon}</span>
+                    {roleConfig.label}
                     <Badge variant="secondary">{currentItems.length} itens</Badge>
                   </CardTitle>
-                  <CardDescription>{roleInfo[role].description}</CardDescription>
+                  <CardDescription>{roleConfig.description || 'Configurar visibilidade do menu'}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
                     {allMenuItems.map((item) => (
                       <div key={item.id} className="flex items-start space-x-2">
                         <Checkbox
-                          id={`${role}-${item.id}`}
+                          id={`${roleConfig.role_key}-${item.id}`}
                           checked={currentItems.includes(item.id)}
                           disabled={!isEditing}
                           onCheckedChange={() => isEditing && toggleMenuItem(item.id)}
                         />
                         <div className="grid gap-1 leading-none">
                           <Label
-                            htmlFor={`${role}-${item.id}`}
+                            htmlFor={`${roleConfig.role_key}-${item.id}`}
                             className={`text-sm font-medium ${!isEditing ? 'cursor-default' : 'cursor-pointer'}`}
                           >
                             {item.label}
@@ -235,7 +233,7 @@ export const MenuVisibilityManager = () => {
                     {!isEditing ? (
                       <Button
                         onClick={() => {
-                          setEditingRole(role);
+                          setEditingRole(roleConfig.role_key);
                           setEditingItems(roleDefault.allowed_menu_items);
                         }}
                         className="w-full"
@@ -246,7 +244,7 @@ export const MenuVisibilityManager = () => {
                     ) : (
                       <>
                         <Button
-                          onClick={() => handleSaveRole(role)}
+                          onClick={() => handleSaveRole(roleConfig.role_key)}
                           className="flex-1"
                         >
                           <Save className="h-4 w-4 mr-2" />
@@ -296,7 +294,7 @@ export const MenuVisibilityManager = () => {
                         <div className="flex gap-1 flex-wrap">
                           {user.roles.map((role) => (
                             <Badge key={role} variant="outline">
-                              {roleInfo[role]?.label || role}
+                              {getRoleLabel(role)}
                             </Badge>
                           ))}
                         </div>

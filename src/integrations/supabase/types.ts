@@ -2538,6 +2538,45 @@ export type Database = {
         }
         Relationships: []
       }
+      roles_config: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          is_system: boolean | null
+          label: string
+          role_key: string
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_system?: boolean | null
+          label: string
+          role_key: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_system?: boolean | null
+          label?: string
+          role_key?: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       segments: {
         Row: {
           created_at: string | null
@@ -3178,6 +3217,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_custom_role: {
+        Args: {
+          p_description?: string
+          p_icon?: string
+          p_label: string
+          p_role_key: string
+        }
+        Returns: Json
+      }
       check_customer_exists: {
         Args: { p_cnpj?: string; p_cpf?: string }
         Returns: Json
@@ -3244,6 +3292,16 @@ export type Database = {
       }
       notify_customer_registered: {
         Args: { p_customer_name: string; p_task_id: string; p_user_id: string }
+        Returns: undefined
+      }
+      update_custom_role: {
+        Args: {
+          p_description: string
+          p_icon: string
+          p_is_active: boolean
+          p_label: string
+          p_role_key: string
+        }
         Returns: undefined
       }
       update_task_customer_id: {
