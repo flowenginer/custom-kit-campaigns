@@ -123,11 +123,10 @@ export const RejectTaskDialog = ({
           console.error('Error updating lead:', leadError);
         }
       } else if (task.lead_id && isReturnForCorrection) {
-        // Devolução para correção: usar 'sent_to_designer' para permitir aparecer em "Retorno de Alteração"
-        // NÃO pode ser 'rejected_by_designer' pois isso impediria o card de aparecer na coluna correta
+        // Devolução para correção: usar 'rejected_by_designer' para o card aparecer na aba "Devolvidas"
         const { error: leadError } = await supabase
           .from('leads')
-          .update({ salesperson_status: 'sent_to_designer' })
+          .update({ salesperson_status: 'rejected_by_designer' })
           .eq('id', task.lead_id);
 
         if (leadError) {
@@ -141,7 +140,7 @@ export const RejectTaskDialog = ({
       const updateData: Record<string, unknown> = {
         status: 'pending',
         status_changed_at: new Date().toISOString(),
-        returned_from_rejection: isReturnForCorrection, // true = vai para "Retorno de Alteração" depois
+        returned_from_rejection: false, // Só vira true quando o vendedor corrigir e reenviar
       };
 
       // Somente remove atribuição se for recusa definitiva
