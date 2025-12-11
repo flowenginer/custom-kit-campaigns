@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { UserPlus, Trash2, Edit, KeyRound, Loader2, Code2, AlertCircle, Building2, Columns, Palette } from "lucide-react";
+import { UserPlus, Trash2, Edit, KeyRound, Loader2, Code2, AlertCircle, Building2, Columns, Palette, Users } from "lucide-react";
 import { DesignModeSwitcher } from "@/components/DesignModeSwitcher";
 import { UrgentReasonsManager } from "@/components/admin/UrgentReasonsManager";
 import { KanbanVisibilityManager } from "@/components/admin/KanbanVisibilityManager";
@@ -19,9 +19,11 @@ import { MenuVisibilityManager } from "@/components/admin/MenuVisibilityManager"
 import { UniformTypesManager } from "@/components/admin/UniformTypesManager";
 import { MenuStructureManager } from "@/components/admin/MenuStructureManager";
 import { BusinessSegmentsManager } from "@/components/admin/BusinessSegmentsManager";
+import { RolesManager } from "@/components/admin/RolesManager";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AppRole } from "@/hooks/useUserRole";
+import { useRolesConfig, RoleConfig } from "@/hooks/useRolesConfig";
 
 interface User {
   id: string;
@@ -76,17 +78,19 @@ const Settings = () => {
     { id: 'completed', label: 'Produção', description: 'Enviado para produção' },
   ];
 
-  const allRoles: { value: AppRole; label: string; description: string }[] = [
-    { value: 'super_admin', label: 'Super Admin', description: 'Acesso total + gerenciar usuários' },
-    { value: 'admin', label: 'Admin', description: 'Acesso a todas funcionalidades' },
-    { value: 'designer', label: 'Designer', description: 'Acesso apenas a tarefas de design' },
-    { value: 'salesperson', label: 'Vendedor', description: 'Acesso a Pedidos e Temas' },
-    { value: 'viewer', label: 'Visualizador', description: 'Apenas visualização' },
-  ];
+  // Hook para buscar roles dinâmicos
+  const { roles: rolesConfig, getRoleLabel: getDynamicRoleLabel, getRoleIcon } = useRolesConfig();
+  
+  // Converter roles do banco para formato usado nos checkboxes
+  const allRoles = rolesConfig.map(r => ({
+    value: r.role_key as AppRole,
+    label: r.label,
+    description: r.description || '',
+    icon: r.icon,
+  }));
 
   const getRoleLabel = (role: AppRole): string => {
-    const foundRole = allRoles.find(r => r.value === role);
-    return foundRole?.label || role.replace('_', ' ').toUpperCase();
+    return getDynamicRoleLabel(role);
   };
 
   useEffect(() => {
@@ -429,6 +433,7 @@ const Settings = () => {
       <Tabs defaultValue="users" className="space-y-4">
         <TabsList className="flex flex-wrap gap-1">
           <TabsTrigger value="users">Usuários</TabsTrigger>
+          <TabsTrigger value="roles"><Users className="w-4 h-4 mr-1 inline" />Perfis</TabsTrigger>
           <TabsTrigger value="design"><Palette className="w-4 h-4 mr-1 inline" />Design</TabsTrigger>
           <TabsTrigger value="uniform-types">Tipos Uniforme</TabsTrigger>
           <TabsTrigger value="business-segments"><Building2 className="w-4 h-4 mr-1 inline" />Segmentos</TabsTrigger>
@@ -440,6 +445,11 @@ const Settings = () => {
           <TabsTrigger value="scripts"><Code2 className="w-4 h-4 mr-1 inline" />Scripts</TabsTrigger>
           <TabsTrigger value="urgent-reasons"><AlertCircle className="w-4 h-4 mr-1 inline" />Urgência</TabsTrigger>
         </TabsList>
+
+        {/* TAB: PERFIS */}
+        <TabsContent value="roles" className="space-y-4">
+          <RolesManager />
+        </TabsContent>
 
         {/* TAB: DESIGN */}
         <TabsContent value="design" className="space-y-4">
